@@ -26,39 +26,6 @@ export default function LoginPage() {
       return;
     }
 
-    // Verify session is actually set
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      setError("Connexion réussie mais la session n'a pas été créée. Vérifiez la configuration Supabase.");
-      setLoading(false);
-      return;
-    }
-
-    // Verify user exists in users table
-    const { data: dbUser, error: dbError } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", session.user.id)
-      .single();
-
-    if (dbError || !dbUser) {
-      setError(`Compte auth OK mais profil introuvable dans la base. (${dbError?.message || "Aucun enregistrement"})`);
-      setLoading(false);
-      return;
-    }
-
-    // Check role matches the selected mode
-    if (mode === "batteur" && !["admin", "superadmin"].includes(dbUser.role)) {
-      setError(`Votre rôle est "${dbUser.role}", pas admin/superadmin. Essayez le mode Écho.`);
-      setLoading(false);
-      return;
-    }
-    if (mode === "echo" && dbUser.role !== "echo") {
-      setError(`Votre rôle est "${dbUser.role}", pas écho. Essayez le mode Batteur.`);
-      setLoading(false);
-      return;
-    }
-
     window.location.href = mode === "echo" ? "/dashboard" : "/admin/dashboard";
   }
 
