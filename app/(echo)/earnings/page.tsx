@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { formatFCFA, timeAgo } from "@/lib/utils";
 import { MIN_PAYOUT_AMOUNT } from "@/lib/constants";
 import type { User, Payout } from "@/lib/types";
@@ -11,24 +10,25 @@ export default function EarningsPage() {
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
-  const supabase = createClient();
 
   useEffect(() => {
     loadData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadData() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-
     const [userRes, payoutsRes] = await Promise.all([
-      supabase.from("users").select("*").eq("id", session.user.id).single(),
-      supabase.from("payouts").select("*").eq("echo_id", session.user.id).order("created_at", { ascending: false }),
+      fetch("/api/echo/user"),
+      fetch("/api/echo/payouts"),
     ]);
 
-    if (userRes.data) setUser(userRes.data);
-    if (payoutsRes.data) setPayouts(payoutsRes.data);
+    if (userRes.ok) {
+      const userData = await userRes.json();
+      setUser(userData);
+    }
+    if (payoutsRes.ok) {
+      const payoutsData = await payoutsRes.json();
+      setPayouts(Array.isArray(payoutsData) ? payoutsData : []);
+    }
     setLoading(false);
   }
 
@@ -36,16 +36,18 @@ export default function EarningsPage() {
     if (!user || user.balance < MIN_PAYOUT_AMOUNT) return;
     setRequesting(true);
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-
-    await supabase.from("payouts").insert({
-      echo_id: session.user.id,
-      amount: user.balance,
-      provider: user.mobile_money_provider,
+    const res = await fetch("/api/echo/payouts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount: user.balance,
+        provider: user.mobile_money_provider,
+      }),
     });
 
-    loadData();
+    if (res.ok) {
+      await loadData();
+    }
     setRequesting(false);
   }
 
