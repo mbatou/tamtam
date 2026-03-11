@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const [mode, setMode] = useState<"echo" | "batteur">("echo");
-  const [phone, setPhone] = useState("+221");
+  const [echoEmail, setEchoEmail] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
@@ -22,7 +22,7 @@ export default function LoginPage() {
     setError("");
 
     if (!otpSent) {
-      const { error } = await supabase.auth.signInWithOtp({ phone });
+      const { error } = await supabase.auth.signInWithOtp({ email: echoEmail });
       if (error) {
         setError(error.message);
       } else {
@@ -30,9 +30,9 @@ export default function LoginPage() {
       }
     } else {
       const { error } = await supabase.auth.verifyOtp({
-        phone,
+        email: echoEmail,
         token: otp,
-        type: "sms",
+        type: "email",
       });
       if (error) {
         setError(error.message);
@@ -100,13 +100,13 @@ export default function LoginPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-white/40 mb-2">
-                  Numéro de téléphone
+                  Adresse email
                 </label>
                 <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+221 77 123 45 67"
+                  type="email"
+                  value={echoEmail}
+                  onChange={(e) => setEchoEmail(e.target.value)}
+                  placeholder="votre@email.com"
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
                   disabled={otpSent}
                 />

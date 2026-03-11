@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 export default function RegisterPage() {
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("+221");
   const [city, setCity] = useState("");
   const [provider, setProvider] = useState<"wave" | "orange_money" | "">("");
@@ -19,7 +20,7 @@ export default function RegisterPage() {
   const supabase = createClient();
 
   async function handleStep1() {
-    if (!name.trim() || phone.length < 10) {
+    if (!name.trim() || !email.trim()) {
       setError("Remplis tous les champs obligatoires.");
       return;
     }
@@ -36,7 +37,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     if (!otpSent) {
-      const { error } = await supabase.auth.signInWithOtp({ phone });
+      const { error } = await supabase.auth.signInWithOtp({ email });
       if (error) {
         setError(error.message);
       } else {
@@ -44,9 +45,9 @@ export default function RegisterPage() {
       }
     } else {
       const { data, error: verifyError } = await supabase.auth.verifyOtp({
-        phone,
+        email,
         token: otp,
-        type: "sms",
+        type: "email",
       });
       if (verifyError) {
         setError(verifyError.message);
@@ -56,7 +57,7 @@ export default function RegisterPage() {
           id: data.user.id,
           role: "echo",
           name,
-          phone,
+          phone: phone.length > 4 ? phone : null,
           city: city || null,
           mobile_money_provider: provider,
         });
@@ -127,7 +128,19 @@ export default function RegisterPage() {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-white/40 mb-2">
-                  Téléphone *
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="moussa@email.com"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-white/40 mb-2">
+                  Téléphone
                 </label>
                 <input
                   type="tel"
@@ -188,7 +201,7 @@ export default function RegisterPage() {
               {otpSent && (
                 <div>
                   <label className="block text-xs font-semibold text-white/40 mb-2">
-                    Code OTP envoyé au {phone}
+                    Code OTP envoyé à {email}
                   </label>
                   <input
                     type="text"
