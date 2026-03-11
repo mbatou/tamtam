@@ -124,6 +124,7 @@ alter table payouts enable row level security;
 
 -- Users: read own data
 create policy "Users can read own data" on users for select using (auth.uid() = id);
+create policy "Users can insert own data" on users for insert with check (auth.uid() = id);
 create policy "Users can update own data" on users for update using (auth.uid() = id);
 
 -- Campaigns: échos see active, batteurs manage own
@@ -144,22 +145,16 @@ create policy "Link owners read clicks" on clicks for select
 create policy "Echos read own payouts" on payouts for select using (echo_id = auth.uid());
 create policy "Echos request payouts" on payouts for insert with check (echo_id = auth.uid());
 
--- Admin policies (using service role key bypasses RLS, but adding explicit admin policies)
-create policy "Admin full access users" on users for all using (
-  auth.uid() in (select id from users where role = 'admin')
-);
-create policy "Admin full access campaigns" on campaigns for all using (
-  auth.uid() in (select id from users where role = 'admin')
-);
-create policy "Admin full access tracked_links" on tracked_links for all using (
-  auth.uid() in (select id from users where role = 'admin')
-);
-create policy "Admin full access clicks" on clicks for all using (
-  auth.uid() in (select id from users where role = 'admin')
-);
-create policy "Admin full access payouts" on payouts for all using (
-  auth.uid() in (select id from users where role = 'admin')
-);
+-- Admin: service role key bypasses RLS, no explicit admin policies needed on users table
+-- For other tables, admin access uses a security definer function to avoid recursion
+create or replace function is_admin() returns boolean as $$
+  select exists (select 1 from users where id = auth.uid() and role = 'admin');
+$$ language sql security definer;
+
+create policy "Admin full access campaigns" on campaigns for all using (is_admin());
+create policy "Admin full access tracked_links" on tracked_links for all using (is_admin());
+create policy "Admin full access clicks" on clicks for all using (is_admin());
+create policy "Admin full access payouts" on payouts for all using (is_admin());
 
 -- Storage bucket for campaign creatives
 insert into storage.buckets (id, name, public) values ('creatives', 'creatives', true);
