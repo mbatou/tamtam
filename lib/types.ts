@@ -1,4 +1,4 @@
-export type UserRole = "echo" | "batteur" | "admin";
+export type UserRole = "echo" | "batteur" | "admin" | "superadmin";
 
 export interface User {
   id: string;
@@ -9,6 +9,8 @@ export interface User {
   mobile_money_provider: "wave" | "orange_money" | null;
   balance: number;
   total_earned: number;
+  status?: "active" | "verified" | "flagged" | "suspended";
+  risk_level?: "low" | "medium" | "high";
   created_at: string;
 }
 
@@ -22,7 +24,11 @@ export interface Campaign {
   cpc: number;
   budget: number;
   spent: number;
-  status: "draft" | "active" | "paused" | "completed";
+  status: "draft" | "active" | "paused" | "completed" | "rejected";
+  moderation_status?: "pending" | "approved" | "rejected";
+  moderation_reason?: string | null;
+  moderated_by?: string | null;
+  moderated_at?: string | null;
   starts_at: string | null;
   ends_at: string | null;
   created_at: string;
@@ -56,6 +62,21 @@ export interface Payout {
   created_at: string;
 }
 
+export interface BlockedIP {
+  id: string;
+  ip_address: string;
+  reason: string | null;
+  blocked_by: string | null;
+  created_at: string;
+}
+
+export interface PlatformSetting {
+  key: string;
+  value: string;
+  updated_at: string;
+  updated_by: string | null;
+}
+
 // Join types
 export interface TrackedLinkWithCampaign extends TrackedLink {
   campaigns: Campaign;
@@ -66,5 +87,9 @@ export interface TrackedLinkWithEcho extends TrackedLink {
 }
 
 export interface PayoutWithEcho extends Payout {
+  users: User;
+}
+
+export interface CampaignWithBatteur extends Campaign {
   users: User;
 }

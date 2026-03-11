@@ -43,7 +43,6 @@ export async function middleware(request: NextRequest) {
     if (!session) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
-    // Check role
     const { data: user } = await supabase
       .from("users")
       .select("role")
@@ -66,7 +65,23 @@ export async function middleware(request: NextRequest) {
       .eq("id", session.user.id)
       .single();
 
-    if (!user || user.role !== "admin") {
+    if (!user || !["admin", "superadmin"].includes(user.role)) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+  }
+
+  // Protect superadmin routes
+  if (pathname.startsWith("/superadmin")) {
+    if (!session) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    const { data: user } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", session.user.id)
+      .single();
+
+    if (!user || user.role !== "superadmin") {
       return NextResponse.redirect(new URL("/login", request.url));
     }
   }
@@ -81,5 +96,6 @@ export const config = {
     "/earnings/:path*",
     "/profil/:path*",
     "/admin/:path*",
+    "/superadmin/:path*",
   ],
 };
