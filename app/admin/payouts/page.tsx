@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { formatFCFA, timeAgo } from "@/lib/utils";
 import type { PayoutWithEcho } from "@/lib/types";
 
@@ -9,20 +8,25 @@ export default function AdminPayoutsPage() {
   const [payouts, setPayouts] = useState<PayoutWithEcho[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
-  const supabase = createClient();
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadPayouts(); }, []);
 
   async function loadPayouts() {
-    const { data } = await supabase.from("payouts").select("*, users(name, phone)").order("created_at", { ascending: false });
-    setPayouts((data || []) as PayoutWithEcho[]);
+    const res = await fetch("/api/admin/payouts");
+    if (res.ok) {
+      const data = await res.json();
+      setPayouts(Array.isArray(data) ? data as PayoutWithEcho[] : []);
+    }
     setLoading(false);
   }
 
   async function processPayout(payoutId: string, status: "sent" | "failed") {
     setProcessing(payoutId);
-    await supabase.rpc("process_payout", { p_payout_id: payoutId, p_status: status });
+    await fetch("/api/admin/payouts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ payout_id: payoutId, status }),
+    });
     loadPayouts();
     setProcessing(null);
   }

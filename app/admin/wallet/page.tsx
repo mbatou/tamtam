@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { formatFCFA } from "@/lib/utils";
 
 interface WalletData {
@@ -26,35 +25,23 @@ export default function AdminWalletPage() {
   const [loading, setLoading] = useState(true);
   const [rechargeAmount, setRechargeAmount] = useState("");
   const [showRecharge, setShowRecharge] = useState(false);
-  const supabase = createClient();
 
   useEffect(() => {
     loadWallet();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadWallet() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-
-    const { data: campaigns } = await supabase
-      .from("campaigns")
-      .select("id, title, budget, spent, status, created_at")
-      .eq("batteur_id", session.user.id)
-      .order("created_at", { ascending: false });
-
-    const allCampaigns = campaigns || [];
-    const totalBudget = allCampaigns.reduce((sum, c) => sum + (c.budget || 0), 0);
-    const totalSpent = allCampaigns.reduce((sum, c) => sum + (c.spent || 0), 0);
-    const activeCampaigns = allCampaigns.filter(c => c.status === "active").length;
-
-    setWallet({
-      balance: totalBudget - totalSpent,
-      totalSpent,
-      totalBudget,
-      activeCampaigns,
-    });
-    setTransactions(allCampaigns);
+    const res = await fetch("/api/admin/stats");
+    if (res.ok) {
+      const data = await res.json();
+      setWallet({
+        balance: (data.budgetTotal || 0) - (data.budgetSpent || 0),
+        totalSpent: data.budgetSpent || 0,
+        totalBudget: data.budgetTotal || 0,
+        activeCampaigns: data.activeRythmes || 0,
+      });
+      setTransactions(data.campaigns || []);
+    }
     setLoading(false);
   }
 
@@ -80,7 +67,6 @@ export default function AdminWalletPage() {
         </button>
       </div>
 
-      {/* Balance cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="glass-card p-4">
           <p className="text-xs text-white/40 font-semibold mb-1">Solde disponible</p>
@@ -100,14 +86,12 @@ export default function AdminWalletPage() {
         </div>
       </div>
 
-      {/* Recharge section */}
       {showRecharge && (
         <div className="glass-card p-6 mb-8">
           <h2 className="text-lg font-bold mb-4">Recharger le portefeuille</h2>
           <p className="text-sm text-white/50 mb-4">
             Sélectionnez un montant ou saisissez un montant personnalisé pour recharger votre portefeuille.
           </p>
-
           <div className="flex flex-wrap gap-3 mb-4">
             {presetAmounts.map((amount) => (
               <button
@@ -123,7 +107,6 @@ export default function AdminWalletPage() {
               </button>
             ))}
           </div>
-
           <div className="flex gap-3">
             <input
               type="number"
@@ -139,14 +122,12 @@ export default function AdminWalletPage() {
               Payer {rechargeAmount ? formatFCFA(parseInt(rechargeAmount)) : ""}
             </button>
           </div>
-
           <p className="text-xs text-white/30 mt-3">
             Paiement via Wave ou Orange Money. Le solde sera crédité instantanément.
           </p>
         </div>
       )}
 
-      {/* Transaction history */}
       <div className="glass-card overflow-hidden">
         <div className="px-5 py-4 border-b border-white/5">
           <h2 className="text-lg font-bold">Historique des dépenses</h2>
