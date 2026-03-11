@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatFCFA } from "@/lib/utils";
 import type { Campaign } from "@/lib/types";
@@ -9,67 +9,141 @@ export default function AdminCampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({
     title: "", description: "", destination_url: "", cpc: "", budget: "", starts_at: "", ends_at: "",
   });
+  const [creativeUrls, setCreativeUrls] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadCampaigns(); }, []);
 
   async function loadCampaigns() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-
     const res = await fetch(`/api/campaigns?batteur_id=${session.user.id}`);
     const data = await res.json();
     setCampaigns(Array.isArray(data) ? data : []);
     setLoading(false);
   }
 
-  async function createCampaign() {
+  function resetForm() {
+    setForm({ title: "", description: "", destination_url: "", cpc: "", budget: "", starts_at: "", ends_at: "" });
+    setCreativeUrls([]);
+    setEditingId(null);
+    setError(null);
+  }
+
+  function startEdit(campaign: Campaign) {
+    setForm({
+      title: campaign.title,
+      description: campaign.description || "",
+      destination_url: campaign.destination_url,
+      cpc: campaign.cpc.toString(),
+      budget: campaign.budget.toString(),
+      starts_at: campaign.starts_at ? campaign.starts_at.slice(0, 16) : "",
+      ends_at: campaign.ends_at ? campaign.ends_at.slice(0, 16) : "",
+    });
+    setCreativeUrls(campaign.creative_urls || []);
+    setEditingId(campaign.id);
+    setShowForm(true);
+    setError(null);
+  }
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    for (let i = 0; i < files.length; i++) {
+      const formData = new FormData();
+      formData.append("file", files[i]);
+
+      const res = await fetch("/api/campaigns/upload", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (res.ok && data.url) {
+        setCreativeUrls((prev) => [...prev, data.url]);
+      } else {
+        setError(data.error || "Erreur lors de l'upload");
+      }
+    }
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function removeCreative(index: number) {
+    setCreativeUrls((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function handleSubmit() {
     setSubmitting(true);
     setError(null);
 
     try {
+      const payload = {
+        ...(editingId ? { id: editingId } : {}),
+        title: form.title,
+        description: form.description || null,
+        destination_url: form.destination_url,
+        cpc: form.cpc,
+        budget: form.budget,
+        starts_at: form.starts_at || null,
+        ends_at: form.ends_at || null,
+        creative_urls: creativeUrls,
+      };
+
       const res = await fetch("/api/campaigns", {
-        method: "POST",
+        method: editingId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: form.title,
-          description: form.description || null,
-          destination_url: form.destination_url,
-          cpc: form.cpc,
-          budget: form.budget,
-          starts_at: form.starts_at || null,
-          ends_at: form.ends_at || null,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
-
       if (!res.ok) {
-        setError(data.error || "Erreur lors de la création");
+        setError(data.error || "Erreur");
         setSubmitting(false);
         return;
       }
 
-      setForm({ title: "", description: "", destination_url: "", cpc: "", budget: "", starts_at: "", ends_at: "" });
+      resetForm();
       setShowForm(false);
       setSubmitting(false);
       loadCampaigns();
-    } catch (err) {
-      console.error("Campaign creation error:", err);
+    } catch {
       setError("Erreur réseau. Veuillez réessayer.");
       setSubmitting(false);
     }
   }
 
+  async function deleteCampaign(id: string) {
+    if (!confirm("Supprimer ce rythme ? Cette action est irréversible.")) return;
+
+    const res = await fetch("/api/campaigns", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+
+    if (res.ok) {
+      loadCampaigns();
+    } else {
+      const data = await res.json();
+      alert(data.error || "Erreur lors de la suppression");
+    }
+  }
+
   async function toggleStatus(campaign: Campaign) {
     const newStatus = campaign.status === "active" ? "paused" : "active";
-    await supabase.from("campaigns").update({ status: newStatus }).eq("id", campaign.id);
+    await fetch("/api/campaigns", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: campaign.id, status: newStatus }),
+    });
     loadCampaigns();
   }
 
@@ -81,18 +155,24 @@ export default function AdminCampaignsPage() {
     <div className="p-6 max-w-6xl">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold">Rythmes</h1>
-        <button onClick={() => setShowForm(!showForm)} className="btn-primary text-sm">
+        <button
+          onClick={() => {
+            if (showForm) { resetForm(); setShowForm(false); }
+            else { resetForm(); setShowForm(true); }
+          }}
+          className="btn-primary text-sm"
+        >
           {showForm ? "Annuler" : "Nouveau Rythme"}
         </button>
       </div>
 
       {showForm && (
         <div className="glass-card p-6 mb-8">
-          <h2 className="text-lg font-bold mb-4">Lancer un Rythme</h2>
+          <h2 className="text-lg font-bold mb-4">{editingId ? "Modifier le Rythme" : "Lancer un Rythme"}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <label className="block text-xs font-semibold text-white/40 mb-2">Titre *</label>
-              <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Promo Ramadan 2024" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
+              <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Promo Ramadan 2026" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
             </div>
             <div className="md:col-span-2">
               <label className="block text-xs font-semibold text-white/40 mb-2">Description</label>
@@ -102,6 +182,52 @@ export default function AdminCampaignsPage() {
               <label className="block text-xs font-semibold text-white/40 mb-2">URL de destination *</label>
               <input type="url" value={form.destination_url} onChange={(e) => setForm({ ...form, destination_url: e.target.value })} placeholder="https://marque.sn/promo" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
             </div>
+
+            {/* Media Upload */}
+            <div className="md:col-span-2">
+              <label className="block text-xs font-semibold text-white/40 mb-2">Visuels de campagne (images/vidéos)</label>
+              <div className="flex flex-wrap gap-3 mb-3">
+                {creativeUrls.map((url, i) => (
+                  <div key={i} className="relative group">
+                    {url.match(/\.(mp4|webm)/) ? (
+                      <video src={url} className="w-24 h-24 object-cover rounded-xl border border-white/10" />
+                    ) : (
+                      <img src={url} alt={`Creative ${i + 1}`} className="w-24 h-24 object-cover rounded-xl border border-white/10" />
+                    )}
+                    <button
+                      onClick={() => removeCreative(i)}
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                    >
+                      x
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="w-24 h-24 rounded-xl border-2 border-dashed border-white/20 flex flex-col items-center justify-center gap-1 text-white/30 hover:text-white/50 hover:border-white/40 transition cursor-pointer"
+                >
+                  {uploading ? (
+                    <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                      <span className="text-[10px]">Ajouter</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"
+                multiple
+                onChange={handleUpload}
+                className="hidden"
+              />
+              <p className="text-xs text-white/20">JPG, PNG, WebP, GIF, MP4, WebM — Max 10 Mo par fichier</p>
+            </div>
+
             <div>
               <label className="block text-xs font-semibold text-white/40 mb-2">CPC (FCFA) *</label>
               <input type="number" value={form.cpc} onChange={(e) => setForm({ ...form, cpc: e.target.value })} placeholder="25" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
@@ -124,8 +250,8 @@ export default function AdminCampaignsPage() {
               {error}
             </div>
           )}
-          <button onClick={createCampaign} disabled={submitting || !form.title || !form.destination_url || !form.cpc || !form.budget} className="btn-primary mt-4 disabled:opacity-40">
-            {submitting ? "Création..." : "Lancer le Rythme"}
+          <button onClick={handleSubmit} disabled={submitting || !form.title || !form.destination_url || !form.cpc || !form.budget} className="btn-primary mt-4 disabled:opacity-40">
+            {submitting ? "Enregistrement..." : editingId ? "Enregistrer les modifications" : "Lancer le Rythme"}
           </button>
         </div>
       )}
@@ -136,6 +262,7 @@ export default function AdminCampaignsPage() {
             <thead>
               <tr className="border-b border-white/5">
                 <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">Titre</th>
+                <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">Visuels</th>
                 <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">Statut</th>
                 <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">Budget</th>
                 <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">CPC</th>
@@ -148,10 +275,29 @@ export default function AdminCampaignsPage() {
                 const progress = campaign.budget > 0 ? (campaign.spent / campaign.budget) * 100 : 0;
                 return (
                   <tr key={campaign.id} className="border-b border-white/5 hover:bg-white/[0.02]">
-                    <td className="px-5 py-4 font-semibold">{campaign.title}</td>
+                    <td className="px-5 py-4">
+                      <div className="font-semibold">{campaign.title}</div>
+                      {campaign.description && <div className="text-xs text-white/30 mt-0.5 line-clamp-1">{campaign.description}</div>}
+                    </td>
+                    <td className="px-5 py-4">
+                      {campaign.creative_urls && campaign.creative_urls.length > 0 ? (
+                        <div className="flex -space-x-2">
+                          {campaign.creative_urls.slice(0, 3).map((url, i) => (
+                            <img key={i} src={url} alt="" className="w-8 h-8 rounded-lg object-cover border-2 border-[#0a0a0a]" />
+                          ))}
+                          {campaign.creative_urls.length > 3 && (
+                            <span className="w-8 h-8 rounded-lg bg-white/10 border-2 border-[#0a0a0a] flex items-center justify-center text-[10px] text-white/40">
+                              +{campaign.creative_urls.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-white/20">—</span>
+                      )}
+                    </td>
                     <td className="px-5 py-4">
                       <span className={`badge-${campaign.status}`}>
-                        {campaign.status === "active" ? "Actif" : campaign.status === "paused" ? "Pausé" : campaign.status === "completed" ? "Terminé" : "Brouillon"}
+                        {campaign.status === "active" ? "Actif" : campaign.status === "paused" ? "Pausé" : campaign.status === "completed" ? "Terminé" : campaign.status === "draft" ? "Brouillon" : "Rejeté"}
                       </span>
                     </td>
                     <td className="px-5 py-4 text-white/60">{formatFCFA(campaign.spent)} / {formatFCFA(campaign.budget)}</td>
@@ -165,11 +311,19 @@ export default function AdminCampaignsPage() {
                       </div>
                     </td>
                     <td className="px-5 py-4">
-                      {(campaign.status === "active" || campaign.status === "paused") && (
-                        <button onClick={() => toggleStatus(campaign)} className="text-xs font-semibold text-primary hover:underline">
-                          {campaign.status === "active" ? "Pauser" : "Activer"}
+                      <div className="flex items-center gap-2">
+                        {(campaign.status === "active" || campaign.status === "paused") && (
+                          <button onClick={() => toggleStatus(campaign)} className="text-xs font-semibold text-primary hover:underline">
+                            {campaign.status === "active" ? "Pauser" : "Activer"}
+                          </button>
+                        )}
+                        <button onClick={() => startEdit(campaign)} className="text-xs font-semibold text-white/40 hover:text-white hover:underline">
+                          Modifier
                         </button>
-                      )}
+                        <button onClick={() => deleteCampaign(campaign.id)} className="text-xs font-semibold text-red-400/60 hover:text-red-400 hover:underline">
+                          Supprimer
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

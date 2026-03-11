@@ -14,36 +14,31 @@ export default function EchoDashboard() {
   const [availableCampaigns, setAvailableCampaigns] = useState<Campaign[]>([]);
   const [tab, setTab] = useState("active");
   const [loading, setLoading] = useState(true);
+  const [accepting, setAccepting] = useState<string | null>(null);
   const supabase = createClient();
   const { showToast, ToastComponent } = useToast();
 
   const loadData = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-
     const [userRes, linksRes, campaignsRes] = await Promise.all([
-      supabase.from("users").select("*").eq("id", session.user.id).single(),
-      supabase
-        .from("tracked_links")
-        .select("*, campaigns(*)")
-        .eq("echo_id", session.user.id)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("campaigns")
-        .select("*")
-        .eq("status", "active")
-        .order("created_at", { ascending: false }),
+      fetch("/api/echo/user"),
+      fetch("/api/echo/links"),
+      fetch("/api/echo/campaigns"),
     ]);
 
-    if (userRes.data) setUser(userRes.data);
-    if (linksRes.data) setActiveLinks(linksRes.data as TrackedLinkWithCampaign[]);
+    const userData = await userRes.json();
+    const linksData = await linksRes.json();
+    const campaignsData = await campaignsRes.json();
 
-    const acceptedIds = new Set(linksRes.data?.map((l) => l.campaign_id) || []);
-    const available = (campaignsRes.data || []).filter((c) => !acceptedIds.has(c.id));
-    setAvailableCampaigns(available);
+    if (userRes.ok) setUser(userData);
+    const links = Array.isArray(linksData) ? linksData as TrackedLinkWithCampaign[] : [];
+    setActiveLinks(links);
+
+    const acceptedIds = new Set(links.map((l) => l.campaign_id));
+    const campaigns = Array.isArray(campaignsData) ? campaignsData : [];
+    setAvailableCampaigns(campaigns.filter((c: Campaign) => !acceptedIds.has(c.id)));
 
     setLoading(false);
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -60,29 +55,22 @@ export default function EchoDashboard() {
   }, [loadData, supabase]);
 
   async function acceptCampaign(campaignId: string) {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    setAccepting(campaignId);
 
-    let shortCode = Math.random().toString(36).substring(2, 8);
-    const { error } = await supabase.from("tracked_links").insert({
-      campaign_id: campaignId,
-      echo_id: session.user.id,
-      short_code: shortCode,
+    const res = await fetch("/api/echo/links", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ campaign_id: campaignId }),
     });
 
-    if (error) {
-      if (error.code === "23505") {
-        shortCode = Math.random().toString(36).substring(2, 8);
-        await supabase.from("tracked_links").insert({
-          campaign_id: campaignId,
-          echo_id: session.user.id,
-          short_code: shortCode,
-        });
-      }
+    if (res.ok) {
+      showToast("Rythme accepté !", "success");
+      await loadData();
+    } else {
+      const data = await res.json();
+      showToast(data.error || "Erreur", "error");
     }
-
-    showToast("Rythme accepté !", "success");
-    loadData();
+    setAccepting(null);
   }
 
   function copyLink(shortCode: string) {
@@ -124,7 +112,7 @@ export default function EchoDashboard() {
         Salut {user?.name?.split(" ")[0]} 👋
       </p>
 
-      {/* Earnings card — ALIVE */}
+      {/* Earnings card */}
       <div className="earnings-card-bg rounded-2xl p-6 mb-6 border border-primary/20 animate-pulse-glow">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -183,6 +171,18 @@ export default function EchoDashboard() {
           ) : (
             activeLinks.map((link, i) => (
               <div key={link.id} className="glass-card p-5 animate-slide-up" style={{ opacity: 0, animationDelay: `${i * 0.1}s` }}>
+                {/* Campaign creatives */}
+                {link.campaigns?.creative_urls && link.campaigns.creative_urls.length > 0 && (
+                  <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+                    {link.campaigns.creative_urls.slice(0, 3).map((url, j) => (
+                      url.match(/\.(mp4|webm)/) ? (
+                        <video key={j} src={url} className="w-20 h-14 object-cover rounded-lg border border-white/10 flex-shrink-0" />
+                      ) : (
+                        <img key={j} src={url} alt="" className="w-20 h-14 object-cover rounded-lg border border-white/10 flex-shrink-0" />
+                      )
+                    ))}
+                  </div>
+                )}
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <h3 className="font-bold text-sm">{link.campaigns?.title}</h3>
@@ -231,6 +231,18 @@ export default function EchoDashboard() {
           ) : (
             availableCampaigns.map((campaign, i) => (
               <div key={campaign.id} className="glass-card p-5 animate-slide-up" style={{ opacity: 0, animationDelay: `${i * 0.1}s` }}>
+                {/* Campaign creatives */}
+                {campaign.creative_urls && campaign.creative_urls.length > 0 && (
+                  <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+                    {campaign.creative_urls.map((url, j) => (
+                      url.match(/\.(mp4|webm)/) ? (
+                        <video key={j} src={url} className="w-28 h-20 object-cover rounded-xl border border-white/10 flex-shrink-0" controls />
+                      ) : (
+                        <img key={j} src={url} alt={`${campaign.title} ${j + 1}`} className="w-28 h-20 object-cover rounded-xl border border-white/10 flex-shrink-0" />
+                      )
+                    ))}
+                  </div>
+                )}
                 <h3 className="font-bold text-sm mb-1">{campaign.title}</h3>
                 <p className="text-xs text-white/30 mb-3">{campaign.description}</p>
                 <div className="flex items-center gap-4 mb-4 text-xs text-white/40">
@@ -241,9 +253,10 @@ export default function EchoDashboard() {
                 </div>
                 <button
                   onClick={() => acceptCampaign(campaign.id)}
-                  className="btn-primary w-full text-xs !py-2.5 text-center"
+                  disabled={accepting === campaign.id}
+                  className="btn-primary w-full text-xs !py-2.5 text-center disabled:opacity-50"
                 >
-                  Accepter le Rythme
+                  {accepting === campaign.id ? "Acceptation..." : "Accepter le Rythme"}
                 </button>
               </div>
             ))
