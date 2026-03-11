@@ -13,8 +13,6 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("+221");
   const [city, setCity] = useState("");
   const [provider, setProvider] = useState<"wave" | "orange_money" | "">("");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -41,36 +39,26 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
 
-    if (!otpSent) {
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) {
-        setError(error.message);
-      } else {
-        setOtpSent(true);
-      }
-    } else {
-      const { data, error: verifyError } = await supabase.auth.verifyOtp({
-        email,
-        token: otp,
-        type: "signup",
+    const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
+    if (signUpError) {
+      setError(signUpError.message);
+      setLoading(false);
+      return;
+    }
+
+    if (data.user) {
+      const { error: insertError } = await supabase.from("users").insert({
+        id: data.user.id,
+        role: "echo",
+        name,
+        phone: phone.length > 4 ? phone : null,
+        city: city || null,
+        mobile_money_provider: provider,
       });
-      if (verifyError) {
-        setError(verifyError.message);
-      } else if (data.user) {
-        // Create user profile
-        const { error: insertError } = await supabase.from("users").insert({
-          id: data.user.id,
-          role: "echo",
-          name,
-          phone: phone.length > 4 ? phone : null,
-          city: city || null,
-          mobile_money_provider: provider,
-        });
-        if (insertError) {
-          setError(insertError.message);
-        } else {
-          router.push("/dashboard");
-        }
+      if (insertError) {
+        setError(insertError.message);
+      } else {
+        router.push("/dashboard");
       }
     }
     setLoading(false);
@@ -215,22 +203,6 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {otpSent && (
-                <div>
-                  <label className="block text-xs font-semibold text-white/40 mb-2">
-                    Code de confirmation envoyé à {email}
-                  </label>
-                  <input
-                    type="text"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    placeholder="123456"
-                    maxLength={6}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-center tracking-[0.5em] focus:outline-none focus:border-primary transition"
-                  />
-                </div>
-              )}
-
               <div className="flex gap-3">
                 <button
                   onClick={() => { setStep(1); setError(""); }}
@@ -243,11 +215,7 @@ export default function RegisterPage() {
                   disabled={loading}
                   className="btn-primary flex-1 text-center disabled:opacity-50"
                 >
-                  {loading
-                    ? "..."
-                    : otpSent
-                    ? "Vérifier"
-                    : "Créer mon compte"}
+                  {loading ? "..." : "Créer mon compte"}
                 </button>
               </div>
             </div>
