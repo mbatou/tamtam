@@ -14,7 +14,7 @@ export async function POST() {
 
   if (recentClicks) {
     const ipLinkMap = new Map<string, string[]>();
-    recentClicks.forEach((click) => {
+    recentClicks.forEach((click: { id: string; ip_address: string | null; link_id: string; is_valid: boolean; created_at: string }) => {
       if (!click.ip_address) return;
       const key = `${click.ip_address}:${click.link_id}`;
       const existing = ipLinkMap.get(key) || [];
@@ -43,11 +43,11 @@ export async function POST() {
 
   if (allValid) {
     const botIds = allValid
-      .filter((c) => {
+      .filter((c: { id: string; user_agent: string | null }) => {
         const ua = (c.user_agent || "").toLowerCase();
         return botPatterns.some((p) => ua.includes(p));
       })
-      .map((c) => c.id);
+      .map((c: { id: string; user_agent: string | null }) => c.id);
 
     if (botIds.length > 0) {
       await supabase.from("clicks").update({ is_valid: false }).in("id", botIds);
