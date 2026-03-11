@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import SoundWave from "@/components/ui/SoundWave";
 
@@ -12,7 +11,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const router = useRouter();
   const supabase = createClient();
 
   async function handleLogin() {
@@ -25,7 +23,7 @@ export default function LoginPage() {
     if (error) {
       setError(error.message);
     } else {
-      router.push(mode === "echo" ? "/dashboard" : "/admin/dashboard");
+      window.location.href = mode === "echo" ? "/dashboard" : "/admin/dashboard";
     }
     setLoading(false);
   }

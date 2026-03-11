@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request: { headers: request.headers },
+  let supabaseResponse = NextResponse.next({
+    request,
   });
 
   const supabase = createServerClient(
@@ -11,82 +11,79 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
+        getAll() {
+          return request.cookies.getAll();
         },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({ name, value, ...options });
-          response = NextResponse.next({
-            request: { headers: request.headers },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            request.cookies.set(name, value)
+          );
+          supabaseResponse = NextResponse.next({
+            request,
           });
-          response.cookies.set({ name, value, ...options });
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({ name, value: "", ...options });
-          response = NextResponse.next({
-            request: { headers: request.headers },
-          });
-          response.cookies.set({ name, value: "", ...options });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          );
         },
       },
     }
   );
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
 
   // Protect echo routes
   if (pathname.startsWith("/dashboard") || pathname.startsWith("/rythmes") || pathname.startsWith("/earnings") || pathname.startsWith("/profil")) {
-    if (!session) {
+    if (!user) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
-    const { data: user } = await supabase
+    const { data: dbUser } = await supabase
       .from("users")
       .select("role")
-      .eq("id", session.user.id)
+      .eq("id", user.id)
       .single();
 
-    if (!user || user.role !== "echo") {
+    if (!dbUser || dbUser.role !== "echo") {
       return NextResponse.redirect(new URL("/login", request.url));
     }
   }
 
   // Protect admin routes
   if (pathname.startsWith("/admin")) {
-    if (!session) {
+    if (!user) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
-    const { data: user } = await supabase
+    const { data: dbUser } = await supabase
       .from("users")
       .select("role")
-      .eq("id", session.user.id)
+      .eq("id", user.id)
       .single();
 
-    if (!user || !["admin", "superadmin"].includes(user.role)) {
+    if (!dbUser || !["admin", "superadmin"].includes(dbUser.role)) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
   }
 
   // Protect superadmin routes
   if (pathname.startsWith("/superadmin")) {
-    if (!session) {
+    if (!user) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
-    const { data: user } = await supabase
+    const { data: dbUser } = await supabase
       .from("users")
       .select("role")
-      .eq("id", session.user.id)
+      .eq("id", user.id)
       .single();
 
-    if (!user || user.role !== "superadmin") {
+    if (!dbUser || dbUser.role !== "superadmin") {
       return NextResponse.redirect(new URL("/login", request.url));
     }
   }
 
-  return response;
+  return supabaseResponse;
 }
 
 export const config = {
