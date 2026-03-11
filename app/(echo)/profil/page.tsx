@@ -3,25 +3,42 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { formatFCFA } from "@/lib/utils";
 import type { User } from "@/lib/types";
 
 export default function ProfilPage() {
   const [user, setUser] = useState<User | null>(null);
+  const [stats, setStats] = useState({ totalClicks: 0, activeCampaigns: 0, totalEarned: 0 });
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
   const router = useRouter();
 
   useEffect(() => {
     loadData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadData() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    const [userRes, linksRes] = await Promise.all([
+      fetch("/api/echo/user"),
+      fetch("/api/echo/links"),
+    ]);
 
-    const { data } = await supabase.from("users").select("*").eq("id", session.user.id).single();
-    if (data) setUser(data);
+    if (userRes.ok) {
+      const userData = await userRes.json();
+      setUser(userData);
+    }
+
+    if (linksRes.ok) {
+      const linksData = await linksRes.json();
+      const links = Array.isArray(linksData) ? linksData : [];
+      const totalClicks = links.reduce((sum: number, l: { click_count: number }) => sum + l.click_count, 0);
+      const activeCampaigns = links.filter((l: { campaigns?: { status: string } }) => l.campaigns?.status === "active").length;
+      const totalEarned = links.reduce((sum: number, l: { click_count: number; campaigns?: { cpc: number } }) => {
+        return sum + Math.floor(l.click_count * (l.campaigns?.cpc || 0) * 0.75);
+      }, 0);
+      setStats({ totalClicks, activeCampaigns, totalEarned });
+    }
+
     setLoading(false);
   }
 
@@ -51,7 +68,31 @@ export default function ProfilPage() {
         {user?.city && <p className="text-sm text-white/30">{user.city}</p>}
       </div>
 
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="glass-card p-4 text-center">
+          <p className="text-2xl font-black">{stats.totalClicks}</p>
+          <p className="text-[10px] text-white/40 font-semibold">Résonances</p>
+        </div>
+        <div className="glass-card p-4 text-center">
+          <p className="text-2xl font-black">{stats.activeCampaigns}</p>
+          <p className="text-[10px] text-white/40 font-semibold">Rythmes actifs</p>
+        </div>
+        <div className="glass-card p-4 text-center">
+          <p className="text-2xl font-black text-accent">{formatFCFA(stats.totalEarned)}</p>
+          <p className="text-[10px] text-white/40 font-semibold">Gagné</p>
+        </div>
+      </div>
+
       <div className="glass-card p-6 mb-6 space-y-4">
+        <div className="flex justify-between">
+          <span className="text-sm text-white/40">Solde</span>
+          <span className="text-sm font-bold text-primary">{formatFCFA(user?.balance || 0)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-sm text-white/40">Total gagné</span>
+          <span className="text-sm font-bold text-accent">{formatFCFA(user?.total_earned || 0)}</span>
+        </div>
         <div className="flex justify-between">
           <span className="text-sm text-white/40">Moyen de paiement</span>
           <span className="text-sm font-semibold">
@@ -59,8 +100,8 @@ export default function ProfilPage() {
           </span>
         </div>
         <div className="flex justify-between">
-          <span className="text-sm text-white/40">Rôle</span>
-          <span className="text-sm font-semibold capitalize">{user?.role}</span>
+          <span className="text-sm text-white/40">Ville</span>
+          <span className="text-sm font-semibold">{user?.city || "—"}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-sm text-white/40">Membre depuis</span>
