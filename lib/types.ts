@@ -77,6 +77,20 @@ export interface PlatformSetting {
   updated_by: string | null;
 }
 
+export interface Payment {
+  id: string;
+  user_id: string;
+  campaign_id: string | null;
+  amount: number;
+  ref_command: string;
+  status: "pending" | "completed" | "cancelled" | "failed";
+  payment_method: string | null;
+  client_phone: string | null;
+  paytech_token: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
 // Join types
 export interface TrackedLinkWithCampaign extends TrackedLink {
   campaigns: Campaign;
