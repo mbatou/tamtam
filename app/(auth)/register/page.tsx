@@ -9,6 +9,7 @@ export default function RegisterPage() {
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("+221");
   const [city, setCity] = useState("");
   const [provider, setProvider] = useState<"wave" | "orange_money" | "">("");
@@ -20,8 +21,12 @@ export default function RegisterPage() {
   const supabase = createClient();
 
   async function handleStep1() {
-    if (!name.trim() || !email.trim()) {
+    if (!name.trim() || !email.trim() || !password.trim()) {
       setError("Remplis tous les champs obligatoires.");
+      return;
+    }
+    if (password.length < 6) {
+      setError("Le mot de passe doit contenir au moins 6 caractères.");
       return;
     }
     setError("");
@@ -37,7 +42,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     if (!otpSent) {
-      const { error } = await supabase.auth.signInWithOtp({ email });
+      const { error } = await supabase.auth.signUp({ email, password });
       if (error) {
         setError(error.message);
       } else {
@@ -47,7 +52,7 @@ export default function RegisterPage() {
       const { data, error: verifyError } = await supabase.auth.verifyOtp({
         email,
         token: otp,
-        type: "email",
+        type: "signup",
       });
       if (verifyError) {
         setError(verifyError.message);
@@ -140,6 +145,18 @@ export default function RegisterPage() {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-white/40 mb-2">
+                  Mot de passe *
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-white/40 mb-2">
                   Téléphone
                 </label>
                 <input
@@ -201,7 +218,7 @@ export default function RegisterPage() {
               {otpSent && (
                 <div>
                   <label className="block text-xs font-semibold text-white/40 mb-2">
-                    Code OTP envoyé à {email}
+                    Code de confirmation envoyé à {email}
                   </label>
                   <input
                     type="text"
@@ -230,7 +247,7 @@ export default function RegisterPage() {
                     ? "..."
                     : otpSent
                     ? "Vérifier"
-                    : "Recevoir le code"}
+                    : "Créer mon compte"}
                 </button>
               </div>
             </div>
