@@ -1,21 +1,36 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { formatFCFA } from "@/lib/utils";
-import type { User } from "@/lib/types";
+
+interface EchoWithStats {
+  id: string;
+  name: string;
+  phone: string;
+  city: string;
+  mobile_money_provider: string;
+  balance: number;
+  total_earned: number;
+  status: string;
+  created_at: string;
+  brand_clicks: number;
+  brand_earned: number;
+  campaign_count: number;
+  campaign_names: string[];
+}
 
 export default function AdminEchosPage() {
-  const [echos, setEchos] = useState<User[]>([]);
+  const [echos, setEchos] = useState<EchoWithStats[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadEchos(); }, []);
 
   async function loadEchos() {
-    const { data } = await supabase.from("users").select("*").eq("role", "echo").order("total_earned", { ascending: false });
-    setEchos(data || []);
+    const res = await fetch("/api/admin/echos");
+    if (res.ok) {
+      const data = await res.json();
+      setEchos(Array.isArray(data) ? data : []);
+    }
     setLoading(false);
   }
 
@@ -25,7 +40,10 @@ export default function AdminEchosPage() {
 
   return (
     <div className="p-6 max-w-6xl">
-      <h1 className="text-2xl font-bold mb-8">Échos</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-2xl font-bold">Échos</h1>
+        <span className="text-sm text-white/40">{echos.length} écho{echos.length !== 1 ? "s" : ""} engagé{echos.length !== 1 ? "s" : ""}</span>
+      </div>
       <div className="glass-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -35,9 +53,10 @@ export default function AdminEchosPage() {
                 <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">Nom</th>
                 <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">Téléphone</th>
                 <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">Ville</th>
+                <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">Campagnes</th>
+                <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">Clics</th>
+                <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">Gagné (vous)</th>
                 <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">Paiement</th>
-                <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">Solde</th>
-                <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">Total gagné</th>
               </tr>
             </thead>
             <tbody>
@@ -49,15 +68,21 @@ export default function AdminEchosPage() {
                   <td className="px-5 py-4 font-semibold">{echo.name}</td>
                   <td className="px-5 py-4 text-white/60">{echo.phone}</td>
                   <td className="px-5 py-4 text-white/60">{echo.city || "—"}</td>
+                  <td className="px-5 py-4">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-sm font-bold">{echo.campaign_count}</span>
+                      <span className="text-[10px] text-white/30 line-clamp-1">{echo.campaign_names.join(", ")}</span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-4 font-semibold">{echo.brand_clicks}</td>
+                  <td className="px-5 py-4 text-accent font-bold">{formatFCFA(echo.brand_earned)}</td>
                   <td className="px-5 py-4 text-xs font-semibold">{echo.mobile_money_provider === "wave" ? "Wave" : echo.mobile_money_provider === "orange_money" ? "Orange Money" : "—"}</td>
-                  <td className="px-5 py-4">{formatFCFA(echo.balance)}</td>
-                  <td className="px-5 py-4 text-accent font-bold">{formatFCFA(echo.total_earned)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        {echos.length === 0 && <div className="p-8 text-center"><p className="text-white/30 text-sm">Aucun écho enregistré.</p></div>}
+        {echos.length === 0 && <div className="p-8 text-center"><p className="text-white/30 text-sm">Aucun écho engagé dans vos campagnes pour le moment.</p></div>}
       </div>
     </div>
   );
