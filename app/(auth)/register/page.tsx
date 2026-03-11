@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import SoundWave from "@/components/ui/SoundWave";
 import ProgressBar from "@/components/ui/ProgressBar";
@@ -17,7 +16,6 @@ export default function RegisterPage() {
   const [provider, setProvider] = useState<"wave" | "orange_money" | "">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const router = useRouter();
   const supabase = createClient();
 
   async function handleStep1() {
@@ -60,7 +58,7 @@ export default function RegisterPage() {
       if (insertError) {
         setError(insertError.message);
       } else {
-        router.push("/dashboard");
+        window.location.href = "/dashboard";
       }
     }
     setLoading(false);
