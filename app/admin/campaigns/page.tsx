@@ -23,12 +23,9 @@ export default function AdminCampaignsPage() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    const { data } = await supabase
-      .from("campaigns")
-      .select("*")
-      .eq("batteur_id", session.user.id)
-      .order("created_at", { ascending: false });
-    setCampaigns(data || []);
+    const res = await fetch(`/api/campaigns?batteur_id=${session.user.id}`);
+    const data = await res.json();
+    setCampaigns(Array.isArray(data) ? data : []);
     setLoading(false);
   }
 
@@ -36,36 +33,38 @@ export default function AdminCampaignsPage() {
     setSubmitting(true);
     setError(null);
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      setError("Session expirée. Veuillez vous reconnecter.");
+    try {
+      const res = await fetch("/api/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: form.title,
+          description: form.description || null,
+          destination_url: form.destination_url,
+          cpc: form.cpc,
+          budget: form.budget,
+          starts_at: form.starts_at || null,
+          ends_at: form.ends_at || null,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Erreur lors de la création");
+        setSubmitting(false);
+        return;
+      }
+
+      setForm({ title: "", description: "", destination_url: "", cpc: "", budget: "", starts_at: "", ends_at: "" });
+      setShowForm(false);
       setSubmitting(false);
-      return;
-    }
-
-    const { error: insertError } = await supabase.from("campaigns").insert({
-      batteur_id: session.user.id,
-      title: form.title,
-      description: form.description || null,
-      destination_url: form.destination_url,
-      cpc: parseInt(form.cpc),
-      budget: parseInt(form.budget),
-      status: "active",
-      starts_at: form.starts_at || null,
-      ends_at: form.ends_at || null,
-    });
-
-    if (insertError) {
-      console.error("Campaign creation error:", insertError);
-      setError(insertError.message);
+      loadCampaigns();
+    } catch (err) {
+      console.error("Campaign creation error:", err);
+      setError("Erreur réseau. Veuillez réessayer.");
       setSubmitting(false);
-      return;
     }
-
-    setForm({ title: "", description: "", destination_url: "", cpc: "", budget: "", starts_at: "", ends_at: "" });
-    setShowForm(false);
-    setSubmitting(false);
-    loadCampaigns();
   }
 
   async function toggleStatus(campaign: Campaign) {
