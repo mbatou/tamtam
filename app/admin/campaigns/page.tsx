@@ -13,23 +13,37 @@ export default function AdminCampaignsPage() {
     title: "", description: "", destination_url: "", cpc: "", budget: "", starts_at: "", ends_at: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadCampaigns(); }, []);
 
   async function loadCampaigns() {
-    const { data } = await supabase.from("campaigns").select("*").order("created_at", { ascending: false });
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const { data } = await supabase
+      .from("campaigns")
+      .select("*")
+      .eq("batteur_id", session.user.id)
+      .order("created_at", { ascending: false });
     setCampaigns(data || []);
     setLoading(false);
   }
 
   async function createCampaign() {
     setSubmitting(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    setError(null);
 
-    await supabase.from("campaigns").insert({
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setError("Session expirée. Veuillez vous reconnecter.");
+      setSubmitting(false);
+      return;
+    }
+
+    const { error: insertError } = await supabase.from("campaigns").insert({
       batteur_id: session.user.id,
       title: form.title,
       description: form.description || null,
@@ -40,6 +54,13 @@ export default function AdminCampaignsPage() {
       starts_at: form.starts_at || null,
       ends_at: form.ends_at || null,
     });
+
+    if (insertError) {
+      console.error("Campaign creation error:", insertError);
+      setError(insertError.message);
+      setSubmitting(false);
+      return;
+    }
 
     setForm({ title: "", description: "", destination_url: "", cpc: "", budget: "", starts_at: "", ends_at: "" });
     setShowForm(false);
@@ -99,7 +120,12 @@ export default function AdminCampaignsPage() {
               <input type="datetime-local" value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
             </div>
           </div>
-          <button onClick={createCampaign} disabled={submitting || !form.title || !form.destination_url || !form.cpc || !form.budget} className="btn-primary mt-6 disabled:opacity-40">
+          {error && (
+            <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+          <button onClick={createCampaign} disabled={submitting || !form.title || !form.destination_url || !form.cpc || !form.budget} className="btn-primary mt-4 disabled:opacity-40">
             {submitting ? "Création..." : "Lancer le Rythme"}
           </button>
         </div>
