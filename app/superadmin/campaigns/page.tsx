@@ -75,15 +75,6 @@ export default function CampaignModerationPage() {
     return true;
   });
 
-  // Get echo count per campaign
-  async function getEchoCount(campaignId: string): Promise<number> {
-    const { count } = await supabase
-      .from("tracked_links")
-      .select("*", { count: "exact", head: true })
-      .eq("campaign_id", campaignId);
-    return count || 0;
-  }
-
   if (loading) {
     return (
       <div className="p-6 space-y-4">

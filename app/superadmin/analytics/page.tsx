@@ -7,8 +7,6 @@ import StatCard from "@/components/StatCard";
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -89,9 +87,10 @@ export default function AnalyticsPage() {
     });
 
     setTopCampaigns(
-      (campaignsRes.data || []).map((c: { id: string; title: string; spent: number; cpc: number; users: { name: string } | null }) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (campaignsRes.data || []).map((c: any) => ({
         title: c.title,
-        name: c.users?.name || "—",
+        name: Array.isArray(c.users) ? c.users[0]?.name || "—" : c.users?.name || "—",
         clicks: c.cpc > 0 ? Math.floor(c.spent / c.cpc) : 0,
         echos: echoCountMap.get(c.id) || 0,
       }))
@@ -153,7 +152,8 @@ export default function AnalyticsPage() {
               <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip
                 contentStyle={{ background: "#1A1A2E", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
-                formatter={(value: number) => formatFCFA(value)}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                formatter={(value: any) => formatFCFA(Number(value))}
               />
               <Bar dataKey="revenue" fill="url(#gradTeal)" radius={[4, 4, 0, 0]} />
               <defs>

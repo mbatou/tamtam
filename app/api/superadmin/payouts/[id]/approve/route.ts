@@ -13,7 +13,7 @@ export async function POST(
       p_status: "sent",
     });
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Failed to process payout" }, { status: 500 });
   }
 }

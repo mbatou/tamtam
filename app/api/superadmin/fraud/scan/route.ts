@@ -65,9 +65,12 @@ export async function POST() {
   if (selfClickCandidates) {
     // Group by echo and check if same IP is used across many of their links
     const echoIPMap = new Map<string, Map<string, string[]>>();
-    selfClickCandidates.forEach((c: { id: string; ip_address: string | null; tracked_links: { echo_id: string } | null }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    selfClickCandidates.forEach((c: any) => {
       if (!c.ip_address || !c.tracked_links) return;
-      const echoId = c.tracked_links.echo_id;
+      const link = Array.isArray(c.tracked_links) ? c.tracked_links[0] : c.tracked_links;
+      if (!link) return;
+      const echoId = link.echo_id;
       if (!echoIPMap.has(echoId)) echoIPMap.set(echoId, new Map());
       const ipMap = echoIPMap.get(echoId)!;
       const ids = ipMap.get(c.ip_address) || [];
