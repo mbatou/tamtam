@@ -55,7 +55,7 @@ export default function EchoBottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className="flex flex-col items-center gap-1 py-1 px-3"
+              className="flex flex-col items-center gap-1 py-1 px-3 relative"
             >
               {item.icon(active)}
               <span
@@ -65,6 +65,9 @@ export default function EchoBottomNav() {
               >
                 {item.label}
               </span>
+              {active && (
+                <div className="absolute -bottom-2 w-8 h-0.5 bg-gradient-primary rounded-full" />
+              )}
             </Link>
           );
         })}

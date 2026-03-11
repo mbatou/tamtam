@@ -65,11 +65,16 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="p-6 max-w-6xl space-y-4">
+        <div className="skeleton h-8 w-48 rounded-xl" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => <div key={i} className="skeleton h-24 rounded-xl" />)}
+        </div>
       </div>
     );
   }
+
+  const medals = ["🥇", "🥈", "🥉"];
 
   return (
     <div className="p-6 max-w-6xl">
@@ -99,16 +104,23 @@ export default function AdminDashboard() {
             <p className="text-white/30 text-sm">Aucun écho enregistré.</p>
           ) : (
             topEchos.map((echo, i) => (
-              <div key={echo.id} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+              <div
+                key={echo.id}
+                className={`flex items-center justify-between py-3 px-3 rounded-xl border border-transparent transition ${
+                  i === 0 ? "bg-primary/5 border-primary/20" : "border-b border-white/5"
+                }`}
+              >
                 <div className="flex items-center gap-3">
-                  <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                  <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                     i < 3 ? "bg-gradient-primary text-white" : "bg-white/5 text-white/40"
                   }`}>
-                    {i + 1}
+                    {i < 3 ? medals[i] : i + 1}
                   </span>
                   <span className="text-sm font-semibold">{echo.name}</span>
                 </div>
-                <span className="text-sm font-bold text-accent">{formatFCFA(echo.total_earned)}</span>
+                <span className={`text-sm font-bold ${i === 0 ? "text-primary text-base" : "text-accent"}`}>
+                  {formatFCFA(echo.total_earned)}
+                </span>
               </div>
             ))
           )}

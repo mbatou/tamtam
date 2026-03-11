@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import SoundWave from "@/components/ui/SoundWave";
 
 export default function LoginPage() {
   const [mode, setMode] = useState<"echo" | "batteur">("echo");
@@ -30,36 +31,43 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6">
+    <div className="min-h-screen flex items-center justify-center px-6 bg-gradient-mesh">
       <div className="w-full max-w-md">
-        <Link href="/" className="block text-center mb-10">
+        <Link href="/" className="flex items-center justify-center gap-3 mb-10">
           <span className="text-3xl font-black gradient-text">Tamtam</span>
+          <SoundWave bars={5} className="h-5 opacity-60" />
         </Link>
 
         {/* Mode toggle */}
         <div className="flex mb-8 glass-card p-1">
           <button
             onClick={() => { setMode("echo"); setError(""); }}
-            className={`flex-1 py-3 rounded-xl text-sm font-bold transition ${
-              mode === "echo" ? "bg-gradient-primary text-white" : "text-white/40"
+            className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${
+              mode === "echo" ? "bg-gradient-primary text-white shadow-lg" : "text-white/40"
             }`}
           >
             Écho
           </button>
           <button
             onClick={() => { setMode("batteur"); setError(""); }}
-            className={`flex-1 py-3 rounded-xl text-sm font-bold transition ${
-              mode === "batteur" ? "bg-gradient-secondary text-white" : "text-white/40"
+            className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${
+              mode === "batteur" ? "bg-gradient-secondary text-white shadow-lg" : "text-white/40"
             }`}
           >
             Batteur
           </button>
         </div>
 
-        <div className="glass-card p-8">
-          <h1 className="text-2xl font-bold mb-6">
+        <div className="glass-card p-8 animate-slide-up" style={{ opacity: 0 }}>
+          <h1 className="text-2xl font-bold mb-2">
             {mode === "echo" ? "Connexion Écho" : "Connexion Batteur"}
           </h1>
+          <p className="text-xs text-white/30 mb-6">
+            {mode === "echo"
+              ? "Utilise ton email pour te connecter"
+              : "Accède à ton espace marque"
+            }
+          </p>
 
           {error && (
             <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
@@ -99,7 +107,7 @@ export default function LoginPage() {
             <button
               onClick={handleLogin}
               disabled={loading}
-              className={`w-full py-3 rounded-btn font-bold text-white disabled:opacity-50 transition hover:opacity-90 ${
+              className={`w-full py-3 rounded-btn font-bold text-white disabled:opacity-50 transition-all hover:opacity-90 hover:-translate-y-0.5 hover:shadow-lg ${
                 mode === "echo" ? "bg-gradient-primary" : "bg-gradient-secondary"
               }`}
             >

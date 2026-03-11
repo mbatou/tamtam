@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import SoundWave from "@/components/ui/SoundWave";
 
 function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: string }) {
   const [count, setCount] = useState(0);
@@ -24,9 +25,23 @@ function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: str
   }, [target]);
 
   return (
-    <span className="text-3xl md:text-4xl font-black gradient-text animate-count">
+    <span className="text-4xl md:text-5xl font-black gradient-text animate-count">
       {new Intl.NumberFormat("fr-FR").format(count)}{suffix}
     </span>
+  );
+}
+
+function RippleCircles() {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div
+          key={i}
+          className="ripple-circle absolute w-40 h-40"
+          style={{ animationDelay: `${i * 0.8}s` }}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -35,7 +50,10 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
-        <span className="text-2xl font-black gradient-text">Tamtam</span>
+        <div className="flex items-center gap-3">
+          <span className="text-2xl font-black gradient-text">Tamtam</span>
+          <SoundWave bars={5} className="h-5 opacity-60" />
+        </div>
         <div className="flex items-center gap-4">
           <Link href="/login" className="text-sm font-semibold text-white/60 hover:text-white transition">
             Connexion
@@ -47,26 +65,29 @@ export default function LandingPage() {
       </header>
 
       {/* Hero */}
-      <section className="px-6 py-20 md:py-32 max-w-7xl mx-auto text-center">
-        <h1 className="text-4xl md:text-6xl lg:text-7xl font-black leading-tight mb-6">
-          Ton statut a de la{" "}
-          <span className="gradient-text">valeur</span>
-        </h1>
-        <p className="text-lg md:text-xl text-white/50 max-w-2xl mx-auto mb-10">
-          Partage des liens de marques sur ton WhatsApp Status et gagne de l&apos;argent
-          pour chaque clic. Simple, rapide, transparent.
-        </p>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link href="/register" className="btn-primary text-lg px-10 py-4">
-            Deviens un Écho
-          </Link>
-          <Link href="/login" className="btn-outline text-lg px-10 py-4">
-            Lance ton Rythme
-          </Link>
+      <section className="relative px-6 py-20 md:py-32 max-w-7xl mx-auto text-center noise-overlay">
+        <RippleCircles />
+        <div className="relative z-10">
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-black leading-tight mb-6 tracking-tight">
+            Ton statut a de la{" "}
+            <span className="gradient-text">valeur</span>
+          </h1>
+          <p className="text-lg md:text-xl text-white/50 max-w-2xl mx-auto mb-10">
+            Partage des liens de marques sur ton WhatsApp Status et gagne de l&apos;argent
+            pour chaque clic. Simple, rapide, transparent.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link href="/register" className="btn-primary text-lg px-10 py-4">
+              Deviens un Écho
+            </Link>
+            <Link href="/login" className="btn-outline text-lg px-10 py-4">
+              Lance ton Rythme
+            </Link>
+          </div>
+          <p className="mt-8 text-sm font-semibold text-white/30 tracking-widest uppercase">
+            Partage. Résonne. Gagne.
+          </p>
         </div>
-        <p className="mt-8 text-sm font-semibold text-white/30 tracking-widest uppercase">
-          Partage. Résonne. Gagne.
-        </p>
       </section>
 
       {/* How it works */}
@@ -95,7 +116,7 @@ export default function LandingPage() {
               icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
             },
           ].map((item) => (
-            <div key={item.step} className="glass-card p-8 text-center group hover:scale-[1.02] transition-transform">
+            <div key={item.step} className="glass-card p-8 text-center hover-lift">
               <div className="w-14 h-14 rounded-2xl bg-gradient-primary flex items-center justify-center mx-auto mb-5">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d={item.icon} />
@@ -111,7 +132,7 @@ export default function LandingPage() {
 
       {/* Stats */}
       <section className="px-6 py-20 max-w-7xl mx-auto">
-        <div className="glass-card p-10 md:p-16">
+        <div className="glass-card p-10 md:p-16 animate-pulse-glow">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {[
               { value: 12500, suffix: "+", label: "Échos actifs" },
@@ -135,7 +156,7 @@ export default function LandingPage() {
             <span className="text-xs font-bold text-secondary uppercase tracking-widest mb-4 block">
               Pour les marques
             </span>
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 tracking-tight">
               Touchez des milliers de personnes via le{" "}
               <span className="gradient-text">bouche-à-oreille digital</span>
             </h2>
@@ -148,26 +169,26 @@ export default function LandingPage() {
               Devenir Batteur
             </Link>
           </div>
-          <div className="glass-card p-8">
+          <div className="glass-card p-8 hover-lift">
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-semibold">Campagne: Promo Ramadan</span>
                 <span className="badge-active">Actif</span>
               </div>
               <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-primary rounded-full" style={{ width: "68%" }} />
+                <div className="h-full bg-gradient-primary rounded-full transition-all duration-1000" style={{ width: "68%" }} />
               </div>
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <p className="text-xl font-bold">2,340</p>
+                  <p className="text-2xl font-black">2,340</p>
                   <p className="text-[10px] text-white/40">Résonances</p>
                 </div>
                 <div>
-                  <p className="text-xl font-bold">156</p>
+                  <p className="text-2xl font-black">156</p>
                   <p className="text-[10px] text-white/40">Échos</p>
                 </div>
                 <div>
-                  <p className="text-xl font-bold">25 FCFA</p>
+                  <p className="text-2xl font-black gradient-text">25 FCFA</p>
                   <p className="text-[10px] text-white/40">CPC</p>
                 </div>
               </div>
@@ -179,7 +200,8 @@ export default function LandingPage() {
       {/* CTA */}
       <section className="px-6 py-20 max-w-7xl mx-auto text-center">
         <div className="glass-card p-12 md:p-16 bg-gradient-to-br from-primary/10 to-primary-light/5">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+          <SoundWave bars={9} className="h-8 justify-center mb-6 opacity-40" />
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">
             Prêt à faire résonner ?
           </h2>
           <p className="text-white/40 mb-8 max-w-lg mx-auto">
@@ -192,12 +214,29 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
+      {/* Footer with sound wave divider */}
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="flex justify-center gap-1 py-4">
+          {Array.from({ length: 30 }).map((_, i) => (
+            <div
+              key={i}
+              className="w-[2px] bg-gradient-to-t from-primary/20 to-primary-light/10 rounded-full animate-wave-bar"
+              style={{
+                height: `${8 + Math.sin(i * 0.5) * 8}px`,
+                animationDelay: `${i * 0.08}s`,
+              }}
+            />
+          ))}
+        </div>
+      </div>
       <footer className="px-6 py-10 border-t border-white/5 max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <span className="text-xl font-black gradient-text">Tamtam</span>
+          <div className="flex items-center gap-3">
+            <span className="text-xl font-black gradient-text">Tamtam</span>
+            <SoundWave bars={3} className="h-3 opacity-40" />
+          </div>
           <p className="text-xs text-white/30">
-            © 2024 Tamtam. Partage. Résonne. Gagne.
+            © 2025 Tamtam. Partage. Résonne. Gagne.
           </p>
         </div>
       </footer>
