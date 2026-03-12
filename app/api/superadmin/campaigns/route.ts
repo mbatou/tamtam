@@ -53,7 +53,70 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServiceClient();
   const body = await request.json();
-  const { campaign_id, action, reason } = body;
+  const { action } = body;
+
+  // --- Create a campaign on behalf of a brand ---
+  if (action === "create") {
+    const { batteur_id, title, description, destination_url, cpc, budget } = body;
+    if (!batteur_id || !title || !destination_url || !cpc || !budget) {
+      return NextResponse.json({ error: "Champs obligatoires manquants" }, { status: 400 });
+    }
+
+    // Verify the batteur exists and has enough balance
+    const { data: batteur } = await supabase
+      .from("users")
+      .select("id, balance, role")
+      .eq("id", batteur_id)
+      .single();
+
+    if (!batteur || batteur.role !== "batteur") {
+      return NextResponse.json({ error: "Batteur introuvable" }, { status: 404 });
+    }
+    if (batteur.balance < budget) {
+      return NextResponse.json({ error: `Solde insuffisant (${batteur.balance} FCFA disponible)` }, { status: 400 });
+    }
+
+    // Deduct from batteur balance
+    const { error: balErr } = await supabase
+      .from("users")
+      .update({ balance: batteur.balance - budget })
+      .eq("id", batteur_id);
+    if (balErr) return NextResponse.json({ error: balErr.message }, { status: 500 });
+
+    // Create campaign pre-approved
+    const { data: campaign, error: campErr } = await supabase
+      .from("campaigns")
+      .insert({
+        batteur_id,
+        title,
+        description: description || null,
+        destination_url,
+        cpc: parseInt(cpc),
+        budget: parseInt(budget),
+        spent: 0,
+        status: "active",
+        moderation_status: "approved",
+        moderated_by: session.user.id,
+        moderated_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (campErr) return NextResponse.json({ error: campErr.message }, { status: 500 });
+
+    await supabase.from("admin_activity_log").insert({
+      admin_id: session.user.id,
+      action: "campaign_create",
+      target_type: "campaign",
+      target_id: campaign.id,
+      details: { title, batteur_id, budget },
+    });
+
+    return NextResponse.json({ success: true, campaign });
+  }
+
+  // --- Moderate existing campaign ---
+  const { campaign_id, reason } = body;
 
   if (!campaign_id || !action) {
     return NextResponse.json({ error: "Paramètres manquants" }, { status: 400 });

@@ -52,6 +52,94 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Paramètres manquants" }, { status: 400 });
   }
 
+  // --- Create a brand user ---
+  if (action === "create_batteur") {
+    const { name, phone, city, email, password } = body;
+    if (!name || !email || !password) {
+      return NextResponse.json({ error: "Nom, email et mot de passe requis" }, { status: 400 });
+    }
+
+    // Create auth user
+    const { data: authUser, error: authErr } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+    if (authErr) return NextResponse.json({ error: authErr.message }, { status: 500 });
+
+    // Create profile in users table
+    const { error: profileErr } = await supabase.from("users").insert({
+      id: authUser.user.id,
+      name,
+      phone: phone || null,
+      city: city || null,
+      role: "batteur",
+      balance: 0,
+      total_earned: 0,
+      status: "verified",
+    });
+    if (profileErr) return NextResponse.json({ error: profileErr.message }, { status: 500 });
+
+    await supabase.from("admin_activity_log").insert({
+      admin_id: session.user.id,
+      action: "user_create_batteur",
+      target_type: "user",
+      target_id: authUser.user.id,
+      details: { name, email },
+    });
+
+    return NextResponse.json({ success: true, user_id: authUser.user.id });
+  }
+
+  // --- Top up brand balance ---
+  if (action === "topup") {
+    const { amount } = body;
+    if (!user_id || !amount || amount <= 0) {
+      return NextResponse.json({ error: "Montant invalide" }, { status: 400 });
+    }
+
+    const { data: user } = await supabase
+      .from("users")
+      .select("id, balance, role, name")
+      .eq("id", user_id)
+      .single();
+
+    if (!user) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
+    if (user.role !== "batteur") return NextResponse.json({ error: "L'utilisateur n'est pas un batteur" }, { status: 400 });
+
+    const newBalance = (user.balance || 0) + parseInt(amount);
+    const { error: upErr } = await supabase
+      .from("users")
+      .update({ balance: newBalance })
+      .eq("id", user_id);
+    if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
+
+    // Log as a manual payment
+    await supabase.from("payments").insert({
+      user_id,
+      amount: parseInt(amount),
+      ref_command: `TOPUP-${Date.now()}`,
+      status: "completed",
+      payment_method: "admin_topup",
+      completed_at: new Date().toISOString(),
+    });
+
+    await supabase.from("admin_activity_log").insert({
+      admin_id: session.user.id,
+      action: "user_topup",
+      target_type: "user",
+      target_id: user_id,
+      details: { amount, new_balance: newBalance, user_name: user.name },
+    });
+
+    return NextResponse.json({ success: true, new_balance: newBalance });
+  }
+
+  // --- Standard user actions ---
+  if (!user_id || !action) {
+    return NextResponse.json({ error: "Paramètres manquants" }, { status: 400 });
+  }
+
   const updates: Record<string, unknown> = {};
 
   switch (action) {

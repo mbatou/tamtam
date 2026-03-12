@@ -16,7 +16,7 @@ export async function GET() {
   ] = await Promise.all([
     supabase.from("campaigns").select("id, title, spent, budget"),
     supabase.from("payouts").select("*, users!echo_id(name, phone)").order("created_at", { ascending: false }),
-    supabase.from("payments").select("*, users!user_id(name)").order("created_at", { ascending: false }),
+    supabase.from("payments").select("*, users!user_id(name)").order("created_at", { ascending: false }).limit(100),
     supabase.from("platform_settings").select("value").eq("key", "platform_fee_percent").single(),
   ]);
 
