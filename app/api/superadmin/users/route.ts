@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { user_id, action, reason } = body;
 
-  if (!user_id || !action) {
+  if (!action) {
     return NextResponse.json({ error: "Paramètres manquants" }, { status: 400 });
   }
 
