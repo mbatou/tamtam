@@ -80,9 +80,12 @@ export default function AdminCampaignsPage() {
     setCreativeUrls((prev) => prev.filter((_, i) => i !== index));
   }
 
+  const [showRechargePrompt, setShowRechargePrompt] = useState(false);
+
   async function handleSubmit() {
     setSubmitting(true);
     setError(null);
+    setShowRechargePrompt(false);
 
     try {
       const payload = {
@@ -105,6 +108,9 @@ export default function AdminCampaignsPage() {
 
       const data = await res.json();
       if (!res.ok) {
+        if (data.code === "INSUFFICIENT_BALANCE") {
+          setShowRechargePrompt(true);
+        }
         setError(data.error || "Erreur");
         setSubmitting(false);
         return;
@@ -139,11 +145,19 @@ export default function AdminCampaignsPage() {
 
   async function toggleStatus(campaign: Campaign) {
     const newStatus = campaign.status === "active" ? "paused" : "active";
-    await fetch("/api/campaigns", {
+    const res = await fetch("/api/campaigns", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: campaign.id, status: newStatus }),
     });
+    if (!res.ok) {
+      const data = await res.json();
+      if (data.code === "INSUFFICIENT_BALANCE") {
+        alert("Solde insuffisant pour réactiver cette campagne. Veuillez recharger votre portefeuille.");
+      } else {
+        alert(data.error || "Erreur");
+      }
+    }
     loadCampaigns();
   }
 
@@ -247,7 +261,12 @@ export default function AdminCampaignsPage() {
           </div>
           {error && (
             <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-              {error}
+              <p>{error}</p>
+              {showRechargePrompt && (
+                <a href="/admin/wallet" className="inline-block mt-2 px-4 py-2 rounded-xl bg-primary/20 text-primary font-semibold text-xs hover:bg-primary/30 transition">
+                  Recharger mon portefeuille
+                </a>
+              )}
             </div>
           )}
           <button onClick={handleSubmit} disabled={submitting || !form.title || !form.destination_url || !form.cpc || !form.budget} className="btn-primary mt-4 disabled:opacity-40">
