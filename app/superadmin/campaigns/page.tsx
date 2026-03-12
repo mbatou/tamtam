@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { formatFCFA } from "@/lib/utils";
 import StatCard from "@/components/StatCard";
 import Badge from "@/components/ui/Badge";
@@ -9,69 +8,76 @@ import TabBar from "@/components/ui/TabBar";
 import Modal from "@/components/ui/Modal";
 import ProgressBar from "@/components/ui/ProgressBar";
 import { useToast } from "@/components/ui/Toast";
-import type { CampaignWithBatteur } from "@/lib/types";
+
+interface Campaign {
+  id: string;
+  title: string;
+  description: string | null;
+  destination_url: string;
+  budget: number;
+  spent: number;
+  cpc: number;
+  status: string;
+  moderation_status: string | null;
+  moderation_reason: string | null;
+  created_at: string;
+  echo_count: number;
+  total_clicks: number;
+  users: { name: string; phone: string } | null;
+}
 
 export default function CampaignModerationPage() {
-  const [campaigns, setCampaigns] = useState<CampaignWithBatteur[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [filter, setFilter] = useState("all");
-  const [selected, setSelected] = useState<CampaignWithBatteur | null>(null);
+  const [selected, setSelected] = useState<Campaign | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
   const { showToast, ToastComponent } = useToast();
 
-  useEffect(() => {
-    loadData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   async function loadData() {
-    const { data } = await supabase
-      .from("campaigns")
-      .select("*, users(name)")
-      .order("created_at", { ascending: false });
-
-    setCampaigns((data || []) as unknown as CampaignWithBatteur[]);
+    try {
+      const res = await fetch("/api/superadmin/campaigns");
+      const data = await res.json();
+      setCampaigns(data);
+    } catch {
+      showToast("Erreur de chargement", "error");
+    }
     setLoading(false);
   }
 
-  async function approveCampaign(id: string) {
-    const { data: { session } } = await supabase.auth.getSession();
-    await supabase.from("campaigns").update({
-      moderation_status: "approved",
-      status: "active",
-      moderated_by: session?.user.id,
-      moderated_at: new Date().toISOString(),
-    }).eq("id", id);
-    showToast("Campagne approuvée", "success");
-    setSelected(null);
-    loadData();
-  }
-
-  async function rejectCampaign(id: string) {
-    if (!rejectReason.trim()) {
-      showToast("Raison requise pour le rejet", "error");
-      return;
+  async function moderateCampaign(id: string, action: string, reason?: string) {
+    try {
+      const res = await fetch("/api/superadmin/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaign_id: id, action, reason }),
+      });
+      if (res.ok) {
+        showToast(
+          action === "approve" ? "Campagne approuvée" :
+          action === "reject" ? "Campagne rejetée" :
+          action === "pause" ? "Campagne en pause" : "Campagne relancée",
+          action === "approve" || action === "resume" ? "success" : "info"
+        );
+        setSelected(null);
+        setRejectReason("");
+        loadData();
+      } else {
+        showToast("Erreur", "error");
+      }
+    } catch {
+      showToast("Erreur réseau", "error");
     }
-    const { data: { session } } = await supabase.auth.getSession();
-    await supabase.from("campaigns").update({
-      moderation_status: "rejected",
-      status: "rejected",
-      moderation_reason: rejectReason,
-      moderated_by: session?.user.id,
-      moderated_at: new Date().toISOString(),
-    }).eq("id", id);
-    showToast("Campagne rejetée", "info");
-    setRejectReason("");
-    setSelected(null);
-    loadData();
   }
 
-  const pendingCount = campaigns.filter((c) => c.moderation_status === "pending").length;
+  const pendingCount = campaigns.filter((c) => (c.moderation_status || "pending") === "pending").length;
   const filtered = campaigns.filter((c) => {
-    if (filter === "pending") return c.moderation_status === "pending";
-    if (filter === "approved") return c.moderation_status === "approved";
-    if (filter === "rejected") return c.moderation_status === "rejected";
+    const ms = c.moderation_status || "pending";
+    if (filter === "pending") return ms === "pending";
+    if (filter === "approved") return ms === "approved";
+    if (filter === "rejected") return ms === "rejected";
     return true;
   });
 
@@ -90,7 +96,7 @@ export default function CampaignModerationPage() {
     <div className="p-6 max-w-7xl">
       {ToastComponent}
 
-      <h1 className="text-2xl font-bold mb-6">🥁 Modération des campagnes</h1>
+      <h1 className="text-2xl font-bold mb-6">Modération des campagnes</h1>
 
       {pendingCount > 0 && (
         <div className="mb-6 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
@@ -127,6 +133,7 @@ export default function CampaignModerationPage() {
               <th className="pb-3 font-semibold">Modération</th>
               <th className="pb-3 font-semibold hidden md:table-cell">Budget</th>
               <th className="pb-3 font-semibold hidden md:table-cell">CPC</th>
+              <th className="pb-3 font-semibold hidden lg:table-cell">Échos</th>
               <th className="pb-3 font-semibold hidden lg:table-cell">Clics</th>
               <th className="pb-3 font-semibold hidden lg:table-cell">Date</th>
             </tr>
@@ -140,14 +147,15 @@ export default function CampaignModerationPage() {
               >
                 <td className="py-3">
                   <div className="font-semibold">{campaign.title}</div>
-                  <div className="text-xs text-white/30">{campaign.users?.name}</div>
+                  <div className="text-xs text-white/30">{campaign.users?.name || "—"}</div>
                 </td>
                 <td className="py-3">
                   <Badge status={campaign.moderation_status || "pending"} />
                 </td>
                 <td className="py-3 hidden md:table-cell">{formatFCFA(campaign.budget)}</td>
                 <td className="py-3 hidden md:table-cell">{campaign.cpc} FCFA</td>
-                <td className="py-3 hidden lg:table-cell">{campaign.spent > 0 ? Math.floor(campaign.spent / campaign.cpc) : 0}</td>
+                <td className="py-3 hidden lg:table-cell">{campaign.echo_count}</td>
+                <td className="py-3 hidden lg:table-cell">{campaign.total_clicks}</td>
                 <td className="py-3 text-xs text-white/40 hidden lg:table-cell">
                   {new Date(campaign.created_at).toLocaleDateString("fr-FR")}
                 </td>
@@ -164,7 +172,7 @@ export default function CampaignModerationPage() {
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <span className="text-xs text-white/40 block">Batteur</span>
-                <span>{selected.users?.name}</span>
+                <span>{selected.users?.name || "—"}</span>
               </div>
               <div>
                 <span className="text-xs text-white/40 block">Status</span>
@@ -177,6 +185,14 @@ export default function CampaignModerationPage() {
               <div>
                 <span className="text-xs text-white/40 block">CPC</span>
                 <span>{selected.cpc} FCFA</span>
+              </div>
+              <div>
+                <span className="text-xs text-white/40 block">Échos engagés</span>
+                <span>{selected.echo_count}</span>
+              </div>
+              <div>
+                <span className="text-xs text-white/40 block">Clics totaux</span>
+                <span>{selected.total_clicks}</span>
               </div>
               <div className="col-span-2">
                 <span className="text-xs text-white/40 block mb-1">Budget dépensé</span>
@@ -203,7 +219,7 @@ export default function CampaignModerationPage() {
               )}
             </div>
 
-            {selected.moderation_status === "pending" && (
+            {(selected.moderation_status || "pending") === "pending" && (
               <div className="space-y-3 pt-2 border-t border-white/5">
                 <textarea
                   value={rejectReason}
@@ -213,18 +229,43 @@ export default function CampaignModerationPage() {
                 />
                 <div className="flex gap-2">
                   <button
-                    onClick={() => approveCampaign(selected.id)}
+                    onClick={() => moderateCampaign(selected.id, "approve")}
                     className="flex-1 py-2.5 rounded-xl bg-accent/10 border border-accent/30 text-accent font-bold text-sm"
                   >
                     Approuver
                   </button>
                   <button
-                    onClick={() => rejectCampaign(selected.id)}
+                    onClick={() => {
+                      if (!rejectReason.trim()) { showToast("Raison requise pour le rejet", "error"); return; }
+                      moderateCampaign(selected.id, "reject", rejectReason);
+                    }}
                     className="flex-1 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-bold text-sm"
                   >
                     Rejeter
                   </button>
                 </div>
+              </div>
+            )}
+
+            {selected.status === "active" && (
+              <div className="pt-2 border-t border-white/5">
+                <button
+                  onClick={() => moderateCampaign(selected.id, "pause")}
+                  className="w-full py-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 font-bold text-sm"
+                >
+                  Mettre en pause
+                </button>
+              </div>
+            )}
+
+            {selected.status === "paused" && (
+              <div className="pt-2 border-t border-white/5">
+                <button
+                  onClick={() => moderateCampaign(selected.id, "resume")}
+                  className="w-full py-2.5 rounded-xl bg-accent/10 border border-accent/30 text-accent font-bold text-sm"
+                >
+                  Relancer
+                </button>
               </div>
             )}
           </div>

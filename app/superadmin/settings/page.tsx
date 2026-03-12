@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { timeAgo } from "@/lib/utils";
 import { useToast } from "@/components/ui/Toast";
 
 interface Settings {
@@ -12,6 +12,23 @@ interface Settings {
   auto_reject_bots: string;
   auto_flag_high_volume: string;
   require_campaign_approval: string;
+}
+
+interface Admin {
+  id: string;
+  name: string;
+  phone: string | null;
+  role: string;
+  created_at: string;
+}
+
+interface LogEntry {
+  id: string;
+  action: string;
+  target_type: string;
+  target_id: string;
+  created_at: string;
+  users: { name: string } | null;
 }
 
 const defaultSettings: Settings = {
@@ -26,41 +43,51 @@ const defaultSettings: Settings = {
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
+  const [admins, setAdmins] = useState<Admin[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const supabase = createClient();
   const { showToast, ToastComponent } = useToast();
 
-  useEffect(() => {
-    loadSettings();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useEffect(() => { loadSettings(); }, []);
 
   async function loadSettings() {
-    const { data } = await supabase.from("platform_settings").select("*");
-    if (data) {
+    try {
+      const res = await fetch("/api/superadmin/settings");
+      const data = await res.json();
+
       const s = { ...defaultSettings };
-      data.forEach((row: { key: string; value: string }) => {
+      (data.settings || []).forEach((row: { key: string; value: string }) => {
         if (row.key in s) {
           (s as Record<string, string>)[row.key] = row.value;
         }
       });
       setSettings(s);
+      setAdmins(data.admins || []);
+      setLogs(data.recentLogs || []);
+    } catch {
+      showToast("Erreur de chargement", "error");
     }
     setLoading(false);
   }
 
   async function saveSetting(key: string, value: string) {
     setSaving(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    await supabase.from("platform_settings").upsert({
-      key,
-      value,
-      updated_at: new Date().toISOString(),
-      updated_by: session?.user.id,
-    });
+    try {
+      const res = await fetch("/api/superadmin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, value }),
+      });
+      if (res.ok) {
+        showToast("Paramètre sauvegardé", "success");
+      } else {
+        showToast("Erreur de sauvegarde", "error");
+      }
+    } catch {
+      showToast("Erreur réseau", "error");
+    }
     setSaving(false);
-    showToast("Paramètre sauvegardé", "success");
   }
 
   function updateSetting(key: keyof Settings, value: string) {
@@ -81,7 +108,7 @@ export default function SettingsPage() {
     <div className="p-6 max-w-3xl">
       {ToastComponent}
 
-      <h1 className="text-2xl font-bold mb-6">⚙️ Paramètres</h1>
+      <h1 className="text-2xl font-bold mb-6">Paramètres</h1>
 
       {/* Financial */}
       <section className="glass-card p-6 mb-6">
@@ -163,66 +190,105 @@ export default function SettingsPage() {
             />
           </div>
 
-          <div className="flex items-center justify-between py-3 border-t border-white/5">
-            <div>
-              <span className="text-sm font-medium block">Rejeter bots automatiquement</span>
-              <span className="text-xs text-white/30">Bloque les user-agents de type bot/curl/python</span>
-            </div>
-            <button
-              onClick={() => updateSetting("auto_reject_bots", settings.auto_reject_bots === "true" ? "false" : "true")}
-              className={`w-12 h-6 rounded-full transition-all ${
-                settings.auto_reject_bots === "true" ? "bg-accent" : "bg-white/10"
-              }`}
-            >
-              <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                settings.auto_reject_bots === "true" ? "translate-x-6" : "translate-x-0.5"
-              }`} />
-            </button>
-          </div>
+          <ToggleSetting
+            label="Rejeter bots automatiquement"
+            description="Bloque les user-agents de type bot/curl/python"
+            value={settings.auto_reject_bots === "true"}
+            onChange={(v) => updateSetting("auto_reject_bots", v ? "true" : "false")}
+          />
 
-          <div className="flex items-center justify-between py-3 border-t border-white/5">
-            <div>
-              <span className="text-sm font-medium block">Signaler haut volume</span>
-              <span className="text-xs text-white/30">Flag automatiquement les IPs suspectes</span>
-            </div>
-            <button
-              onClick={() => updateSetting("auto_flag_high_volume", settings.auto_flag_high_volume === "true" ? "false" : "true")}
-              className={`w-12 h-6 rounded-full transition-all ${
-                settings.auto_flag_high_volume === "true" ? "bg-accent" : "bg-white/10"
-              }`}
-            >
-              <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                settings.auto_flag_high_volume === "true" ? "translate-x-6" : "translate-x-0.5"
-              }`} />
-            </button>
-          </div>
+          <ToggleSetting
+            label="Signaler haut volume"
+            description="Flag automatiquement les IPs suspectes"
+            value={settings.auto_flag_high_volume === "true"}
+            onChange={(v) => updateSetting("auto_flag_high_volume", v ? "true" : "false")}
+          />
         </div>
       </section>
 
       {/* Campaign settings */}
       <section className="glass-card p-6 mb-6">
         <h2 className="text-lg font-bold mb-4">Campagnes</h2>
-        <div className="flex items-center justify-between py-3">
-          <div>
-            <span className="text-sm font-medium block">Approbation requise</span>
-            <span className="text-xs text-white/30">Les campagnes doivent être approuvées avant activation</span>
-          </div>
-          <button
-            onClick={() => updateSetting("require_campaign_approval", settings.require_campaign_approval === "true" ? "false" : "true")}
-            className={`w-12 h-6 rounded-full transition-all ${
-              settings.require_campaign_approval === "true" ? "bg-accent" : "bg-white/10"
-            }`}
-          >
-            <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-              settings.require_campaign_approval === "true" ? "translate-x-6" : "translate-x-0.5"
-            }`} />
-          </button>
+        <ToggleSetting
+          label="Approbation requise"
+          description="Les campagnes doivent être approuvées avant activation"
+          value={settings.require_campaign_approval === "true"}
+          onChange={(v) => updateSetting("require_campaign_approval", v ? "true" : "false")}
+        />
+      </section>
+
+      {/* Admins */}
+      <section className="glass-card p-6 mb-6">
+        <h2 className="text-lg font-bold mb-4">Administrateurs ({admins.length})</h2>
+        <div className="space-y-3">
+          {admins.map((admin) => (
+            <div key={admin.id} className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-xs font-bold text-white">
+                  {admin.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div className="text-sm font-semibold">{admin.name}</div>
+                  <div className="text-xs text-white/30">{admin.phone || ""}</div>
+                </div>
+              </div>
+              <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                admin.role === "superadmin" ? "bg-red-500/10 text-red-400" : "bg-purple-500/10 text-purple-400"
+              }`}>
+                {admin.role}
+              </span>
+            </div>
+          ))}
+          {admins.length === 0 && <p className="text-xs text-white/30">Aucun administrateur</p>}
+        </div>
+      </section>
+
+      {/* Activity Log */}
+      <section className="glass-card p-6 mb-6">
+        <h2 className="text-lg font-bold mb-4">Dernières actions admin</h2>
+        <div className="space-y-3">
+          {logs.map((log) => (
+            <div key={log.id} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+              <div>
+                <div className="text-sm font-semibold">{log.users?.name || "—"}</div>
+                <div className="text-xs text-white/30">
+                  {log.action} · {log.target_type}: {log.target_id?.substring(0, 8)}...
+                </div>
+              </div>
+              <span className="text-xs text-white/30">{timeAgo(log.created_at)}</span>
+            </div>
+          ))}
+          {logs.length === 0 && <p className="text-xs text-white/30">Aucune activité récente</p>}
         </div>
       </section>
 
       {saving && (
         <p className="text-xs text-white/30 text-center">Sauvegarde en cours...</p>
       )}
+    </div>
+  );
+}
+
+function ToggleSetting({ label, description, value, onChange }: {
+  label: string;
+  description: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between py-3 border-t border-white/5">
+      <div>
+        <span className="text-sm font-medium block">{label}</span>
+        <span className="text-xs text-white/30">{description}</span>
+      </div>
+      <button
+        onClick={() => onChange(!value)}
+        className={`w-12 h-6 rounded-full transition-all ${value ? "bg-accent" : "bg-white/10"}`}
+      >
+        <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+          value ? "translate-x-6" : "translate-x-0.5"
+        }`} />
+      </button>
     </div>
   );
 }
