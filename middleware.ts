@@ -2,6 +2,22 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 
+// Simple in-memory rate limiting for superadmin API routes
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX = 30; // max requests per window
+
+function isRateLimited(key: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+  if (!entry || now > entry.resetTime) {
+    rateLimitMap.set(key, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return false;
+  }
+  entry.count++;
+  return entry.count > RATE_LIMIT_MAX;
+}
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -85,6 +101,32 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Protect superadmin API routes
+  if (pathname.startsWith("/api/superadmin/")) {
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+    const role = await getUserRole(user.id);
+    if (role !== "superadmin") {
+      return NextResponse.json(
+        { error: "Forbidden" },
+        { status: 403 }
+      );
+    }
+
+    // Rate limiting for superadmin API routes
+    const rateLimitKey = `${user.id}:${pathname}`;
+    if (isRateLimited(rateLimitKey)) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 }
+      );
+    }
+  }
+
   return supabaseResponse;
 }
 
@@ -96,5 +138,6 @@ export const config = {
     "/profil/:path*",
     "/admin/:path*",
     "/superadmin/:path*",
+    "/api/superadmin/:path*",
   ],
 };

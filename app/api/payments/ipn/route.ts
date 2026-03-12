@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import crypto from "crypto";
+import { logSecurityEvent } from "@/lib/security-alerts";
 
 // Use service role client directly to bypass RLS
 const supabase = createSupabaseClient(
@@ -34,6 +35,7 @@ export async function POST(req: NextRequest) {
 
       if (expectedHmac !== hmac_compute) {
         console.error("IPN: HMAC verification failed");
+        await logSecurityEvent("ipn_verification_failed", "critical", { ref_command, type: "hmac" }, req.headers.get("x-forwarded-for")?.split(",")[0] || undefined);
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     } else if (api_key_sha256 && api_secret_sha256) {
@@ -48,6 +50,7 @@ export async function POST(req: NextRequest) {
 
       if (expectedKey !== api_key_sha256 || expectedSecret !== api_secret_sha256) {
         console.error("IPN: SHA256 verification failed");
+        await logSecurityEvent("ipn_verification_failed", "critical", { ref_command, type: "hmac" }, req.headers.get("x-forwarded-for")?.split(",")[0] || undefined);
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     }

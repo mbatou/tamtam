@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { acceptCampaignSchema } from "@/lib/validations";
 
 export async function GET() {
   const authClient = createClient();
@@ -34,9 +35,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
-  const { campaign_id } = await request.json();
-  if (!campaign_id) {
-    return NextResponse.json({ error: "campaign_id manquant" }, { status: 400 });
+  const body = await request.json();
+  const parsed = acceptCampaignSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Données invalides", details: parsed.error.flatten().fieldErrors },
+      { status: 400 }
+    );
   }
 
   const supabase = createServiceClient();
@@ -45,7 +50,7 @@ export async function POST(request: NextRequest) {
   const { data: existing } = await supabase
     .from("tracked_links")
     .select("id")
-    .eq("campaign_id", campaign_id)
+    .eq("campaign_id", parsed.data.campaign_id)
     .eq("echo_id", session.user.id)
     .single();
 
@@ -66,7 +71,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { data, error } = await supabase.from("tracked_links").insert({
-    campaign_id,
+    campaign_id: parsed.data.campaign_id,
     echo_id: session.user.id,
     short_code: shortCode,
   }).select("*, campaigns(*)").single();

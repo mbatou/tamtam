@@ -1,9 +1,20 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { MIN_PAYOUT_AMOUNT } from "@/lib/constants";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function GET() {
-  const supabase = createClient();
+  const authClient = createClient();
+  const {
+    data: { session },
+  } = await authClient.auth.getSession();
+
+  if (!session) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+
+  const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("payouts")
     .select("*, users(name, phone)")
@@ -16,14 +27,21 @@ export async function GET() {
 }
 
 export async function POST() {
-  const supabase = createClient();
+  const authClient = createClient();
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await authClient.auth.getSession();
 
   if (!session) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
+
+  const { allowed } = rateLimit(`payout:${session.user.id}`, 3, 86400000);
+  if (!allowed) {
+    return NextResponse.json({ error: "Trop de demandes de retrait. Réessaie demain." }, { status: 429 });
+  }
+
+  const supabase = createServiceClient();
 
   // Get user balance
   const { data: user } = await supabase

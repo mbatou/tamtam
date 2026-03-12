@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { ANTI_FRAUD, ECHO_SHARE_PERCENT } from "@/lib/constants";
-
-export const runtime = "edge";
+import { ECHO_SHARE_PERCENT } from "@/lib/constants";
+import { rateLimit } from "@/lib/rate-limit";
+import { validateClick } from "@/lib/click-validator";
 
 function getSupabase() {
   return createServerClient(
@@ -25,6 +25,16 @@ export async function GET(
   const { code } = params;
   const supabase = getSupabase();
 
+  // Rate limit check
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown";
+  const { allowed } = rateLimit(`r:${ip}`, 100, 60000);
+  if (!allowed) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
   // Lookup tracked link with campaign data
   const { data: link } = await supabase
     .from("tracked_links")
@@ -44,58 +54,21 @@ export async function GET(
   }
 
   // Gather visitor data
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown";
   const userAgent = request.headers.get("user-agent") || "unknown";
 
-  // Anti-fraud checks
-  let isValid = true;
-
-  // 1. IP dedup: same IP + same link within 24h
-  const dedupTime = new Date(
-    Date.now() - ANTI_FRAUD.IP_DEDUP_HOURS * 60 * 60 * 1000
-  ).toISOString();
-
-  const { count: recentIpClicks } = await supabase
-    .from("clicks")
-    .select("*", { count: "exact", head: true })
-    .eq("link_id", link.id)
-    .eq("ip_address", ip)
-    .gte("created_at", dedupTime);
-
-  if (recentIpClicks && recentIpClicks > 0) {
-    isValid = false;
-  }
-
-  // 2. Rate limit: >50 clicks on same link in 1 hour
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const { count: hourlyClicks } = await supabase
-    .from("clicks")
-    .select("*", { count: "exact", head: true })
-    .eq("link_id", link.id)
-    .gte("created_at", oneHourAgo);
-
-  if (hourlyClicks && hourlyClicks >= ANTI_FRAUD.MAX_CLICKS_PER_HOUR) {
-    isValid = false;
-  }
-
-  // 3. Budget check
-  if (campaign.spent + campaign.cpc > campaign.budget) {
-    isValid = false;
-  }
+  // Validate click using click validator
+  const { valid } = await validateClick(ip, userAgent, link.id);
 
   // Insert click record
   await supabase.from("clicks").insert({
     link_id: link.id,
     ip_address: ip,
-    user_agent: userAgent,
-    is_valid: isValid,
+    user_agent: userAgent.substring(0, 500),
+    is_valid: valid,
   });
 
   // If valid click, update counters
-  if (isValid) {
+  if (valid) {
     const echoEarnings = Math.floor(
       (campaign.cpc * ECHO_SHARE_PERCENT) / 100
     );
