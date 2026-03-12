@@ -5,6 +5,13 @@ export const metadata: Metadata = {
   title: "Tamtam — Partage. Résonne. Gagne.",
   description:
     "Gagne de l'argent en partageant des liens sur WhatsApp. La plateforme de micro-influence pour tous.",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    viewportFit: "cover",
+  },
+  themeColor: "#0F0F1F",
 };
 
 export default function RootLayout({

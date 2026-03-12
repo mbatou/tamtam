@@ -315,6 +315,48 @@ h1, h2, h3 {
   z-index: 50;
 }
 
+/* Safe area for iPhone notch/home indicator */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Hide scrollbar for swipeable media */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Line clamp for truncated descriptions */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Active state for mobile buttons (replaces hover) */
+@media (hover: none) {
+  .btn-primary:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  .btn-primary:active {
+    opacity: 0.85;
+    transform: scale(0.98);
+  }
+  .hover-lift:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  .glass-card:hover {
+    background: rgba(255,255,255,0.03);
+    border-color: rgba(255,255,255,0.06);
+  }
+}
+
 /* Superadmin surface */
 .sa-surface {
   background: #0E0E1A;

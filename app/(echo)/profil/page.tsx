@@ -49,63 +49,75 @@ export default function ProfilPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="px-4 py-5 max-w-lg mx-auto space-y-3">
+        <div className="skeleton h-6 w-28 rounded-xl" />
+        <div className="skeleton h-24 rounded-xl" />
+        <div className="grid grid-cols-3 gap-2">
+          <div className="skeleton h-16 rounded-xl" />
+          <div className="skeleton h-16 rounded-xl" />
+          <div className="skeleton h-16 rounded-xl" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Mon Profil</h1>
+    <div className="px-4 py-5 max-w-lg mx-auto">
+      <h1 className="text-xl font-bold mb-5">Mon Profil</h1>
 
-      <div className="glass-card p-6 mb-6">
-        <div className="w-16 h-16 rounded-full bg-gradient-primary flex items-center justify-center text-2xl font-black mb-4">
-          {user?.name?.charAt(0).toUpperCase()}
+      {/* Profile card */}
+      <div className="glass-card p-5 mb-5">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-full bg-gradient-primary flex items-center justify-center text-xl font-black shrink-0">
+            {user?.name?.charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold truncate">{user?.name}</h2>
+            <p className="text-xs text-white/40">{user?.phone}</p>
+            {user?.city && <p className="text-xs text-white/30">{user.city}</p>}
+          </div>
         </div>
-        <h2 className="text-xl font-bold">{user?.name}</h2>
-        <p className="text-sm text-white/40">{user?.phone}</p>
-        {user?.city && <p className="text-sm text-white/30">{user.city}</p>}
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        <div className="glass-card p-4 text-center">
-          <p className="text-2xl font-black">{stats.totalClicks}</p>
-          <p className="text-[10px] text-white/40 font-semibold">Résonances</p>
+      <div className="grid grid-cols-3 gap-2 mb-5">
+        <div className="glass-card p-3 text-center">
+          <p className="text-lg font-black">{stats.totalClicks}</p>
+          <p className="text-[9px] text-white/40 font-semibold">Resonances</p>
         </div>
-        <div className="glass-card p-4 text-center">
-          <p className="text-2xl font-black">{stats.activeCampaigns}</p>
-          <p className="text-[10px] text-white/40 font-semibold">Rythmes actifs</p>
+        <div className="glass-card p-3 text-center">
+          <p className="text-lg font-black">{stats.activeCampaigns}</p>
+          <p className="text-[9px] text-white/40 font-semibold">Rythmes</p>
         </div>
-        <div className="glass-card p-4 text-center">
-          <p className="text-2xl font-black text-accent">{formatFCFA(stats.totalEarned)}</p>
-          <p className="text-[10px] text-white/40 font-semibold">Gagné</p>
+        <div className="glass-card p-3 text-center">
+          <p className="text-lg font-black text-accent">{formatFCFA(stats.totalEarned)}</p>
+          <p className="text-[9px] text-white/40 font-semibold">Gagne</p>
         </div>
       </div>
 
-      <div className="glass-card p-6 mb-6 space-y-4">
-        <div className="flex justify-between">
-          <span className="text-sm text-white/40">Solde</span>
-          <span className="text-sm font-bold text-primary">{formatFCFA(user?.balance || 0)}</span>
+      {/* Details */}
+      <div className="glass-card divide-y divide-white/5 mb-5">
+        <div className="flex justify-between px-4 py-3">
+          <span className="text-xs text-white/40">Solde</span>
+          <span className="text-xs font-bold text-primary">{formatFCFA(user?.balance || 0)}</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-sm text-white/40">Total gagné</span>
-          <span className="text-sm font-bold text-accent">{formatFCFA(user?.total_earned || 0)}</span>
+        <div className="flex justify-between px-4 py-3">
+          <span className="text-xs text-white/40">Total gagne</span>
+          <span className="text-xs font-bold text-accent">{formatFCFA(user?.total_earned || 0)}</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-sm text-white/40">Moyen de paiement</span>
-          <span className="text-sm font-semibold">
+        <div className="flex justify-between px-4 py-3">
+          <span className="text-xs text-white/40">Moyen de paiement</span>
+          <span className="text-xs font-semibold">
             {user?.mobile_money_provider === "wave" ? "Wave" : "Orange Money"}
           </span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-sm text-white/40">Ville</span>
-          <span className="text-sm font-semibold">{user?.city || "—"}</span>
+        <div className="flex justify-between px-4 py-3">
+          <span className="text-xs text-white/40">Ville</span>
+          <span className="text-xs font-semibold">{user?.city || "—"}</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-sm text-white/40">Membre depuis</span>
-          <span className="text-sm font-semibold">
+        <div className="flex justify-between px-4 py-3">
+          <span className="text-xs text-white/40">Membre depuis</span>
+          <span className="text-xs font-semibold">
             {user?.created_at ? new Date(user.created_at).toLocaleDateString("fr-FR") : "—"}
           </span>
         </div>
@@ -113,9 +125,9 @@ export default function ProfilPage() {
 
       <button
         onClick={handleLogout}
-        className="w-full py-3 rounded-btn border border-red-500/20 text-red-400 text-sm font-semibold hover:bg-red-500/10 transition"
+        className="w-full py-3 rounded-btn border border-red-500/20 text-red-400 text-sm font-semibold active:bg-red-500/10 transition"
       >
-        Se déconnecter
+        Se deconnecter
       </button>
     </div>
   );

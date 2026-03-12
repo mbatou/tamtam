@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { formatFCFA, timeAgo } from "@/lib/utils";
 import { MIN_PAYOUT_AMOUNT } from "@/lib/constants";
+import { useToast } from "@/components/ui/Toast";
 import type { User, Payout } from "@/lib/types";
 
 export default function EarningsPage() {
@@ -10,6 +11,7 @@ export default function EarningsPage() {
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
+  const { showToast, ToastComponent } = useToast();
 
   useEffect(() => {
     loadData();
@@ -46,15 +48,21 @@ export default function EarningsPage() {
     });
 
     if (res.ok) {
+      showToast("Demande de retrait envoyee !", "success");
       await loadData();
+    } else {
+      showToast("Erreur lors de la demande", "error");
     }
     setRequesting(false);
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="px-4 py-5 max-w-lg mx-auto space-y-3">
+        <div className="skeleton h-6 w-28 rounded-xl" />
+        <div className="skeleton h-36 rounded-2xl" />
+        <div className="skeleton h-6 w-40 rounded-xl" />
+        <div className="skeleton h-16 rounded-xl" />
       </div>
     );
   }
@@ -63,62 +71,79 @@ export default function EarningsPage() {
   const hasPendingPayout = payouts.some((p) => p.status === "pending");
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Mes Gains</h1>
+    <div className="px-4 py-5 max-w-lg mx-auto">
+      {ToastComponent}
+
+      <h1 className="text-xl font-bold mb-5">Mes Gains</h1>
 
       {/* Balance card */}
-      <div className="glass-card p-6 mb-6 bg-gradient-to-br from-accent/10 to-transparent">
-        <p className="text-xs text-white/40 font-semibold mb-1">Solde disponible</p>
-        <p className="text-4xl font-black mb-2">{formatFCFA(user?.balance || 0)}</p>
-        <p className="text-xs text-white/30 mb-4">
-          Total gagné: {formatFCFA(user?.total_earned || 0)}
-        </p>
+      <div className="glass-card p-5 mb-5 bg-gradient-to-br from-accent/10 to-transparent">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-[10px] text-white/40 font-semibold uppercase tracking-wider mb-0.5">Solde disponible</p>
+            <p className="text-3xl font-black">{formatFCFA(user?.balance || 0)}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] text-white/30">Total gagne</p>
+            <p className="text-sm font-bold text-accent">{formatFCFA(user?.total_earned || 0)}</p>
+          </div>
+        </div>
 
         {hasPendingPayout ? (
-          <div className="p-3 rounded-xl bg-primary-light/10 border border-primary-light/20 text-sm text-primary-light">
-            Un retrait est en cours de traitement...
+          <div className="p-3 rounded-xl bg-primary-light/10 border border-primary-light/20 text-sm text-primary-light flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-primary-light border-t-transparent rounded-full animate-spin shrink-0" />
+            Retrait en cours de traitement...
           </div>
         ) : (
           <button
             onClick={requestPayout}
             disabled={!canWithdraw || requesting}
-            className="btn-primary w-full text-center disabled:opacity-40"
+            className="btn-primary w-full text-center text-sm !py-3 disabled:opacity-40"
           >
             {requesting
               ? "Envoi..."
-              : `Retirer via ${user?.mobile_money_provider === "wave" ? "Wave" : "Orange Money"}`}
+              : `Retirer ${formatFCFA(user?.balance || 0)} via ${user?.mobile_money_provider === "wave" ? "Wave" : "Orange Money"}`}
           </button>
         )}
 
         {!canWithdraw && !hasPendingPayout && (
-          <p className="text-xs text-white/30 mt-3 text-center">
+          <p className="text-[10px] text-white/30 mt-2.5 text-center">
             Minimum de retrait: {formatFCFA(MIN_PAYOUT_AMOUNT)}
           </p>
         )}
       </div>
 
       {/* Payout history */}
-      <h2 className="text-lg font-bold mb-4">Historique des retraits</h2>
+      <h2 className="text-sm font-bold text-white/60 uppercase tracking-wider mb-3">Historique des retraits</h2>
       <div className="space-y-2">
         {payouts.length === 0 ? (
           <div className="glass-card p-6 text-center">
-            <p className="text-white/30 text-sm">Aucun retrait effectué.</p>
+            <p className="text-xs text-white/30">Aucun retrait effectue.</p>
           </div>
         ) : (
           payouts.map((payout) => (
             <div key={payout.id} className="glass-card p-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-bold">{formatFCFA(payout.amount)}</p>
-                <p className="text-xs text-white/30">
-                  via {payout.provider === "wave" ? "Wave" : "Orange Money"} · {timeAgo(payout.created_at)}
-                </p>
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs shrink-0 ${
+                  payout.status === "sent" ? "bg-accent/10 text-accent" :
+                  payout.status === "pending" ? "bg-primary-light/10 text-primary-light" :
+                  "bg-red-500/10 text-red-400"
+                }`}>
+                  {payout.status === "sent" ? "✓" : payout.status === "pending" ? "⏳" : "✕"}
+                </div>
+                <div>
+                  <p className="text-sm font-bold">{formatFCFA(payout.amount)}</p>
+                  <p className="text-[10px] text-white/30">
+                    {payout.provider === "wave" ? "Wave" : "Orange Money"} · {timeAgo(payout.created_at)}
+                  </p>
+                </div>
               </div>
-              <span className={`badge-${payout.status}`}>
+              <span className={`badge-${payout.status} text-[10px]`}>
                 {payout.status === "pending"
                   ? "En attente"
                   : payout.status === "sent"
-                  ? "Envoyé"
-                  : "Échoué"}
+                  ? "Envoye"
+                  : "Echoue"}
               </span>
             </div>
           ))
