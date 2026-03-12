@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { paytechConfig, paytechHeaders } from "@/lib/paytech";
+import { paymentRequestSchema } from "@/lib/validations";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,16 +15,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    const body = await req.json();
-    const { amount, payment_method } = body;
-
-    if (!amount || amount < 100) {
+    // Rate limit: 5 payment requests per hour
+    const { allowed } = rateLimit(`payment:${session.user.id}`, 5, 3600000);
+    if (!allowed) {
       return NextResponse.json(
-        { error: "Montant minimum: 100 FCFA" },
+        { error: "Trop de requêtes. Réessaie plus tard." },
+        { status: 429 }
+      );
+    }
+
+    const body = await req.json();
+    const parsed = paymentRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Données invalides", details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
 
+    const { amount, payment_method } = parsed.data;
     const supabase = createServiceClient();
 
     // Get user profile for autofill
@@ -88,7 +99,6 @@ export async function POST(req: NextRequest) {
     if (result.success === 1) {
       let redirectUrl = result.redirect_url;
 
-      // Add autofill params if user has phone
       if (profile?.phone) {
         const phone = profile.phone.startsWith("+221")
           ? profile.phone
@@ -101,7 +111,6 @@ export async function POST(req: NextRequest) {
         redirectUrl += "?" + params.toString();
       }
 
-      // Update payment record with token
       await supabase
         .from("payments")
         .update({ paytech_token: result.token })

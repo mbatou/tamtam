@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { payoutRequestSchema } from "@/lib/validations";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function GET() {
   const authClient = createClient();
@@ -34,9 +36,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
-  const { amount, provider } = await request.json();
-  if (!amount || !provider) {
-    return NextResponse.json({ error: "Montant et fournisseur requis" }, { status: 400 });
+  const { allowed } = rateLimit(`payout:${session.user.id}`, 3, 86400000);
+  if (!allowed) {
+    return NextResponse.json({ error: "Trop de demandes de retrait. Réessaie demain." }, { status: 429 });
+  }
+
+  const body = await request.json();
+  const parsed = payoutRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Données invalides", details: parsed.error.flatten().fieldErrors },
+      { status: 400 }
+    );
   }
 
   const supabase = createServiceClient();
@@ -48,14 +59,14 @@ export async function POST(request: NextRequest) {
     .eq("id", session.user.id)
     .single();
 
-  if (!user || user.balance < amount) {
+  if (!user || user.balance < parsed.data.amount) {
     return NextResponse.json({ error: "Solde insuffisant" }, { status: 400 });
   }
 
   const { data, error } = await supabase.from("payouts").insert({
     echo_id: session.user.id,
-    amount,
-    provider,
+    amount: parsed.data.amount,
+    provider: parsed.data.provider,
   }).select().single();
 
   if (error) {

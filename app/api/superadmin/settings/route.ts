@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { settingUpdateSchema } from "@/lib/validations";
 
 export async function GET() {
   const authClient = createClient();
@@ -31,11 +32,14 @@ export async function POST(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   const supabase = createServiceClient();
-  const { key, value } = await request.json();
+  const body = await request.json();
+  const parsed = settingUpdateSchema.safeParse(body);
 
-  if (!key || value === undefined) {
-    return NextResponse.json({ error: "Paramètres manquants" }, { status: 400 });
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.message }, { status: 400 });
   }
+
+  const { key, value } = parsed.data;
 
   const { error } = await supabase
     .from("platform_settings")

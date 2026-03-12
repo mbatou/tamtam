@@ -1,4 +1,4 @@
-// lib/paytech.ts
+import "server-only";
 
 const PAYTECH_BASE_URL = "https://paytech.sn/api";
 

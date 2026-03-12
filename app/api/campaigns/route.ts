@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createCampaignSchema, updateCampaignSchema, deleteCampaignSchema } from "@/lib/validations";
 
 export async function GET(request: NextRequest) {
   const authClient = createClient();
@@ -39,14 +40,17 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls } = body;
-
-  if (!title || !destination_url || !cpc || !budget) {
-    return NextResponse.json({ error: "Champs obligatoires manquants" }, { status: 400 });
+  const parsed = createCampaignSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Données invalides", details: parsed.error.flatten().fieldErrors },
+      { status: 400 }
+    );
   }
 
+  const { title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls } = parsed.data;
+
   const supabase = createServiceClient();
-  const budgetAmount = parseInt(budget);
 
   // Check batteur's total_recharged (recharge pool for campaigns)
   const { data: batteur } = await supabase
@@ -55,7 +59,7 @@ export async function POST(request: NextRequest) {
     .eq("id", session.user.id)
     .single();
 
-  if (!batteur || (batteur.total_recharged || 0) < budgetAmount) {
+  if (!batteur || (batteur.total_recharged || 0) < budget) {
     return NextResponse.json(
       { error: "Solde rechargé insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
       { status: 400 }
@@ -65,7 +69,7 @@ export async function POST(request: NextRequest) {
   // Debit from total_recharged (recharge pool)
   const { error: debitError } = await supabase
     .from("users")
-    .update({ total_recharged: batteur.total_recharged - budgetAmount })
+    .update({ total_recharged: batteur.total_recharged - budget })
     .eq("id", session.user.id);
 
   if (debitError) {
@@ -78,8 +82,8 @@ export async function POST(request: NextRequest) {
     description: description || null,
     destination_url,
     creative_urls: creative_urls || [],
-    cpc: parseInt(cpc),
-    budget: budgetAmount,
+    cpc,
+    budget,
     status: "active",
     starts_at: starts_at || null,
     ends_at: ends_at || null,
@@ -107,11 +111,15 @@ export async function PUT(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { id, title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls, status } = body;
-
-  if (!id) {
-    return NextResponse.json({ error: "ID de campagne manquant" }, { status: 400 });
+  const parsed = updateCampaignSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Données invalides", details: parsed.error.flatten().fieldErrors },
+      { status: 400 }
+    );
   }
+
+  const { id, title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls, status } = parsed.data;
 
   const supabase = createServiceClient();
 
@@ -125,7 +133,7 @@ export async function PUT(request: NextRequest) {
   if (title !== undefined) updates.title = title;
   if (description !== undefined) updates.description = description;
   if (destination_url !== undefined) updates.destination_url = destination_url;
-  if (cpc !== undefined) updates.cpc = parseInt(cpc);
+  if (cpc !== undefined) updates.cpc = cpc;
   if (starts_at !== undefined) updates.starts_at = starts_at || null;
   if (ends_at !== undefined) updates.ends_at = ends_at || null;
   if (creative_urls !== undefined) updates.creative_urls = creative_urls;
@@ -133,9 +141,8 @@ export async function PUT(request: NextRequest) {
 
   // Handle budget change: charge or refund the difference
   if (budget !== undefined) {
-    const newBudget = parseInt(budget);
     const oldBudget = existing.budget;
-    const diff = newBudget - oldBudget;
+    const diff = budget - oldBudget;
 
     if (diff > 0) {
       // Need more budget: check total_recharged
@@ -149,12 +156,12 @@ export async function PUT(request: NextRequest) {
       await supabase.from("users").update({ total_recharged: batteur.total_recharged - diff }).eq("id", session.user.id);
     } else if (diff < 0) {
       // Reducing budget: refund the difference (but can't go below spent)
-      if (newBudget < existing.spent) {
+      if (budget < existing.spent) {
         return NextResponse.json({ error: "Le budget ne peut pas être inférieur au montant déjà dépensé." }, { status: 400 });
       }
       await supabase.rpc("increment_balance", { p_user_id: session.user.id, p_amount: Math.abs(diff) });
     }
-    updates.budget = newBudget;
+    updates.budget = budget;
   }
 
   // Refund unspent budget when pausing or completing a campaign
@@ -198,10 +205,16 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
-  const { id } = await request.json();
-  if (!id) {
-    return NextResponse.json({ error: "ID de campagne manquant" }, { status: 400 });
+  const body = await request.json();
+  const parsed = deleteCampaignSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Données invalides", details: parsed.error.flatten().fieldErrors },
+      { status: 400 }
+    );
   }
+
+  const { id } = parsed.data;
 
   const supabase = createServiceClient();
 
