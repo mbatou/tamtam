@@ -86,22 +86,14 @@ export async function POST(req: NextRequest) {
           .eq("id", payment_id);
       }
 
-      // Credit the user's wallet
+      // Credit the user's total_recharged (recharge pool for campaigns)
       if (type === "wallet_recharge" && user_id) {
         const amount = parseInt(final_item_price || item_price);
 
-        const { data: user } = await supabase
-          .from("users")
-          .select("balance")
-          .eq("id", user_id)
-          .single();
-
-        if (user) {
-          await supabase
-            .from("users")
-            .update({ balance: (user.balance || 0) + amount })
-            .eq("id", user_id);
-        }
+        await supabase.rpc("increment_recharged", {
+          p_user_id: user_id,
+          p_amount: amount,
+        });
       }
     } else if (type_event === "sale_canceled") {
       console.log(`IPN: Payment cancelled for ${ref_command}`);

@@ -21,6 +21,7 @@ export default function AdminWalletWrapper() {
 
 interface WalletData {
   balance: number;
+  totalRecharged: number;
   totalSpent: number;
   totalBudget: number;
   activeCampaigns: number;
@@ -53,7 +54,7 @@ const PAYMENT_METHODS = [
 ];
 
 function AdminWalletPage() {
-  const [wallet, setWallet] = useState<WalletData>({ balance: 0, totalSpent: 0, totalBudget: 0, activeCampaigns: 0 });
+  const [wallet, setWallet] = useState<WalletData>({ balance: 0, totalRecharged: 0, totalSpent: 0, totalBudget: 0, activeCampaigns: 0 });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,6 +90,7 @@ function AdminWalletPage() {
       const data = await statsRes.json();
       setWallet({
         balance: data.walletBalance ?? 0,
+        totalRecharged: data.totalRecharged ?? 0,
         totalSpent: data.budgetSpent || 0,
         totalBudget: data.budgetTotal || 0,
         activeCampaigns: data.activeRythmes || 0,
@@ -151,9 +153,6 @@ function AdminWalletPage() {
     );
   }
 
-  const completedPayments = payments.filter((p) => p.status === "completed");
-  const totalRecharged = completedPayments.reduce((sum, p) => sum + p.amount, 0);
-
   return (
     <div className="p-6 max-w-4xl">
       <div className="flex items-center justify-between mb-8">
@@ -182,7 +181,7 @@ function AdminWalletPage() {
         </div>
         <div className="glass-card p-4">
           <p className="text-xs text-white/40 font-semibold mb-1">Total rechargé</p>
-          <p className="text-xl font-bold">{formatFCFA(totalRecharged)}</p>
+          <p className="text-xl font-bold">{formatFCFA(wallet.totalRecharged)}</p>
         </div>
         <div className="glass-card p-4">
           <p className="text-xs text-white/40 font-semibold mb-1">Rythmes actifs</p>

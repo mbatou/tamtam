@@ -20,6 +20,17 @@ export default function AdminSupportPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [form, setForm] = useState({ subject: "", message: "" });
+
+  const SUPPORT_SUBJECTS = [
+    "Problème de paiement",
+    "Problème avec ma campagne",
+    "Problème de retrait",
+    "Mon compte est bloqué",
+    "Signaler un bug",
+    "Question sur les tarifs",
+    "Demande de fonctionnalité",
+    "Autre",
+  ];
   const [expandedTicket, setExpandedTicket] = useState<string | null>(null);
 
   useEffect(() => { loadTickets(); }, []);
@@ -102,14 +113,16 @@ export default function AdminSupportPage() {
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-white/40 mb-2">Sujet *</label>
-              <input
-                type="text"
+              <select
                 value={form.subject}
                 onChange={(e) => setForm({ ...form, subject: e.target.value })}
-                placeholder="Ex: Problème avec ma campagne"
-                maxLength={200}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
-              />
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition appearance-none cursor-pointer"
+              >
+                <option value="" disabled className="bg-[#1a1a2e]">Sélectionnez un sujet</option>
+                {SUPPORT_SUBJECTS.map((s) => (
+                  <option key={s} value={s} className="bg-[#1a1a2e]">{s}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-xs font-semibold text-white/40 mb-2">Message *</label>
