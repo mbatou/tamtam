@@ -14,6 +14,15 @@ export async function GET() {
   const supabase = createServiceClient();
   const batteurId = session.user.id;
 
+  // Get batteur's wallet balance
+  const { data: batteurUser } = await supabase
+    .from("users")
+    .select("balance")
+    .eq("id", batteurId)
+    .single();
+
+  const walletBalance = batteurUser?.balance || 0;
+
   // Get brand's campaigns
   const { data: campaigns } = await supabase
     .from("campaigns")
@@ -91,6 +100,7 @@ export async function GET() {
     activeEchos: echoIds.length,
     budgetSpent: totalSpent,
     budgetTotal: totalBudget,
+    walletBalance,
     activeRythmes: activeCampaigns.length,
     totalCampaigns: allCampaigns.length,
     topEchos,

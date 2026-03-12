@@ -46,6 +46,32 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createServiceClient();
+  const budgetAmount = parseInt(budget);
+
+  // Check batteur's balance
+  const { data: batteur } = await supabase
+    .from("users")
+    .select("balance")
+    .eq("id", session.user.id)
+    .single();
+
+  if (!batteur || (batteur.balance || 0) < budgetAmount) {
+    return NextResponse.json(
+      { error: "Solde insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
+      { status: 400 }
+    );
+  }
+
+  // Debit balance and create campaign
+  const { error: debitError } = await supabase
+    .from("users")
+    .update({ balance: batteur.balance - budgetAmount })
+    .eq("id", session.user.id);
+
+  if (debitError) {
+    return NextResponse.json({ error: debitError.message }, { status: 500 });
+  }
+
   const { data, error } = await supabase.from("campaigns").insert({
     batteur_id: session.user.id,
     title,
@@ -53,13 +79,18 @@ export async function POST(request: NextRequest) {
     destination_url,
     creative_urls: creative_urls || [],
     cpc: parseInt(cpc),
-    budget: parseInt(budget),
+    budget: budgetAmount,
     status: "active",
     starts_at: starts_at || null,
     ends_at: ends_at || null,
   }).select().single();
 
   if (error) {
+    // Rollback balance debit if campaign creation fails
+    await supabase
+      .from("users")
+      .update({ balance: batteur.balance })
+      .eq("id", session.user.id);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json(data, { status: 201 });
@@ -84,8 +115,8 @@ export async function PUT(request: NextRequest) {
 
   const supabase = createServiceClient();
 
-  // Verify ownership
-  const { data: existing } = await supabase.from("campaigns").select("batteur_id").eq("id", id).single();
+  // Verify ownership and get current campaign data
+  const { data: existing } = await supabase.from("campaigns").select("batteur_id, budget, spent, status").eq("id", id).single();
   if (!existing || existing.batteur_id !== session.user.id) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
@@ -95,11 +126,59 @@ export async function PUT(request: NextRequest) {
   if (description !== undefined) updates.description = description;
   if (destination_url !== undefined) updates.destination_url = destination_url;
   if (cpc !== undefined) updates.cpc = parseInt(cpc);
-  if (budget !== undefined) updates.budget = parseInt(budget);
   if (starts_at !== undefined) updates.starts_at = starts_at || null;
   if (ends_at !== undefined) updates.ends_at = ends_at || null;
   if (creative_urls !== undefined) updates.creative_urls = creative_urls;
   if (status !== undefined) updates.status = status;
+
+  // Handle budget change: charge or refund the difference
+  if (budget !== undefined) {
+    const newBudget = parseInt(budget);
+    const oldBudget = existing.budget;
+    const diff = newBudget - oldBudget;
+
+    if (diff > 0) {
+      // Need more budget: check balance
+      const { data: batteur } = await supabase.from("users").select("balance").eq("id", session.user.id).single();
+      if (!batteur || (batteur.balance || 0) < diff) {
+        return NextResponse.json(
+          { error: "Solde insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
+          { status: 400 }
+        );
+      }
+      await supabase.from("users").update({ balance: batteur.balance - diff }).eq("id", session.user.id);
+    } else if (diff < 0) {
+      // Reducing budget: refund the difference (but can't go below spent)
+      if (newBudget < existing.spent) {
+        return NextResponse.json({ error: "Le budget ne peut pas être inférieur au montant déjà dépensé." }, { status: 400 });
+      }
+      await supabase.rpc("increment_balance", { p_user_id: session.user.id, p_amount: Math.abs(diff) });
+    }
+    updates.budget = newBudget;
+  }
+
+  // Refund unspent budget when pausing or completing a campaign
+  if (status !== undefined && (status === "paused" || status === "completed") && existing.status === "active") {
+    const unspent = existing.budget - existing.spent;
+    if (unspent > 0) {
+      await supabase.rpc("increment_balance", { p_user_id: session.user.id, p_amount: unspent });
+    }
+  }
+
+  // Re-debit budget when reactivating a paused campaign
+  if (status === "active" && existing.status === "paused") {
+    const unspent = existing.budget - existing.spent;
+    if (unspent > 0) {
+      const { data: batteur } = await supabase.from("users").select("balance").eq("id", session.user.id).single();
+      if (!batteur || (batteur.balance || 0) < unspent) {
+        return NextResponse.json(
+          { error: "Solde insuffisant pour réactiver cette campagne.", code: "INSUFFICIENT_BALANCE" },
+          { status: 400 }
+        );
+      }
+      await supabase.from("users").update({ balance: batteur.balance - unspent }).eq("id", session.user.id);
+    }
+  }
 
   const { data, error } = await supabase.from("campaigns").update(updates).eq("id", id).select().single();
 
@@ -126,10 +205,18 @@ export async function DELETE(request: NextRequest) {
 
   const supabase = createServiceClient();
 
-  // Verify ownership
-  const { data: existing } = await supabase.from("campaigns").select("batteur_id").eq("id", id).single();
+  // Verify ownership and get campaign data for refund
+  const { data: existing } = await supabase.from("campaigns").select("batteur_id, budget, spent, status").eq("id", id).single();
   if (!existing || existing.batteur_id !== session.user.id) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
+
+  // Refund unspent budget if campaign was active or paused
+  if (existing.status === "active" || existing.status === "paused") {
+    const unspent = existing.budget - existing.spent;
+    if (unspent > 0) {
+      await supabase.rpc("increment_balance", { p_user_id: session.user.id, p_amount: unspent });
+    }
   }
 
   // Delete related tracked_links first, then the campaign

@@ -88,7 +88,7 @@ function AdminWalletPage() {
     if (statsRes.ok) {
       const data = await statsRes.json();
       setWallet({
-        balance: (data.budgetTotal || 0) - (data.budgetSpent || 0),
+        balance: data.walletBalance ?? 0,
         totalSpent: data.budgetSpent || 0,
         totalBudget: data.budgetTotal || 0,
         activeCampaigns: data.activeRythmes || 0,
