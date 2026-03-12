@@ -90,9 +90,14 @@ export default function LoginPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-white/40 mb-2">
-                Mot de passe
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold text-white/40">
+                  Mot de passe
+                </label>
+                <Link href="/forgot-password" className="text-xs text-primary hover:underline">
+                  Mot de passe oublié ?
+                </Link>
+              </div>
               <input
                 type="password"
                 value={password}
@@ -128,6 +133,12 @@ export default function LoginPage() {
               Contactez-nous pour créer un compte Batteur
             </>
           )}
+        </p>
+
+        <p className="text-center mt-4">
+          <Link href="/" className="text-xs text-white/30 hover:text-white/50 transition">
+            ← Retour à l&apos;accueil
+          </Link>
         </p>
       </div>
     </div>
