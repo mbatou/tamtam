@@ -62,24 +62,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Champs obligatoires manquants" }, { status: 400 });
     }
 
-    // Verify the batteur exists and has enough balance
+    // Verify the batteur exists and has enough recharged balance
     const { data: batteur } = await supabase
       .from("users")
-      .select("id, balance, role")
+      .select("id, total_recharged, role")
       .eq("id", batteur_id)
       .single();
 
     if (!batteur || batteur.role !== "batteur") {
       return NextResponse.json({ error: "Batteur introuvable" }, { status: 404 });
     }
-    if (batteur.balance < budget) {
-      return NextResponse.json({ error: `Solde insuffisant (${batteur.balance} FCFA disponible)` }, { status: 400 });
+    if ((batteur.total_recharged || 0) < budget) {
+      return NextResponse.json({ error: `Solde rechargé insuffisant (${batteur.total_recharged || 0} FCFA disponible)` }, { status: 400 });
     }
 
-    // Deduct from batteur balance
+    // Deduct from batteur total_recharged
     const { error: balErr } = await supabase
       .from("users")
-      .update({ balance: batteur.balance - budget })
+      .update({ total_recharged: (batteur.total_recharged || 0) - budget })
       .eq("id", batteur_id);
     if (balErr) return NextResponse.json({ error: balErr.message }, { status: 500 });
 

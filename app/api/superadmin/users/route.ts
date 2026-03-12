@@ -100,24 +100,25 @@ export async function POST(request: NextRequest) {
 
     const { data: user } = await supabase
       .from("users")
-      .select("id, balance, role, name")
+      .select("id, total_recharged, role, name")
       .eq("id", user_id)
       .single();
 
     if (!user) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
     if (user.role !== "batteur") return NextResponse.json({ error: "L'utilisateur n'est pas un batteur" }, { status: 400 });
 
-    const newBalance = (user.balance || 0) + parseInt(amount);
+    const topupAmount = parseInt(amount);
+    const newRecharged = (user.total_recharged || 0) + topupAmount;
     const { error: upErr } = await supabase
       .from("users")
-      .update({ balance: newBalance })
+      .update({ total_recharged: newRecharged })
       .eq("id", user_id);
     if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
 
     // Log as a manual payment
     await supabase.from("payments").insert({
       user_id,
-      amount: parseInt(amount),
+      amount: topupAmount,
       ref_command: `TOPUP-${Date.now()}`,
       status: "completed",
       payment_method: "admin_topup",
@@ -129,10 +130,10 @@ export async function POST(request: NextRequest) {
       action: "user_topup",
       target_type: "user",
       target_id: user_id,
-      details: { amount, new_balance: newBalance, user_name: user.name },
+      details: { amount: topupAmount, new_recharged: newRecharged, user_name: user.name },
     });
 
-    return NextResponse.json({ success: true, new_balance: newBalance });
+    return NextResponse.json({ success: true, new_recharged: newRecharged });
   }
 
   // --- Standard user actions ---
