@@ -10,6 +10,7 @@ const navItems = [
   { label: "Modération", href: "/superadmin/campaigns", emoji: "🥁" },
   { label: "Finances", href: "/superadmin/finance", emoji: "💰" },
   { label: "Utilisateurs", href: "/superadmin/users", emoji: "👥" },
+  { label: "Support", href: "/superadmin/support", emoji: "💬" },
   { label: "Paramètres", href: "/superadmin/settings", emoji: "⚙️" },
 ];
 
