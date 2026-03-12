@@ -26,6 +26,12 @@ interface Campaign {
   users: { name: string; phone: string } | null;
 }
 
+interface Batteur {
+  id: string;
+  name: string;
+  balance: number;
+}
+
 export default function CampaignModerationPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [filter, setFilter] = useState("all");
@@ -34,13 +40,39 @@ export default function CampaignModerationPage() {
   const [loading, setLoading] = useState(true);
   const { showToast, ToastComponent } = useToast();
 
+  // Create campaign state
+  const [showCreate, setShowCreate] = useState(false);
+  const [batteurs, setBatteurs] = useState<Batteur[]>([]);
+  const [creating, setCreating] = useState(false);
+  const [newCamp, setNewCamp] = useState({
+    batteur_id: "",
+    title: "",
+    description: "",
+    destination_url: "",
+    cpc: "25",
+    budget: "5000",
+  });
+
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
     try {
-      const res = await fetch("/api/superadmin/campaigns");
-      const data = await res.json();
-      setCampaigns(data);
+      const [campRes, usersRes] = await Promise.all([
+        fetch("/api/superadmin/campaigns"),
+        fetch("/api/superadmin/users"),
+      ]);
+      const campData = await campRes.json();
+      const usersData = await usersRes.json();
+      setCampaigns(campData);
+      setBatteurs(
+        (usersData || [])
+          .filter((u: { role: string }) => u.role === "batteur")
+          .map((u: { id: string; name: string; balance: number }) => ({
+            id: u.id,
+            name: u.name,
+            balance: u.balance,
+          }))
+      );
     } catch {
       showToast("Erreur de chargement", "error");
     }
@@ -56,9 +88,9 @@ export default function CampaignModerationPage() {
       });
       if (res.ok) {
         showToast(
-          action === "approve" ? "Campagne approuvée" :
-          action === "reject" ? "Campagne rejetée" :
-          action === "pause" ? "Campagne en pause" : "Campagne relancée",
+          action === "approve" ? "Campagne approuvee" :
+          action === "reject" ? "Campagne rejetee" :
+          action === "pause" ? "Campagne en pause" : "Campagne relancee",
           action === "approve" || action === "resume" ? "success" : "info"
         );
         setSelected(null);
@@ -68,8 +100,35 @@ export default function CampaignModerationPage() {
         showToast("Erreur", "error");
       }
     } catch {
-      showToast("Erreur réseau", "error");
+      showToast("Erreur reseau", "error");
     }
+  }
+
+  async function createCampaign() {
+    if (!newCamp.batteur_id || !newCamp.title || !newCamp.destination_url) {
+      showToast("Remplissez tous les champs obligatoires", "error");
+      return;
+    }
+    setCreating(true);
+    try {
+      const res = await fetch("/api/superadmin/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "create", ...newCamp }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast("Campagne creee avec succes", "success");
+        setShowCreate(false);
+        setNewCamp({ batteur_id: "", title: "", description: "", destination_url: "", cpc: "25", budget: "5000" });
+        loadData();
+      } else {
+        showToast(data.error || "Erreur", "error");
+      }
+    } catch {
+      showToast("Erreur reseau", "error");
+    }
+    setCreating(false);
   }
 
   const pendingCount = campaigns.filter((c) => (c.moderation_status || "pending") === "pending").length;
@@ -80,6 +139,8 @@ export default function CampaignModerationPage() {
     if (filter === "rejected") return ms === "rejected";
     return true;
   });
+
+  const selectedBatteur = batteurs.find((b) => b.id === newCamp.batteur_id);
 
   if (loading) {
     return (
@@ -96,7 +157,15 @@ export default function CampaignModerationPage() {
     <div className="p-6 max-w-7xl">
       {ToastComponent}
 
-      <h1 className="text-2xl font-bold mb-6">Modération des campagnes</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Moderation des campagnes</h1>
+        <button
+          onClick={() => setShowCreate(true)}
+          className="px-4 py-2.5 rounded-xl bg-gradient-primary text-white text-sm font-bold hover:opacity-90 transition"
+        >
+          + Creer une campagne
+        </button>
+      </div>
 
       {pendingCount > 0 && (
         <div className="mb-6 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
@@ -110,15 +179,15 @@ export default function CampaignModerationPage() {
         <StatCard label="Total" value={campaigns.length.toString()} accent="orange" />
         <StatCard label="Actives" value={campaigns.filter((c) => c.status === "active").length.toString()} accent="teal" />
         <StatCard label="En attente" value={pendingCount.toString()} accent="purple" />
-        <StatCard label="Rejetées" value={campaigns.filter((c) => c.moderation_status === "rejected").length.toString()} accent="red" />
+        <StatCard label="Rejetees" value={campaigns.filter((c) => c.moderation_status === "rejected").length.toString()} accent="red" />
       </div>
 
       <TabBar
         tabs={[
           { key: "all", label: "Toutes", count: campaigns.length },
           { key: "pending", label: "En attente", count: pendingCount },
-          { key: "approved", label: "Approuvées", count: campaigns.filter((c) => c.moderation_status === "approved").length },
-          { key: "rejected", label: "Rejetées", count: campaigns.filter((c) => c.moderation_status === "rejected").length },
+          { key: "approved", label: "Approuvees", count: campaigns.filter((c) => c.moderation_status === "approved").length },
+          { key: "rejected", label: "Rejetees", count: campaigns.filter((c) => c.moderation_status === "rejected").length },
         ]}
         active={filter}
         onChange={setFilter}
@@ -130,10 +199,10 @@ export default function CampaignModerationPage() {
           <thead>
             <tr className="text-left text-xs text-white/30 border-b border-white/5">
               <th className="pb-3 font-semibold">Campagne</th>
-              <th className="pb-3 font-semibold">Modération</th>
+              <th className="pb-3 font-semibold">Moderation</th>
               <th className="pb-3 font-semibold hidden md:table-cell">Budget</th>
               <th className="pb-3 font-semibold hidden md:table-cell">CPC</th>
-              <th className="pb-3 font-semibold hidden lg:table-cell">Échos</th>
+              <th className="pb-3 font-semibold hidden lg:table-cell">Echos</th>
               <th className="pb-3 font-semibold hidden lg:table-cell">Clics</th>
               <th className="pb-3 font-semibold hidden lg:table-cell">Date</th>
             </tr>
@@ -187,7 +256,7 @@ export default function CampaignModerationPage() {
                 <span>{selected.cpc} FCFA</span>
               </div>
               <div>
-                <span className="text-xs text-white/40 block">Échos engagés</span>
+                <span className="text-xs text-white/40 block">Echos engages</span>
                 <span>{selected.echo_count}</span>
               </div>
               <div>
@@ -195,7 +264,7 @@ export default function CampaignModerationPage() {
                 <span>{selected.total_clicks}</span>
               </div>
               <div className="col-span-2">
-                <span className="text-xs text-white/40 block mb-1">Budget dépensé</span>
+                <span className="text-xs text-white/40 block mb-1">Budget depense</span>
                 <ProgressBar value={selected.spent} max={selected.budget} />
                 <span className="text-xs text-white/30 mt-1 block">
                   {formatFCFA(selected.spent)} / {formatFCFA(selected.budget)}
@@ -270,6 +339,104 @@ export default function CampaignModerationPage() {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* Create Campaign Modal */}
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Creer une campagne pour un batteur">
+        <div className="space-y-4">
+          {/* Select brand */}
+          <div>
+            <label className="text-xs text-white/40 block mb-1">Batteur (marque) *</label>
+            <select
+              value={newCamp.batteur_id}
+              onChange={(e) => setNewCamp({ ...newCamp, batteur_id: e.target.value })}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+            >
+              <option value="">Selectionner un batteur...</option>
+              {batteurs.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name} — Solde: {formatFCFA(b.balance)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {selectedBatteur && (
+            <div className="p-3 rounded-xl bg-white/5 text-xs">
+              <span className="text-white/40">Solde disponible: </span>
+              <span className="font-bold text-accent">{formatFCFA(selectedBatteur.balance)}</span>
+            </div>
+          )}
+
+          <div>
+            <label className="text-xs text-white/40 block mb-1">Titre de la campagne *</label>
+            <input
+              type="text"
+              value={newCamp.title}
+              onChange={(e) => setNewCamp({ ...newCamp, title: e.target.value })}
+              placeholder="Ex: Promo ete 2026"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-white/40 block mb-1">Description</label>
+            <textarea
+              value={newCamp.description}
+              onChange={(e) => setNewCamp({ ...newCamp, description: e.target.value })}
+              placeholder="Description optionnelle..."
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition resize-none h-16"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-white/40 block mb-1">URL de destination *</label>
+            <input
+              type="url"
+              value={newCamp.destination_url}
+              onChange={(e) => setNewCamp({ ...newCamp, destination_url: e.target.value })}
+              placeholder="https://..."
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-white/40 block mb-1">CPC (FCFA) *</label>
+              <input
+                type="number"
+                value={newCamp.cpc}
+                onChange={(e) => setNewCamp({ ...newCamp, cpc: e.target.value })}
+                min="5"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-white/40 block mb-1">Budget (FCFA) *</label>
+              <input
+                type="number"
+                value={newCamp.budget}
+                onChange={(e) => setNewCamp({ ...newCamp, budget: e.target.value })}
+                min="500"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+              />
+            </div>
+          </div>
+
+          {selectedBatteur && parseInt(newCamp.budget) > selectedBatteur.balance && (
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+              Budget depasse le solde du batteur ({formatFCFA(selectedBatteur.balance)})
+            </div>
+          )}
+
+          <button
+            onClick={createCampaign}
+            disabled={creating}
+            className="w-full py-3 rounded-xl bg-gradient-primary text-white font-bold text-sm hover:opacity-90 transition disabled:opacity-50"
+          >
+            {creating ? "Creation en cours..." : "Creer et approuver la campagne"}
+          </button>
+        </div>
       </Modal>
     </div>
   );

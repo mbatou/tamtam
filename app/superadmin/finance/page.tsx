@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { formatFCFA } from "@/lib/utils";
 import StatCard from "@/components/StatCard";
 import Badge from "@/components/ui/Badge";
+import Modal from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 
 interface PayoutRow {
@@ -22,6 +23,7 @@ interface PaymentRow {
   amount: number;
   status: string;
   provider: string;
+  payment_method: string | null;
   created_at: string;
   users: { name: string } | null;
 }
@@ -36,10 +38,14 @@ interface FinanceData {
   payments: PaymentRow[];
 }
 
+type FinanceTab = "payout_requests" | "payout_history" | "payments";
+
 export default function FinancePage() {
   const [data, setData] = useState<FinanceData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"payouts" | "payments">("payouts");
+  const [tab, setTab] = useState<FinanceTab>("payout_requests");
+  const [selectedPayout, setSelectedPayout] = useState<PayoutRow | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
   const { showToast, ToastComponent } = useToast();
 
   useEffect(() => { loadData(); }, []);
@@ -63,14 +69,16 @@ export default function FinancePage() {
         body: JSON.stringify({ payout_id: payoutId, action, reason }),
       });
       if (res.ok) {
-        showToast(action === "approve" ? "Paiement envoyé" : "Paiement refusé", action === "approve" ? "success" : "info");
+        showToast(action === "approve" ? "Paiement envoye" : "Paiement refuse", action === "approve" ? "success" : "info");
+        setSelectedPayout(null);
+        setRejectReason("");
         loadData();
       } else {
         const err = await res.json();
         showToast(err.error || "Erreur", "error");
       }
     } catch {
-      showToast("Erreur réseau", "error");
+      showToast("Erreur reseau", "error");
     }
   }
 
@@ -85,6 +93,8 @@ export default function FinancePage() {
     );
   }
 
+  const pendingPayouts = data.payouts.filter((p) => p.status === "pending");
+  const completedPayouts = data.payouts.filter((p) => p.status !== "pending");
   const echoShare = data.grossRevenue - data.platformCut;
   const total = data.grossRevenue || 1;
   const platformPct = (data.platformCut / total) * 100;
@@ -95,18 +105,18 @@ export default function FinancePage() {
     <div className="p-6 max-w-7xl">
       {ToastComponent}
 
-      <h1 className="text-2xl font-bold mb-6">Contrôle financier</h1>
+      <h1 className="text-2xl font-bold mb-6">Controle financier</h1>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard label="Revenu brut" value={formatFCFA(data.grossRevenue)} accent="orange" />
         <StatCard label={`Commission (${data.feePercent}%)`} value={formatFCFA(data.platformCut)} accent="teal" />
-        <StatCard label="Payé aux Échos" value={formatFCFA(data.sentTotal)} accent="purple" />
+        <StatCard label="Paye aux Echos" value={formatFCFA(data.sentTotal)} accent="purple" />
         <StatCard label="En attente" value={formatFCFA(data.pendingTotal)} accent="red" />
       </div>
 
       {/* Reconciliation Bar */}
       <div className="glass-card p-6 mb-8">
-        <h3 className="text-sm font-bold mb-4">Répartition des revenus</h3>
+        <h3 className="text-sm font-bold mb-4">Repartition des revenus</h3>
         <div className="flex h-6 rounded-full overflow-hidden mb-3">
           <div className="bg-gradient-primary" style={{ width: `${platformPct}%` }} />
           <div className="bg-accent" style={{ width: `${paidPct}%` }} />
@@ -119,7 +129,7 @@ export default function FinancePage() {
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-full bg-accent" />
-            <span className="text-white/50">Payé ({Math.round(paidPct)}%)</span>
+            <span className="text-white/50">Paye ({Math.round(paidPct)}%)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-full bg-white/10" />
@@ -127,23 +137,36 @@ export default function FinancePage() {
           </div>
         </div>
         <div className="mt-3 text-xs text-white/30">
-          Part Échos: {formatFCFA(echoShare)} · Déjà payé: {formatFCFA(data.sentTotal)} · En attente: {formatFCFA(data.pendingTotal)}
+          Part Echos: {formatFCFA(echoShare)} · Deja paye: {formatFCFA(data.sentTotal)} · En attente: {formatFCFA(data.pendingTotal)}
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-6 overflow-x-auto">
         <button
-          onClick={() => setTab("payouts")}
-          className={`px-4 py-2 rounded-xl text-sm font-bold transition ${
-            tab === "payouts" ? "bg-gradient-primary text-white" : "bg-white/5 text-white/40"
+          onClick={() => setTab("payout_requests")}
+          className={`px-4 py-2 rounded-xl text-sm font-bold transition whitespace-nowrap flex items-center gap-2 ${
+            tab === "payout_requests" ? "bg-gradient-primary text-white" : "bg-white/5 text-white/40"
           }`}
         >
-          Paiements Échos ({data.payouts.length})
+          Demandes de paiement
+          {pendingPayouts.length > 0 && (
+            <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+              {pendingPayouts.length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setTab("payout_history")}
+          className={`px-4 py-2 rounded-xl text-sm font-bold transition whitespace-nowrap ${
+            tab === "payout_history" ? "bg-gradient-primary text-white" : "bg-white/5 text-white/40"
+          }`}
+        >
+          Historique paiements ({completedPayouts.length})
         </button>
         <button
           onClick={() => setTab("payments")}
-          className={`px-4 py-2 rounded-xl text-sm font-bold transition ${
+          className={`px-4 py-2 rounded-xl text-sm font-bold transition whitespace-nowrap ${
             tab === "payments" ? "bg-gradient-primary text-white" : "bg-white/5 text-white/40"
           }`}
         >
@@ -151,21 +174,76 @@ export default function FinancePage() {
         </button>
       </div>
 
-      {tab === "payouts" && (
+      {/* Payout Requests Tab */}
+      {tab === "payout_requests" && (
+        <div>
+          {pendingPayouts.length === 0 ? (
+            <div className="glass-card p-12 text-center">
+              <div className="text-4xl mb-3">&#10003;</div>
+              <h3 className="text-lg font-bold mb-1">Aucune demande en attente</h3>
+              <p className="text-sm text-white/40">Toutes les demandes de paiement ont ete traitees.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {pendingPayouts.map((payout) => (
+                <div
+                  key={payout.id}
+                  className="glass-card p-4 flex items-center justify-between hover:bg-white/5 transition cursor-pointer"
+                  onClick={() => setSelectedPayout(payout)}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center text-sm font-bold text-white">
+                      {payout.users?.name?.charAt(0)?.toUpperCase() || "?"}
+                    </div>
+                    <div>
+                      <div className="font-bold">{payout.users?.name || "—"}</div>
+                      <div className="text-xs text-white/40">
+                        {payout.users?.phone || ""} · {payout.provider === "wave" ? "Wave" : "Orange Money"}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-lg">{formatFCFA(payout.amount)}</div>
+                    <div className="text-xs text-white/30">
+                      {new Date(payout.created_at).toLocaleDateString("fr-FR")}
+                    </div>
+                  </div>
+                  <div className="flex gap-2 ml-4">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handlePayout(payout.id, "approve"); }}
+                      className="px-4 py-2 rounded-xl bg-accent/10 border border-accent/30 text-accent text-xs font-bold hover:bg-accent/20 transition"
+                    >
+                      Payer
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setSelectedPayout(payout); }}
+                      className="px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold hover:bg-red-500/20 transition"
+                    >
+                      Refuser
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Payout History Tab */}
+      {tab === "payout_history" && (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-white/30 border-b border-white/5">
                 <th className="pb-3 font-semibold">Date</th>
-                <th className="pb-3 font-semibold">Écho</th>
+                <th className="pb-3 font-semibold">Echo</th>
                 <th className="pb-3 font-semibold">Montant</th>
                 <th className="pb-3 font-semibold hidden md:table-cell">Fournisseur</th>
                 <th className="pb-3 font-semibold">Status</th>
-                <th className="pb-3 font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {data.payouts.map((payout) => (
+              {completedPayouts.map((payout) => (
                 <tr key={payout.id} className="border-b border-white/5">
                   <td className="py-3 text-xs text-white/50">
                     {new Date(payout.created_at).toLocaleDateString("fr-FR")}
@@ -181,35 +259,17 @@ export default function FinancePage() {
                   <td className="py-3">
                     <Badge status={payout.status} />
                   </td>
-                  <td className="py-3">
-                    {payout.status === "pending" && (
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => handlePayout(payout.id, "approve")}
-                          className="text-xs font-bold text-accent hover:text-accent/80"
-                        >
-                          Envoyer
-                        </button>
-                        <span className="text-white/10">|</span>
-                        <button
-                          onClick={() => handlePayout(payout.id, "reject")}
-                          className="text-xs font-bold text-red-400 hover:text-red-300"
-                        >
-                          Refuser
-                        </button>
-                      </div>
-                    )}
-                  </td>
                 </tr>
               ))}
-              {data.payouts.length === 0 && (
-                <tr><td colSpan={6} className="py-6 text-center text-white/30 text-sm">Aucun paiement</td></tr>
+              {completedPayouts.length === 0 && (
+                <tr><td colSpan={5} className="py-6 text-center text-white/30 text-sm">Aucun historique</td></tr>
               )}
             </tbody>
           </table>
         </div>
       )}
 
+      {/* Brand Payments Tab */}
       {tab === "payments" && (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -218,7 +278,7 @@ export default function FinancePage() {
                 <th className="pb-3 font-semibold">Date</th>
                 <th className="pb-3 font-semibold">Batteur</th>
                 <th className="pb-3 font-semibold">Montant</th>
-                <th className="pb-3 font-semibold hidden md:table-cell">Méthode</th>
+                <th className="pb-3 font-semibold hidden md:table-cell">Methode</th>
                 <th className="pb-3 font-semibold">Status</th>
               </tr>
             </thead>
@@ -230,7 +290,13 @@ export default function FinancePage() {
                   </td>
                   <td className="py-3 font-semibold text-sm">{payment.users?.name || "—"}</td>
                   <td className="py-3 font-bold">{formatFCFA(payment.amount)}</td>
-                  <td className="py-3 hidden md:table-cell text-xs">{payment.provider || "—"}</td>
+                  <td className="py-3 hidden md:table-cell text-xs">
+                    {payment.payment_method === "admin_topup" ? (
+                      <span className="text-purple-400 font-bold">Recharge admin</span>
+                    ) : (
+                      payment.payment_method || payment.provider || "—"
+                    )}
+                  </td>
                   <td className="py-3">
                     <Badge status={payment.status} />
                   </td>
@@ -243,6 +309,71 @@ export default function FinancePage() {
           </table>
         </div>
       )}
+
+      {/* Payout Detail / Reject Modal */}
+      <Modal
+        open={!!selectedPayout}
+        onClose={() => { setSelectedPayout(null); setRejectReason(""); }}
+        title="Demande de paiement"
+      >
+        {selectedPayout && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-full bg-gradient-primary flex items-center justify-center text-xl font-bold text-white">
+                {selectedPayout.users?.name?.charAt(0)?.toUpperCase() || "?"}
+              </div>
+              <div>
+                <h3 className="font-bold text-lg">{selectedPayout.users?.name || "—"}</h3>
+                <p className="text-xs text-white/40">{selectedPayout.users?.phone || ""}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="glass-card p-4 text-center">
+                <div className="text-2xl font-bold">{formatFCFA(selectedPayout.amount)}</div>
+                <div className="text-[10px] text-white/40">Montant demande</div>
+              </div>
+              <div className="glass-card p-4 text-center">
+                <div className="text-lg font-bold">{selectedPayout.provider === "wave" ? "Wave" : "Orange Money"}</div>
+                <div className="text-[10px] text-white/40">Fournisseur</div>
+              </div>
+            </div>
+
+            <div className="text-xs text-white/30">
+              Demande le {new Date(selectedPayout.created_at).toLocaleDateString("fr-FR", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </div>
+
+            <div className="space-y-3 pt-2 border-t border-white/5">
+              <button
+                onClick={() => handlePayout(selectedPayout.id, "approve")}
+                className="w-full py-3 rounded-xl bg-accent/10 border border-accent/30 text-accent font-bold text-sm hover:bg-accent/20 transition"
+              >
+                Confirmer le paiement
+              </button>
+
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Raison du refus (optionnel)..."
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition resize-none h-16"
+              />
+              <button
+                onClick={() => handlePayout(selectedPayout.id, "reject", rejectReason)}
+                className="w-full py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-bold text-sm hover:bg-red-500/20 transition"
+              >
+                Refuser le paiement
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
