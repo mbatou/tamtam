@@ -5,11 +5,11 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 const navItems = [
-  { label: "Anti-Fraude", href: "/superadmin/fraud", emoji: "🛡️", badgeKey: "fraud" },
-  { label: "Modération", href: "/superadmin/campaigns", emoji: "🥁", badgeKey: "campaigns" },
-  { label: "Finances", href: "/superadmin/finance", emoji: "💰", badgeKey: "finance" },
-  { label: "Analytics", href: "/superadmin/analytics", emoji: "📊" },
-  { label: "Utilisateurs", href: "/superadmin/users", emoji: "👥", badgeKey: "users" },
+  { label: "Vue d'ensemble", href: "/superadmin", emoji: "🏠", exact: true },
+  { label: "Anti-Fraude", href: "/superadmin/fraud", emoji: "🛡️" },
+  { label: "Modération", href: "/superadmin/campaigns", emoji: "🥁" },
+  { label: "Finances", href: "/superadmin/finance", emoji: "💰" },
+  { label: "Utilisateurs", href: "/superadmin/users", emoji: "👥" },
   { label: "Paramètres", href: "/superadmin/settings", emoji: "⚙️" },
 ];
 
@@ -33,7 +33,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         }`}
       >
         <div className="p-4 border-b border-white/5">
-          <Link href="/superadmin/fraud" className="flex items-center gap-2">
+          <Link href="/superadmin" className="flex items-center gap-2">
             <span className="text-xl font-black gradient-text">
               {collapsed ? "T" : "Tamtam"}
             </span>
@@ -47,7 +47,9 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
 
         <nav className="flex-1 p-3 space-y-1">
           {navItems.map((item) => {
-            const active = pathname.startsWith(item.href);
+            const active = (item as { exact?: boolean }).exact
+              ? pathname === item.href
+              : pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}
@@ -92,7 +94,9 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         {/* Mobile nav */}
         <div className="lg:hidden flex overflow-x-auto gap-1 p-2 border-b border-white/5">
           {navItems.map((item) => {
-            const active = pathname.startsWith(item.href);
+            const active = (item as { exact?: boolean }).exact
+              ? pathname === item.href
+              : pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}
