@@ -1,5 +1,6 @@
 import EchoBottomNav from "@/components/EchoBottomNav";
 import SoundWave from "@/components/ui/SoundWave";
+import { InstallPrompt } from "@/components/InstallPrompt";
 
 export default function EchoLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -11,6 +12,7 @@ export default function EchoLayout({ children }: { children: React.ReactNode }) 
         </div>
       </header>
       <main>{children}</main>
+      <InstallPrompt />
       <EchoBottomNav />
     </div>
   );

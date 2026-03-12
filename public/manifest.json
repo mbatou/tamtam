@@ -1,0 +1,28 @@
+{
+  "name": "Tamtam",
+  "short_name": "Tamtam",
+  "description": "Partage. Résonne. Gagne. — Gagne de l'argent en partageant sur WhatsApp.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0A18",
+  "theme_color": "#D35400",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["finance", "social"],
+  "lang": "fr",
+  "dir": "ltr"
+}
