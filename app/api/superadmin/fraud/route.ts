@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -63,9 +64,50 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === "toggle_validity" && click_id) {
-    const { data: click } = await supabase.from("clicks").select("is_valid").eq("id", click_id).single();
+    // Get click data
+    const { data: click } = await supabase
+      .from("clicks")
+      .select("id, is_valid, link_id")
+      .eq("id", click_id)
+      .single();
+
     if (click) {
-      await supabase.from("clicks").update({ is_valid: !click.is_valid }).eq("id", click_id);
+      const newValid = !click.is_valid;
+      await supabase.from("clicks").update({ is_valid: newValid }).eq("id", click_id);
+
+      // Get link + campaign info for counter adjustments
+      const { data: link } = await supabase
+        .from("tracked_links")
+        .select("echo_id, campaign_id, campaigns(cpc)")
+        .eq("id", click.link_id)
+        .single();
+
+      if (link) {
+        const campaign = link.campaigns as unknown as { cpc: number } | null;
+        if (campaign) {
+          const cpc = campaign.cpc;
+          const echoEarnings = Math.floor((cpc * ECHO_SHARE_PERCENT) / 100);
+          const direction = newValid ? 1 : -1;
+
+          await supabase.rpc("adjust_click_counters", {
+            p_link_id: click.link_id,
+            p_campaign_id: link.campaign_id,
+            p_echo_id: link.echo_id,
+            p_cpc: cpc * direction,
+            p_echo_earnings: echoEarnings * direction,
+            p_click_delta: direction,
+          });
+        }
+      }
+
+      try {
+        await supabase.from("admin_activity_log").insert({
+          admin_id: session.user.id,
+          action: newValid ? "validate_click" : "invalidate_click",
+          target_type: "click",
+          target_id: click_id,
+        });
+      } catch { /* admin_activity_log may not exist yet */ }
     }
     return NextResponse.json({ success: true });
   }
