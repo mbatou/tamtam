@@ -8,6 +8,7 @@ const navItems = [
   { label: "Vue d'ensemble", href: "/superadmin", emoji: "🏠", exact: true },
   { label: "Anti-Fraude", href: "/superadmin/fraud", emoji: "🛡️" },
   { label: "Modération", href: "/superadmin/campaigns", emoji: "🥁" },
+  { label: "Leads", href: "/superadmin/leads", emoji: "📩" },
   { label: "Finances", href: "/superadmin/finance", emoji: "💰" },
   { label: "Utilisateurs", href: "/superadmin/users", emoji: "👥" },
   { label: "Support", href: "/superadmin/support", emoji: "💬" },

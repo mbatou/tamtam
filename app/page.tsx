@@ -151,7 +151,7 @@ export default function LandingPage() {
       </section>
 
       {/* For Brands */}
-      <section className="px-4 sm:px-6 py-14 sm:py-20 max-w-7xl mx-auto">
+      <section id="pour-les-marques" className="px-4 sm:px-6 py-14 sm:py-20 max-w-7xl mx-auto">
         <div className="grid md:grid-cols-2 gap-8 sm:gap-12 items-center">
           <div>
             <span className="text-xs font-bold text-secondary uppercase tracking-widest mb-3 sm:mb-4 block">
@@ -166,8 +166,8 @@ export default function LandingPage() {
               Des milliers d&apos;Echos partagent votre lien sur WhatsApp. Vous ne payez
               que pour les clics reels et verifies.
             </p>
-            <Link href="/login" className="btn-outline text-sm sm:text-base">
-              Devenir Batteur
+            <Link href="/login?tab=batteur" className="btn-outline text-sm sm:text-base">
+              Devenir un Batteur →
             </Link>
           </div>
           <div className="glass-card p-6 sm:p-8 hover-lift">
