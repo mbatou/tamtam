@@ -100,7 +100,7 @@ export default function AdminCampaignsPage() {
     setCreativeUrls((prev) => prev.filter((_, i) => i !== index));
   }
 
-  async function handleSubmit() {
+  async function handleSubmit(asDraft = false) {
     setSubmitting(true);
     setError(null);
     setShowRechargePrompt(false);
@@ -115,6 +115,7 @@ export default function AdminCampaignsPage() {
         starts_at: form.starts_at || null,
         ends_at: form.ends_at || null,
         creative_urls: creativeUrls,
+        ...(!editingId && asDraft ? { save_as_draft: true } : {}),
       };
       const res = await fetch("/api/campaigns", {
         method: editingId ? "PUT" : "POST",
@@ -174,7 +175,7 @@ export default function AdminCampaignsPage() {
         if (!res.ok) {
           const data = await res.json();
           if (data.code === "INSUFFICIENT_BALANCE") {
-            alert("Solde insuffisant pour réactiver cette campagne. Veuillez recharger votre portefeuille.");
+            alert("Solde insuffisant. Veuillez recharger votre portefeuille.");
           } else {
             alert(data.error || "Erreur");
           }
@@ -211,6 +212,7 @@ export default function AdminCampaignsPage() {
     const remaining = c.budget - c.spent;
     const isActive = c.status === "active";
     const isPaused = c.status === "paused";
+    const isDraft = c.status === "draft";
     const isEnded = c.status === "completed" || c.status === "rejected";
 
     return (
@@ -219,6 +221,19 @@ export default function AdminCampaignsPage() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           Retour aux Rythmes
         </button>
+
+        {/* Draft banner */}
+        {isDraft && (
+          <div className="mb-6 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-yellow-400">Brouillon</p>
+              <p className="text-xs text-white/40">Ce rythme n&apos;est pas encore publié. Publiez-le quand vous êtes prêt.</p>
+            </div>
+            <button onClick={() => handleAction(c.id, "activate")} disabled={actionLoading !== null} className="px-5 py-2.5 rounded-xl bg-accent text-dark text-sm font-bold hover:bg-accent/90 transition disabled:opacity-40">
+              {actionLoading === "activate" ? "..." : "Publier maintenant"}
+            </button>
+          </div>
+        )}
 
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
@@ -232,6 +247,11 @@ export default function AdminCampaignsPage() {
           </div>
 
           <div className="flex flex-wrap gap-2">
+            {isDraft && (
+              <button onClick={() => handleAction(c.id, "activate")} disabled={actionLoading !== null} className="px-4 py-2 rounded-xl bg-accent/10 text-accent text-sm font-semibold hover:bg-accent/20 transition disabled:opacity-40">
+                {actionLoading === "activate" ? "..." : "Publier"}
+              </button>
+            )}
             {isActive && (
               <button onClick={() => handleAction(c.id, "pause")} disabled={actionLoading !== null} className="px-4 py-2 rounded-xl bg-yellow-500/10 text-yellow-400 text-sm font-semibold hover:bg-yellow-500/20 transition disabled:opacity-40">
                 {actionLoading === "pause" ? "..." : "Mettre en pause"}
@@ -423,9 +443,16 @@ export default function AdminCampaignsPage() {
             </div>
           )}
 
-          <button onClick={handleSubmit} disabled={submitting || !form.title || !form.destination_url || !form.cpc || !form.budget} className="btn-primary mt-6 disabled:opacity-40">
-            {submitting ? "Enregistrement..." : editingId ? "Enregistrer les modifications" : "Lancer le Rythme"}
-          </button>
+          <div className="flex gap-3 mt-6">
+            <button onClick={() => handleSubmit(false)} disabled={submitting || !form.title || !form.destination_url || !form.cpc || !form.budget} className="btn-primary flex-1 disabled:opacity-40">
+              {submitting ? "Enregistrement..." : editingId ? "Enregistrer les modifications" : "Lancer le Rythme"}
+            </button>
+            {!editingId && (
+              <button onClick={() => handleSubmit(true)} disabled={submitting || !form.title || !form.destination_url || !form.cpc || !form.budget} className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 font-semibold text-sm hover:bg-white/10 transition disabled:opacity-40">
+                {submitting ? "..." : "Sauvegarder en brouillon"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );

@@ -50,11 +50,30 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls } = parsed.data;
+  const { title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls, save_as_draft } = parsed.data;
 
   const supabase = createServiceClient();
 
-  // Check batteur's balance
+  // Draft: save without balance check or deduction
+  if (save_as_draft) {
+    const { data, error } = await supabase.from("campaigns").insert({
+      batteur_id: session.user.id,
+      title,
+      description: description || null,
+      destination_url,
+      creative_urls: creative_urls || [],
+      cpc,
+      budget,
+      status: "draft",
+      starts_at: starts_at || null,
+      ends_at: ends_at || null,
+    }).select().single();
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(data, { status: 201 });
+  }
+
+  // Active: check and debit balance
   const { data: batteur } = await supabase
     .from("users")
     .select("balance")
@@ -68,7 +87,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Debit from balance
   const { error: debitError } = await supabase
     .from("users")
     .update({ balance: batteur.balance - budget })
@@ -141,27 +159,29 @@ export async function PUT(request: NextRequest) {
   if (creative_urls !== undefined) updates.creative_urls = creative_urls;
   if (status !== undefined) updates.status = status;
 
-  // Handle budget change: charge or refund the difference
+  // Handle budget change: charge or refund the difference (skip for drafts - no balance was deducted)
   if (budget !== undefined) {
-    const oldBudget = existing.budget;
-    const diff = budget - oldBudget;
+    if (existing.status !== "draft") {
+      const oldBudget = existing.budget;
+      const diff = budget - oldBudget;
 
-    if (diff > 0) {
-      // Need more budget: check balance
-      const { data: batteur } = await supabase.from("users").select("balance").eq("id", session.user.id).single();
-      if (!batteur || (batteur.balance || 0) < diff) {
-        return NextResponse.json(
-          { error: "Solde insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
-          { status: 400 }
-        );
+      if (diff > 0) {
+        // Need more budget: check balance
+        const { data: batteur } = await supabase.from("users").select("balance").eq("id", session.user.id).single();
+        if (!batteur || (batteur.balance || 0) < diff) {
+          return NextResponse.json(
+            { error: "Solde insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
+            { status: 400 }
+          );
+        }
+        await supabase.from("users").update({ balance: batteur.balance - diff }).eq("id", session.user.id);
+      } else if (diff < 0) {
+        // Reducing budget: refund the difference (but can't go below spent)
+        if (budget < existing.spent) {
+          return NextResponse.json({ error: "Le budget ne peut pas être inférieur au montant déjà dépensé." }, { status: 400 });
+        }
+        await supabase.rpc("increment_balance", { p_user_id: session.user.id, p_amount: Math.abs(diff) });
       }
-      await supabase.from("users").update({ balance: batteur.balance - diff }).eq("id", session.user.id);
-    } else if (diff < 0) {
-      // Reducing budget: refund the difference (but can't go below spent)
-      if (budget < existing.spent) {
-        return NextResponse.json({ error: "Le budget ne peut pas être inférieur au montant déjà dépensé." }, { status: 400 });
-      }
-      await supabase.rpc("increment_balance", { p_user_id: session.user.id, p_amount: Math.abs(diff) });
     }
     updates.budget = budget;
   }
@@ -172,6 +192,19 @@ export async function PUT(request: NextRequest) {
     if (unspent > 0) {
       await supabase.rpc("increment_balance", { p_user_id: session.user.id, p_amount: unspent });
     }
+  }
+
+  // Debit balance when publishing a draft campaign
+  if (status === "active" && existing.status === "draft") {
+    const campaignBudget = budget !== undefined ? budget : existing.budget;
+    const { data: batteur } = await supabase.from("users").select("balance").eq("id", session.user.id).single();
+    if (!batteur || (batteur.balance || 0) < campaignBudget) {
+      return NextResponse.json(
+        { error: "Solde insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
+        { status: 400 }
+      );
+    }
+    await supabase.from("users").update({ balance: batteur.balance - campaignBudget }).eq("id", session.user.id);
   }
 
   // Re-debit from balance when reactivating a paused campaign
