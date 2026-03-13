@@ -138,16 +138,18 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === "approve") {
+    // Always pass all 3 args to avoid PostgreSQL overload ambiguity
     const { error } = await supabase.rpc("process_payout", {
       p_payout_id: payout_id,
       p_status: "sent",
+      p_reason: "",
     });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   } else if (action === "reject") {
     const { error } = await supabase.rpc("process_payout", {
       p_payout_id: payout_id,
       p_status: "failed",
-      p_reason: reason || null,
+      p_reason: reason || "Refusé par l'admin",
     });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   } else {

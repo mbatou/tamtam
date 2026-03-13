@@ -96,6 +96,44 @@ export async function GET() {
       .slice(0, 10);
   }
 
+  // --- Chart data: daily clicks for brand's campaigns (last 14 days) ---
+  const fourteenDaysAgo = new Date();
+  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 13);
+  fourteenDaysAgo.setHours(0, 0, 0, 0);
+
+  let clicksChart: { date: string; valid: number; fraud: number }[] = [];
+  if (linkIds.length > 0) {
+    const { data: dailyClicks } = await supabase
+      .from("clicks")
+      .select("created_at, is_valid")
+      .in("link_id", linkIds)
+      .gte("created_at", fourteenDaysAgo.toISOString())
+      .order("created_at", { ascending: true });
+
+    const clicksByDay: Record<string, { date: string; valid: number; fraud: number }> = {};
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(fourteenDaysAgo);
+      d.setDate(d.getDate() + i);
+      const key = d.toISOString().slice(0, 10);
+      clicksByDay[key] = { date: key, valid: 0, fraud: 0 };
+    }
+    for (const click of dailyClicks || []) {
+      const key = click.created_at.slice(0, 10);
+      if (clicksByDay[key]) {
+        if (click.is_valid) clicksByDay[key].valid++;
+        else clicksByDay[key].fraud++;
+      }
+    }
+    clicksChart = Object.values(clicksByDay);
+  }
+
+  // --- Chart data: budget per campaign ---
+  const campaignBudgets = allCampaigns.map((c) => ({
+    name: c.title.length > 15 ? c.title.slice(0, 15) + "..." : c.title,
+    budget: c.budget,
+    spent: c.spent || 0,
+  }));
+
   return NextResponse.json({
     totalClicks,
     validClicks,
@@ -107,5 +145,7 @@ export async function GET() {
     totalCampaigns: allCampaigns.length,
     topEchos,
     campaigns: allCampaigns,
+    clicksChart,
+    campaignBudgets,
   });
 }

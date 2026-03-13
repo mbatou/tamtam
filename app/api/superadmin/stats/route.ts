@@ -41,7 +41,7 @@ export async function GET() {
     supabase.from("users").select("id, name, total_earned, balance").eq("role", "echo").order("total_earned", { ascending: false }).limit(10),
     supabase.from("clicks").select("id, ip_address, is_valid, created_at, link_id").order("created_at", { ascending: false }).limit(20),
     supabase.from("payouts").select("id, echo_id, amount, provider, status, created_at, users!echo_id(name, phone)").eq("status", "pending").order("created_at", { ascending: false }).limit(10),
-    supabase.from("campaigns").select("spent, budget"),
+    supabase.from("campaigns").select("spent, budget, status"),
     supabase.from("payouts").select("amount").eq("status", "sent"),
     supabase.from("platform_settings").select("key, value"),
   ]);
@@ -52,6 +52,59 @@ export async function GET() {
   const paidToEchos = (sentPayouts || []).reduce((s: number, p: { amount: number }) => s + p.amount, 0);
   const pendingPayoutAmount = (pendingPayoutsList || []).reduce((s: number, p: { amount: number }) => s + p.amount, 0);
   const fraudRate = (totalClicks || 0) > 0 ? ((fraudClicks || 0) / (totalClicks || 1) * 100) : 0;
+
+  // --- Chart data: clicks per day (last 14 days) ---
+  const fourteenDaysAgo = new Date();
+  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 13);
+  fourteenDaysAgo.setHours(0, 0, 0, 0);
+
+  const { data: dailyClicks } = await supabase
+    .from("clicks")
+    .select("created_at, is_valid")
+    .gte("created_at", fourteenDaysAgo.toISOString())
+    .order("created_at", { ascending: true });
+
+  const clicksByDay: Record<string, { date: string; valid: number; fraud: number }> = {};
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(fourteenDaysAgo);
+    d.setDate(d.getDate() + i);
+    const key = d.toISOString().slice(0, 10);
+    clicksByDay[key] = { date: key, valid: 0, fraud: 0 };
+  }
+  for (const click of dailyClicks || []) {
+    const key = click.created_at.slice(0, 10);
+    if (clicksByDay[key]) {
+      if (click.is_valid) clicksByDay[key].valid++;
+      else clicksByDay[key].fraud++;
+    }
+  }
+  const clicksChart = Object.values(clicksByDay);
+
+  // --- Chart data: campaign status distribution ---
+  const campaignsByStatus: Record<string, number> = {};
+  for (const c of allCampaigns || []) {
+    const s = (c as { status?: string }).status || "unknown";
+    campaignsByStatus[s] = (campaignsByStatus[s] || 0) + 1;
+  }
+
+  // --- Chart data: echo signups per day (last 14 days) ---
+  const { data: recentSignups } = await supabase
+    .from("users")
+    .select("created_at")
+    .eq("role", "echo")
+    .gte("created_at", fourteenDaysAgo.toISOString());
+
+  const signupsByDay: Record<string, number> = {};
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(fourteenDaysAgo);
+    d.setDate(d.getDate() + i);
+    signupsByDay[d.toISOString().slice(0, 10)] = 0;
+  }
+  for (const u of recentSignups || []) {
+    const key = u.created_at.slice(0, 10);
+    if (signupsByDay[key] !== undefined) signupsByDay[key]++;
+  }
+  const signupsChart = Object.entries(signupsByDay).map(([date, count]) => ({ date, count }));
 
   return NextResponse.json({
     totalEchos: totalEchos || 0,
@@ -72,5 +125,8 @@ export async function GET() {
     topEchos: topEchos || [],
     recentClicks: recentClicks || [],
     pendingPayoutsList: pendingPayoutsList || [],
+    clicksChart,
+    campaignsByStatus,
+    signupsChart,
   });
 }
