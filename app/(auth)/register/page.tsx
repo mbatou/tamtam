@@ -39,24 +39,44 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
 
+    let userId: string | null = null;
+
     const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
     if (signUpError) {
-      setError(signUpError.message);
-      setLoading(false);
-      return;
+      // If user already exists in auth, try signing in instead
+      if (signUpError.message.toLowerCase().includes("already registered") || signUpError.message.toLowerCase().includes("already been registered")) {
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInError) {
+          setError("Ce compte existe déjà. Vérifie ton mot de passe ou connecte-toi.");
+          setLoading(false);
+          return;
+        }
+        userId = signInData.user?.id || null;
+      } else {
+        setError(signUpError.message);
+        setLoading(false);
+        return;
+      }
+    } else {
+      userId = data.user?.id || null;
     }
 
-    if (data.user) {
-      const { error: insertError } = await supabase.from("users").insert({
-        id: data.user.id,
-        role: "echo",
-        name,
-        phone: phone.length > 4 ? phone : null,
-        city: city || null,
-        mobile_money_provider: provider,
+    if (userId) {
+      // Use server-side API to create profile (bypasses RLS issues when session isn't ready)
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          name,
+          phone: phone.length > 4 ? phone : null,
+          city: city || null,
+          mobile_money_provider: provider,
+        }),
       });
-      if (insertError) {
-        setError(insertError.message);
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Erreur lors de la création du profil");
       } else {
         window.location.href = "/dashboard";
       }
