@@ -25,6 +25,9 @@ export default function SuperadminLeadsPage() {
   const [notes, setNotes] = useState("");
   const [updating, setUpdating] = useState(false);
   const [converting, setConverting] = useState(false);
+  const [emailConflict, setEmailConflict] = useState(false);
+  const [alternativeEmail, setAlternativeEmail] = useState("");
+  const [conversionResult, setConversionResult] = useState<{ email: string; success: boolean } | null>(null);
 
   useEffect(() => { loadLeads(); }, []);
 
@@ -53,19 +56,25 @@ export default function SuperadminLeadsPage() {
     setUpdating(false);
   }
 
-  async function convertLead(id: string) {
-    if (!confirm("Créer un compte Batteur pour ce lead ? Un email avec les identifiants sera envoyé.")) return;
+  async function convertLead(id: string, overrideEmail?: string) {
+    if (!overrideEmail && !confirm("Créer un compte Batteur pour ce lead ? Un email avec les identifiants sera envoyé.")) return;
     setConverting(true);
+    setEmailConflict(false);
+    const payload: { id: string; email?: string } = { id };
+    if (overrideEmail) payload.email = overrideEmail;
+
     const res = await fetch("/api/superadmin/leads", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
     if (res.ok) {
-      alert("Compte Batteur créé avec succès !");
+      setConversionResult({ email: data.email_used, success: true });
+      setAlternativeEmail("");
       await loadLeads();
-      setSelectedLead(null);
+    } else if (res.status === 409 && data.email_conflict) {
+      setEmailConflict(true);
     } else {
       alert(data.error || "Erreur");
     }
@@ -164,7 +173,7 @@ export default function SuperadminLeadsPage() {
                 {filtered.map((lead) => (
                   <tr
                     key={lead.id}
-                    onClick={() => { setSelectedLead(lead); setNotes(lead.notes || ""); }}
+                    onClick={() => { setSelectedLead(lead); setNotes(lead.notes || ""); setEmailConflict(false); setAlternativeEmail(""); setConversionResult(null); }}
                     className="border-b border-white/5 hover:bg-white/[0.03] cursor-pointer transition"
                   >
                     <td className="p-4 text-white/30 text-xs whitespace-nowrap">{timeAgo(lead.created_at)}</td>
@@ -274,9 +283,51 @@ export default function SuperadminLeadsPage() {
               </button>
             </div>
 
+            {/* Conversion Result */}
+            {conversionResult && (
+              <div className="mb-4 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                <p className="text-sm text-emerald-400 font-semibold">Compte Batteur créé avec succès !</p>
+                <p className="text-xs text-white/50 mt-1">
+                  Un email avec les identifiants a été envoyé à <span className="text-white/70 font-semibold">{conversionResult.email}</span>
+                </p>
+              </div>
+            )}
+
+            {/* Email Conflict */}
+            {emailConflict && (
+              <div className="mb-4 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 space-y-3">
+                <p className="text-sm text-orange-400 font-semibold">
+                  Cet email est déjà utilisé (probablement un compte Echo).
+                </p>
+                <p className="text-xs text-white/40">
+                  Entrez un email différent pour créer le compte Batteur :
+                </p>
+                <input
+                  type="email"
+                  value={alternativeEmail}
+                  onChange={(e) => setAlternativeEmail(e.target.value)}
+                  placeholder="email-alternatif@exemple.com"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+                />
+                <button
+                  onClick={() => {
+                    if (!alternativeEmail || !alternativeEmail.includes("@")) {
+                      alert("Veuillez entrer un email valide");
+                      return;
+                    }
+                    convertLead(selectedLead.id, alternativeEmail);
+                  }}
+                  disabled={converting || !alternativeEmail}
+                  className="w-full px-4 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/20 transition disabled:opacity-40"
+                >
+                  {converting ? "Création..." : "Créer avec cet email"}
+                </button>
+              </div>
+            )}
+
             {/* Actions */}
             <div className="flex flex-wrap gap-2">
-              {selectedLead.status !== "converted" && (
+              {selectedLead.status !== "converted" && !conversionResult && (
                 <button
                   onClick={() => convertLead(selectedLead.id)}
                   disabled={converting}

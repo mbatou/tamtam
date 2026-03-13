@@ -64,7 +64,8 @@ export async function POST(req: NextRequest) {
   const auth = await requireSuperadmin();
   if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
-  const { id } = await req.json();
+  const body = await req.json();
+  const { id, email: overrideEmail } = body;
   if (!id) return NextResponse.json({ error: "ID requis" }, { status: 400 });
 
   // Get lead
@@ -79,15 +80,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Ce lead est déjà converti." }, { status: 400 });
   }
 
-  // Check if email already exists
-  const { data: existingUser } = await auth.supabase
-    .from("users")
-    .select("id")
-    .eq("email", lead.email)
-    .limit(1);
+  // Use override email if provided (for cases where lead email is already taken)
+  const accountEmail = overrideEmail || lead.email;
 
-  if (existingUser?.length) {
-    return NextResponse.json({ error: "Un utilisateur avec cet email existe déjà." }, { status: 400 });
+  // Check if email already exists in auth
+  const { data: authList } = await auth.supabase.auth.admin.listUsers();
+  const existingAuthUser = authList?.users?.find(
+    (u) => u.email?.toLowerCase() === accountEmail.toLowerCase()
+  );
+
+  if (existingAuthUser) {
+    // Check if this auth user already has a profile
+    const { data: existingProfile } = await auth.supabase
+      .from("users")
+      .select("id, role")
+      .eq("id", existingAuthUser.id)
+      .single();
+
+    if (existingProfile) {
+      return NextResponse.json({
+        error: `Cet email est déjà utilisé par un compte ${existingProfile.role === "echo" ? "Echo" : existingProfile.role}. Veuillez utiliser un email différent.`,
+        email_conflict: true,
+        existing_role: existingProfile.role,
+      }, { status: 409 });
+    }
   }
 
   // Generate temporary password
@@ -95,20 +111,27 @@ export async function POST(req: NextRequest) {
 
   // Create auth user
   const { data: authUser, error: authError } = await auth.supabase.auth.admin.createUser({
-    email: lead.email,
+    email: accountEmail,
     password: tempPassword,
     email_confirm: true,
   });
 
   if (authError || !authUser.user) {
+    // If auth user creation fails due to duplicate, provide clear message
+    if (authError?.message?.includes("already been registered") || authError?.message?.includes("already exists")) {
+      return NextResponse.json({
+        error: "Cet email est déjà enregistré. Veuillez utiliser un email différent.",
+        email_conflict: true,
+      }, { status: 409 });
+    }
     return NextResponse.json({ error: authError?.message || "Erreur création compte" }, { status: 500 });
   }
 
-  // Create user profile
+  // Create user profile (users table has: id, role, name, phone, city, balance, etc.)
   const { error: profileError } = await auth.supabase.from("users").insert({
     id: authUser.user.id,
-    email: lead.email,
-    full_name: lead.contact_name,
+    name: lead.business_name || lead.contact_name,
+    phone: lead.whatsapp || null,
     role: "batteur",
     balance: 0,
   });
@@ -122,7 +145,10 @@ export async function POST(req: NextRequest) {
   // Update lead status
   await auth.supabase
     .from("brand_leads")
-    .update({ status: "converted", notes: `Compte créé le ${new Date().toLocaleDateString("fr-FR")}. ${lead.notes || ""}`.trim() })
+    .update({
+      status: "converted",
+      notes: `Compte créé le ${new Date().toLocaleDateString("fr-FR")} (${accountEmail}). ${lead.notes || ""}`.trim(),
+    })
     .eq("id", id);
 
   // Log activity
@@ -132,14 +158,14 @@ export async function POST(req: NextRequest) {
       action: "convert_lead",
       target_type: "user",
       target_id: authUser.user.id,
-      details: { lead_id: id, business_name: lead.business_name, email: lead.email },
+      details: { lead_id: id, business_name: lead.business_name, email: accountEmail },
     });
   } catch {}
 
-  // Send welcome email
+  // Send welcome email with login credentials
   try {
     await sendBatteurWelcomeEmail({
-      to: lead.email,
+      to: accountEmail,
       temporaryPassword: tempPassword,
       business_name: lead.business_name,
     });
@@ -147,5 +173,10 @@ export async function POST(req: NextRequest) {
     console.error("Welcome email failed:", e);
   }
 
-  return NextResponse.json({ success: true, user_id: authUser.user.id });
+  return NextResponse.json({
+    success: true,
+    user_id: authUser.user.id,
+    email_sent: true,
+    email_used: accountEmail,
+  });
 }
