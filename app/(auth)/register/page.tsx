@@ -62,16 +62,21 @@ export default function RegisterPage() {
     }
 
     if (userId) {
-      const { error: upsertError } = await supabase.from("users").upsert({
-        id: userId,
-        role: "echo",
-        name,
-        phone: phone.length > 4 ? phone : null,
-        city: city || null,
-        mobile_money_provider: provider,
-      }, { onConflict: "id" });
-      if (upsertError) {
-        setError(upsertError.message);
+      // Use server-side API to create profile (bypasses RLS issues when session isn't ready)
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          name,
+          phone: phone.length > 4 ? phone : null,
+          city: city || null,
+          mobile_money_provider: provider,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Erreur lors de la création du profil");
       } else {
         window.location.href = "/dashboard";
       }
