@@ -54,24 +54,24 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServiceClient();
 
-  // Check batteur's total_recharged (recharge pool for campaigns)
+  // Check batteur's balance
   const { data: batteur } = await supabase
     .from("users")
-    .select("total_recharged")
+    .select("balance")
     .eq("id", session.user.id)
     .single();
 
-  if (!batteur || (batteur.total_recharged || 0) < budget) {
+  if (!batteur || (batteur.balance || 0) < budget) {
     return NextResponse.json(
-      { error: "Solde rechargé insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
+      { error: "Solde insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
       { status: 400 }
     );
   }
 
-  // Debit from total_recharged (recharge pool)
+  // Debit from balance
   const { error: debitError } = await supabase
     .from("users")
-    .update({ total_recharged: batteur.total_recharged - budget })
+    .update({ balance: batteur.balance - budget })
     .eq("id", session.user.id);
 
   if (debitError) {
@@ -92,10 +92,10 @@ export async function POST(request: NextRequest) {
   }).select().single();
 
   if (error) {
-    // Rollback: restore total_recharged if campaign creation fails
+    // Rollback: restore balance if campaign creation fails
     await supabase
       .from("users")
-      .update({ total_recharged: batteur.total_recharged })
+      .update({ balance: batteur.balance })
       .eq("id", session.user.id);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -147,15 +147,15 @@ export async function PUT(request: NextRequest) {
     const diff = budget - oldBudget;
 
     if (diff > 0) {
-      // Need more budget: check total_recharged
-      const { data: batteur } = await supabase.from("users").select("total_recharged").eq("id", session.user.id).single();
-      if (!batteur || (batteur.total_recharged || 0) < diff) {
+      // Need more budget: check balance
+      const { data: batteur } = await supabase.from("users").select("balance").eq("id", session.user.id).single();
+      if (!batteur || (batteur.balance || 0) < diff) {
         return NextResponse.json(
-          { error: "Solde rechargé insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
+          { error: "Solde insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
           { status: 400 }
         );
       }
-      await supabase.from("users").update({ total_recharged: batteur.total_recharged - diff }).eq("id", session.user.id);
+      await supabase.from("users").update({ balance: batteur.balance - diff }).eq("id", session.user.id);
     } else if (diff < 0) {
       // Reducing budget: refund the difference (but can't go below spent)
       if (budget < existing.spent) {
@@ -174,18 +174,18 @@ export async function PUT(request: NextRequest) {
     }
   }
 
-  // Re-debit from total_recharged when reactivating a paused campaign
+  // Re-debit from balance when reactivating a paused campaign
   if (status === "active" && existing.status === "paused") {
     const unspent = existing.budget - existing.spent;
     if (unspent > 0) {
-      const { data: batteur } = await supabase.from("users").select("total_recharged").eq("id", session.user.id).single();
-      if (!batteur || (batteur.total_recharged || 0) < unspent) {
+      const { data: batteur } = await supabase.from("users").select("balance").eq("id", session.user.id).single();
+      if (!batteur || (batteur.balance || 0) < unspent) {
         return NextResponse.json(
-          { error: "Solde rechargé insuffisant pour réactiver cette campagne.", code: "INSUFFICIENT_BALANCE" },
+          { error: "Solde insuffisant pour réactiver cette campagne.", code: "INSUFFICIENT_BALANCE" },
           { status: 400 }
         );
       }
-      await supabase.from("users").update({ total_recharged: batteur.total_recharged - unspent }).eq("id", session.user.id);
+      await supabase.from("users").update({ balance: batteur.balance - unspent }).eq("id", session.user.id);
     }
   }
 

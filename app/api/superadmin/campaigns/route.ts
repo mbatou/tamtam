@@ -64,24 +64,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Champs obligatoires manquants" }, { status: 400 });
     }
 
-    // Verify the batteur exists and has enough recharged balance
+    // Verify the batteur exists and has enough balance
     const { data: batteur } = await supabase
       .from("users")
-      .select("id, total_recharged, role")
+      .select("id, balance, role")
       .eq("id", batteur_id)
       .single();
 
     if (!batteur || batteur.role !== "batteur") {
       return NextResponse.json({ error: "Batteur introuvable" }, { status: 404 });
     }
-    if ((batteur.total_recharged || 0) < budget) {
-      return NextResponse.json({ error: `Solde rechargé insuffisant (${batteur.total_recharged || 0} FCFA disponible)` }, { status: 400 });
+    if ((batteur.balance || 0) < budget) {
+      return NextResponse.json({ error: `Solde insuffisant (${batteur.balance || 0} FCFA disponible)` }, { status: 400 });
     }
 
-    // Deduct from batteur total_recharged
+    // Deduct from batteur balance
     const { error: balErr } = await supabase
       .from("users")
-      .update({ total_recharged: (batteur.total_recharged || 0) - budget })
+      .update({ balance: (batteur.balance || 0) - budget })
       .eq("id", batteur_id);
     if (balErr) return NextResponse.json({ error: balErr.message }, { status: 500 });
 
@@ -106,13 +106,15 @@ export async function POST(request: NextRequest) {
 
     if (campErr) return NextResponse.json({ error: campErr.message }, { status: 500 });
 
-    await supabase.from("admin_activity_log").insert({
-      admin_id: session.user.id,
-      action: "campaign_create",
-      target_type: "campaign",
-      target_id: campaign.id,
-      details: { title, batteur_id, budget },
-    });
+    try {
+      await supabase.from("admin_activity_log").insert({
+        admin_id: session.user.id,
+        action: "campaign_create",
+        target_type: "campaign",
+        target_id: campaign.id,
+        details: { title, batteur_id, budget },
+      });
+    } catch { /* admin_activity_log may not exist yet */ }
 
     return NextResponse.json({ success: true, campaign });
   }
@@ -159,13 +161,15 @@ export async function POST(request: NextRequest) {
   }
 
   // Log action
-  await supabase.from("admin_activity_log").insert({
-    admin_id: session.user.id,
-    action: `campaign_${action}`,
-    target_type: "campaign",
-    target_id: campaign_id,
-    details: { reason },
-  });
+  try {
+    await supabase.from("admin_activity_log").insert({
+      admin_id: session.user.id,
+      action: `campaign_${action}`,
+      target_type: "campaign",
+      target_id: campaign_id,
+      details: { reason },
+    });
+  } catch { /* admin_activity_log may not exist yet */ }
 
   return NextResponse.json({ success: true });
 }

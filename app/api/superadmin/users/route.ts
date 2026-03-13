@@ -82,13 +82,15 @@ export async function POST(request: NextRequest) {
     });
     if (profileErr) return NextResponse.json({ error: profileErr.message }, { status: 500 });
 
-    await supabase.from("admin_activity_log").insert({
-      admin_id: session.user.id,
-      action: "user_create_batteur",
-      target_type: "user",
-      target_id: authUser.user.id,
-      details: { name, email },
-    });
+    try {
+      await supabase.from("admin_activity_log").insert({
+        admin_id: session.user.id,
+        action: "user_create_batteur",
+        target_type: "user",
+        target_id: authUser.user.id,
+        details: { name, email },
+      });
+    } catch { /* admin_activity_log may not exist yet */ }
 
     return NextResponse.json({ success: true, user_id: authUser.user.id });
   }
@@ -102,7 +104,7 @@ export async function POST(request: NextRequest) {
 
     const { data: user } = await supabase
       .from("users")
-      .select("id, total_recharged, role, name")
+      .select("id, balance, role, name")
       .eq("id", user_id)
       .single();
 
@@ -110,10 +112,10 @@ export async function POST(request: NextRequest) {
     if (user.role !== "batteur") return NextResponse.json({ error: "L'utilisateur n'est pas un batteur" }, { status: 400 });
 
     const topupAmount = parseInt(amount);
-    const newRecharged = (user.total_recharged || 0) + topupAmount;
+    const newBalance = (user.balance || 0) + topupAmount;
     const { error: upErr } = await supabase
       .from("users")
-      .update({ total_recharged: newRecharged })
+      .update({ balance: newBalance })
       .eq("id", user_id);
     if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
 
@@ -127,15 +129,17 @@ export async function POST(request: NextRequest) {
       completed_at: new Date().toISOString(),
     });
 
-    await supabase.from("admin_activity_log").insert({
-      admin_id: session.user.id,
-      action: "user_topup",
-      target_type: "user",
-      target_id: user_id,
-      details: { amount: topupAmount, new_recharged: newRecharged, user_name: user.name },
-    });
+    try {
+      await supabase.from("admin_activity_log").insert({
+        admin_id: session.user.id,
+        action: "user_topup",
+        target_type: "user",
+        target_id: user_id,
+        details: { amount: topupAmount, new_balance: newBalance, user_name: user.name },
+      });
+    } catch { /* admin_activity_log may not exist yet */ }
 
-    return NextResponse.json({ success: true, new_recharged: newRecharged });
+    return NextResponse.json({ success: true, new_balance: newBalance });
   }
 
   // --- Standard user actions ---
@@ -175,13 +179,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  await supabase.from("admin_activity_log").insert({
-    admin_id: session.user.id,
-    action: `user_${action}`,
-    target_type: "user",
-    target_id: user_id,
-    details: { reason },
-  });
+  try {
+    await supabase.from("admin_activity_log").insert({
+      admin_id: session.user.id,
+      action: `user_${action}`,
+      target_type: "user",
+      target_id: user_id,
+      details: { reason },
+    });
+  } catch { /* admin_activity_log may not exist yet */ }
 
   return NextResponse.json({ success: true });
 }

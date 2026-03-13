@@ -65,13 +65,15 @@ export async function POST(request: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  await supabase.from("admin_activity_log").insert({
-    admin_id: session.user.id,
-    action: `payout_${action}`,
-    target_type: "payout",
-    target_id: payout_id,
-    details: { reason },
-  });
+  try {
+    await supabase.from("admin_activity_log").insert({
+      admin_id: session.user.id,
+      action: `payout_${action}`,
+      target_type: "payout",
+      target_id: payout_id,
+      details: { reason },
+    });
+  } catch { /* admin_activity_log may not exist yet */ }
 
   return NextResponse.json({ success: true });
 }

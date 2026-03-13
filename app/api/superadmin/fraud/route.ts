@@ -56,7 +56,9 @@ export async function POST(request: NextRequest) {
 
   if (action === "block_ip" && ip) {
     await supabase.from("blocked_ips").upsert({ ip_address: ip, blocked_by: session.user.id, reason: "Bloqué par superadmin" });
-    await supabase.from("admin_activity_log").insert({ admin_id: session.user.id, action: "block_ip", target_type: "ip", target_id: ip });
+    try {
+      await supabase.from("admin_activity_log").insert({ admin_id: session.user.id, action: "block_ip", target_type: "ip", target_id: ip });
+    } catch { /* admin_activity_log may not exist yet */ }
     return NextResponse.json({ success: true });
   }
 
