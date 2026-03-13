@@ -64,3 +64,16 @@ export const settingUpdateSchema = z.object({
 export const payoutActionSchema = z.object({
   reason: z.string().max(500).optional(),
 });
+
+export const leadSchema = z.object({
+  business_name: z.string().min(2, "Nom d'entreprise requis").max(200).trim(),
+  contact_name: z.string().min(2, "Nom requis").max(200).trim(),
+  email: z.string().email("Email invalide").max(200).trim().toLowerCase(),
+  whatsapp: z.string().max(20).optional().nullable(),
+  message: z.string().max(500).optional().nullable(),
+});
+
+export const updateLeadSchema = z.object({
+  status: z.enum(["new", "contacted", "converted", "rejected"]).optional(),
+  notes: z.string().max(1000).optional().nullable(),
+});
