@@ -55,7 +55,7 @@ function BrandLeadForm() {
           required
           value={form.business_name}
           onChange={(e) => setForm({ ...form, business_name: e.target.value })}
-          className="input-field text-sm"
+          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-secondary/50 focus:ring-1 focus:ring-secondary/30 transition"
         />
         <input
           type="text"
@@ -63,7 +63,7 @@ function BrandLeadForm() {
           required
           value={form.contact_name}
           onChange={(e) => setForm({ ...form, contact_name: e.target.value })}
-          className="input-field text-sm"
+          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-secondary/50 focus:ring-1 focus:ring-secondary/30 transition"
         />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -73,14 +73,14 @@ function BrandLeadForm() {
           required
           value={form.email}
           onChange={(e) => setForm({ ...form, email: e.target.value })}
-          className="input-field text-sm"
+          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-secondary/50 focus:ring-1 focus:ring-secondary/30 transition"
         />
         <input
           type="tel"
           placeholder="WhatsApp (optionnel)"
           value={form.whatsapp}
           onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
-          className="input-field text-sm"
+          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-secondary/50 focus:ring-1 focus:ring-secondary/30 transition"
         />
       </div>
       {error && <p className="text-xs text-red-400">{error}</p>}
