@@ -19,23 +19,26 @@ export default function Footer() {
         </div>
       </div>
       <footer className="px-4 sm:px-6 py-10 sm:py-14 border-t border-white/5 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-12">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 sm:gap-12">
           {/* Brand */}
-          <div>
+          <div className="col-span-2 sm:col-span-1">
             <div className="flex items-center gap-3 mb-3">
               <span className="text-xl font-black gradient-text">Tamtam</span>
               <SoundWave bars={3} className="h-3 opacity-40" />
             </div>
-            <p className="text-xs text-white/30 leading-relaxed">
+            <p className="text-xs text-white/30 leading-relaxed mb-4">
               La plateforme de micro-influence au Sénégal.
               Partage des liens, gagne de l&apos;argent.
             </p>
+            <a href="mailto:contact@tamma.me" className="text-xs text-secondary/70 hover:text-secondary transition font-semibold">
+              contact@tamma.me
+            </a>
           </div>
 
-          {/* Plateforme */}
+          {/* Échos */}
           <div>
             <h4 className="text-xs font-bold text-white/50 uppercase tracking-widest mb-3">
-              Plateforme
+              Échos
             </h4>
             <ul className="space-y-2">
               <li>
@@ -51,6 +54,25 @@ export default function Footer() {
             </ul>
           </div>
 
+          {/* Marques */}
+          <div>
+            <h4 className="text-xs font-bold text-white/50 uppercase tracking-widest mb-3">
+              Marques
+            </h4>
+            <ul className="space-y-2">
+              <li>
+                <Link href="/#pour-les-marques" className="text-sm text-white/30 hover:text-white/60 transition">
+                  Lancer une campagne
+                </Link>
+              </li>
+              <li>
+                <Link href="/login?tab=batteur" className="text-sm text-white/30 hover:text-white/60 transition">
+                  Espace Batteur
+                </Link>
+              </li>
+            </ul>
+          </div>
+
           {/* Légal */}
           <div>
             <h4 className="text-xs font-bold text-white/50 uppercase tracking-widest mb-3">
@@ -59,22 +81,25 @@ export default function Footer() {
             <ul className="space-y-2">
               <li>
                 <Link href="/privacy" className="text-sm text-white/30 hover:text-white/60 transition">
-                  Politique de confidentialité
+                  Confidentialité
                 </Link>
               </li>
               <li>
                 <Link href="/terms" className="text-sm text-white/30 hover:text-white/60 transition">
-                  Conditions d&apos;utilisation
+                  Conditions
                 </Link>
               </li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-8 pt-6 border-t border-white/5 text-center">
+        <div className="mt-8 pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-white/20">
             &copy; {new Date().getFullYear()} Built by Lupandu
           </p>
+          <a href="mailto:contact@tamma.me" className="text-xs text-white/20 hover:text-white/40 transition">
+            contact@tamma.me
+          </a>
         </div>
       </footer>
     </>

@@ -5,6 +5,96 @@ import { useEffect, useState } from "react";
 import SoundWave from "@/components/ui/SoundWave";
 import Footer from "@/components/Footer";
 
+function BrandLeadForm() {
+  const [form, setForm] = useState({ business_name: "", contact_name: "", email: "", whatsapp: "" });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmitting(true);
+    setError("");
+    try {
+      const res = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Erreur");
+      }
+      setSubmitted(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur inattendue");
+    }
+    setSubmitting(false);
+  }
+
+  if (submitted) {
+    return (
+      <div className="text-center py-6">
+        <div className="w-12 h-12 rounded-full bg-teal-500/20 flex items-center justify-center mx-auto mb-3">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1ABC9C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+        </div>
+        <p className="text-sm font-semibold text-teal-400">Demande envoyee !</p>
+        <p className="text-xs text-white/40 mt-1">Notre equipe vous contactera sous 24h.</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <input
+          type="text"
+          placeholder="Nom de l'entreprise"
+          required
+          value={form.business_name}
+          onChange={(e) => setForm({ ...form, business_name: e.target.value })}
+          className="input-field text-sm"
+        />
+        <input
+          type="text"
+          placeholder="Votre nom"
+          required
+          value={form.contact_name}
+          onChange={(e) => setForm({ ...form, contact_name: e.target.value })}
+          className="input-field text-sm"
+        />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <input
+          type="email"
+          placeholder="Email professionnel"
+          required
+          value={form.email}
+          onChange={(e) => setForm({ ...form, email: e.target.value })}
+          className="input-field text-sm"
+        />
+        <input
+          type="tel"
+          placeholder="WhatsApp (optionnel)"
+          value={form.whatsapp}
+          onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
+          className="input-field text-sm"
+        />
+      </div>
+      {error && <p className="text-xs text-red-400">{error}</p>}
+      <button
+        type="submit"
+        disabled={submitting}
+        className="btn-primary w-full text-sm py-3 disabled:opacity-50"
+      >
+        {submitting ? "Envoi..." : "Demander une demo"}
+      </button>
+    </form>
+  );
+}
+
 function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: string }) {
   const [count, setCount] = useState(0);
 
@@ -81,9 +171,9 @@ export default function LandingPage() {
             <Link href="/register" className="btn-primary text-base sm:text-lg px-8 sm:px-10 py-3.5 sm:py-4 w-full sm:w-auto text-center">
               Deviens un Echo
             </Link>
-            <Link href="/login" className="btn-outline text-base sm:text-lg px-8 sm:px-10 py-3.5 sm:py-4 w-full sm:w-auto text-center">
-              Lance ton Rythme
-            </Link>
+            <a href="#pour-les-marques" className="btn-outline text-base sm:text-lg px-8 sm:px-10 py-3.5 sm:py-4 w-full sm:w-auto text-center">
+              Je suis une marque
+            </a>
           </div>
           <p className="mt-6 sm:mt-8 text-xs sm:text-sm font-semibold text-white/30 tracking-widest uppercase">
             Partage. Resonne. Gagne.
@@ -152,24 +242,52 @@ export default function LandingPage() {
 
       {/* For Brands */}
       <section id="pour-les-marques" className="px-4 sm:px-6 py-14 sm:py-20 max-w-7xl mx-auto">
-        <div className="grid md:grid-cols-2 gap-8 sm:gap-12 items-center">
-          <div>
-            <span className="text-xs font-bold text-secondary uppercase tracking-widest mb-3 sm:mb-4 block">
-              Pour les marques
-            </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6 tracking-tight">
-              Touchez des milliers de personnes via le{" "}
-              <span className="gradient-text">bouche-a-oreille digital</span>
-            </h2>
-            <p className="text-white/40 mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base">
-              Creez un Rythme, definissez votre budget et votre cout par clic.
-              Des milliers d&apos;Echos partagent votre lien sur WhatsApp. Vous ne payez
-              que pour les clics reels et verifies.
+        <div className="text-center mb-10 sm:mb-14">
+          <span className="text-xs font-bold text-secondary uppercase tracking-widest mb-3 sm:mb-4 block">
+            Pour les marques
+          </span>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
+            Touchez des milliers de personnes via le{" "}
+            <span className="gradient-text">bouche-a-oreille digital</span>
+          </h2>
+          <p className="text-white/40 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
+            Lancez une campagne, definissez votre budget et votre cout par clic.
+            Des milliers d&apos;Echos partagent votre lien sur WhatsApp. Vous ne payez
+            que pour les clics reels et verifies.
+          </p>
+        </div>
+
+        {/* Brand benefits */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-10 sm:mb-14">
+          {[
+            { icon: "🎯", title: "Ciblage local", desc: "Vos campagnes touchent de vraies personnes au Senegal via WhatsApp" },
+            { icon: "💰", title: "Cout par clic", desc: "Ne payez que pour les clics verifies. Zero gaspillage de budget." },
+            { icon: "📊", title: "Suivi en temps reel", desc: "Dashboard complet avec stats de clics, conversions et ROI." },
+          ].map((b) => (
+            <div key={b.title} className="glass-card p-5 sm:p-6 text-center">
+              <span className="text-2xl mb-3 block">{b.icon}</span>
+              <h3 className="text-sm sm:text-base font-bold mb-2">{b.title}</h3>
+              <p className="text-xs text-white/40 leading-relaxed">{b.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Lead gen + campaign preview */}
+        <div className="grid md:grid-cols-2 gap-6 sm:gap-8 items-start">
+          {/* Lead capture form */}
+          <div className="glass-card p-6 sm:p-8 border border-secondary/20" style={{ boxShadow: "0 0 40px rgba(26,188,156,0.06)" }}>
+            <h3 className="text-lg sm:text-xl font-bold mb-2">Lancez votre premiere campagne</h3>
+            <p className="text-xs text-white/40 mb-5">Remplissez le formulaire, notre equipe vous contacte sous 24h.</p>
+            <BrandLeadForm />
+            <p className="text-[10px] text-white/20 mt-3 text-center">
+              Deja un compte ?{" "}
+              <Link href="/login?tab=batteur" className="text-secondary/60 hover:text-secondary transition">
+                Connectez-vous
+              </Link>
             </p>
-            <Link href="/login?tab=batteur" className="btn-outline text-sm sm:text-base">
-              Devenir un Batteur →
-            </Link>
           </div>
+
+          {/* Campaign preview card */}
           <div className="glass-card p-6 sm:p-8 hover-lift">
             <div className="space-y-4">
               <div className="flex justify-between items-center">
@@ -194,24 +312,51 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
+            <div className="mt-6 pt-4 border-t border-white/5">
+              <p className="text-xs text-white/30 mb-3">Pourquoi les marques choisissent Tamtam :</p>
+              <div className="space-y-2">
+                {["Resultats mesurables en 24h", "Budget a partir de 10 000 FCFA", "Support dedie pour chaque campagne"].map((item) => (
+                  <div key={item} className="flex items-center gap-2">
+                    <div className="w-1 h-1 rounded-full bg-teal-400 shrink-0" />
+                    <span className="text-xs text-white/40">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="px-4 sm:px-6 py-14 sm:py-20 max-w-7xl mx-auto text-center">
-        <div className="glass-card p-8 sm:p-12 md:p-16 bg-gradient-to-br from-primary/10 to-primary-light/5">
-          <SoundWave bars={7} className="h-6 sm:h-8 justify-center mb-4 sm:mb-6 opacity-40" />
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 tracking-tight">
-            Pret a faire resonner ?
-          </h2>
-          <p className="text-white/40 mb-6 sm:mb-8 max-w-lg mx-auto text-sm sm:text-base">
-            Rejoins des milliers d&apos;Echos qui gagnent de l&apos;argent chaque jour en
-            partageant simplement des liens.
-          </p>
-          <Link href="/register" className="btn-primary text-base sm:text-lg px-10 sm:px-12 py-3.5 sm:py-4">
-            Commencer maintenant
-          </Link>
+      <section className="px-4 sm:px-6 py-14 sm:py-20 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+          {/* Echo CTA */}
+          <div className="glass-card p-8 sm:p-10 text-center bg-gradient-to-br from-primary/10 to-primary-light/5">
+            <SoundWave bars={5} className="h-5 sm:h-6 justify-center mb-4 opacity-40" />
+            <h2 className="text-xl sm:text-2xl font-bold mb-3 tracking-tight">
+              Gagne de l&apos;argent avec ton WhatsApp
+            </h2>
+            <p className="text-white/40 mb-6 text-sm max-w-sm mx-auto">
+              Partage des liens de marques sur ton statut et gagne pour chaque clic.
+            </p>
+            <Link href="/register" className="btn-primary text-sm sm:text-base px-8 py-3">
+              Devenir un Echo
+            </Link>
+          </div>
+
+          {/* Brand CTA */}
+          <div className="glass-card p-8 sm:p-10 text-center bg-gradient-to-br from-secondary/10 to-secondary/5">
+            <span className="text-2xl sm:text-3xl block mb-3">🎯</span>
+            <h2 className="text-xl sm:text-2xl font-bold mb-3 tracking-tight">
+              Boostez votre visibilite
+            </h2>
+            <p className="text-white/40 mb-6 text-sm max-w-sm mx-auto">
+              Lancez des campagnes WhatsApp et touchez des milliers de personnes au Senegal.
+            </p>
+            <a href="#pour-les-marques" className="btn-outline text-sm sm:text-base px-8 py-3 border-secondary/30 text-secondary hover:bg-secondary/10">
+              Demander une demo
+            </a>
+          </div>
         </div>
       </section>
 
