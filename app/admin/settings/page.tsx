@@ -19,6 +19,11 @@ export default function AdminSettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", phone: "", city: "", mobile_money_provider: "" });
 
+  // Password change
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwords, setPasswords] = useState({ new_password: "", confirm: "" });
+  const [pwSaving, setPwSaving] = useState(false);
+
   useEffect(() => { loadProfile(); }, []);
 
   async function loadProfile() {
@@ -59,6 +64,41 @@ export default function AdminSettingsPage() {
       setError("Erreur réseau. Veuillez réessayer.");
     }
     setSaving(false);
+  }
+
+  async function handleChangePassword() {
+    setError(null);
+    setSuccess(false);
+
+    if (passwords.new_password.length < 6) {
+      setError("Le mot de passe doit contenir au moins 6 caractères.");
+      return;
+    }
+    if (passwords.new_password !== passwords.confirm) {
+      setError("Les mots de passe ne correspondent pas.");
+      return;
+    }
+
+    setPwSaving(true);
+    try {
+      const res = await fetch("/api/auth/password", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ new_password: passwords.new_password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Erreur");
+      } else {
+        setSuccess(true);
+        setPasswords({ new_password: "", confirm: "" });
+        setShowPassword(false);
+        setTimeout(() => setSuccess(false), 3000);
+      }
+    } catch {
+      setError("Erreur réseau. Veuillez réessayer.");
+    }
+    setPwSaving(false);
   }
 
   if (loading) {
@@ -165,6 +205,63 @@ export default function AdminSettingsPage() {
         >
           {saving ? "Enregistrement..." : "Enregistrer les modifications"}
         </button>
+      </div>
+
+      {/* Password section */}
+      <div className="glass-card p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold">Mot de passe</h2>
+          {!showPassword && (
+            <button
+              onClick={() => { setShowPassword(true); setError(null); setSuccess(false); }}
+              className="text-sm text-primary font-semibold hover:underline"
+            >
+              Changer le mot de passe
+            </button>
+          )}
+        </div>
+        {showPassword ? (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-white/40 mb-2">Nouveau mot de passe</label>
+              <input
+                type="password"
+                value={passwords.new_password}
+                onChange={(e) => setPasswords({ ...passwords, new_password: e.target.value })}
+                placeholder="Min. 6 caractères"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-white/40 mb-2">Confirmer le mot de passe</label>
+              <input
+                type="password"
+                value={passwords.confirm}
+                onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
+                placeholder="Répétez le mot de passe"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+                onKeyDown={(e) => e.key === "Enter" && !pwSaving && passwords.new_password && passwords.confirm && handleChangePassword()}
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleChangePassword}
+                disabled={pwSaving || !passwords.new_password || !passwords.confirm}
+                className="btn-primary disabled:opacity-40"
+              >
+                {pwSaving ? "Mise à jour..." : "Mettre à jour le mot de passe"}
+              </button>
+              <button
+                onClick={() => { setShowPassword(false); setPasswords({ new_password: "", confirm: "" }); }}
+                className="px-6 py-3 rounded-xl border border-white/10 text-sm font-semibold text-white/60 hover:bg-white/5 transition"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-white/30">Utilisez un mot de passe fort d&apos;au moins 6 caractères.</p>
+        )}
       </div>
 
       {/* Account info */}

@@ -1,8 +1,81 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { createCampaignSchema, updateCampaignSchema, deleteCampaignSchema } from "@/lib/validations";
+import { sendNewCampaignNotification, sendCampaignCompletedToEcho } from "@/lib/email";
+import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
+
+async function notifyEchosNewCampaign(campaignTitle: string, cpc: number) {
+  try {
+    const supabase = createServiceClient();
+    // Get all echos with their auth emails
+    const { data: echos } = await supabase
+      .from("users")
+      .select("id, name")
+      .eq("role", "echo")
+      .eq("status", "active");
+    if (!echos?.length) return;
+
+    const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+    const emailMap = new Map(authUsers?.map((u) => [u.id, u.email]) || []);
+
+    for (const echo of echos) {
+      const email = emailMap.get(echo.id);
+      if (email) {
+        sendNewCampaignNotification({ to: email, echoName: echo.name, campaignTitle, cpc }).catch(() => {});
+      }
+    }
+  } catch { /* non-blocking */ }
+}
+
+async function notifyCampaignCompleted(campaignId: string) {
+  try {
+    const supabase = createServiceClient();
+    // Get campaign info
+    const { data: campaign } = await supabase
+      .from("campaigns")
+      .select("title, cpc")
+      .eq("id", campaignId)
+      .single();
+    if (!campaign) return;
+
+    // Get all echos who participated (have tracked links)
+    const { data: links } = await supabase
+      .from("tracked_links")
+      .select("echo_id, click_count")
+      .eq("campaign_id", campaignId);
+    if (!links?.length) return;
+
+    // Get echo details
+    const echoIds = links.map((l) => l.echo_id);
+    const { data: echos } = await supabase
+      .from("users")
+      .select("id, name")
+      .in("id", echoIds);
+    if (!echos) return;
+
+    const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+    const emailMap = new Map(authUsers?.map((u) => [u.id, u.email]) || []);
+
+    const clickMap = new Map(links.map((l) => [l.echo_id, l.click_count]));
+
+    for (const echo of echos) {
+      const email = emailMap.get(echo.id);
+      const clicks = clickMap.get(echo.id) || 0;
+      const earnings = Math.floor(clicks * campaign.cpc * ECHO_SHARE_PERCENT / 100);
+      if (email) {
+        sendCampaignCompletedToEcho({
+          to: email,
+          echoName: echo.name,
+          campaignTitle: campaign.title,
+          clickCount: clicks,
+          earnings,
+        }).catch(() => {});
+      }
+    }
+  } catch { /* non-blocking */ }
+}
 
 export async function GET(request: NextRequest) {
   const authClient = createClient();
@@ -117,6 +190,10 @@ export async function POST(request: NextRequest) {
       .eq("id", session.user.id);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Notify echos about the new active campaign
+  notifyEchosNewCampaign(title, cpc);
+
   return NextResponse.json(data, { status: 201 });
 }
 
@@ -227,6 +304,12 @@ export async function PUT(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Notify echos when campaign is completed
+  if (status === "completed" && existing.status === "active") {
+    notifyCampaignCompleted(id);
+  }
+
   return NextResponse.json(data);
 }
 

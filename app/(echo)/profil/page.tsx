@@ -10,6 +10,17 @@ export default function ProfilPage() {
   const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState({ totalClicks: 0, activeCampaigns: 0, totalEarned: 0 });
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState("");
+  const [error, setError] = useState("");
+  const [form, setForm] = useState({ name: "", phone: "", city: "", mobile_money_provider: "" });
+
+  // Password change
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwords, setPasswords] = useState({ new_password: "", confirm: "" });
+  const [pwSaving, setPwSaving] = useState(false);
+
   const supabase = createClient();
   const router = useRouter();
 
@@ -26,6 +37,12 @@ export default function ProfilPage() {
     if (userRes.ok) {
       const userData = await userRes.json();
       setUser(userData);
+      setForm({
+        name: userData.name || "",
+        phone: userData.phone || "",
+        city: userData.city || "",
+        mobile_money_provider: userData.mobile_money_provider || "",
+      });
     }
 
     if (linksRes.ok) {
@@ -40,6 +57,67 @@ export default function ProfilPage() {
     }
 
     setLoading(false);
+  }
+
+  async function handleSaveProfile() {
+    setSaving(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const res = await fetch("/api/echo/user", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Erreur");
+      } else {
+        setUser((prev) => prev ? { ...prev, ...data } : prev);
+        setSuccess("Profil mis à jour avec succès !");
+        setEditing(false);
+        setTimeout(() => setSuccess(""), 3000);
+      }
+    } catch {
+      setError("Erreur réseau. Veuillez réessayer.");
+    }
+    setSaving(false);
+  }
+
+  async function handleChangePassword() {
+    setError("");
+    setSuccess("");
+
+    if (passwords.new_password.length < 6) {
+      setError("Le mot de passe doit contenir au moins 6 caractères.");
+      return;
+    }
+    if (passwords.new_password !== passwords.confirm) {
+      setError("Les mots de passe ne correspondent pas.");
+      return;
+    }
+
+    setPwSaving(true);
+    try {
+      const res = await fetch("/api/auth/password", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ new_password: passwords.new_password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Erreur");
+      } else {
+        setSuccess("Mot de passe mis à jour !");
+        setPasswords({ new_password: "", confirm: "" });
+        setShowPassword(false);
+        setTimeout(() => setSuccess(""), 3000);
+      }
+    } catch {
+      setError("Erreur réseau. Veuillez réessayer.");
+    }
+    setPwSaving(false);
   }
 
   async function handleLogout() {
@@ -65,19 +143,121 @@ export default function ProfilPage() {
     <div className="px-4 py-5 max-w-lg mx-auto">
       <h1 className="text-xl font-bold mb-5">Mon Profil</h1>
 
+      {/* Feedback */}
+      {error && (
+        <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">
+          {success}
+        </div>
+      )}
+
       {/* Profile card */}
       <div className="glass-card p-5 mb-5">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-gradient-primary flex items-center justify-center text-xl font-black shrink-0">
-            {user?.name?.charAt(0).toUpperCase()}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-gradient-primary flex items-center justify-center text-xl font-black shrink-0">
+              {user?.name?.charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-lg font-bold truncate">{user?.name}</h2>
+              <p className="text-xs text-white/40">{user?.phone}</p>
+              {user?.city && <p className="text-xs text-white/30">{user.city}</p>}
+            </div>
           </div>
-          <div className="min-w-0">
-            <h2 className="text-lg font-bold truncate">{user?.name}</h2>
-            <p className="text-xs text-white/40">{user?.phone}</p>
-            {user?.city && <p className="text-xs text-white/30">{user.city}</p>}
-          </div>
+          {!editing && (
+            <button
+              onClick={() => { setEditing(true); setError(""); setSuccess(""); }}
+              className="text-xs text-primary font-semibold hover:underline shrink-0"
+            >
+              Modifier
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Edit form */}
+      {editing && (
+        <div className="glass-card p-5 mb-5 space-y-4">
+          <h3 className="text-sm font-bold">Modifier le profil</h3>
+          <div>
+            <label className="block text-xs font-semibold text-white/40 mb-1">Nom *</label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-white/40 mb-1">Téléphone</label>
+            <input
+              type="tel"
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              placeholder="+221 77 000 00 00"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-white/40 mb-1">Ville</label>
+            <input
+              type="text"
+              value={form.city}
+              onChange={(e) => setForm({ ...form, city: e.target.value })}
+              placeholder="Dakar"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-white/40 mb-1">Moyen de paiement</label>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { id: "wave", label: "Wave" },
+                { id: "orange_money", label: "Orange Money" },
+              ].map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => setForm({ ...form, mobile_money_provider: option.id })}
+                  className={`p-3 rounded-xl border-2 transition-all text-left ${
+                    form.mobile_money_provider === option.id
+                      ? "border-primary bg-primary/10"
+                      : "border-white/10 bg-white/5 hover:border-white/20"
+                  }`}
+                >
+                  <p className="font-semibold text-sm">{option.label}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={handleSaveProfile}
+              disabled={saving || !form.name}
+              className="flex-1 py-3 rounded-btn font-bold text-white bg-gradient-primary disabled:opacity-50 transition"
+            >
+              {saving ? "Enregistrement..." : "Enregistrer"}
+            </button>
+            <button
+              onClick={() => {
+                setEditing(false);
+                setForm({
+                  name: user?.name || "",
+                  phone: user?.phone || "",
+                  city: user?.city || "",
+                  mobile_money_provider: user?.mobile_money_provider || "",
+                });
+              }}
+              className="px-6 py-3 rounded-btn border border-white/10 text-sm font-semibold text-white/60 hover:bg-white/5 transition"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 mb-5">
@@ -121,6 +301,63 @@ export default function ProfilPage() {
             {user?.created_at ? new Date(user.created_at).toLocaleDateString("fr-FR") : "—"}
           </span>
         </div>
+      </div>
+
+      {/* Password change */}
+      <div className="glass-card p-5 mb-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold">Mot de passe</h3>
+          {!showPassword && (
+            <button
+              onClick={() => { setShowPassword(true); setError(""); setSuccess(""); }}
+              className="text-xs text-primary font-semibold hover:underline"
+            >
+              Changer
+            </button>
+          )}
+        </div>
+        {showPassword ? (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-white/40 mb-1">Nouveau mot de passe</label>
+              <input
+                type="password"
+                value={passwords.new_password}
+                onChange={(e) => setPasswords({ ...passwords, new_password: e.target.value })}
+                placeholder="Min. 6 caractères"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-white/40 mb-1">Confirmer</label>
+              <input
+                type="password"
+                value={passwords.confirm}
+                onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
+                placeholder="Répétez le mot de passe"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+                onKeyDown={(e) => e.key === "Enter" && !pwSaving && passwords.new_password && passwords.confirm && handleChangePassword()}
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleChangePassword}
+                disabled={pwSaving || !passwords.new_password || !passwords.confirm}
+                className="flex-1 py-3 rounded-btn font-bold text-white bg-gradient-primary disabled:opacity-50 transition"
+              >
+                {pwSaving ? "Mise à jour..." : "Mettre à jour"}
+              </button>
+              <button
+                onClick={() => { setShowPassword(false); setPasswords({ new_password: "", confirm: "" }); }}
+                className="px-6 py-3 rounded-btn border border-white/10 text-sm font-semibold text-white/60 hover:bg-white/5 transition"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-white/30">Utilisez un mot de passe fort d&apos;au moins 6 caractères.</p>
+        )}
       </div>
 
       <button
