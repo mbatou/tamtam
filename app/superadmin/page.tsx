@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import { formatFCFA, formatNumber, timeAgo } from "@/lib/utils";
 import StatCard from "@/components/StatCard";
+import {
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+} from "recharts";
 
 interface Stats {
   totalEchos: number;
@@ -23,6 +27,30 @@ interface Stats {
   topEchos: { id: string; name: string; total_earned: number; balance: number }[];
   recentClicks: { id: string; ip_address: string; is_valid: boolean; created_at: string; link_id: string }[];
   pendingPayoutsList: { id: string; echo_id: string; amount: number; provider: string; status: string; created_at: string; users: { name: string; phone: string } }[];
+  clicksChart: { date: string; valid: number; fraud: number }[];
+  campaignsByStatus: Record<string, number>;
+  signupsChart: { date: string; count: number }[];
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  active: "#22c55e",
+  draft: "#94a3b8",
+  paused: "#eab308",
+  completed: "#3b82f6",
+  rejected: "#ef4444",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  active: "Actives",
+  draft: "Brouillons",
+  paused: "En pause",
+  completed: "Terminées",
+  rejected: "Rejetées",
+};
+
+function formatShortDate(dateStr: string) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 }
 
 export default function SuperAdminOverview() {
@@ -54,6 +82,12 @@ export default function SuperAdminOverview() {
   if (stats.fraudRate > 10) alerts.push({ type: "danger", message: `Taux de fraude élevé: ${stats.fraudRate}%` });
   if (stats.pendingPayoutsCount > 0) alerts.push({ type: "warning", message: `${stats.pendingPayoutsCount} paiement(s) en attente (${formatFCFA(stats.pendingPayoutAmount)})` });
   if (stats.activeCampaigns === 0) alerts.push({ type: "info", message: "Aucune campagne active" });
+
+  const pieData = Object.entries(stats.campaignsByStatus || {}).map(([status, count]) => ({
+    name: STATUS_LABELS[status] || status,
+    value: count,
+    color: STATUS_COLORS[status] || "#64748b",
+  }));
 
   return (
     <div className="p-6 max-w-7xl space-y-6">
@@ -90,7 +124,84 @@ export default function SuperAdminOverview() {
         </div>
       </div>
 
-      {/* Row 3 — Alerts */}
+      {/* Row 3 — Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Clicks over time */}
+        <div className="glass-card p-5 lg:col-span-2">
+          <h3 className="text-sm font-bold mb-4">Clics (14 derniers jours)</h3>
+          <ResponsiveContainer width="100%" height={240}>
+            <AreaChart data={stats.clicksChart || []}>
+              <defs>
+                <linearGradient id="gradValid" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gradFraud" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="date" tickFormatter={formatShortDate} tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <Tooltip
+                contentStyle={{ background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
+                labelFormatter={(v) => formatShortDate(String(v))}
+              />
+              <Area type="monotone" dataKey="valid" name="Valides" stroke="#22c55e" fill="url(#gradValid)" strokeWidth={2} />
+              <Area type="monotone" dataKey="fraud" name="Fraude" stroke="#ef4444" fill="url(#gradFraud)" strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Campaign status pie */}
+        <div className="glass-card p-5">
+          <h3 className="text-sm font-bold mb-4">Campagnes par statut</h3>
+          {pieData.length > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={180}>
+                <PieChart>
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={75} dataKey="value" paddingAngle={3}>
+                    {pieData.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex flex-wrap gap-3 mt-2 justify-center">
+                {pieData.map((entry, i) => (
+                  <div key={i} className="flex items-center gap-1.5 text-xs">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: entry.color }} />
+                    <span className="text-white/50">{entry.name} ({entry.value})</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="text-xs text-white/30 text-center py-8">Aucune campagne</p>
+          )}
+        </div>
+      </div>
+
+      {/* Row 4 — Echo signups chart */}
+      <div className="glass-card p-5">
+        <h3 className="text-sm font-bold mb-4">Inscriptions Échos (14 derniers jours)</h3>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={stats.signupsChart || []}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <XAxis dataKey="date" tickFormatter={formatShortDate} tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+            <Tooltip
+              contentStyle={{ background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
+              labelFormatter={(v) => formatShortDate(String(v))}
+            />
+            <Bar dataKey="count" name="Inscriptions" fill="#D35400" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Row 5 — Alerts */}
       {alerts.length > 0 && (
         <div className="space-y-2">
           {alerts.map((alert, i) => (
@@ -110,7 +221,7 @@ export default function SuperAdminOverview() {
         </div>
       )}
 
-      {/* Row 4 — Two columns */}
+      {/* Row 6 — Two columns */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Echos */}
         <div className="glass-card p-5">
@@ -159,7 +270,7 @@ export default function SuperAdminOverview() {
         </div>
       </div>
 
-      {/* Row 5 — Recent campaigns + Pending payouts */}
+      {/* Row 7 — Recent campaigns + Pending payouts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="glass-card p-5">
           <h3 className="text-sm font-bold mb-4">Dernières campagnes</h3>
