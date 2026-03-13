@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { payoutRequestSchema } from "@/lib/validations";
 import { rateLimit } from "@/lib/rate-limit";
+import { sendPayoutRequestNotification } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -74,5 +75,20 @@ export async function POST(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Notify admin by email
+  const { data: echoUser } = await supabase
+    .from("users")
+    .select("name, phone")
+    .eq("id", session.user.id)
+    .single();
+
+  sendPayoutRequestNotification({
+    echoName: echoUser?.name || "Inconnu",
+    echoPhone: echoUser?.phone || "",
+    amount: parsed.data.amount,
+    provider: parsed.data.provider || "wave",
+  }).catch(() => {});
+
   return NextResponse.json(data, { status: 201 });
 }
