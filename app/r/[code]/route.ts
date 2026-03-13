@@ -72,20 +72,31 @@ export async function GET(
     is_valid: valid,
   });
 
-  // If valid click, update counters
+  // If valid click, update counters (with budget guard)
   if (valid) {
     const echoEarnings = Math.floor(
       (campaign.cpc * ECHO_SHARE_PERCENT) / 100
     );
 
-    // Increment click count on tracked link
-    await supabase.rpc("increment_click", {
+    // increment_click returns false if budget would be exceeded
+    const { data: budgetOk } = await supabase.rpc("increment_click", {
       p_link_id: link.id,
       p_campaign_id: campaign.id,
       p_echo_id: link.echo_id,
       p_cpc: campaign.cpc,
       p_echo_earnings: echoEarnings,
     });
+
+    // Budget exhausted mid-flight — mark click as invalid retroactively
+    if (budgetOk === false) {
+      await supabase
+        .from("clicks")
+        .update({ is_valid: false })
+        .eq("link_id", link.id)
+        .eq("ip_address", ip)
+        .order("created_at", { ascending: false })
+        .limit(1);
+    }
   }
 
   // Redirect to destination
