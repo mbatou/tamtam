@@ -89,6 +89,38 @@ export async function sendLeadNotification({
   });
 }
 
+export async function sendRoleUpgradeEmail({
+  to,
+  name,
+}: {
+  to: string;
+  name: string;
+}) {
+  return sendEmail({
+    to,
+    subject: "Tamtam — Votre compte a été mis à jour !",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px;">
+        <h2 style="color: #D35400;">Bonne nouvelle, ${name} !</h2>
+        <p>Votre compte Tamtam a été mis à jour. En plus de votre accès Echo, vous avez maintenant accès à l'espace <strong>Batteur (Marque)</strong>.</p>
+        <p>Vous pouvez maintenant :</p>
+        <ul>
+          <li>Créer et gérer des campagnes publicitaires</li>
+          <li>Recharger votre portefeuille</li>
+          <li>Suivre les performances de vos campagnes</li>
+        </ul>
+        <p>Connectez-vous avec vos identifiants habituels :</p>
+        <p style="margin-top: 20px;">
+          <a href="https://www.tamma.me/login" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Se connecter</a>
+        </p>
+        <p style="margin-top: 20px; color: #888; font-size: 13px;">
+          Besoin d'aide ? Contactez-nous à support@tamma.me
+        </p>
+      </div>
+    `,
+  });
+}
+
 export async function sendBatteurWelcomeEmail({
   to,
   temporaryPassword,

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { updateLeadSchema } from "@/lib/validations";
-import { sendBatteurWelcomeEmail } from "@/lib/email";
+import { sendBatteurWelcomeEmail, sendRoleUpgradeEmail } from "@/lib/email";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
   if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   const body = await req.json();
-  const { id, email: overrideEmail } = body;
+  const { id, email: overrideEmail, promote_echo } = body;
   if (!id) return NextResponse.json({ error: "ID requis" }, { status: 400 });
 
   // Get lead
@@ -93,15 +93,66 @@ export async function POST(req: NextRequest) {
     // Check if this auth user already has a profile
     const { data: existingProfile } = await auth.supabase
       .from("users")
-      .select("id, role")
+      .select("id, role, name")
       .eq("id", existingAuthUser.id)
       .single();
 
     if (existingProfile) {
+      // If user is an Echo and we want to promote them to Batteur
+      if (existingProfile.role === "echo" && promote_echo) {
+        const { error: updateError } = await auth.supabase
+          .from("users")
+          .update({ role: "batteur" })
+          .eq("id", existingProfile.id);
+
+        if (updateError) {
+          return NextResponse.json({ error: updateError.message }, { status: 500 });
+        }
+
+        // Update lead status
+        await auth.supabase
+          .from("brand_leads")
+          .update({
+            status: "converted",
+            notes: `Echo promu Batteur le ${new Date().toLocaleDateString("fr-FR")}. ${lead.notes || ""}`.trim(),
+          })
+          .eq("id", id);
+
+        // Log activity
+        try {
+          await auth.supabase.from("admin_activity_log").insert({
+            admin_id: auth.session.user.id,
+            action: "promote_echo_to_batteur",
+            target_type: "user",
+            target_id: existingProfile.id,
+            details: { lead_id: id, business_name: lead.business_name, email: accountEmail },
+          });
+        } catch {}
+
+        // Send upgrade notification email
+        try {
+          await sendRoleUpgradeEmail({
+            to: accountEmail,
+            name: existingProfile.name || lead.business_name,
+          });
+        } catch (e) {
+          console.error("Upgrade email failed:", e);
+        }
+
+        return NextResponse.json({
+          success: true,
+          user_id: existingProfile.id,
+          promoted: true,
+          email_used: accountEmail,
+        });
+      }
+
+      // Email exists but promotion not requested — return conflict with option to promote
       return NextResponse.json({
-        error: `Cet email est déjà utilisé par un compte ${existingProfile.role === "echo" ? "Echo" : existingProfile.role}. Veuillez utiliser un email différent.`,
+        error: `Cet email est déjà utilisé par un compte ${existingProfile.role === "echo" ? "Echo" : existingProfile.role}.`,
         email_conflict: true,
         existing_role: existingProfile.role,
+        can_promote: existingProfile.role === "echo",
       }, { status: 409 });
     }
   }
@@ -117,7 +168,6 @@ export async function POST(req: NextRequest) {
   });
 
   if (authError || !authUser.user) {
-    // If auth user creation fails due to duplicate, provide clear message
     if (authError?.message?.includes("already been registered") || authError?.message?.includes("already exists")) {
       return NextResponse.json({
         error: "Cet email est déjà enregistré. Veuillez utiliser un email différent.",

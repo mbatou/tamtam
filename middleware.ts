@@ -74,7 +74,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
     const role = await getUserRole(user.id);
-    if (role !== "echo") {
+    if (!role || !["echo", "batteur"].includes(role)) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
   }

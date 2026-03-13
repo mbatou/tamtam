@@ -37,6 +37,16 @@ BEGIN
   END IF;
 END $$;
 
+-- Ensure increment_balance RPC exists (used by campaign rejection refund)
+CREATE OR REPLACE FUNCTION increment_balance(
+  p_user_id uuid,
+  p_amount integer
+) RETURNS void AS $$
+BEGIN
+  UPDATE users SET balance = balance + p_amount WHERE id = p_user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Update process_payout to handle completed_at and failure_reason
 CREATE OR REPLACE FUNCTION process_payout(
   p_payout_id uuid,

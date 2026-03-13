@@ -56,12 +56,16 @@ export default function SuperadminLeadsPage() {
     setUpdating(false);
   }
 
-  async function convertLead(id: string, overrideEmail?: string) {
-    if (!overrideEmail && !confirm("Créer un compte Batteur pour ce lead ? Un email avec les identifiants sera envoyé.")) return;
+  const [conflictData, setConflictData] = useState<{ existing_role?: string; can_promote?: boolean } | null>(null);
+
+  async function convertLead(id: string, opts?: { overrideEmail?: string; promoteEcho?: boolean }) {
+    if (!opts && !confirm("Créer un compte Batteur pour ce lead ? Un email avec les identifiants sera envoyé.")) return;
     setConverting(true);
     setEmailConflict(false);
-    const payload: { id: string; email?: string } = { id };
-    if (overrideEmail) payload.email = overrideEmail;
+    setConflictData(null);
+    const payload: { id: string; email?: string; promote_echo?: boolean } = { id };
+    if (opts?.overrideEmail) payload.email = opts.overrideEmail;
+    if (opts?.promoteEcho) payload.promote_echo = true;
 
     const res = await fetch("/api/superadmin/leads", {
       method: "POST",
@@ -70,11 +74,12 @@ export default function SuperadminLeadsPage() {
     });
     const data = await res.json();
     if (res.ok) {
-      setConversionResult({ email: data.email_used, success: true });
+      setConversionResult({ email: data.email_used || selectedLead?.email || "", success: true });
       setAlternativeEmail("");
       await loadLeads();
     } else if (res.status === 409 && data.email_conflict) {
       setEmailConflict(true);
+      setConflictData({ existing_role: data.existing_role, can_promote: data.can_promote });
     } else {
       alert(data.error || "Erreur");
     }
@@ -173,7 +178,7 @@ export default function SuperadminLeadsPage() {
                 {filtered.map((lead) => (
                   <tr
                     key={lead.id}
-                    onClick={() => { setSelectedLead(lead); setNotes(lead.notes || ""); setEmailConflict(false); setAlternativeEmail(""); setConversionResult(null); }}
+                    onClick={() => { setSelectedLead(lead); setNotes(lead.notes || ""); setEmailConflict(false); setAlternativeEmail(""); setConversionResult(null); setConflictData(null); }}
                     className="border-b border-white/5 hover:bg-white/[0.03] cursor-pointer transition"
                   >
                     <td className="p-4 text-white/30 text-xs whitespace-nowrap">{timeAgo(lead.created_at)}</td>
@@ -297,31 +302,51 @@ export default function SuperadminLeadsPage() {
             {emailConflict && (
               <div className="mb-4 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 space-y-3">
                 <p className="text-sm text-orange-400 font-semibold">
-                  Cet email est déjà utilisé (probablement un compte Echo).
+                  Cet email est déjà utilisé par un compte {conflictData?.existing_role === "echo" ? "Echo" : conflictData?.existing_role || ""}.
                 </p>
-                <p className="text-xs text-white/40">
-                  Entrez un email différent pour créer le compte Batteur :
-                </p>
-                <input
-                  type="email"
-                  value={alternativeEmail}
-                  onChange={(e) => setAlternativeEmail(e.target.value)}
-                  placeholder="email-alternatif@exemple.com"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
-                />
-                <button
-                  onClick={() => {
-                    if (!alternativeEmail || !alternativeEmail.includes("@")) {
-                      alert("Veuillez entrer un email valide");
-                      return;
-                    }
-                    convertLead(selectedLead.id, alternativeEmail);
-                  }}
-                  disabled={converting || !alternativeEmail}
-                  className="w-full px-4 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/20 transition disabled:opacity-40"
-                >
-                  {converting ? "Création..." : "Créer avec cet email"}
-                </button>
+
+                {/* Option 1: Promote Echo to Batteur */}
+                {conflictData?.can_promote && (
+                  <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 space-y-2">
+                    <p className="text-xs text-blue-300">
+                      Cette personne est déjà un Echo. Vous pouvez lui donner aussi l&apos;accès Batteur (même compte, même mot de passe).
+                    </p>
+                    <button
+                      onClick={() => convertLead(selectedLead.id, { promoteEcho: true })}
+                      disabled={converting}
+                      className="w-full px-4 py-2.5 rounded-xl bg-blue-500/10 text-blue-400 text-sm font-semibold hover:bg-blue-500/20 transition disabled:opacity-40"
+                    >
+                      {converting ? "Promotion..." : "Promouvoir en Echo + Batteur"}
+                    </button>
+                  </div>
+                )}
+
+                {/* Option 2: Use different email */}
+                <div className="pt-2 border-t border-white/5">
+                  <p className="text-xs text-white/40 mb-2">
+                    Ou créer un compte séparé avec un autre email :
+                  </p>
+                  <input
+                    type="email"
+                    value={alternativeEmail}
+                    onChange={(e) => setAlternativeEmail(e.target.value)}
+                    placeholder="email-alternatif@exemple.com"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+                  />
+                  <button
+                    onClick={() => {
+                      if (!alternativeEmail || !alternativeEmail.includes("@")) {
+                        alert("Veuillez entrer un email valide");
+                        return;
+                      }
+                      convertLead(selectedLead.id, { overrideEmail: alternativeEmail });
+                    }}
+                    disabled={converting || !alternativeEmail}
+                    className="mt-2 w-full px-4 py-2.5 rounded-xl bg-white/5 text-white/60 text-sm font-semibold hover:bg-white/10 transition disabled:opacity-40"
+                  >
+                    {converting ? "Création..." : "Créer avec cet email"}
+                  </button>
+                </div>
               </div>
             )}
 
