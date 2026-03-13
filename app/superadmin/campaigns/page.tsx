@@ -86,6 +86,7 @@ export default function CampaignModerationPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ campaign_id: id, action, reason }),
       });
+      const data = await res.json();
       if (res.ok) {
         showToast(
           action === "approve" ? "Campagne approuvee" :
@@ -97,7 +98,7 @@ export default function CampaignModerationPage() {
         setRejectReason("");
         loadData();
       } else {
-        showToast("Erreur", "error");
+        showToast(data.error || "Erreur lors de la moderation", "error");
       }
     } catch {
       showToast("Erreur reseau", "error");

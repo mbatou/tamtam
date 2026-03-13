@@ -3,12 +3,21 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+async function requireSuperadmin() {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-
+  if (!session) return null;
   const supabase = createServiceClient();
+  const { data: user } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  if (!user || user.role !== "superadmin") return null;
+  return { session, supabase };
+}
+
+export async function GET() {
+  const auth = await requireSuperadmin();
+  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+
+  const supabase = auth.supabase;
 
   const { data: campaigns } = await supabase
     .from("campaigns")
@@ -49,11 +58,11 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const auth = await requireSuperadmin();
+  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
-  const supabase = createServiceClient();
+  const supabase = auth.supabase;
+  const session = auth.session;
   const body = await request.json();
   const { action } = body;
 
@@ -126,21 +135,69 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Paramètres manquants" }, { status: 400 });
   }
 
+  // Get current campaign state
+  const { data: campaign, error: fetchErr } = await supabase
+    .from("campaigns")
+    .select("id, status, budget, spent, batteur_id")
+    .eq("id", campaign_id)
+    .single();
+
+  if (fetchErr || !campaign) {
+    return NextResponse.json({ error: "Campagne introuvable" }, { status: 404 });
+  }
+
   const updates: Record<string, unknown> = {
     moderated_by: session.user.id,
     moderated_at: new Date().toISOString(),
   };
 
   switch (action) {
-    case "approve":
+    case "approve": {
       updates.moderation_status = "approved";
       updates.status = "active";
+
+      // If campaign was a draft, deduct budget from batteur balance
+      if (campaign.status === "draft") {
+        const { data: batteur } = await supabase
+          .from("users")
+          .select("balance")
+          .eq("id", campaign.batteur_id)
+          .single();
+
+        if (!batteur || (batteur.balance || 0) < campaign.budget) {
+          return NextResponse.json({
+            error: `Solde insuffisant du batteur (${batteur?.balance || 0} FCFA disponible, ${campaign.budget} FCFA requis)`,
+          }, { status: 400 });
+        }
+
+        const { error: balErr } = await supabase
+          .from("users")
+          .update({ balance: (batteur.balance || 0) - campaign.budget })
+          .eq("id", campaign.batteur_id);
+
+        if (balErr) {
+          return NextResponse.json({ error: balErr.message }, { status: 500 });
+        }
+      }
       break;
-    case "reject":
+    }
+    case "reject": {
       updates.moderation_status = "rejected";
       updates.status = "rejected";
       updates.moderation_reason = reason || "Rejeté par l'admin";
+
+      // Refund budget if it was already deducted (campaign was active, not draft)
+      if (campaign.status === "active") {
+        const unspent = campaign.budget - (campaign.spent || 0);
+        if (unspent > 0) {
+          await supabase.rpc("increment_balance", {
+            p_user_id: campaign.batteur_id,
+            p_amount: unspent,
+          });
+        }
+      }
       break;
+    }
     case "pause":
       updates.status = "paused";
       break;

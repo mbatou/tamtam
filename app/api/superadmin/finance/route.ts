@@ -3,12 +3,21 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+async function requireSuperadmin() {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-
+  if (!session) return null;
   const supabase = createServiceClient();
+  const { data: user } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  if (!user || user.role !== "superadmin") return null;
+  return { session, supabase };
+}
+
+export async function GET() {
+  const auth = await requireSuperadmin();
+  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+
+  const supabase = auth.supabase;
 
   const [
     { data: campaigns },
@@ -40,11 +49,11 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const auth = await requireSuperadmin();
+  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
-  const supabase = createServiceClient();
+  const supabase = auth.supabase;
+  const session = auth.session;
   const body = await request.json();
 
   // ===== RECHARGE VALIDATION (Wave payments) =====
@@ -138,8 +147,11 @@ export async function POST(request: NextRequest) {
     const { error } = await supabase.rpc("process_payout", {
       p_payout_id: payout_id,
       p_status: "failed",
+      p_reason: reason || null,
     });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  } else {
+    return NextResponse.json({ error: "Action invalide" }, { status: 400 });
   }
 
   try {
