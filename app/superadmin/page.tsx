@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { formatFCFA, formatNumber, timeAgo } from "@/lib/utils";
 import StatCard from "@/components/StatCard";
 import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
 } from "recharts";
 
 interface Stats {
@@ -30,6 +30,7 @@ interface Stats {
   clicksChart: { date: string; valid: number; fraud: number }[];
   campaignsByStatus: Record<string, number>;
   signupsChart: { date: string; count: number }[];
+  acquisitionChart: { date: string; echos: number; brands: number; cumulEchos: number; cumulBrands: number }[];
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -200,6 +201,46 @@ export default function SuperAdminOverview() {
           </BarChart>
         </ResponsiveContainer>
       </div>
+
+      {/* Row 4b — User acquisition (30 days) */}
+      {stats.acquisitionChart && stats.acquisitionChart.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="glass-card p-5">
+            <h3 className="text-sm font-bold mb-4">Nouvelles inscriptions / jour (30j)</h3>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={stats.acquisitionChart}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <XAxis dataKey="date" tickFormatter={formatShortDate} tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{ background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
+                  labelFormatter={(v) => formatShortDate(String(v))}
+                />
+                <Bar dataKey="echos" name="Échos" fill="#D35400" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="brands" name="Batteurs" fill="#6C3483" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="glass-card p-5">
+            <h3 className="text-sm font-bold mb-4">Utilisateurs cumulés (30j)</h3>
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={stats.acquisitionChart}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <XAxis dataKey="date" tickFormatter={formatShortDate} tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{ background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
+                  labelFormatter={(v) => formatShortDate(String(v))}
+                />
+                <Line type="monotone" dataKey="cumulEchos" name="Échos" stroke="#D35400" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="cumulBrands" name="Batteurs" stroke="#6C3483" strokeWidth={2} dot={false} />
+                <Legend wrapperStyle={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       {/* Row 5 — Alerts */}
       {alerts.length > 0 && (
