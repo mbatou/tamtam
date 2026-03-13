@@ -106,6 +106,40 @@ export async function GET() {
   }
   const signupsChart = Object.entries(signupsByDay).map(([date, count]) => ({ date, count }));
 
+  // --- Chart data: user acquisition (last 30 days, echos + brands cumulative) ---
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+  thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+  const [{ data: echoSignups30 }, { data: brandSignups30 }, { count: echosBefore }, { count: brandsBefore }] = await Promise.all([
+    supabase.from("users").select("created_at").eq("role", "echo").gte("created_at", thirtyDaysAgo.toISOString()),
+    supabase.from("users").select("created_at").eq("role", "batteur").gte("created_at", thirtyDaysAgo.toISOString()),
+    supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "echo").lt("created_at", thirtyDaysAgo.toISOString()),
+    supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "batteur").lt("created_at", thirtyDaysAgo.toISOString()),
+  ]);
+
+  const acqByDay: Record<string, { date: string; echos: number; brands: number; cumulEchos: number; cumulBrands: number }> = {};
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(thirtyDaysAgo);
+    d.setDate(d.getDate() + i);
+    acqByDay[d.toISOString().slice(0, 10)] = { date: d.toISOString().slice(0, 10), echos: 0, brands: 0, cumulEchos: 0, cumulBrands: 0 };
+  }
+  for (const u of echoSignups30 || []) {
+    const key = u.created_at.slice(0, 10);
+    if (acqByDay[key]) acqByDay[key].echos++;
+  }
+  for (const u of brandSignups30 || []) {
+    const key = u.created_at.slice(0, 10);
+    if (acqByDay[key]) acqByDay[key].brands++;
+  }
+  let runEchos = echosBefore || 0;
+  let runBrands = brandsBefore || 0;
+  const acquisitionChart = Object.values(acqByDay).map((d) => {
+    runEchos += d.echos;
+    runBrands += d.brands;
+    return { ...d, cumulEchos: runEchos, cumulBrands: runBrands };
+  });
+
   return NextResponse.json({
     totalEchos: totalEchos || 0,
     totalBatteurs: totalBatteurs || 0,
@@ -128,5 +162,6 @@ export async function GET() {
     clicksChart,
     campaignsByStatus,
     signupsChart,
+    acquisitionChart,
   });
 }
