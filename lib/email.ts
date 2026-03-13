@@ -159,6 +159,106 @@ export async function sendBatteurWelcomeEmail({
   });
 }
 
+// --- Admin notification emails ---
+
+export async function sendRechargeRequestNotification({
+  brandName,
+  amount,
+  paymentMethod,
+  refCommand,
+}: {
+  brandName: string;
+  amount: number;
+  paymentMethod: string;
+  refCommand: string;
+}) {
+  return sendEmail({
+    to: SUPPORT_EMAIL,
+    subject: `💰 Demande de recharge : ${amount} FCFA — ${brandName}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px;">
+        <h2 style="color: #D35400;">Nouvelle demande de recharge</h2>
+        <p>Un batteur vient de soumettre une demande de recharge Wave.</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <tr>
+            <td style="padding: 8px; font-weight: bold; color: #666;">Batteur</td>
+            <td style="padding: 8px;">${brandName}</td>
+          </tr>
+          <tr style="background: #f9f9f9;">
+            <td style="padding: 8px; font-weight: bold; color: #666;">Montant</td>
+            <td style="padding: 8px; font-weight: bold; font-size: 18px; color: #D35400;">${amount} FCFA</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; font-weight: bold; color: #666;">Methode</td>
+            <td style="padding: 8px;">${paymentMethod}</td>
+          </tr>
+          <tr style="background: #f9f9f9;">
+            <td style="padding: 8px; font-weight: bold; color: #666;">Reference</td>
+            <td style="padding: 8px; font-family: monospace; font-size: 12px;">${refCommand}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; font-weight: bold; color: #666;">Date</td>
+            <td style="padding: 8px;">${new Date().toLocaleString("fr-SN")}</td>
+          </tr>
+        </table>
+        <p>Verifie le paiement sur le dashboard Wave puis valide dans le backoffice :</p>
+        <p style="margin-top: 20px;">
+          <a href="https://www.tamma.me/superadmin/finance" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Voir les recharges</a>
+        </p>
+      </div>
+    `,
+  });
+}
+
+export async function sendPayoutRequestNotification({
+  echoName,
+  echoPhone,
+  amount,
+  provider,
+}: {
+  echoName: string;
+  echoPhone: string;
+  amount: number;
+  provider: string;
+}) {
+  return sendEmail({
+    to: SUPPORT_EMAIL,
+    subject: `🏧 Demande de retrait : ${amount} FCFA — ${echoName}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px;">
+        <h2 style="color: #D35400;">Nouvelle demande de retrait</h2>
+        <p>Un echo vient de demander un retrait de ses gains.</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <tr>
+            <td style="padding: 8px; font-weight: bold; color: #666;">Echo</td>
+            <td style="padding: 8px;">${echoName}</td>
+          </tr>
+          <tr style="background: #f9f9f9;">
+            <td style="padding: 8px; font-weight: bold; color: #666;">Telephone</td>
+            <td style="padding: 8px;">${echoPhone}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; font-weight: bold; color: #666;">Montant</td>
+            <td style="padding: 8px; font-weight: bold; font-size: 18px; color: #D35400;">${amount} FCFA</td>
+          </tr>
+          <tr style="background: #f9f9f9;">
+            <td style="padding: 8px; font-weight: bold; color: #666;">Fournisseur</td>
+            <td style="padding: 8px;">${provider === "wave" ? "Wave" : "Orange Money"}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; font-weight: bold; color: #666;">Date</td>
+            <td style="padding: 8px;">${new Date().toLocaleString("fr-SN")}</td>
+          </tr>
+        </table>
+        <p>Traite cette demande dans le backoffice :</p>
+        <p style="margin-top: 20px;">
+          <a href="https://www.tamma.me/superadmin/finance" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Voir les demandes</a>
+        </p>
+      </div>
+    `,
+  });
+}
+
 // --- Engagement emails ---
 
 export async function sendNewCampaignNotification({

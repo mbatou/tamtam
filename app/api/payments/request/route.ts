@@ -3,6 +3,7 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 // import { paytechConfig, paytechHeaders } from "@/lib/paytech";
 import { paymentRequestSchema } from "@/lib/validations";
 import { rateLimit } from "@/lib/rate-limit";
+import { sendRechargeRequestNotification } from "@/lib/email";
 
 // Wave payment link configuration
 const WAVE_PAYMENT_BASE_URL = "https://pay.wave.com/m/M_sn_hawWuMtnv3Ad/c/sn/";
@@ -62,6 +63,20 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Notify admin by email
+    const { data: profile } = await supabase
+      .from("users")
+      .select("name")
+      .eq("id", session.user.id)
+      .single();
+
+    sendRechargeRequestNotification({
+      brandName: profile?.name || "Inconnu",
+      amount,
+      paymentMethod: payment_method || "Wave",
+      refCommand,
+    }).catch(() => {});
 
     // Generate Wave payment link with dynamic amount
     const waveUrl = `${WAVE_PAYMENT_BASE_URL}?amount=${amount}`;
