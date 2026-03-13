@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { validatePayout } from "@/lib/payout-safety";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(
   _request: Request,
   { params }: { params: { id: string } }
