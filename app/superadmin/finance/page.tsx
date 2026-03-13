@@ -38,7 +38,7 @@ interface FinanceData {
   payments: PaymentRow[];
 }
 
-type FinanceTab = "payout_requests" | "payout_history" | "payments";
+type FinanceTab = "payout_requests" | "payout_history" | "payments" | "pending_recharges";
 
 export default function FinancePage() {
   const [data, setData] = useState<FinanceData | null>(null);
@@ -82,6 +82,25 @@ export default function FinancePage() {
     }
   }
 
+  async function handleRechargeAction(paymentId: string, action: "validate" | "reject", reason?: string) {
+    try {
+      const res = await fetch("/api/superadmin/finance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payment_id: paymentId, action, reason }),
+      });
+      if (res.ok) {
+        showToast(action === "validate" ? "Recharge validée, solde crédité" : "Recharge refusée", action === "validate" ? "success" : "info");
+        loadData();
+      } else {
+        const err = await res.json();
+        showToast(err.error || "Erreur", "error");
+      }
+    } catch {
+      showToast("Erreur réseau", "error");
+    }
+  }
+
   if (loading || !data) {
     return (
       <div className="p-6 space-y-4">
@@ -95,6 +114,8 @@ export default function FinancePage() {
 
   const pendingPayouts = data.payouts.filter((p) => p.status === "pending");
   const completedPayouts = data.payouts.filter((p) => p.status !== "pending");
+  const pendingRecharges = data.payments.filter((p) => p.status === "pending");
+  const processedRecharges = data.payments.filter((p) => p.status !== "pending");
   const echoShare = data.grossRevenue - data.platformCut;
   const total = data.grossRevenue || 1;
   const platformPct = (data.platformCut / total) * 100;
@@ -165,12 +186,25 @@ export default function FinancePage() {
           Historique paiements ({completedPayouts.length})
         </button>
         <button
+          onClick={() => setTab("pending_recharges")}
+          className={`px-4 py-2 rounded-xl text-sm font-bold transition whitespace-nowrap flex items-center gap-2 ${
+            tab === "pending_recharges" ? "bg-gradient-primary text-white" : "bg-white/5 text-white/40"
+          }`}
+        >
+          Recharges Wave
+          {pendingRecharges.length > 0 && (
+            <span className="bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+              {pendingRecharges.length}
+            </span>
+          )}
+        </button>
+        <button
           onClick={() => setTab("payments")}
           className={`px-4 py-2 rounded-xl text-sm font-bold transition whitespace-nowrap ${
             tab === "payments" ? "bg-gradient-primary text-white" : "bg-white/5 text-white/40"
           }`}
         >
-          Recharges Batteurs ({data.payments.length})
+          Historique recharges ({processedRecharges.length})
         </button>
       </div>
 
@@ -269,7 +303,63 @@ export default function FinancePage() {
         </div>
       )}
 
-      {/* Brand Payments Tab */}
+      {/* Pending Recharges (Wave) Tab */}
+      {tab === "pending_recharges" && (
+        <div>
+          {pendingRecharges.length === 0 ? (
+            <div className="glass-card p-12 text-center">
+              <div className="text-4xl mb-3">&#10003;</div>
+              <h3 className="text-lg font-bold mb-1">Aucune recharge en attente</h3>
+              <p className="text-sm text-white/40">Toutes les recharges Wave ont été traitées.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {pendingRecharges.map((payment) => (
+                <div key={payment.id} className="glass-card p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-sm font-bold text-blue-400">
+                      W
+                    </div>
+                    <div>
+                      <div className="font-bold">{payment.users?.name || "—"}</div>
+                      <div className="text-xs text-white/40">
+                        {payment.payment_method || "Wave"} · Ref: {payment.id.slice(0, 8)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-lg">{formatFCFA(payment.amount)}</div>
+                    <div className="text-xs text-white/30">
+                      {new Date(payment.created_at).toLocaleDateString("fr-FR")}
+                    </div>
+                  </div>
+                  <div className="flex gap-2 ml-4">
+                    <button
+                      onClick={() => handleRechargeAction(payment.id, "validate")}
+                      className="px-4 py-2 rounded-xl bg-accent/10 border border-accent/30 text-accent text-xs font-bold hover:bg-accent/20 transition"
+                    >
+                      Valider
+                    </button>
+                    <button
+                      onClick={() => handleRechargeAction(payment.id, "reject")}
+                      className="px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold hover:bg-red-500/20 transition"
+                    >
+                      Refuser
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="mt-4 p-4 rounded-xl bg-blue-500/5 border border-blue-500/10">
+            <p className="text-xs text-blue-300/60">
+              Vérifie les paiements sur le dashboard Wave avant de valider. La validation crédite automatiquement le solde du batteur.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Processed Recharges History Tab */}
       {tab === "payments" && (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -283,7 +373,7 @@ export default function FinancePage() {
               </tr>
             </thead>
             <tbody>
-              {data.payments.map((payment) => (
+              {processedRecharges.map((payment) => (
                 <tr key={payment.id} className="border-b border-white/5">
                   <td className="py-3 text-xs text-white/50">
                     {new Date(payment.created_at).toLocaleDateString("fr-FR")}
@@ -302,7 +392,7 @@ export default function FinancePage() {
                   </td>
                 </tr>
               ))}
-              {data.payments.length === 0 && (
+              {processedRecharges.length === 0 && (
                 <tr><td colSpan={5} className="py-6 text-center text-white/30 text-sm">Aucune recharge</td></tr>
               )}
             </tbody>

@@ -45,12 +45,13 @@ interface Payment {
   completed_at: string | null;
 }
 
-const PAYMENT_METHODS = [
-  { id: "Orange Money", label: "Orange Money", icon: "🟠" },
-  { id: "Wave", label: "Wave", icon: "🔵" },
-  { id: "Free Money", label: "Free Money", icon: "🟢" },
-  { id: "Carte Bancaire", label: "Carte Bancaire", icon: "💳" },
-];
+// PayTech payment methods (commented out - using Wave link for now)
+// const PAYMENT_METHODS = [
+//   { id: "Orange Money", label: "Orange Money", icon: "🟠" },
+//   { id: "Wave", label: "Wave", icon: "🔵" },
+//   { id: "Free Money", label: "Free Money", icon: "🟢" },
+//   { id: "Carte Bancaire", label: "Carte Bancaire", icon: "💳" },
+// ];
 
 function AdminWalletPage() {
   const [wallet, setWallet] = useState<WalletData>({ balance: 0, totalSpent: 0, totalBudget: 0, activeCampaigns: 0 });
@@ -58,7 +59,7 @@ function AdminWalletPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [rechargeAmount, setRechargeAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("Wave");
+  const [paymentMethod] = useState("Wave");
   const [showRecharge, setShowRecharge] = useState(false);
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
@@ -68,10 +69,10 @@ function AdminWalletPage() {
   useEffect(() => {
     loadWallet();
 
-    // Handle PayTech redirect
+    // Handle redirect params (legacy PayTech / future use)
     const paymentStatus = searchParams.get("payment");
     if (paymentStatus === "success") {
-      setSuccessMsg("Paiement réussi ! Votre solde sera mis à jour sous peu.");
+      setSuccessMsg("Paiement enregistré ! Ton solde sera crédité après validation.");
       window.history.replaceState({}, "", "/admin/wallet");
     } else if (paymentStatus === "cancelled") {
       setPayError("Paiement annulé.");
@@ -127,7 +128,13 @@ function AdminWalletPage() {
       const data = await res.json();
 
       if (data.success && data.redirect_url) {
-        window.location.href = data.redirect_url;
+        // Open Wave payment link in new tab
+        window.open(data.redirect_url, "_blank");
+        setSuccessMsg("Finalise ton paiement sur Wave. Ton solde sera crédité après validation par l'équipe Tamtam.");
+        setShowRecharge(false);
+        setPaying(false);
+        setRechargeAmount("");
+        loadWallet();
       } else {
         setPayError(data.error || "Erreur lors de l'initialisation du paiement");
         setPaying(false);
@@ -216,25 +223,6 @@ function AdminWalletPage() {
             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition mb-6"
           />
 
-          {/* Payment method selection */}
-          <p className="text-xs font-semibold text-white/40 mb-2">Moyen de paiement</p>
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            {PAYMENT_METHODS.map((m) => (
-              <button
-                key={m.id}
-                onClick={() => setPaymentMethod(m.id)}
-                className={`p-4 rounded-xl border-2 transition-all text-left ${
-                  paymentMethod === m.id
-                    ? "border-primary bg-primary/10"
-                    : "border-white/10 bg-white/5 hover:border-white/20"
-                }`}
-              >
-                <span className="text-2xl">{m.icon}</span>
-                <p className="font-semibold mt-2 text-sm">{m.label}</p>
-              </button>
-            ))}
-          </div>
-
           {payError && (
             <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
               {payError}
@@ -247,12 +235,12 @@ function AdminWalletPage() {
             className="btn-primary w-full text-center disabled:opacity-40"
           >
             {paying
-              ? "Redirection vers PayTech..."
-              : `Payer ${rechargeAmount ? formatFCFA(parseInt(rechargeAmount)) : ""} via ${paymentMethod}`}
+              ? "Ouverture de Wave..."
+              : `Payer ${rechargeAmount ? formatFCFA(parseInt(rechargeAmount)) : ""} via Wave`}
           </button>
 
           <p className="text-xs text-white/30 mt-3 text-center">
-            Vous serez redirigé vers PayTech pour finaliser le paiement.
+            Tu seras redirigé vers Wave pour effectuer le paiement. Ton solde sera crédité après validation.
           </p>
         </div>
       )}
@@ -289,12 +277,12 @@ function AdminWalletPage() {
                           : "text-red-400 font-semibold"
                       }>
                         {payment.status === "completed"
-                          ? "Complété"
+                          ? "Validé"
                           : payment.status === "pending"
-                          ? "En attente"
+                          ? "En attente de validation"
                           : payment.status === "cancelled"
                           ? "Annulé"
-                          : "Échoué"}
+                          : "Refusé"}
                       </span>
                     </td>
                     <td className="px-5 py-3 text-white/40 text-xs">{timeAgo(payment.created_at)}</td>
