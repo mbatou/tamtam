@@ -7,8 +7,8 @@ export const createCampaignSchema = z.object({
   cpc: z.coerce.number().int().min(10, "CPC minimum 10 FCFA").max(1000),
   budget: z.coerce.number().int().min(1000, "Budget minimum 1000 FCFA").max(10000000),
   creative_urls: z.array(z.string().url()).optional(),
-  starts_at: z.string().datetime().optional().nullable(),
-  ends_at: z.string().datetime().optional().nullable(),
+  starts_at: z.string().optional().nullable(),
+  ends_at: z.string().optional().nullable(),
 });
 
 export const updateCampaignSchema = z.object({
@@ -19,8 +19,8 @@ export const updateCampaignSchema = z.object({
   cpc: z.coerce.number().int().min(10).max(1000).optional(),
   budget: z.coerce.number().int().min(1000).max(10000000).optional(),
   creative_urls: z.array(z.string().url()).optional(),
-  starts_at: z.string().datetime().optional().nullable(),
-  ends_at: z.string().datetime().optional().nullable(),
+  starts_at: z.string().optional().nullable(),
+  ends_at: z.string().optional().nullable(),
   status: z.enum(["draft", "active", "paused", "completed"]).optional(),
 });
 

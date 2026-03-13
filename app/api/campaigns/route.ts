@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { createCampaignSchema, updateCampaignSchema, deleteCampaignSchema } from "@/lib/validations";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   const authClient = createClient();
   const {
