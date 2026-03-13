@@ -40,8 +40,8 @@ function BrandLeadForm() {
             <path d="M20 6L9 17l-5-5" />
           </svg>
         </div>
-        <p className="text-sm font-semibold text-teal-400">Demande envoyee !</p>
-        <p className="text-xs text-white/40 mt-1">Notre equipe vous contactera sous 24h.</p>
+        <p className="text-sm font-semibold text-teal-400">Inscription recue !</p>
+        <p className="text-xs text-white/40 mt-1">Vous recevrez vos identifiants d&apos;acces tres bientot.</p>
       </div>
     );
   }
@@ -89,7 +89,7 @@ function BrandLeadForm() {
         disabled={submitting}
         className="btn-primary w-full text-sm py-3 disabled:opacity-50"
       >
-        {submitting ? "Envoi..." : "Demander une demo"}
+        {submitting ? "Envoi..." : "Obtenir mon acces"}
       </button>
     </form>
   );
@@ -276,8 +276,8 @@ export default function LandingPage() {
         <div className="grid md:grid-cols-2 gap-6 sm:gap-8 items-start">
           {/* Lead capture form */}
           <div className="glass-card p-6 sm:p-8 border border-secondary/20" style={{ boxShadow: "0 0 40px rgba(26,188,156,0.06)" }}>
-            <h3 className="text-lg sm:text-xl font-bold mb-2">Lancez votre premiere campagne</h3>
-            <p className="text-xs text-white/40 mb-5">Remplissez le formulaire, notre equipe vous contacte sous 24h.</p>
+            <h3 className="text-lg sm:text-xl font-bold mb-2">Obtenez votre acces Batteur</h3>
+            <p className="text-xs text-white/40 mb-5">Inscrivez-vous et commencez a lancer vos campagnes WhatsApp.</p>
             <BrandLeadForm />
             <p className="text-[10px] text-white/20 mt-3 text-center">
               Deja un compte ?{" "}
@@ -354,7 +354,7 @@ export default function LandingPage() {
               Lancez des campagnes WhatsApp et touchez des milliers de personnes au Senegal.
             </p>
             <a href="#pour-les-marques" className="btn-outline text-sm sm:text-base px-8 py-3 border-secondary/30 text-secondary hover:bg-secondary/10">
-              Demander une demo
+              Obtenir mon acces
             </a>
           </div>
         </div>
