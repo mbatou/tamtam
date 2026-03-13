@@ -158,3 +158,129 @@ export async function sendBatteurWelcomeEmail({
     `,
   });
 }
+
+// --- Engagement emails ---
+
+export async function sendNewCampaignNotification({
+  to,
+  echoName,
+  campaignTitle,
+  cpc,
+}: {
+  to: string;
+  echoName: string;
+  campaignTitle: string;
+  cpc: number;
+}) {
+  return sendEmail({
+    to,
+    subject: `🎵 Nouveau Rythme disponible : ${campaignTitle}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px;">
+        <h2 style="color: #D35400;">Salut ${echoName} !</h2>
+        <p>Un nouveau Rythme vient d'être lancé sur Tamtam et attend tes partages.</p>
+        <div style="background: #fef3e2; border-left: 4px solid #D35400; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+          <p style="margin: 0; font-weight: bold; font-size: 16px;">${campaignTitle}</p>
+          <p style="margin: 8px 0 0; color: #666;">Gagne <strong style="color: #D35400;">${cpc} FCFA</strong> par clic valide</p>
+        </div>
+        <p>Connecte-toi pour générer ton lien de partage et commencer à gagner :</p>
+        <p style="margin-top: 20px;">
+          <a href="https://www.tamma.me/rythmes" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Voir les Rythmes</a>
+        </p>
+        <p style="margin-top: 20px; color: #888; font-size: 13px;">
+          Tu reçois cet email car tu es Echo sur Tamtam. Besoin d'aide ? support@tamma.me
+        </p>
+      </div>
+    `,
+  });
+}
+
+export async function sendCampaignCompletedToEcho({
+  to,
+  echoName,
+  campaignTitle,
+  clickCount,
+  earnings,
+}: {
+  to: string;
+  echoName: string;
+  campaignTitle: string;
+  clickCount: number;
+  earnings: number;
+}) {
+  return sendEmail({
+    to,
+    subject: `🏁 Rythme terminé : ${campaignTitle}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px;">
+        <h2 style="color: #D35400;">Bravo ${echoName} !</h2>
+        <p>Le Rythme <strong>${campaignTitle}</strong> est maintenant terminé.</p>
+        <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+          <p style="margin: 0; font-weight: bold; color: #16a34a;">Ton bilan</p>
+          <table style="margin-top: 8px; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 4px 12px 4px 0; color: #666;">Clics valides</td>
+              <td style="padding: 4px 0; font-weight: bold;">${clickCount}</td>
+            </tr>
+            <tr>
+              <td style="padding: 4px 12px 4px 0; color: #666;">Gains</td>
+              <td style="padding: 4px 0; font-weight: bold; color: #16a34a;">${earnings} FCFA</td>
+            </tr>
+          </table>
+        </div>
+        <p>Tes gains ont été ajoutés à ton solde. Découvre d'autres Rythmes pour continuer à gagner !</p>
+        <p style="margin-top: 20px;">
+          <a href="https://www.tamma.me/rythmes" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Voir les Rythmes</a>
+        </p>
+        <p style="margin-top: 20px; color: #888; font-size: 13px;">
+          Tu reçois cet email car tu as participé à ce Rythme sur Tamtam.
+        </p>
+      </div>
+    `,
+  });
+}
+
+export async function sendCampaignLiveToBrand({
+  to,
+  brandName,
+  campaignTitle,
+  budget,
+  cpc,
+}: {
+  to: string;
+  brandName: string;
+  campaignTitle: string;
+  budget: number;
+  cpc: number;
+}) {
+  return sendEmail({
+    to,
+    subject: `✅ Votre campagne est en ligne : ${campaignTitle}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px;">
+        <h2 style="color: #D35400;">Bonne nouvelle, ${brandName} !</h2>
+        <p>Votre campagne a été approuvée et est maintenant <strong style="color: #22c55e;">en ligne</strong>.</p>
+        <div style="background: #fef3e2; border-left: 4px solid #D35400; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+          <p style="margin: 0; font-weight: bold; font-size: 16px;">${campaignTitle}</p>
+          <table style="margin-top: 8px; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 4px 12px 4px 0; color: #666;">Budget</td>
+              <td style="padding: 4px 0; font-weight: bold;">${budget} FCFA</td>
+            </tr>
+            <tr>
+              <td style="padding: 4px 12px 4px 0; color: #666;">CPC</td>
+              <td style="padding: 4px 0; font-weight: bold;">${cpc} FCFA</td>
+            </tr>
+          </table>
+        </div>
+        <p>Les Echos peuvent maintenant partager votre campagne. Suivez les performances en temps réel :</p>
+        <p style="margin-top: 20px;">
+          <a href="https://www.tamma.me/admin/campaigns" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Voir mes campagnes</a>
+        </p>
+        <p style="margin-top: 20px; color: #888; font-size: 13px;">
+          Besoin d'aide ? Contactez-nous à support@tamma.me
+        </p>
+      </div>
+    `,
+  });
+}

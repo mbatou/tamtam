@@ -1,7 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { sendNewCampaignNotification, sendCampaignLiveToBrand } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
+
+async function notifyEchosNewCampaign(supabase: ReturnType<typeof createServiceClient>, campaignTitle: string, cpc: number) {
+  try {
+    const { data: echos } = await supabase
+      .from("users")
+      .select("id, name")
+      .eq("role", "echo")
+      .eq("status", "active");
+    if (!echos?.length) return;
+
+    const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+    const emailMap = new Map(authUsers?.map((u) => [u.id, u.email]) || []);
+
+    for (const echo of echos) {
+      const email = emailMap.get(echo.id);
+      if (email) {
+        sendNewCampaignNotification({ to: email, echoName: echo.name, campaignTitle, cpc }).catch(() => {});
+      }
+    }
+  } catch { /* non-blocking */ }
+}
 
 async function requireSuperadmin() {
   const authClient = createClient();
@@ -125,6 +147,24 @@ export async function POST(request: NextRequest) {
       });
     } catch { /* admin_activity_log may not exist yet */ }
 
+    // Notify brand that campaign is live
+    try {
+      const { data: brandUser } = await supabase.from("users").select("name").eq("id", batteur_id).single();
+      const { data: { user: authUser } } = await supabase.auth.admin.getUserById(batteur_id);
+      if (authUser?.email && brandUser) {
+        sendCampaignLiveToBrand({
+          to: authUser.email,
+          brandName: brandUser.name,
+          campaignTitle: title,
+          budget: parseInt(budget),
+          cpc: parseInt(cpc),
+        }).catch(() => {});
+      }
+    } catch { /* non-blocking */ }
+
+    // Notify echos about new campaign
+    notifyEchosNewCampaign(supabase, title, parseInt(cpc));
+
     return NextResponse.json({ success: true, campaign });
   }
 
@@ -227,6 +267,33 @@ export async function POST(request: NextRequest) {
       details: { reason },
     });
   } catch { /* admin_activity_log may not exist yet */ }
+
+  // Send engagement emails based on action
+  if (action === "approve") {
+    // Notify brand that campaign is live
+    try {
+      const { data: campaignFull } = await supabase
+        .from("campaigns")
+        .select("title, cpc, budget, batteur_id")
+        .eq("id", campaign_id)
+        .single();
+      if (campaignFull) {
+        const { data: brandUser } = await supabase.from("users").select("name").eq("id", campaignFull.batteur_id).single();
+        const { data: { user: authUser } } = await supabase.auth.admin.getUserById(campaignFull.batteur_id);
+        if (authUser?.email && brandUser) {
+          sendCampaignLiveToBrand({
+            to: authUser.email,
+            brandName: brandUser.name,
+            campaignTitle: campaignFull.title,
+            budget: campaignFull.budget,
+            cpc: campaignFull.cpc,
+          }).catch(() => {});
+        }
+        // Notify echos about new campaign
+        notifyEchosNewCampaign(supabase, campaignFull.title, campaignFull.cpc);
+      }
+    } catch { /* non-blocking */ }
+  }
 
   return NextResponse.json({ success: true });
 }
