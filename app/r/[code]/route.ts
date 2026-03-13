@@ -57,7 +57,12 @@ export async function GET(
   const userAgent = request.headers.get("user-agent") || "unknown";
 
   // Validate click using click validator
-  const { valid } = await validateClick(ip, userAgent, link.id);
+  const { valid, reason } = await validateClick(ip, userAgent, link.id);
+
+  // Social preview bots (WhatsApp, Snapchat, etc.) just redirect — don't record as a click
+  if (reason === "social_preview") {
+    return NextResponse.redirect(campaign.destination_url);
+  }
 
   // Insert click record
   await supabase.from("clicks").insert({
