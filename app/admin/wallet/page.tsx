@@ -173,7 +173,7 @@ function AdminWalletPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="glass-card p-4">
           <p className="text-xs text-white/40 font-semibold mb-1">Solde disponible</p>
-          <p className="text-xl font-bold text-primary">{formatFCFA(wallet.balance)}</p>
+          <p className="text-xl font-bold text-primary">{formatFCFA(wallet.totalRecharged)}</p>
         </div>
         <div className="glass-card p-4">
           <p className="text-xs text-white/40 font-semibold mb-1">Total dépensé</p>
