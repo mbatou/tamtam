@@ -111,19 +111,39 @@ create index idx_users_role on users(role);
 create index idx_users_status on users(status);
 create index idx_blocked_ips_ip on blocked_ips(ip_address);
 
--- RPC: Atomic click increment (prevents race conditions)
+-- RPC: Atomic click increment with budget enforcement
 create or replace function increment_click(
   p_link_id uuid,
   p_campaign_id uuid,
   p_echo_id uuid,
   p_cpc integer,
   p_echo_earnings integer
-) returns void as $$
+) returns boolean as $$
+declare
+  v_updated integer;
 begin
+  -- Only increment spent if budget allows it (atomic check-and-update)
+  update campaigns
+    set spent = spent + p_cpc
+    where id = p_campaign_id
+      and status = 'active'
+      and spent + p_cpc <= budget;
+
+  get diagnostics v_updated = row_count;
+
+  -- If no row was updated, budget is exhausted — do NOT pay the echo
+  if v_updated = 0 then
+    return false;
+  end if;
+
+  -- Budget was sufficient — proceed with crediting the echo
   update tracked_links set click_count = click_count + 1 where id = p_link_id;
-  update campaigns set spent = spent + p_cpc where id = p_campaign_id;
   update users set balance = balance + p_echo_earnings, total_earned = total_earned + p_echo_earnings where id = p_echo_id;
+
+  -- Auto-complete campaign when budget is fully spent
   update campaigns set status = 'completed' where id = p_campaign_id and spent >= budget;
+
+  return true;
 end;
 $$ language plpgsql security definer;
 
