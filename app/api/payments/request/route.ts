@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { paytechConfig, paytechHeaders } from "@/lib/paytech";
+// import { paytechConfig, paytechHeaders } from "@/lib/paytech";
 import { paymentRequestSchema } from "@/lib/validations";
 import { rateLimit } from "@/lib/rate-limit";
+
+// Wave payment link configuration
+const WAVE_PAYMENT_BASE_URL = "https://pay.wave.com/m/M_sn_hawWuMtnv3Ad/c/sn/";
 
 export async function POST(req: NextRequest) {
   try {
@@ -36,17 +39,10 @@ export async function POST(req: NextRequest) {
     const { amount, payment_method } = parsed.data;
     const supabase = createServiceClient();
 
-    // Get user profile for autofill
-    const { data: profile } = await supabase
-      .from("users")
-      .select("name, phone")
-      .eq("id", session.user.id)
-      .single();
-
     // Generate unique reference
     const refCommand = `TAMTAM_WALLET_${session.user.id.slice(0, 8)}_${Date.now()}`;
 
-    // Create payment record
+    // Create payment record with pending_wave status (needs superadmin validation)
     const { data: paymentRecord, error: insertError } = await supabase
       .from("payments")
       .insert({
@@ -54,7 +50,7 @@ export async function POST(req: NextRequest) {
         amount: amount,
         ref_command: refCommand,
         status: "pending",
-        payment_method: payment_method || null,
+        payment_method: payment_method || "Wave",
       })
       .select()
       .single();
@@ -66,6 +62,23 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Generate Wave payment link with dynamic amount
+    const waveUrl = `${WAVE_PAYMENT_BASE_URL}?amount=${amount}`;
+
+    return NextResponse.json({
+      success: true,
+      redirect_url: waveUrl,
+      payment_id: paymentRecord.id,
+    });
+
+    /* ===== PAYTECH INTEGRATION (commented out - waiting for prod approval) =====
+    // Get user profile for autofill
+    const { data: profile } = await supabase
+      .from("users")
+      .select("name, phone")
+      .eq("id", session.user.id)
+      .single();
 
     // Call PayTech API
     const paymentData = {
@@ -132,6 +145,7 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+    ===== END PAYTECH INTEGRATION ===== */
   } catch (error) {
     console.error("Payment request error:", error);
     return NextResponse.json(

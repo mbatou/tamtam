@@ -45,7 +45,84 @@ export async function POST(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   const supabase = createServiceClient();
-  const { payout_id, action, reason } = await request.json();
+  const body = await request.json();
+
+  // ===== RECHARGE VALIDATION (Wave payments) =====
+  if (body.payment_id && body.action) {
+    const { payment_id, action: paymentAction } = body;
+
+    if (paymentAction === "validate") {
+      // Get the payment record
+      const { data: payment, error: fetchError } = await supabase
+        .from("payments")
+        .select("*")
+        .eq("id", payment_id)
+        .single();
+
+      if (fetchError || !payment) {
+        return NextResponse.json({ error: "Paiement introuvable" }, { status: 404 });
+      }
+
+      if (payment.status !== "pending") {
+        return NextResponse.json({ error: "Ce paiement a déjà été traité" }, { status: 400 });
+      }
+
+      // Mark payment as completed
+      const { error: updateError } = await supabase
+        .from("payments")
+        .update({
+          status: "completed",
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", payment_id);
+
+      if (updateError) {
+        return NextResponse.json({ error: updateError.message }, { status: 500 });
+      }
+
+      // Credit the user's balance
+      await supabase.rpc("increment_balance", {
+        p_user_id: payment.user_id,
+        p_amount: payment.amount,
+      });
+
+      try {
+        await supabase.from("admin_activity_log").insert({
+          admin_id: session.user.id,
+          action: "recharge_validated",
+          target_type: "payment",
+          target_id: payment_id,
+          details: { amount: payment.amount, user_id: payment.user_id },
+        });
+      } catch { /* admin_activity_log may not exist yet */ }
+
+      return NextResponse.json({ success: true });
+    } else if (paymentAction === "reject") {
+      const { error: updateError } = await supabase
+        .from("payments")
+        .update({ status: "failed" })
+        .eq("id", payment_id);
+
+      if (updateError) {
+        return NextResponse.json({ error: updateError.message }, { status: 500 });
+      }
+
+      try {
+        await supabase.from("admin_activity_log").insert({
+          admin_id: session.user.id,
+          action: "recharge_rejected",
+          target_type: "payment",
+          target_id: payment_id,
+          details: { reason: body.reason },
+        });
+      } catch { /* admin_activity_log may not exist yet */ }
+
+      return NextResponse.json({ success: true });
+    }
+  }
+
+  // ===== PAYOUT ACTIONS =====
+  const { payout_id, action, reason } = body;
 
   if (!payout_id || !action) {
     return NextResponse.json({ error: "Paramètres manquants" }, { status: 400 });
