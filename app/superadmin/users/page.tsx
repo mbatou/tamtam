@@ -17,7 +17,6 @@ interface UserRow {
   status: string | null;
   risk_level: string | null;
   balance: number;
-  total_recharged: number;
   total_earned: number;
   mobile_money_provider: string | null;
   created_at: string;
@@ -131,7 +130,7 @@ export default function UsersPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        showToast(`Solde recharge: ${formatFCFA(data.new_recharged)}`, "success");
+        showToast(`Nouveau solde: ${formatFCFA(data.new_balance)}`, "success");
         setShowTopup(false);
         setTopupUser(null);
         setTopupAmount("");
@@ -309,8 +308,8 @@ export default function UsersPage() {
                 <div className="text-[10px] text-white/40">Total gagne</div>
               </div>
               <div className="glass-card p-3">
-                <div className="text-lg font-bold">{formatFCFA(selected.role === "batteur" ? (selected.total_recharged || 0) : selected.balance)}</div>
-                <div className="text-[10px] text-white/40">{selected.role === "batteur" ? "Solde recharge" : "Solde"}</div>
+                <div className="text-lg font-bold">{formatFCFA(selected.balance || 0)}</div>
+                <div className="text-[10px] text-white/40">Solde</div>
               </div>
               <div className="glass-card p-3">
                 <div className="text-lg font-bold">{selected.click_stats.total}</div>
@@ -465,7 +464,7 @@ export default function UsersPage() {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-white/40">Solde actuel</span>
-                <span className="font-bold text-accent">{formatFCFA(topupUser.total_recharged || 0)}</span>
+                <span className="font-bold text-accent">{formatFCFA(topupUser.balance || 0)}</span>
               </div>
             </div>
 
@@ -486,7 +485,7 @@ export default function UsersPage() {
                 <div className="flex justify-between">
                   <span className="text-white/40">Nouveau solde</span>
                   <span className="font-bold text-accent">
-                    {formatFCFA((topupUser.total_recharged || 0) + parseInt(topupAmount))}
+                    {formatFCFA((topupUser.balance || 0) + parseInt(topupAmount))}
                   </span>
                 </div>
               </div>

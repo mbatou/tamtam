@@ -89,11 +89,11 @@ export async function POST(req: NextRequest) {
           .eq("id", payment_id);
       }
 
-      // Credit the user's total_recharged (recharge pool for campaigns)
+      // Credit the user's balance
       if (type === "wallet_recharge" && user_id) {
         const amount = parseInt(final_item_price || item_price);
 
-        await supabase.rpc("increment_recharged", {
+        await supabase.rpc("increment_balance", {
           p_user_id: user_id,
           p_amount: amount,
         });

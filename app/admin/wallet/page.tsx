@@ -21,7 +21,6 @@ export default function AdminWalletWrapper() {
 
 interface WalletData {
   balance: number;
-  totalRecharged: number;
   totalSpent: number;
   totalBudget: number;
   activeCampaigns: number;
@@ -54,7 +53,7 @@ const PAYMENT_METHODS = [
 ];
 
 function AdminWalletPage() {
-  const [wallet, setWallet] = useState<WalletData>({ balance: 0, totalRecharged: 0, totalSpent: 0, totalBudget: 0, activeCampaigns: 0 });
+  const [wallet, setWallet] = useState<WalletData>({ balance: 0, totalSpent: 0, totalBudget: 0, activeCampaigns: 0 });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,7 +89,6 @@ function AdminWalletPage() {
       const data = await statsRes.json();
       setWallet({
         balance: data.walletBalance ?? 0,
-        totalRecharged: data.totalRecharged ?? 0,
         totalSpent: data.budgetSpent || 0,
         totalBudget: data.budgetTotal || 0,
         activeCampaigns: data.activeRythmes || 0,
@@ -173,15 +171,15 @@ function AdminWalletPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="glass-card p-4">
           <p className="text-xs text-white/40 font-semibold mb-1">Solde disponible</p>
-          <p className="text-xl font-bold text-primary">{formatFCFA(wallet.totalRecharged)}</p>
+          <p className="text-xl font-bold text-primary">{formatFCFA(wallet.balance)}</p>
         </div>
         <div className="glass-card p-4">
           <p className="text-xs text-white/40 font-semibold mb-1">Total dépensé</p>
           <p className="text-xl font-bold text-accent">{formatFCFA(wallet.totalSpent)}</p>
         </div>
         <div className="glass-card p-4">
-          <p className="text-xs text-white/40 font-semibold mb-1">Total rechargé</p>
-          <p className="text-xl font-bold">{formatFCFA(wallet.totalRecharged)}</p>
+          <p className="text-xs text-white/40 font-semibold mb-1">Budget total</p>
+          <p className="text-xl font-bold">{formatFCFA(wallet.totalBudget)}</p>
         </div>
         <div className="glass-card p-4">
           <p className="text-xs text-white/40 font-semibold mb-1">Rythmes actifs</p>

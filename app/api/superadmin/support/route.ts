@@ -82,13 +82,15 @@ export async function POST(request: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
     // Log activity
-    await supabase.from("admin_activity_log").insert({
-      admin_id: session.user.id,
-      action: "support_reply",
-      target_type: "support_ticket",
-      target_id: ticket_id,
-      details: { subject: ticket.subject },
-    });
+    try {
+      await supabase.from("admin_activity_log").insert({
+        admin_id: session.user.id,
+        action: "support_reply",
+        target_type: "support_ticket",
+        target_id: ticket_id,
+        details: { subject: ticket.subject },
+      });
+    } catch { /* admin_activity_log may not exist yet */ }
 
     return NextResponse.json({ success: true });
   }

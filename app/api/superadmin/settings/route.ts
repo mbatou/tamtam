@@ -14,17 +14,21 @@ export async function GET() {
   const [
     { data: settings },
     { data: admins },
-    { data: recentLogs },
   ] = await Promise.all([
     supabase.from("platform_settings").select("*"),
     supabase.from("users").select("id, name, phone, role, created_at").in("role", ["admin", "superadmin"]),
-    supabase.from("admin_activity_log").select("*, users!admin_id(name)").order("created_at", { ascending: false }).limit(20),
   ]);
+
+  let recentLogs: unknown[] = [];
+  try {
+    const { data } = await supabase.from("admin_activity_log").select("*, users!admin_id(name)").order("created_at", { ascending: false }).limit(20);
+    recentLogs = data || [];
+  } catch { /* admin_activity_log may not exist yet */ }
 
   return NextResponse.json({
     settings: settings || [],
     admins: admins || [],
-    recentLogs: recentLogs || [],
+    recentLogs,
   });
 }
 
@@ -54,13 +58,15 @@ export async function POST(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  await supabase.from("admin_activity_log").insert({
-    admin_id: session.user.id,
-    action: "setting_update",
-    target_type: "setting",
-    target_id: key,
-    details: { value },
-  });
+  try {
+    await supabase.from("admin_activity_log").insert({
+      admin_id: session.user.id,
+      action: "setting_update",
+      target_type: "setting",
+      target_id: key,
+      details: { value },
+    });
+  } catch { /* admin_activity_log may not exist yet */ }
 
   return NextResponse.json({ success: true });
 }
