@@ -124,7 +124,12 @@ export default function AdminCampaignsPage() {
       const data = await res.json();
       if (!res.ok) {
         if (data.code === "INSUFFICIENT_BALANCE") setShowRechargePrompt(true);
-        setError(data.error || "Erreur");
+        let errorMsg = data.error || "Erreur";
+        if (data.details) {
+          const fields = Object.entries(data.details).map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`).join("; ");
+          if (fields) errorMsg += ` (${fields})`;
+        }
+        setError(errorMsg);
         setSubmitting(false);
         return;
       }
