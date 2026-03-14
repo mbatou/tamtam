@@ -88,16 +88,16 @@ function FinancePageContent() {
         body: JSON.stringify({ payout_id: payoutId, action, reason }),
       });
       if (res.ok) {
-        showToast(action === "approve" ? "Paiement envoye" : "Paiement refuse", action === "approve" ? "success" : "info");
+        showToast(action === "approve" ? t("common.sent") : t("common.rejected"), action === "approve" ? "success" : "info");
         setSelectedPayout(null);
         setRejectReason("");
         loadData();
       } else {
         const err = await res.json();
-        showToast(err.error || "Erreur", "error");
+        showToast(err.error || t("common.error"), "error");
       }
     } catch {
-      showToast("Erreur reseau", "error");
+      showToast(t("common.networkError"), "error");
     }
   }
 
@@ -109,14 +109,14 @@ function FinancePageContent() {
         body: JSON.stringify({ payment_id: paymentId, action, reason }),
       });
       if (res.ok) {
-        showToast(action === "validate" ? "Recharge validée, solde crédité" : "Recharge refusée", action === "validate" ? "success" : "info");
+        showToast(action === "validate" ? t("common.valid") : t("common.rejected"), action === "validate" ? "success" : "info");
         loadData();
       } else {
         const err = await res.json();
-        showToast(err.error || "Erreur", "error");
+        showToast(err.error || t("common.error"), "error");
       }
     } catch {
-      showToast("Erreur réseau", "error");
+      showToast(t("common.networkError"), "error");
     }
   }
 
@@ -148,10 +148,10 @@ function FinancePageContent() {
       <h1 className="text-2xl font-bold mb-6">{t("superadmin.finance.title")}</h1>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Revenu brut" value={formatFCFA(data.grossRevenue)} accent="orange" />
+        <StatCard label={t("superadmin.dashboard.grossRevenue")} value={formatFCFA(data.grossRevenue)} accent="orange" />
         <StatCard label={`Commission (${data.feePercent}%)`} value={formatFCFA(data.platformCut)} accent="teal" />
         <StatCard label="Paye aux Echos" value={formatFCFA(data.sentTotal)} accent="purple" />
-        <StatCard label="En attente" value={formatFCFA(data.pendingTotal)} accent="red" />
+        <StatCard label={t("common.pending")} value={formatFCFA(data.pendingTotal)} accent="red" />
       </div>
 
       {/* Reconciliation Bar */}
@@ -423,7 +423,7 @@ function FinancePageContent() {
       <Modal
         open={!!selectedPayout}
         onClose={() => { setSelectedPayout(null); setRejectReason(""); }}
-        title="Demande de paiement"
+        title={t("superadmin.finance.payoutRequests")}
       >
         {selectedPayout && (
           <div className="space-y-4">
