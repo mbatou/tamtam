@@ -186,16 +186,20 @@ export default function EchoDashboard() {
 
       {/* Streak display */}
       {gamification && (
-        <StreakDisplay streak={gamification.streak} />
+        <div className="mb-5">
+          <StreakDisplay streak={gamification.streak} />
+        </div>
       )}
 
       {/* Tier progress */}
       {gamification?.user && (
-        <TierProgress
-          tier={gamification.user.tier}
-          tierBonusPercent={gamification.user.tier_bonus_percent}
-          totalClicks={gamification.user.total_valid_clicks}
-        />
+        <div className="mb-5">
+          <TierProgress
+            tier={gamification.user.tier}
+            tierBonusPercent={gamification.user.tier_bonus_percent}
+            totalClicks={gamification.user.total_valid_clicks}
+          />
+        </div>
       )}
 
       {/* Stats row */}

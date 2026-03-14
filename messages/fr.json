@@ -740,6 +740,7 @@
     "streakTitle": "Streak: {count} rythmes d'affilée",
     "nextBonus": "Prochain bonus: {count} rythmes → +{amount} FCFA",
     "startStreak": "Accepte un rythme pour démarrer ta série !",
+    "startStreakHint": "Partage des rythmes chaque jour pour construire ta série et gagner des bonus.",
     "almost": "Presque !",
     "tierName_echo": "Écho",
     "tierName_argent": "Écho Argent",

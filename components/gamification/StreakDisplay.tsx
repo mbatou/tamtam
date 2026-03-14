@@ -76,8 +76,8 @@ export default function StreakDisplay({ streak }: StreakProps) {
       )}
 
       {current === 0 && (
-        <p className="text-sm text-gray-400 mt-1">
-          {t("gamification.startStreak")}
+        <p className="text-sm text-gray-400">
+          {t("gamification.startStreakHint")}
         </p>
       )}
     </div>

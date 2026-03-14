@@ -740,6 +740,7 @@
     "streakTitle": "Streak: {count} rythmes in a row",
     "nextBonus": "Next bonus: {count} rythmes → +{amount} FCFA",
     "startStreak": "Accept a rythme to start your streak!",
+    "startStreakHint": "Share rythmes daily to build your streak and earn bonus rewards.",
     "almost": "Almost!",
     "tierName_echo": "Echo",
     "tierName_argent": "Silver Echo",
