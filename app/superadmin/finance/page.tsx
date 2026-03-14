@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { formatFCFA } from "@/lib/utils";
 import StatCard from "@/components/StatCard";
 import Badge from "@/components/ui/Badge";
@@ -40,13 +41,28 @@ interface FinanceData {
 
 type FinanceTab = "payout_requests" | "payout_history" | "payments" | "pending_recharges";
 
-export default function FinancePage() {
+export default function FinancePageWrapper() {
+  return <Suspense><FinancePageContent /></Suspense>;
+}
+
+function FinancePageContent() {
   const [data, setData] = useState<FinanceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<FinanceTab>("payout_requests");
   const [selectedPayout, setSelectedPayout] = useState<PayoutRow | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const { showToast, ToastComponent } = useToast();
+  const searchParams = useSearchParams();
+  const highlightId = searchParams.get("id");
+
+  const openPayoutById = useCallback((finData: FinanceData, id: string) => {
+    const match = finData.payouts.find((p) => p.id === id);
+    if (match) {
+      setSelectedPayout(match);
+      if (match.status === "pending") setTab("payout_requests");
+      else setTab("payout_history");
+    }
+  }, []);
 
   useEffect(() => { loadData(); }, []);
 
@@ -55,6 +71,7 @@ export default function FinancePage() {
       const res = await fetch("/api/superadmin/finance");
       const json = await res.json();
       setData(json);
+      if (highlightId) openPayoutById(json, highlightId);
     } catch {
       showToast("Erreur de chargement", "error");
     }
