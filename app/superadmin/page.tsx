@@ -154,8 +154,8 @@ export default function SuperAdminOverview() {
                 contentStyle={{ background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
                 labelFormatter={(v) => formatShortDate(String(v))}
               />
-              <Area type="monotone" dataKey="valid" name="Valides" stroke="#22c55e" fill="url(#gradValid)" strokeWidth={2} />
-              <Area type="monotone" dataKey="fraud" name="Fraude" stroke="#ef4444" fill="url(#gradFraud)" strokeWidth={2} />
+              <Area type="monotone" dataKey="valid" name={t("common.valid")} stroke="#22c55e" fill="url(#gradValid)" strokeWidth={2} />
+              <Area type="monotone" dataKey="fraud" name={t("common.invalid")} stroke="#ef4444" fill="url(#gradFraud)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
