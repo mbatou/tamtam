@@ -99,7 +99,7 @@ export default function Footer() {
 
         <div className="mt-8 pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-white/20">
-            {t("footer.copyright", { year: new Date().getFullYear() })}
+            &copy; {new Date().getFullYear()} Built by Lupandu
           </p>
           <a href="mailto:contact@tamma.me" className="text-xs text-white/20 hover:text-white/40 transition">
             contact@tamma.me
