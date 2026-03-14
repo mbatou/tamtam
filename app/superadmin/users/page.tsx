@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { formatFCFA } from "@/lib/utils";
 import StatCard from "@/components/StatCard";
 import Badge from "@/components/ui/Badge";
@@ -23,13 +24,19 @@ interface UserRow {
   click_stats: { total: number; valid: number; fraud: number; rate: number };
 }
 
-export default function UsersPage() {
+export default function UsersPageWrapper() {
+  return <Suspense><UsersPageContent /></Suspense>;
+}
+
+function UsersPageContent() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [filter, setFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
   const [selected, setSelected] = useState<UserRow | null>(null);
   const [loading, setLoading] = useState(true);
   const { showToast, ToastComponent } = useToast();
+  const searchParams = useSearchParams();
+  const highlightId = searchParams.get("id");
 
   // Create brand user state
   const [showCreateBrand, setShowCreateBrand] = useState(false);
@@ -48,6 +55,11 @@ export default function UsersPage() {
   const [topupAmount, setTopupAmount] = useState("");
   const [toppingUp, setToppingUp] = useState(false);
 
+  const openUserById = useCallback((userList: UserRow[], id: string) => {
+    const match = userList.find((u) => u.id === id);
+    if (match) setSelected(match);
+  }, []);
+
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
@@ -55,6 +67,7 @@ export default function UsersPage() {
       const res = await fetch("/api/superadmin/users");
       const data = await res.json();
       setUsers(data);
+      if (highlightId) openUserById(data, highlightId);
     } catch {
       showToast("Erreur de chargement", "error");
     }

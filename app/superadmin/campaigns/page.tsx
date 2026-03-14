@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { formatFCFA } from "@/lib/utils";
 import StatCard from "@/components/StatCard";
 import Badge from "@/components/ui/Badge";
@@ -32,13 +33,19 @@ interface Batteur {
   balance: number;
 }
 
-export default function CampaignModerationPage() {
+export default function CampaignModerationPageWrapper() {
+  return <Suspense><CampaignModerationPageContent /></Suspense>;
+}
+
+function CampaignModerationPageContent() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState<Campaign | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [loading, setLoading] = useState(true);
   const { showToast, ToastComponent } = useToast();
+  const searchParams = useSearchParams();
+  const highlightId = searchParams.get("id");
 
   // Create campaign state
   const [showCreate, setShowCreate] = useState(false);
@@ -53,6 +60,11 @@ export default function CampaignModerationPage() {
     budget: "5000",
   });
 
+  const openById = useCallback((list: Campaign[], id: string) => {
+    const match = list.find((c) => c.id === id);
+    if (match) setSelected(match);
+  }, []);
+
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
@@ -64,6 +76,7 @@ export default function CampaignModerationPage() {
       const campData = await campRes.json();
       const usersData = await usersRes.json();
       setCampaigns(campData);
+      if (highlightId) openById(campData, highlightId);
       setBatteurs(
         (usersData || [])
           .filter((u: { role: string }) => u.role === "batteur")

@@ -136,7 +136,7 @@ export default function SuperadminSearch() {
               {results.users.map((u) => (
                 <button
                   key={u.id}
-                  onClick={() => navigate("/superadmin/users")}
+                  onClick={() => navigate(`/superadmin/users?id=${u.id}`)}
                   className="w-full px-4 py-3 flex items-center gap-3 hover:bg-white/[0.04] transition text-left border-b border-white/[0.03] last:border-0"
                 >
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/30 to-primary-light/30 flex items-center justify-center text-xs font-bold text-primary shrink-0">
@@ -169,7 +169,7 @@ export default function SuperadminSearch() {
               {results.campaigns.map((c) => (
                 <button
                   key={c.id}
-                  onClick={() => navigate("/superadmin/campaigns")}
+                  onClick={() => navigate(`/superadmin/campaigns?id=${c.id}`)}
                   className="w-full px-4 py-3 flex items-center gap-3 hover:bg-white/[0.04] transition text-left border-b border-white/[0.03] last:border-0"
                 >
                   <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
@@ -196,7 +196,7 @@ export default function SuperadminSearch() {
               {results.tickets.map((t) => (
                 <button
                   key={t.id}
-                  onClick={() => navigate("/superadmin/support")}
+                  onClick={() => navigate(`/superadmin/support?id=${t.id}`)}
                   className="w-full px-4 py-3 flex items-center gap-3 hover:bg-white/[0.04] transition text-left border-b border-white/[0.03] last:border-0"
                 >
                   <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
@@ -225,7 +225,7 @@ export default function SuperadminSearch() {
               {results.payouts.map((p) => (
                 <button
                   key={p.id}
-                  onClick={() => navigate("/superadmin/finance")}
+                  onClick={() => navigate(`/superadmin/finance?id=${p.id}`)}
                   className="w-full px-4 py-3 flex items-center gap-3 hover:bg-white/[0.04] transition text-left border-b border-white/[0.03] last:border-0"
                 >
                   <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center shrink-0">

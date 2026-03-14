@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { timeAgo } from "@/lib/utils";
 import StatCard from "@/components/StatCard";
 import Modal from "@/components/ui/Modal";
@@ -27,7 +28,11 @@ interface Stats {
 
 type FilterTab = "all" | "open" | "replied" | "closed";
 
-export default function SuperadminSupportPage() {
+export default function SuperadminSupportPageWrapper() {
+  return <Suspense><SuperadminSupportPageContent /></Suspense>;
+}
+
+function SuperadminSupportPageContent() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, open: 0, replied: 0, closed: 0 });
   const [loading, setLoading] = useState(true);
@@ -36,6 +41,17 @@ export default function SuperadminSupportPage() {
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
   const { showToast, ToastComponent } = useToast();
+  const searchParams = useSearchParams();
+  const highlightId = searchParams.get("id");
+
+  const openTicketById = useCallback((ticketList: Ticket[], id: string) => {
+    const match = ticketList.find((t) => t.id === id);
+    if (match) {
+      setSelectedTicket(match);
+      setReply(match.admin_reply || "");
+      setFilter("all");
+    }
+  }, []);
 
   useEffect(() => { loadData(); }, []);
 
@@ -45,6 +61,7 @@ export default function SuperadminSupportPage() {
       const data = await res.json();
       setTickets(data.tickets || []);
       setStats(data.stats || { total: 0, open: 0, replied: 0, closed: 0 });
+      if (highlightId) openTicketById(data.tickets || [], highlightId);
     } catch {
       showToast("Erreur de chargement", "error");
     }
