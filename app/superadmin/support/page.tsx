@@ -80,9 +80,9 @@ function SuperadminSupportPageContent() {
       });
       if (res.ok) {
         const messages: Record<string, string> = {
-          reply: "Reponse envoyee",
-          close: "Ticket ferme",
-          reopen: "Ticket reouvert",
+          reply: t("superadmin.support.repliedTab"),
+          close: t("superadmin.support.closedTab"),
+          reopen: t("superadmin.support.openTab"),
         };
         showToast(messages[action], "success");
         setSelectedTicket(null);
@@ -134,10 +134,10 @@ function SuperadminSupportPageContent() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Total tickets" value={stats.total.toString()} accent="purple" />
-        <StatCard label="Ouverts" value={stats.open.toString()} accent="red" />
-        <StatCard label="Repondus" value={stats.replied.toString()} accent="teal" />
-        <StatCard label="Fermes" value={stats.closed.toString()} accent="orange" />
+        <StatCard label={t("superadmin.support.title")} value={stats.total.toString()} accent="purple" />
+        <StatCard label={t("superadmin.support.openTab")} value={stats.open.toString()} accent="red" />
+        <StatCard label={t("superadmin.support.repliedTab")} value={stats.replied.toString()} accent="teal" />
+        <StatCard label={t("superadmin.support.closedTab")} value={stats.closed.toString()} accent="orange" />
       </div>
 
       {/* Filter tabs */}
@@ -215,7 +215,7 @@ function SuperadminSupportPageContent() {
       <Modal
         open={!!selectedTicket}
         onClose={() => { setSelectedTicket(null); setReply(""); }}
-        title="Ticket support"
+        title={t("superadmin.support.title")}
       >
         {selectedTicket && (
           <div className="space-y-4">
@@ -284,7 +284,7 @@ function SuperadminSupportPageContent() {
                     disabled={sending || !reply.trim()}
                     className="flex-1 py-3 rounded-xl bg-accent/10 border border-accent/30 text-accent font-bold text-sm hover:bg-accent/20 transition disabled:opacity-40"
                   >
-                    {sending ? "Envoi..." : selectedTicket.admin_reply ? "Mettre a jour la reponse" : "Repondre"}
+                    {sending ? t("common.sending") : selectedTicket.admin_reply ? t("common.update") : t("superadmin.support.repliedTab")}
                   </button>
                   <button
                     onClick={() => handleAction(selectedTicket.id, "close")}

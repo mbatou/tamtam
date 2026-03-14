@@ -192,10 +192,10 @@ function CampaignModerationPageContent() {
       )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Total" value={campaigns.length.toString()} accent="orange" />
-        <StatCard label="Actives" value={campaigns.filter((c) => c.status === "active").length.toString()} accent="teal" />
-        <StatCard label="En attente" value={pendingCount.toString()} accent="purple" />
-        <StatCard label="Rejetees" value={campaigns.filter((c) => c.moderation_status === "rejected").length.toString()} accent="red" />
+        <StatCard label={t("superadmin.campaigns.allTab")} value={campaigns.length.toString()} accent="orange" />
+        <StatCard label={t("superadmin.campaigns.approvedTab")} value={campaigns.filter((c) => c.status === "active").length.toString()} accent="teal" />
+        <StatCard label={t("superadmin.campaigns.pendingTab")} value={pendingCount.toString()} accent="purple" />
+        <StatCard label={t("superadmin.campaigns.rejectedTab")} value={campaigns.filter((c) => c.moderation_status === "rejected").length.toString()} accent="red" />
       </div>
 
       <TabBar
@@ -321,7 +321,7 @@ function CampaignModerationPageContent() {
                   </button>
                   <button
                     onClick={() => {
-                      if (!rejectReason.trim()) { showToast("Raison requise pour le rejet", "error"); return; }
+                      if (!rejectReason.trim()) { showToast(t("common.error"), "error"); return; }
                       moderateCampaign(selected.id, "reject", rejectReason);
                     }}
                     className="flex-1 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-bold text-sm"
@@ -450,7 +450,7 @@ function CampaignModerationPageContent() {
             disabled={creating}
             className="w-full py-3 rounded-xl bg-gradient-primary text-white font-bold text-sm hover:opacity-90 transition disabled:opacity-50"
           >
-            {creating ? "Creation en cours..." : "Creer et approuver la campagne"}
+            {creating ? t("common.loading") : t("superadmin.campaigns.title")}
           </button>
         </div>
       </Modal>

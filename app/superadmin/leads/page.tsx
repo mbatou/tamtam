@@ -61,7 +61,7 @@ export default function SuperadminLeadsPage() {
   const [conflictData, setConflictData] = useState<{ existing_role?: string; can_promote?: boolean } | null>(null);
 
   async function convertLead(id: string, opts?: { overrideEmail?: string; promoteEcho?: boolean }) {
-    if (!opts && !confirm("Créer un compte Batteur pour ce lead ? Un email avec les identifiants sera envoyé.")) return;
+    if (!opts && !confirm(t("superadmin.leads.createBatteur") + " ?")) return;
     setConverting(true);
     setEmailConflict(false);
     setConflictData(null);
@@ -83,7 +83,7 @@ export default function SuperadminLeadsPage() {
       setEmailConflict(true);
       setConflictData({ existing_role: data.existing_role, can_promote: data.can_promote });
     } else {
-      alert(data.error || "Erreur");
+      alert(data.error || t("common.error"));
     }
     setConverting(false);
   }
@@ -168,12 +168,12 @@ export default function SuperadminLeadsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/5 text-white/40 text-xs">
-                  <th className="text-left p-4 font-semibold">Date</th>
+                  <th className="text-left p-4 font-semibold">{t("common.date")}</th>
                   <th className="text-left p-4 font-semibold">{t("superadmin.leads.company")}</th>
                   <th className="text-left p-4 font-semibold">{t("superadmin.leads.contact")}</th>
                   <th className="text-left p-4 font-semibold">{t("common.email")}</th>
                   <th className="text-left p-4 font-semibold">{t("superadmin.leads.whatsapp")}</th>
-                  <th className="text-left p-4 font-semibold">Statut</th>
+                  <th className="text-left p-4 font-semibold">{t("common.status")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -230,11 +230,11 @@ export default function SuperadminLeadsPage() {
             {/* Info */}
             <div className="space-y-3 mb-6">
               <div className="flex justify-between text-sm">
-                <span className="text-white/40">Email</span>
+                <span className="text-white/40">{t("common.email")}</span>
                 <a href={`mailto:${selectedLead.email}`} className="text-primary hover:underline">{selectedLead.email}</a>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-white/40">WhatsApp</span>
+                <span className="text-white/40">{t("superadmin.leads.whatsapp")}</span>
                 {selectedLead.whatsapp ? (
                   <a href={`https://wa.me/221${selectedLead.whatsapp.replace(/\s/g, "")}`} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline">
                     {selectedLead.whatsapp}
@@ -244,7 +244,7 @@ export default function SuperadminLeadsPage() {
                 )}
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-white/40">Date</span>
+                <span className="text-white/40">{t("common.date")}</span>
                 <span>{new Date(selectedLead.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
               </div>
               {selectedLead.message && (
@@ -257,7 +257,7 @@ export default function SuperadminLeadsPage() {
 
             {/* Status */}
             <div className="mb-4">
-              <label className="block text-xs font-semibold text-white/40 mb-2">Statut</label>
+              <label className="block text-xs font-semibold text-white/40 mb-2">{t("common.status")}</label>
               <select
                 value={selectedLead.status}
                 onChange={(e) => updateLead(selectedLead.id, { status: e.target.value })}
@@ -295,7 +295,7 @@ export default function SuperadminLeadsPage() {
               <div className="mb-4 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
                 <p className="text-sm text-emerald-400 font-semibold">{t("superadmin.leads.batteurCreated")}</p>
                 <p className="text-xs text-white/50 mt-1">
-                  {t("superadmin.leads.credentialsSent", { email: "" })}<span className="text-white/70 font-semibold">{conversionResult.email}</span>
+                  {t("superadmin.leads.credentialsSent", { email: conversionResult.email })}
                 </p>
               </div>
             )}
