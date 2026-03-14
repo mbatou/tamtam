@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
+import SuperadminSearch from "@/components/SuperadminSearch";
 
 const navItems = [
   { label: "Roadmap", href: "/superadmin/roadmap", emoji: "🎯" },
@@ -83,18 +84,26 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
       {/* Main */}
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Top bar */}
-        <header className="flex items-center justify-between px-6 py-3 border-b border-white/5">
-          <div className="flex items-center gap-4">
+        <header className="flex items-center justify-between gap-4 px-6 py-3 border-b border-white/5">
+          <div className="flex items-center gap-4 shrink-0">
             <span className="lg:hidden text-xl font-black gradient-text">Tamtam</span>
             <span className="hidden lg:block text-xs text-white/30 font-medium">{today}</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="hidden sm:block flex-1 max-w-md">
+            <SuperadminSearch />
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
             <DashboardSwitcher />
             <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-xs font-bold text-white">
               SA
             </div>
           </div>
         </header>
+
+        {/* Mobile search */}
+        <div className="sm:hidden px-4 py-2 border-b border-white/5">
+          <SuperadminSearch />
+        </div>
 
         {/* Mobile nav */}
         <div className="lg:hidden flex overflow-x-auto gap-1 p-2 border-b border-white/5">
