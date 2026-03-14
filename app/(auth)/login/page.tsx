@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import SoundWave from "@/components/ui/SoundWave";
+import { useTranslation } from "@/lib/i18n";
 
 export default function LoginPage() {
   return (
@@ -15,6 +16,7 @@ export default function LoginPage() {
 }
 
 function LoginContent() {
+  const { t } = useTranslation();
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<"echo" | "batteur">("echo");
   const [email, setEmail] = useState("");
@@ -64,7 +66,7 @@ function LoginContent() {
       });
       const data = await res.json();
       if (!res.ok) {
-        let msg = data.error || "Erreur";
+        let msg = data.error || t("common.error");
         if (data.details) {
           const fields = Object.entries(data.details)
             .map(([, v]) => (v as string[]).join(", "))
@@ -76,7 +78,7 @@ function LoginContent() {
         setLeadSuccess(true);
       }
     } catch {
-      setLeadError("Erreur réseau. Réessaie.");
+      setLeadError(t("auth.loginError"));
     }
     setLeadSubmitting(false);
   }
@@ -97,7 +99,7 @@ function LoginContent() {
               mode === "echo" ? "bg-gradient-primary text-white shadow-lg" : "text-white/40"
             }`}
           >
-            Écho
+            {t("auth.echo")}
           </button>
           <button
             onClick={() => { setMode("batteur"); setError(""); }}
@@ -105,7 +107,7 @@ function LoginContent() {
               mode === "batteur" ? "bg-gradient-secondary text-white shadow-lg" : "text-white/40"
             }`}
           >
-            Batteur
+            {t("auth.batteur")}
           </button>
         </div>
 
@@ -113,9 +115,9 @@ function LoginContent() {
         {mode === "echo" && (
           <>
             <div className="glass-card p-8 animate-slide-up" style={{ opacity: 0 }}>
-              <h1 className="text-2xl font-bold mb-2">Connexion Écho</h1>
+              <h1 className="text-2xl font-bold mb-2">{t("auth.echoLogin")}</h1>
               <p className="text-xs text-white/30 mb-6">
-                Utilise ton email pour te connecter
+                {t("auth.echoLoginDesc")}
               </p>
 
               {error && (
@@ -126,27 +128,27 @@ function LoginContent() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-white/40 mb-2">Email</label>
+                  <label className="block text-xs font-semibold text-white/40 mb-2">{t("common.email")}</label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="votre@email.com"
+                    placeholder={t("auth.emailPlaceholder")}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
                   />
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs font-semibold text-white/40">Mot de passe</label>
+                    <label className="text-xs font-semibold text-white/40">{t("common.password")}</label>
                     <Link href="/forgot-password" className="text-xs text-primary hover:underline">
-                      Mot de passe oublié ?
+                      {t("auth.forgotPassword")}
                     </Link>
                   </div>
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder={t("auth.passwordPlaceholder")}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
                   />
                 </div>
@@ -155,15 +157,15 @@ function LoginContent() {
                   disabled={loading}
                   className="w-full py-3 rounded-btn font-bold text-white disabled:opacity-50 transition-all hover:opacity-90 hover:-translate-y-0.5 hover:shadow-lg bg-gradient-primary"
                 >
-                  {loading ? "Chargement..." : "Se connecter"}
+                  {loading ? t("auth.loginLoading") : t("auth.loginButton")}
                 </button>
               </div>
             </div>
 
             <p className="text-center text-sm text-white/30 mt-6">
-              Pas encore de compte ?{" "}
+              {t("auth.noAccount")}{" "}
               <Link href="/register" className="text-primary font-semibold hover:underline">
-                Deviens un Écho
+                {t("auth.becomeEcho")}
               </Link>
             </p>
           </>
@@ -173,9 +175,9 @@ function LoginContent() {
         {mode === "batteur" && !leadSuccess && (
           <>
             <div className="glass-card p-8 animate-slide-up" style={{ opacity: 0 }}>
-              <h1 className="text-2xl font-bold mb-2">Connexion Batteur</h1>
+              <h1 className="text-2xl font-bold mb-2">{t("auth.batteurLogin")}</h1>
               <p className="text-xs text-white/30 mb-6">
-                Accède à ton espace marque
+                {t("auth.batteurLoginDesc")}
               </p>
 
               {error && (
@@ -186,7 +188,7 @@ function LoginContent() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-white/40 mb-2">Email</label>
+                  <label className="block text-xs font-semibold text-white/40 mb-2">{t("common.email")}</label>
                   <input
                     type="email"
                     value={email}
@@ -197,16 +199,16 @@ function LoginContent() {
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs font-semibold text-white/40">Mot de passe</label>
+                    <label className="text-xs font-semibold text-white/40">{t("common.password")}</label>
                     <Link href="/forgot-password" className="text-xs text-primary hover:underline">
-                      Mot de passe oublié ?
+                      {t("auth.forgotPassword")}
                     </Link>
                   </div>
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder={t("auth.passwordPlaceholder")}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-secondary transition"
                   />
                 </div>
@@ -215,7 +217,7 @@ function LoginContent() {
                   disabled={loading}
                   className="w-full py-3 rounded-btn font-bold text-white disabled:opacity-50 transition-all hover:opacity-90 hover:-translate-y-0.5 hover:shadow-lg bg-gradient-secondary"
                 >
-                  {loading ? "Chargement..." : "Se connecter"}
+                  {loading ? t("auth.loginLoading") : t("auth.loginButton")}
                 </button>
               </div>
             </div>
@@ -224,9 +226,9 @@ function LoginContent() {
             <div className="glass-card p-8 mt-6">
               <div className="text-center mb-6">
                 <p className="text-2xl mb-2">🥁</p>
-                <h2 className="text-lg font-bold mb-2">Tu es une marque ?</h2>
+                <h2 className="text-lg font-bold mb-2">{t("auth.brandQuestion")}</h2>
                 <p className="text-xs text-white/40 leading-relaxed">
-                  Tamtam connecte ta marque avec des centaines d&apos;ambassadeurs qui partagent ton message. Tu ne paies que pour les vrais clics.
+                  {t("auth.brandDesc")}
                 </p>
               </div>
 
@@ -241,34 +243,34 @@ function LoginContent() {
                   type="text"
                   value={leadForm.business_name}
                   onChange={(e) => setLeadForm({ ...leadForm, business_name: e.target.value })}
-                  placeholder="Nom de l'entreprise ou marque"
+                  placeholder={t("auth.brandCompanyName")}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-secondary transition"
                 />
                 <input
                   type="text"
                   value={leadForm.contact_name}
                   onChange={(e) => setLeadForm({ ...leadForm, contact_name: e.target.value })}
-                  placeholder="Ton nom complet"
+                  placeholder={t("auth.brandFullName")}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-secondary transition"
                 />
                 <input
                   type="email"
                   value={leadForm.email}
                   onChange={(e) => setLeadForm({ ...leadForm, email: e.target.value })}
-                  placeholder="Email professionnel"
+                  placeholder={t("auth.brandEmail")}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-secondary transition"
                 />
                 <input
                   type="tel"
                   value={leadForm.whatsapp}
                   onChange={(e) => setLeadForm({ ...leadForm, whatsapp: e.target.value })}
-                  placeholder="Numéro WhatsApp (ex: 77 123 45 67)"
+                  placeholder={t("auth.brandWhatsApp")}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-secondary transition"
                 />
                 <textarea
                   value={leadForm.message}
                   onChange={(e) => setLeadForm({ ...leadForm, message: e.target.value })}
-                  placeholder="Dis-nous en plus sur ta marque et ce que tu veux promouvoir..."
+                  placeholder={t("auth.brandMessage")}
                   rows={3}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-secondary transition resize-none"
                 />
@@ -277,11 +279,11 @@ function LoginContent() {
                   disabled={leadSubmitting || !leadForm.business_name || !leadForm.contact_name || !leadForm.email}
                   className="w-full py-3 rounded-btn font-bold text-white disabled:opacity-40 transition-all hover:opacity-90 hover:-translate-y-0.5 hover:shadow-lg bg-gradient-secondary"
                 >
-                  {leadSubmitting ? "Envoi en cours..." : "🥁 Devenir un Batteur"}
+                  {leadSubmitting ? t("common.sending") : t("auth.becomeBatteur")}
                 </button>
               </div>
               <p className="text-center text-xs text-white/20 mt-3">
-                On te recontacte sous 24h.
+                {t("auth.contactBack")}
               </p>
             </div>
           </>
@@ -295,20 +297,19 @@ function LoginContent() {
                 <path d="M20 6L9 17l-5-5" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold mb-2">Merci {leadForm.contact_name} !</h2>
+            <h2 className="text-xl font-bold mb-2">{t("auth.leadThanks", { name: leadForm.contact_name })}</h2>
             <p className="text-sm text-white/40 mb-4">
-              On a bien reçu ta demande pour <span className="text-white/70 font-semibold">{leadForm.business_name}</span>.
-              Notre équipe te recontacte sous 24h par email ou WhatsApp.
+              {t("auth.leadReceived", { business: leadForm.business_name })}
             </p>
             <Link href="/#pour-les-marques" className="text-sm text-secondary font-semibold hover:underline">
-              Découvre comment Tamtam fonctionne →
+              {t("auth.discoverHow")}
             </Link>
           </div>
         )}
 
         <p className="text-center mt-4">
           <Link href="/" className="text-xs text-white/30 hover:text-white/50 transition">
-            ← Retour à l&apos;accueil
+            {t("auth.backToHome")}
           </Link>
         </p>
       </div>

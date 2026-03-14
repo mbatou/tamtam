@@ -6,6 +6,7 @@ import { formatFCFA, getTrackingUrl } from "@/lib/utils";
 import TabBar from "@/components/ui/TabBar";
 import { useToast } from "@/components/ui/Toast";
 import CampaignDetailModal from "@/components/CampaignDetailModal";
+import { useTranslation } from "@/lib/i18n";
 import type { User, TrackedLinkWithCampaign, Campaign } from "@/lib/types";
 
 export default function EchoDashboard() {
@@ -19,6 +20,7 @@ export default function EchoDashboard() {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const supabase = createClient();
   const { showToast, ToastComponent } = useToast();
+  const { t } = useTranslation();
 
   const loadData = useCallback(async () => {
     const [userRes, linksRes, campaignsRes] = await Promise.all([
@@ -66,18 +68,18 @@ export default function EchoDashboard() {
     });
 
     if (res.ok) {
-      showToast("Rythme accepte !", "success");
+      showToast(t("echo.dashboard.accepted"), "success");
       await loadData();
     } else {
       const data = await res.json();
-      showToast(data.error || "Erreur", "error");
+      showToast(data.error || t("common.error"), "error");
     }
     setAccepting(null);
   }
 
   function copyLink(shortCode: string) {
     navigator.clipboard.writeText(getTrackingUrl(shortCode));
-    showToast("Lien copie !", "success");
+    showToast(t("echo.dashboard.copied"), "success");
   }
 
   function shareWhatsApp(shortCode: string, title: string, creativeUrls?: string[]) {
@@ -91,7 +93,7 @@ export default function EchoDashboard() {
       }
     }
 
-    text += `Clique ici 👉 ${url}`;
+    text += `${t("echo.dashboard.shareText")} ${url}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }
 
@@ -141,9 +143,9 @@ export default function EchoDashboard() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-xl font-bold">
-            Salut {user?.name?.split(" ")[0]} 👋
+            {t("echo.dashboard.greeting", { name: user?.name?.split(" ")[0] || "" })}
           </h1>
-          <p className="text-xs text-white/40 mt-0.5">Ton Pulse</p>
+          <p className="text-xs text-white/40 mt-0.5">{t("echo.dashboard.yourPulse")}</p>
         </div>
         <div className="w-9 h-9 rounded-full bg-gradient-primary flex items-center justify-center text-sm font-bold">
           {user?.name?.charAt(0)?.toUpperCase()}
@@ -154,17 +156,17 @@ export default function EchoDashboard() {
       <div className="earnings-card-bg rounded-2xl p-5 mb-5 border border-primary/20">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[10px] text-white/40 font-semibold uppercase tracking-wider mb-0.5">Solde disponible</p>
+            <p className="text-[10px] text-white/40 font-semibold uppercase tracking-wider mb-0.5">{t("echo.dashboard.availableBalance")}</p>
             <p className="text-3xl font-black tracking-tight">{formatFCFA(user?.balance || 0)}</p>
             <p className="text-[10px] text-white/30 mt-1">
-              Total gagne: {formatFCFA(user?.total_earned || 0)}
+              {t("echo.dashboard.totalEarned")} {formatFCFA(user?.total_earned || 0)}
             </p>
           </div>
           <button
             onClick={() => window.location.href = "/earnings"}
             className="btn-primary text-xs !py-2.5 !px-4 shrink-0"
           >
-            Retirer
+            {t("echo.dashboard.withdraw")}
           </button>
         </div>
       </div>
@@ -176,23 +178,23 @@ export default function EchoDashboard() {
             <span className="live-dot !w-[6px] !h-[6px]" />
           </div>
           <span className="text-lg font-black block">{totalClicks}</span>
-          <span className="text-[9px] text-white/40 font-semibold">Resonances</span>
+          <span className="text-[9px] text-white/40 font-semibold">{t("echo.dashboard.resonances")}</span>
         </div>
         <div className="glass-card p-3 text-center">
           <span className="text-lg font-black block text-accent">{formatFCFA(totalEarnings)}</span>
-          <span className="text-[9px] text-white/40 font-semibold">Genere</span>
+          <span className="text-[9px] text-white/40 font-semibold">{t("echo.dashboard.generated")}</span>
         </div>
         <div className="glass-card p-3 text-center">
           <span className="text-lg font-black block">{activeLinks.filter((l) => l.campaigns?.status === "active").length}</span>
-          <span className="text-[9px] text-white/40 font-semibold">Rythmes</span>
+          <span className="text-[9px] text-white/40 font-semibold">{t("echo.dashboard.rythmes")}</span>
         </div>
       </div>
 
       {/* Tabs */}
       <TabBar
         tabs={[
-          { key: "active", label: "Mes Rythmes", count: activeLinks.length },
-          { key: "discover", label: "Decouvrir", count: availableCampaigns.length },
+          { key: "active", label: t("echo.dashboard.myRythmes"), count: activeLinks.length },
+          { key: "discover", label: t("echo.dashboard.discover"), count: availableCampaigns.length },
         ]}
         active={tab}
         onChange={setTab}
@@ -205,15 +207,15 @@ export default function EchoDashboard() {
           {activeLinks.length === 0 ? (
             <div className="glass-card p-8 text-center">
               <div className="text-3xl mb-2">🔍</div>
-              <p className="text-sm font-semibold mb-1">Aucun rythme actif</p>
+              <p className="text-sm font-semibold mb-1">{t("echo.dashboard.noActiveRythme")}</p>
               <p className="text-xs text-white/30 mb-4">
-                Decouvre les campagnes et commence a gagner !
+                {t("echo.dashboard.discoverCampaigns")}
               </p>
               <button
                 onClick={() => setTab("discover")}
                 className="btn-primary text-xs !py-2 !px-6"
               >
-                Decouvrir
+                {t("echo.dashboard.discover")}
               </button>
             </div>
           ) : (
@@ -246,7 +248,7 @@ export default function EchoDashboard() {
                         <p className="text-xs text-white/30 mt-0.5 line-clamp-2">{link.campaigns?.description}</p>
                       </div>
                       <span className={`badge-${link.campaigns?.status || "active"} shrink-0 text-[10px]`}>
-                        {link.campaigns?.status === "active" ? "Actif" : link.campaigns?.status === "completed" ? "Termine" : link.campaigns?.status}
+                        {link.campaigns?.status === "active" ? t("common.active") : link.campaigns?.status === "completed" ? t("common.finished") : link.campaigns?.status}
                       </span>
                     </div>
 
@@ -260,7 +262,7 @@ export default function EchoDashboard() {
                         {formatFCFA(Math.floor(link.click_count * (link.campaigns?.cpc || 0) * 0.75))}
                       </div>
                       <div className="text-[10px] text-white/30">
-                        {link.campaigns?.cpc} FCFA/clic
+                        {link.campaigns?.cpc} FCFA/{t("common.clicks")}
                       </div>
                     </div>
 
@@ -271,14 +273,14 @@ export default function EchoDashboard() {
                         className={`flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold transition flex items-center justify-center gap-1.5 ${isShareable ? "active:bg-white/10" : "opacity-30 cursor-not-allowed"}`}
                       >
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                        Copier
+                        {t("common.copy")}
                       </button>
                       <button
                         onClick={() => isShareable ? shareWhatsApp(link.short_code, link.campaigns?.title || "", link.campaigns?.creative_urls) : setSelectedLink(link)}
                         className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${isShareable ? "bg-[#25D366]/10 border border-[#25D366]/30 text-[#25D366] active:bg-[#25D366]/20" : "bg-white/5 border border-white/10 text-white/30 cursor-not-allowed"}`}
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                        Partager
+                        {t("common.share")}
                       </button>
                     </div>
                   </div>
@@ -292,8 +294,8 @@ export default function EchoDashboard() {
           {availableCampaigns.length === 0 ? (
             <div className="glass-card p-8 text-center">
               <div className="text-3xl mb-2">🎵</div>
-              <p className="text-sm font-semibold mb-1">Aucun rythme disponible</p>
-              <p className="text-xs text-white/30">Reviens bientot !</p>
+              <p className="text-sm font-semibold mb-1">{t("echo.dashboard.noAvailable")}</p>
+              <p className="text-xs text-white/30">{t("echo.dashboard.comeBackSoon")}</p>
             </div>
           ) : (
             availableCampaigns.map((campaign) => (
@@ -323,9 +325,9 @@ export default function EchoDashboard() {
                   <p className="text-xs text-white/30 mb-3 line-clamp-2">{campaign.description}</p>
 
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-bold text-primary">{campaign.cpc} FCFA / clic</span>
+                    <span className="text-sm font-bold text-primary">{campaign.cpc} FCFA / {t("common.clicks")}</span>
                     <span className="text-xs text-white/40">
-                      {formatFCFA(campaign.budget - campaign.spent)} restant
+                      {formatFCFA(campaign.budget - campaign.spent)} {t("common.remaining")}
                     </span>
                   </div>
 
@@ -341,7 +343,7 @@ export default function EchoDashboard() {
                     disabled={accepting === campaign.id}
                     className="btn-primary w-full text-sm !py-3 text-center disabled:opacity-50"
                   >
-                    {accepting === campaign.id ? "Acceptation..." : "Accepter le Rythme"}
+                    {accepting === campaign.id ? t("echo.dashboard.accepting") : t("echo.dashboard.acceptRythme")}
                   </button>
                 </div>
               </div>

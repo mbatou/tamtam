@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatFCFA, timeAgo } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 export default function AdminWalletWrapper() {
   return (
@@ -54,6 +55,7 @@ interface Payment {
 // ];
 
 function AdminWalletPage() {
+  const { t } = useTranslation();
   const [wallet, setWallet] = useState<WalletData>({ balance: 0, totalSpent: 0, totalBudget: 0, activeCampaigns: 0 });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -72,10 +74,10 @@ function AdminWalletPage() {
     // Handle redirect params (legacy PayTech / future use)
     const paymentStatus = searchParams.get("payment");
     if (paymentStatus === "success") {
-      setSuccessMsg("Paiement enregistré ! Ton solde sera crédité après validation.");
+      setSuccessMsg(t("admin.wallet.paymentRegistered"));
       window.history.replaceState({}, "", "/admin/wallet");
     } else if (paymentStatus === "cancelled") {
-      setPayError("Paiement annulé.");
+      setPayError(t("admin.wallet.paymentCancelled"));
       window.history.replaceState({}, "", "/admin/wallet");
     }
   }, [searchParams]);
@@ -108,7 +110,7 @@ function AdminWalletPage() {
   async function handlePayment() {
     const amount = parseInt(rechargeAmount);
     if (!amount || amount < 100) {
-      setPayError("Montant minimum: 100 FCFA");
+      setPayError(t("admin.wallet.minAmount"));
       return;
     }
 
@@ -130,17 +132,17 @@ function AdminWalletPage() {
       if (data.success && data.redirect_url) {
         // Open Wave payment link in new tab
         window.open(data.redirect_url, "_blank");
-        setSuccessMsg("Finalise ton paiement sur Wave. Ton solde sera crédité après validation par l'équipe Tamtam.");
+        setSuccessMsg(t("admin.wallet.finalizeWave"));
         setShowRecharge(false);
         setPaying(false);
         setRechargeAmount("");
         loadWallet();
       } else {
-        setPayError(data.error || "Erreur lors de l'initialisation du paiement");
+        setPayError(data.error || t("common.error"));
         setPaying(false);
       }
     } catch {
-      setPayError("Erreur de connexion. Veuillez réessayer.");
+      setPayError(t("common.networkRetry"));
       setPaying(false);
     }
   }
@@ -161,9 +163,9 @@ function AdminWalletPage() {
   return (
     <div className="p-6 max-w-4xl">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold">Portefeuille</h1>
+        <h1 className="text-2xl font-bold">{t("admin.wallet.title")}</h1>
         <button onClick={() => { setShowRecharge(!showRecharge); setPayError(null); setSuccessMsg(null); }} className="btn-primary text-sm">
-          {showRecharge ? "Annuler" : "Recharger"}
+          {showRecharge ? t("common.cancel") : t("admin.wallet.recharge")}
         </button>
       </div>
 
@@ -177,29 +179,29 @@ function AdminWalletPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="glass-card p-4">
-          <p className="text-xs text-white/40 font-semibold mb-1">Solde disponible</p>
+          <p className="text-xs text-white/40 font-semibold mb-1">{t("admin.wallet.availableBalance")}</p>
           <p className="text-xl font-bold text-primary">{formatFCFA(wallet.balance)}</p>
         </div>
         <div className="glass-card p-4">
-          <p className="text-xs text-white/40 font-semibold mb-1">Total dépensé</p>
+          <p className="text-xs text-white/40 font-semibold mb-1">{t("admin.wallet.totalSpent")}</p>
           <p className="text-xl font-bold text-accent">{formatFCFA(wallet.totalSpent)}</p>
         </div>
         <div className="glass-card p-4">
-          <p className="text-xs text-white/40 font-semibold mb-1">Budget total</p>
+          <p className="text-xs text-white/40 font-semibold mb-1">{t("admin.wallet.totalBudget")}</p>
           <p className="text-xl font-bold">{formatFCFA(wallet.totalBudget)}</p>
         </div>
         <div className="glass-card p-4">
-          <p className="text-xs text-white/40 font-semibold mb-1">Rythmes actifs</p>
+          <p className="text-xs text-white/40 font-semibold mb-1">{t("admin.wallet.activeRythmes")}</p>
           <p className="text-xl font-bold">{wallet.activeCampaigns}</p>
         </div>
       </div>
 
       {showRecharge && (
         <div className="glass-card p-6 mb-8">
-          <h2 className="text-lg font-bold mb-4">Recharger le portefeuille</h2>
+          <h2 className="text-lg font-bold mb-4">{t("admin.wallet.rechargeTitle")}</h2>
 
           {/* Amount selection */}
-          <p className="text-xs font-semibold text-white/40 mb-2">Montant</p>
+          <p className="text-xs font-semibold text-white/40 mb-2">{t("common.amount")}</p>
           <div className="flex flex-wrap gap-3 mb-4">
             {presetAmounts.map((amount) => (
               <button
@@ -219,7 +221,7 @@ function AdminWalletPage() {
             type="number"
             value={rechargeAmount}
             onChange={(e) => setRechargeAmount(e.target.value)}
-            placeholder="Ou saisissez un montant personnalisé"
+            placeholder={t("admin.wallet.customAmount")}
             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition mb-6"
           />
 
@@ -235,12 +237,12 @@ function AdminWalletPage() {
             className="btn-primary w-full text-center disabled:opacity-40"
           >
             {paying
-              ? "Ouverture de Wave..."
-              : `Payer ${rechargeAmount ? formatFCFA(parseInt(rechargeAmount)) : ""} via Wave`}
+              ? t("admin.wallet.openingWave")
+              : t("admin.wallet.payViaWave", { amount: rechargeAmount ? formatFCFA(parseInt(rechargeAmount)) : "" })}
           </button>
 
           <p className="text-xs text-white/30 mt-3 text-center">
-            Tu seras redirigé vers Wave pour effectuer le paiement. Ton solde sera crédité après validation.
+            {t("admin.wallet.waveRedirect")}
           </p>
         </div>
       )}
@@ -249,16 +251,16 @@ function AdminWalletPage() {
       {payments.length > 0 && (
         <div className="glass-card overflow-hidden mb-8">
           <div className="px-5 py-4 border-b border-white/5">
-            <h2 className="text-lg font-bold">Historique des recharges</h2>
+            <h2 className="text-lg font-bold">{t("admin.wallet.rechargeHistory")}</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/5">
-                  <th className="text-left px-5 py-3 font-semibold text-white/40 text-xs uppercase">Montant</th>
-                  <th className="text-left px-5 py-3 font-semibold text-white/40 text-xs uppercase">Moyen</th>
-                  <th className="text-left px-5 py-3 font-semibold text-white/40 text-xs uppercase">Statut</th>
-                  <th className="text-left px-5 py-3 font-semibold text-white/40 text-xs uppercase">Date</th>
+                  <th className="text-left px-5 py-3 font-semibold text-white/40 text-xs uppercase">{t("common.amount")}</th>
+                  <th className="text-left px-5 py-3 font-semibold text-white/40 text-xs uppercase">{t("admin.wallet.method")}</th>
+                  <th className="text-left px-5 py-3 font-semibold text-white/40 text-xs uppercase">{t("common.status")}</th>
+                  <th className="text-left px-5 py-3 font-semibold text-white/40 text-xs uppercase">{t("common.date")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -277,12 +279,12 @@ function AdminWalletPage() {
                           : "text-red-400 font-semibold"
                       }>
                         {payment.status === "completed"
-                          ? "Validé"
+                          ? t("admin.wallet.validated")
                           : payment.status === "pending"
-                          ? "En attente de validation"
+                          ? t("admin.wallet.pendingValidation")
                           : payment.status === "cancelled"
-                          ? "Annulé"
-                          : "Refusé"}
+                          ? t("admin.wallet.cancelled")
+                          : t("admin.wallet.refused")}
                       </span>
                     </td>
                     <td className="px-5 py-3 text-white/40 text-xs">{timeAgo(payment.created_at)}</td>
@@ -297,17 +299,17 @@ function AdminWalletPage() {
       {/* Campaign spending history */}
       <div className="glass-card overflow-hidden">
         <div className="px-5 py-4 border-b border-white/5">
-          <h2 className="text-lg font-bold">Dépenses par campagne</h2>
+          <h2 className="text-lg font-bold">{t("admin.wallet.spendByCampaign")}</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/5">
-                <th className="text-left px-5 py-3 font-semibold text-white/40 text-xs uppercase">Rythme</th>
-                <th className="text-left px-5 py-3 font-semibold text-white/40 text-xs uppercase">Budget</th>
-                <th className="text-left px-5 py-3 font-semibold text-white/40 text-xs uppercase">Dépensé</th>
-                <th className="text-left px-5 py-3 font-semibold text-white/40 text-xs uppercase">Statut</th>
-                <th className="text-left px-5 py-3 font-semibold text-white/40 text-xs uppercase">Date</th>
+                <th className="text-left px-5 py-3 font-semibold text-white/40 text-xs uppercase">{t("admin.wallet.rythme")}</th>
+                <th className="text-left px-5 py-3 font-semibold text-white/40 text-xs uppercase">{t("common.budget")}</th>
+                <th className="text-left px-5 py-3 font-semibold text-white/40 text-xs uppercase">{t("admin.dashboard.spent")}</th>
+                <th className="text-left px-5 py-3 font-semibold text-white/40 text-xs uppercase">{t("common.status")}</th>
+                <th className="text-left px-5 py-3 font-semibold text-white/40 text-xs uppercase">{t("common.date")}</th>
               </tr>
             </thead>
             <tbody>
@@ -318,7 +320,7 @@ function AdminWalletPage() {
                   <td className="px-5 py-3 text-accent">{formatFCFA(tx.spent)}</td>
                   <td className="px-5 py-3">
                     <span className={`badge-${tx.status}`}>
-                      {tx.status === "active" ? "Actif" : tx.status === "paused" ? "Pausé" : tx.status === "completed" ? "Terminé" : "Brouillon"}
+                      {tx.status === "active" ? t("common.active") : tx.status === "paused" ? t("common.paused") : tx.status === "completed" ? t("common.finished") : t("admin.campaigns.draft")}
                     </span>
                   </td>
                   <td className="px-5 py-3 text-white/40 text-xs">
@@ -331,7 +333,7 @@ function AdminWalletPage() {
         </div>
         {transactions.length === 0 && (
           <div className="p-8 text-center">
-            <p className="text-white/30 text-sm">Aucune campagne.</p>
+            <p className="text-white/30 text-sm">{t("admin.wallet.noCampaign")}</p>
           </div>
         )}
       </div>

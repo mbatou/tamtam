@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatFCFA, formatNumber } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
 import {
   BarChart,
@@ -21,6 +22,7 @@ interface DayData {
 }
 
 export default function AnalyticsPage() {
+  const { t } = useTranslation();
   const [weekStats, setWeekStats] = useState({ clicks: 0, revenue: 0, newEchos: 0, fraudRate: 0 });
   const [chartData, setChartData] = useState<DayData[]>([]);
   const [topEchos, setTopEchos] = useState<{ name: string; total_earned: number }[]>([]);
@@ -112,19 +114,19 @@ export default function AnalyticsPage() {
 
   return (
     <div className="p-6 max-w-7xl">
-      <h1 className="text-2xl font-bold mb-6">📊 Analytics</h1>
+      <h1 className="text-2xl font-bold mb-6">{t("superadmin.analytics.title")}</h1>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Clics (semaine)" value={formatNumber(weekStats.clicks)} accent="orange" />
-        <StatCard label="Revenus (semaine)" value={formatFCFA(weekStats.revenue)} accent="teal" />
-        <StatCard label="Nouveaux Échos" value={weekStats.newEchos.toString()} accent="purple" />
-        <StatCard label="Taux fraude" value={`${weekStats.fraudRate}%`} accent="red" />
+        <StatCard label={t("superadmin.analytics.weekClicks")} value={formatNumber(weekStats.clicks)} accent="orange" />
+        <StatCard label={t("superadmin.analytics.weekRevenue")} value={formatFCFA(weekStats.revenue)} accent="teal" />
+        <StatCard label={t("superadmin.analytics.newEchos")} value={weekStats.newEchos.toString()} accent="purple" />
+        <StatCard label={t("superadmin.analytics.fraudRate")} value={`${weekStats.fraudRate}%`} accent="red" />
       </div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div className="glass-card p-6">
-          <h3 className="text-sm font-bold mb-4">Clics par jour (7 derniers jours)</h3>
+          <h3 className="text-sm font-bold mb-4">{t("superadmin.analytics.clicksPerDay")}</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={chartData}>
               <XAxis dataKey="date" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
@@ -145,7 +147,7 @@ export default function AnalyticsPage() {
         </div>
 
         <div className="glass-card p-6">
-          <h3 className="text-sm font-bold mb-4">Revenus par jour</h3>
+          <h3 className="text-sm font-bold mb-4">{t("superadmin.analytics.revenuePerDay")}</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={chartData}>
               <XAxis dataKey="date" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
@@ -170,7 +172,7 @@ export default function AnalyticsPage() {
       {/* Leaderboards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="glass-card p-6">
-          <h3 className="text-sm font-bold mb-4">Top 5 Échos</h3>
+          <h3 className="text-sm font-bold mb-4">{t("superadmin.analytics.topEchos")}</h3>
           <div className="space-y-3">
             {topEchos.map((echo, i) => (
               <div key={i} className="flex items-center justify-between py-2">
@@ -189,15 +191,15 @@ export default function AnalyticsPage() {
         </div>
 
         <div className="glass-card p-6">
-          <h3 className="text-sm font-bold mb-4">Top 5 Campagnes</h3>
+          <h3 className="text-sm font-bold mb-4">{t("superadmin.analytics.topCampaigns")}</h3>
           <div className="space-y-3">
             {topCampaigns.map((c, i) => (
               <div key={i} className="flex items-center justify-between py-2">
                 <div>
                   <span className="text-sm font-semibold block">{c.title}</span>
-                  <span className="text-xs text-white/30">{c.name} · {c.echos} échos</span>
+                  <span className="text-xs text-white/30">{c.name} · {c.echos} {t("superadmin.campaigns.echos").toLowerCase()}</span>
                 </div>
-                <span className="text-sm font-bold text-primary">{formatNumber(c.clicks)} clics</span>
+                <span className="text-sm font-bold text-primary">{formatNumber(c.clicks)} {t("common.clicks")}</span>
               </div>
             ))}
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslation } from "@/lib/i18n";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -10,6 +11,7 @@ interface BeforeInstallPromptEvent extends Event {
 export function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     // Check if already installed
@@ -55,14 +57,14 @@ export function InstallPrompt() {
       <div className="bg-gradient-primary rounded-2xl p-4 flex items-center gap-3 shadow-[0_8px_32px_rgba(211,84,0,0.4)]">
         <div className="text-2xl shrink-0">📲</div>
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-sm text-white">Installe Tamtam</p>
-          <p className="text-xs text-white/80 mt-0.5">Acces rapide depuis ton ecran d&apos;accueil</p>
+          <p className="font-bold text-sm text-white">{t("install.title")}</p>
+          <p className="text-xs text-white/80 mt-0.5">{t("install.desc")}</p>
         </div>
         <button
           onClick={handleInstall}
           className="shrink-0 bg-white/20 border border-white/30 rounded-xl px-3.5 py-2 text-white font-bold text-xs"
         >
-          Installer
+          {t("install.button")}
         </button>
         <button
           onClick={handleDismiss}

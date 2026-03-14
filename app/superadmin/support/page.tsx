@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { timeAgo } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
 import Modal from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
@@ -33,6 +34,7 @@ export default function SuperadminSupportPageWrapper() {
 }
 
 function SuperadminSupportPageContent() {
+  const { t } = useTranslation();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, open: 0, replied: 0, closed: 0 });
   const [loading, setLoading] = useState(true);
@@ -63,7 +65,7 @@ function SuperadminSupportPageContent() {
       setStats(data.stats || { total: 0, open: 0, replied: 0, closed: 0 });
       if (highlightId) openTicketById(data.tickets || [], highlightId);
     } catch {
-      showToast("Erreur de chargement", "error");
+      showToast(t("common.networkError"), "error");
     }
     setLoading(false);
   }
@@ -78,9 +80,9 @@ function SuperadminSupportPageContent() {
       });
       if (res.ok) {
         const messages: Record<string, string> = {
-          reply: "Reponse envoyee",
-          close: "Ticket ferme",
-          reopen: "Ticket reouvert",
+          reply: t("superadmin.support.repliedTab"),
+          close: t("superadmin.support.closedTab"),
+          reopen: t("superadmin.support.openTab"),
         };
         showToast(messages[action], "success");
         setSelectedTicket(null);
@@ -88,16 +90,16 @@ function SuperadminSupportPageContent() {
         loadData();
       } else {
         const err = await res.json();
-        showToast(err.error || "Erreur", "error");
+        showToast(err.error || t("common.error"), "error");
       }
     } catch {
-      showToast("Erreur reseau", "error");
+      showToast(t("common.networkError"), "error");
     }
     setSending(false);
   }
 
   function getStatusLabel(status: string) {
-    const map: Record<string, string> = { open: "Ouvert", replied: "Repondu", closed: "Ferme" };
+    const map: Record<string, string> = { open: t("superadmin.support.openTab"), replied: t("superadmin.support.repliedTab"), closed: t("superadmin.support.closedTab") };
     return map[status] || status;
   }
 
@@ -128,23 +130,23 @@ function SuperadminSupportPageContent() {
     <div className="p-6 max-w-7xl">
       {ToastComponent}
 
-      <h1 className="text-2xl font-bold mb-6">Support</h1>
+      <h1 className="text-2xl font-bold mb-6">{t("superadmin.support.title")}</h1>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Total tickets" value={stats.total.toString()} accent="purple" />
-        <StatCard label="Ouverts" value={stats.open.toString()} accent="red" />
-        <StatCard label="Repondus" value={stats.replied.toString()} accent="teal" />
-        <StatCard label="Fermes" value={stats.closed.toString()} accent="orange" />
+        <StatCard label={t("superadmin.support.title")} value={stats.total.toString()} accent="purple" />
+        <StatCard label={t("superadmin.support.openTab")} value={stats.open.toString()} accent="red" />
+        <StatCard label={t("superadmin.support.repliedTab")} value={stats.replied.toString()} accent="teal" />
+        <StatCard label={t("superadmin.support.closedTab")} value={stats.closed.toString()} accent="orange" />
       </div>
 
       {/* Filter tabs */}
       <div className="flex gap-2 mb-6 overflow-x-auto">
         {([
-          { key: "open", label: "Ouverts", count: stats.open },
-          { key: "replied", label: "Repondus", count: stats.replied },
-          { key: "closed", label: "Fermes", count: stats.closed },
-          { key: "all", label: "Tous", count: stats.total },
+          { key: "open", label: t("superadmin.support.openTab"), count: stats.open },
+          { key: "replied", label: t("superadmin.support.repliedTab"), count: stats.replied },
+          { key: "closed", label: t("superadmin.support.closedTab"), count: stats.closed },
+          { key: "all", label: t("superadmin.support.allTab"), count: stats.total },
         ] as const).map((tab) => (
           <button
             key={tab.key}
@@ -169,9 +171,9 @@ function SuperadminSupportPageContent() {
       {filteredTickets.length === 0 ? (
         <div className="glass-card p-12 text-center">
           <div className="text-4xl mb-3">&#10003;</div>
-          <h3 className="text-lg font-bold mb-1">Aucun ticket {filter !== "all" ? getStatusLabel(filter).toLowerCase() : ""}</h3>
+          <h3 className="text-lg font-bold mb-1">{t("superadmin.support.noTicket", { status: filter !== "all" ? getStatusLabel(filter).toLowerCase() : "" })}</h3>
           <p className="text-sm text-white/40">
-            {filter === "open" ? "Tous les tickets ont ete traites." : "Aucun ticket dans cette categorie."}
+            {filter === "open" ? t("superadmin.support.allTicketsProcessed") : t("superadmin.support.noTicketInCategory")}
           </p>
         </div>
       ) : (
@@ -213,7 +215,7 @@ function SuperadminSupportPageContent() {
       <Modal
         open={!!selectedTicket}
         onClose={() => { setSelectedTicket(null); setReply(""); }}
-        title="Ticket support"
+        title={t("superadmin.support.title")}
       >
         {selectedTicket && (
           <div className="space-y-4">
@@ -251,14 +253,14 @@ function SuperadminSupportPageContent() {
 
             {/* User message */}
             <div className="glass-card p-4">
-              <p className="text-xs text-white/40 font-semibold mb-1">Message</p>
+              <p className="text-xs text-white/40 font-semibold mb-1">{t("superadmin.support.message")}</p>
               <p className="text-sm text-white/80 whitespace-pre-wrap">{selectedTicket.message}</p>
             </div>
 
             {/* Existing reply */}
             {selectedTicket.admin_reply && selectedTicket.status !== "open" && (
               <div className="p-4 rounded-xl bg-accent/5 border border-accent/10">
-                <p className="text-xs text-accent font-semibold mb-1">Votre reponse</p>
+                <p className="text-xs text-accent font-semibold mb-1">{t("superadmin.support.repliedTab")}</p>
                 <p className="text-sm text-white/70 whitespace-pre-wrap">{selectedTicket.admin_reply}</p>
                 {selectedTicket.replied_at && (
                   <p className="text-xs text-white/20 mt-2">{timeAgo(selectedTicket.replied_at)}</p>
@@ -272,7 +274,7 @@ function SuperadminSupportPageContent() {
                 <textarea
                   value={reply}
                   onChange={(e) => setReply(e.target.value)}
-                  placeholder="Ecrire une reponse..."
+                  placeholder={t("superadmin.support.writeReply")}
                   rows={4}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition resize-none"
                 />
@@ -282,14 +284,14 @@ function SuperadminSupportPageContent() {
                     disabled={sending || !reply.trim()}
                     className="flex-1 py-3 rounded-xl bg-accent/10 border border-accent/30 text-accent font-bold text-sm hover:bg-accent/20 transition disabled:opacity-40"
                   >
-                    {sending ? "Envoi..." : selectedTicket.admin_reply ? "Mettre a jour la reponse" : "Repondre"}
+                    {sending ? t("common.sending") : selectedTicket.admin_reply ? t("common.update") : t("superadmin.support.repliedTab")}
                   </button>
                   <button
                     onClick={() => handleAction(selectedTicket.id, "close")}
                     disabled={sending}
                     className="py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white/50 font-bold text-sm hover:bg-white/10 transition disabled:opacity-40"
                   >
-                    Fermer
+                    {t("common.close")}
                   </button>
                 </div>
               </div>
@@ -303,7 +305,7 @@ function SuperadminSupportPageContent() {
                   disabled={sending}
                   className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-white/50 font-bold text-sm hover:bg-white/10 transition disabled:opacity-40"
                 >
-                  Reouvrir le ticket
+                  {t("superadmin.support.openTab")}
                 </button>
               </div>
             )}

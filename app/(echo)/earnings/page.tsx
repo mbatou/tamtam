@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { formatFCFA, timeAgo } from "@/lib/utils";
 import { MIN_PAYOUT_AMOUNT } from "@/lib/constants";
 import { useToast } from "@/components/ui/Toast";
+import { useTranslation } from "@/lib/i18n";
 import type { User, Payout } from "@/lib/types";
 
 export default function EarningsPage() {
@@ -12,6 +13,7 @@ export default function EarningsPage() {
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
   const { showToast, ToastComponent } = useToast();
+  const { t } = useTranslation();
 
   useEffect(() => {
     loadData();
@@ -48,10 +50,10 @@ export default function EarningsPage() {
     });
 
     if (res.ok) {
-      showToast("Demande de retrait envoyee !", "success");
+      showToast(t("echo.earnings.requestSent"), "success");
       await loadData();
     } else {
-      showToast("Erreur lors de la demande", "error");
+      showToast(t("echo.earnings.requestError"), "error");
     }
     setRequesting(false);
   }
@@ -74,17 +76,17 @@ export default function EarningsPage() {
     <div className="px-4 py-5 max-w-lg mx-auto">
       {ToastComponent}
 
-      <h1 className="text-xl font-bold mb-5">Mes Gains</h1>
+      <h1 className="text-xl font-bold mb-5">{t("echo.earnings.title")}</h1>
 
       {/* Balance card */}
       <div className="glass-card p-5 mb-5 bg-gradient-to-br from-accent/10 to-transparent">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-[10px] text-white/40 font-semibold uppercase tracking-wider mb-0.5">Solde disponible</p>
+            <p className="text-[10px] text-white/40 font-semibold uppercase tracking-wider mb-0.5">{t("echo.earnings.availableBalance")}</p>
             <p className="text-3xl font-black">{formatFCFA(user?.balance || 0)}</p>
           </div>
           <div className="text-right">
-            <p className="text-[10px] text-white/30">Total gagne</p>
+            <p className="text-[10px] text-white/30">{t("echo.earnings.totalEarned")}</p>
             <p className="text-sm font-bold text-accent">{formatFCFA(user?.total_earned || 0)}</p>
           </div>
         </div>
@@ -92,7 +94,7 @@ export default function EarningsPage() {
         {hasPendingPayout ? (
           <div className="p-3 rounded-xl bg-primary-light/10 border border-primary-light/20 text-sm text-primary-light flex items-center gap-2">
             <div className="w-4 h-4 border-2 border-primary-light border-t-transparent rounded-full animate-spin shrink-0" />
-            Retrait en cours de traitement...
+            {t("echo.earnings.processing")}
           </div>
         ) : (
           <button
@@ -101,24 +103,24 @@ export default function EarningsPage() {
             className="btn-primary w-full text-center text-sm !py-3 disabled:opacity-40"
           >
             {requesting
-              ? "Envoi..."
-              : `Retirer ${formatFCFA(user?.balance || 0)} via ${user?.mobile_money_provider === "wave" ? "Wave" : "Orange Money"}`}
+              ? t("echo.earnings.sending")
+              : t("echo.earnings.withdrawVia", { amount: formatFCFA(user?.balance || 0), provider: user?.mobile_money_provider === "wave" ? t("common.wave") : t("common.orangeMoney") })}
           </button>
         )}
 
         {!canWithdraw && !hasPendingPayout && (
           <p className="text-[10px] text-white/30 mt-2.5 text-center">
-            Minimum de retrait: {formatFCFA(MIN_PAYOUT_AMOUNT)}
+            {t("echo.earnings.minWithdraw")} {formatFCFA(MIN_PAYOUT_AMOUNT)}
           </p>
         )}
       </div>
 
       {/* Payout history */}
-      <h2 className="text-sm font-bold text-white/60 uppercase tracking-wider mb-3">Historique des retraits</h2>
+      <h2 className="text-sm font-bold text-white/60 uppercase tracking-wider mb-3">{t("echo.earnings.history")}</h2>
       <div className="space-y-2">
         {payouts.length === 0 ? (
           <div className="glass-card p-6 text-center">
-            <p className="text-xs text-white/30">Aucun retrait effectue.</p>
+            <p className="text-xs text-white/30">{t("echo.earnings.noWithdraw")}</p>
           </div>
         ) : (
           payouts.map((payout) => (
@@ -134,16 +136,16 @@ export default function EarningsPage() {
                 <div>
                   <p className="text-sm font-bold">{formatFCFA(payout.amount)}</p>
                   <p className="text-[10px] text-white/30">
-                    {payout.provider === "wave" ? "Wave" : "Orange Money"} · {timeAgo(payout.created_at)}
+                    {payout.provider === "wave" ? t("common.wave") : t("common.orangeMoney")} · {timeAgo(payout.created_at)}
                   </p>
                 </div>
               </div>
               <span className={`badge-${payout.status} text-[10px]`}>
                 {payout.status === "pending"
-                  ? "En attente"
+                  ? t("common.pending")
                   : payout.status === "sent"
-                  ? "Envoye"
-                  : "Echoue"}
+                  ? t("common.sent")
+                  : t("common.failed")}
               </span>
             </div>
           ))

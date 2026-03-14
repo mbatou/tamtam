@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { formatFCFA, formatNumber, timeAgo } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
@@ -41,13 +42,15 @@ const STATUS_COLORS: Record<string, string> = {
   rejected: "#ef4444",
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  active: "Actives",
-  draft: "Brouillons",
-  paused: "En pause",
-  completed: "Terminées",
-  rejected: "Rejetées",
-};
+function getStatusLabels(t: (key: string) => string): Record<string, string> {
+  return {
+    active: t("superadmin.dashboard.activeCampaigns"),
+    draft: t("superadmin.dashboard.draftCampaigns"),
+    paused: t("superadmin.dashboard.pausedCampaigns"),
+    completed: t("superadmin.dashboard.finishedCampaigns"),
+    rejected: t("superadmin.dashboard.rejectedCampaigns"),
+  };
+}
 
 function formatShortDate(dateStr: string) {
   const d = new Date(dateStr);
@@ -55,6 +58,7 @@ function formatShortDate(dateStr: string) {
 }
 
 export default function SuperAdminOverview() {
+  const { t } = useTranslation();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -80,10 +84,11 @@ export default function SuperAdminOverview() {
   }
 
   const alerts: { type: "danger" | "warning" | "info"; message: string }[] = [];
-  if (stats.fraudRate > 10) alerts.push({ type: "danger", message: `Taux de fraude élevé: ${stats.fraudRate}%` });
-  if (stats.pendingPayoutsCount > 0) alerts.push({ type: "warning", message: `${stats.pendingPayoutsCount} paiement(s) en attente (${formatFCFA(stats.pendingPayoutAmount)})` });
-  if (stats.activeCampaigns === 0) alerts.push({ type: "info", message: "Aucune campagne active" });
+  if (stats.fraudRate > 10) alerts.push({ type: "danger", message: t("superadmin.dashboard.highFraudRate", { rate: stats.fraudRate }) });
+  if (stats.pendingPayoutsCount > 0) alerts.push({ type: "warning", message: `${stats.pendingPayoutsCount} ${t("superadmin.dashboard.pendingPayments", { amount: formatFCFA(stats.pendingPayoutAmount) })}` });
+  if (stats.activeCampaigns === 0) alerts.push({ type: "info", message: t("superadmin.dashboard.noActiveCampaign") });
 
+  const STATUS_LABELS = getStatusLabels(t);
   const pieData = Object.entries(stats.campaignsByStatus || {}).map(([status, count]) => ({
     name: STATUS_LABELS[status] || status,
     value: count,
@@ -92,15 +97,15 @@ export default function SuperAdminOverview() {
 
   return (
     <div className="p-6 max-w-7xl space-y-6">
-      <h1 className="text-2xl font-bold">Centre de commande</h1>
+      <h1 className="text-2xl font-bold">{t("superadmin.dashboard.title")}</h1>
 
       {/* Row 1 — Critical KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Échos" value={formatNumber(stats.totalEchos)} accent="orange" />
-        <StatCard label="Rythmes actifs" value={stats.activeCampaigns.toString()} accent="teal" />
-        <StatCard label="Revenu plateforme" value={formatFCFA(stats.platformRevenue)} accent="purple" />
+        <StatCard label={t("superadmin.dashboard.totalEchos")} value={formatNumber(stats.totalEchos)} accent="orange" />
+        <StatCard label={t("superadmin.dashboard.activeCampaigns")} value={stats.activeCampaigns.toString()} accent="teal" />
+        <StatCard label={t("superadmin.dashboard.grossRevenue")} value={formatFCFA(stats.platformRevenue)} accent="purple" />
         <StatCard
-          label="Taux de fraude"
+          label={t("superadmin.dashboard.fraudRate")}
           value={`${stats.fraudRate}%`}
           accent={stats.fraudRate > 10 ? "red" : "teal"}
         />
@@ -109,19 +114,19 @@ export default function SuperAdminOverview() {
       {/* Row 2 — Money */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="glass-card p-5">
-          <div className="text-xs text-white/40 font-medium mb-1">Revenu brut</div>
+          <div className="text-xs text-white/40 font-medium mb-1">{t("superadmin.dashboard.grossRevenue")}</div>
           <div className="text-xl font-bold">{formatFCFA(stats.grossRevenue)}</div>
-          <div className="text-xs text-white/30 mt-1">{stats.totalCampaigns} campagnes totales</div>
+          <div className="text-xs text-white/30 mt-1">{stats.totalCampaigns} {t("superadmin.dashboard.totalCampaigns")}</div>
         </div>
         <div className="glass-card p-5">
-          <div className="text-xs text-white/40 font-medium mb-1">Payé aux Échos</div>
+          <div className="text-xs text-white/40 font-medium mb-1">{t("superadmin.dashboard.paidToEchos")}</div>
           <div className="text-xl font-bold text-accent">{formatFCFA(stats.paidToEchos)}</div>
-          <div className="text-xs text-white/30 mt-1">{stats.totalBatteurs} batteurs inscrits</div>
+          <div className="text-xs text-white/30 mt-1">{stats.totalBatteurs} {t("superadmin.dashboard.registeredBatteurs")}</div>
         </div>
         <div className="glass-card p-5">
-          <div className="text-xs text-white/40 font-medium mb-1">Clics totaux</div>
+          <div className="text-xs text-white/40 font-medium mb-1">{t("superadmin.dashboard.totalClicks")}</div>
           <div className="text-xl font-bold">{formatNumber(stats.totalClicks)}</div>
-          <div className="text-xs text-white/30 mt-1">{formatNumber(stats.validClicks)} valides · {formatNumber(stats.fraudClicks)} fraude</div>
+          <div className="text-xs text-white/30 mt-1">{formatNumber(stats.validClicks)} {t("superadmin.dashboard.validAndFraud", { count: formatNumber(stats.fraudClicks) })}</div>
         </div>
       </div>
 
@@ -129,7 +134,7 @@ export default function SuperAdminOverview() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Clicks over time */}
         <div className="glass-card p-5 lg:col-span-2">
-          <h3 className="text-sm font-bold mb-4">Clics (14 derniers jours)</h3>
+          <h3 className="text-sm font-bold mb-4">{t("superadmin.dashboard.clicksChart")}</h3>
           <ResponsiveContainer width="100%" height={240}>
             <AreaChart data={stats.clicksChart || []}>
               <defs>
@@ -149,15 +154,15 @@ export default function SuperAdminOverview() {
                 contentStyle={{ background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
                 labelFormatter={(v) => formatShortDate(String(v))}
               />
-              <Area type="monotone" dataKey="valid" name="Valides" stroke="#22c55e" fill="url(#gradValid)" strokeWidth={2} />
-              <Area type="monotone" dataKey="fraud" name="Fraude" stroke="#ef4444" fill="url(#gradFraud)" strokeWidth={2} />
+              <Area type="monotone" dataKey="valid" name={t("common.valid")} stroke="#22c55e" fill="url(#gradValid)" strokeWidth={2} />
+              <Area type="monotone" dataKey="fraud" name={t("common.invalid")} stroke="#ef4444" fill="url(#gradFraud)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
         {/* Campaign status pie */}
         <div className="glass-card p-5">
-          <h3 className="text-sm font-bold mb-4">Campagnes par statut</h3>
+          <h3 className="text-sm font-bold mb-4">{t("superadmin.dashboard.campaignsByStatus")}</h3>
           {pieData.length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={180}>
@@ -180,14 +185,14 @@ export default function SuperAdminOverview() {
               </div>
             </>
           ) : (
-            <p className="text-xs text-white/30 text-center py-8">Aucune campagne</p>
+            <p className="text-xs text-white/30 text-center py-8">{t("superadmin.dashboard.noCampaign")}</p>
           )}
         </div>
       </div>
 
       {/* Row 4 — Echo signups chart */}
       <div className="glass-card p-5">
-        <h3 className="text-sm font-bold mb-4">Inscriptions Échos (14 derniers jours)</h3>
+        <h3 className="text-sm font-bold mb-4">{t("superadmin.dashboard.echoSignups")}</h3>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={stats.signupsChart || []}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -197,7 +202,7 @@ export default function SuperAdminOverview() {
               contentStyle={{ background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
               labelFormatter={(v) => formatShortDate(String(v))}
             />
-            <Bar dataKey="count" name="Inscriptions" fill="#D35400" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="count" name={t("superadmin.dashboard.signups")} fill="#D35400" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -206,7 +211,7 @@ export default function SuperAdminOverview() {
       {stats.acquisitionChart && stats.acquisitionChart.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="glass-card p-5">
-            <h3 className="text-sm font-bold mb-4">Nouvelles inscriptions / jour (30j)</h3>
+            <h3 className="text-sm font-bold mb-4">{t("superadmin.dashboard.newSignupsDay")}</h3>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={stats.acquisitionChart}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -216,14 +221,14 @@ export default function SuperAdminOverview() {
                   contentStyle={{ background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
                   labelFormatter={(v) => formatShortDate(String(v))}
                 />
-                <Bar dataKey="echos" name="Échos" fill="#D35400" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="brands" name="Batteurs" fill="#6C3483" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="echos" name={t("superadmin.dashboard.totalEchos")} fill="#D35400" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="brands" name={t("superadmin.users.batteurs")} fill="#6C3483" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           <div className="glass-card p-5">
-            <h3 className="text-sm font-bold mb-4">Utilisateurs cumulés (30j)</h3>
+            <h3 className="text-sm font-bold mb-4">{t("superadmin.dashboard.cumulativeUsers")}</h3>
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={stats.acquisitionChart}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -233,8 +238,8 @@ export default function SuperAdminOverview() {
                   contentStyle={{ background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
                   labelFormatter={(v) => formatShortDate(String(v))}
                 />
-                <Line type="monotone" dataKey="cumulEchos" name="Échos" stroke="#D35400" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="cumulBrands" name="Batteurs" stroke="#6C3483" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="cumulEchos" name={t("superadmin.dashboard.totalEchos")} stroke="#D35400" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="cumulBrands" name={t("superadmin.users.batteurs")} stroke="#6C3483" strokeWidth={2} dot={false} />
                 <Legend wrapperStyle={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }} />
               </LineChart>
             </ResponsiveContainer>
@@ -266,7 +271,7 @@ export default function SuperAdminOverview() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Echos */}
         <div className="glass-card p-5">
-          <h3 className="text-sm font-bold mb-4">Derniers Échos inscrits</h3>
+          <h3 className="text-sm font-bold mb-4">{t("superadmin.dashboard.latestEchos")}</h3>
           <div className="space-y-3">
             {stats.recentEchos.map((echo) => (
               <div key={echo.id} className="flex items-center justify-between">
@@ -282,13 +287,13 @@ export default function SuperAdminOverview() {
                 <span className="text-xs text-white/30">{timeAgo(echo.created_at)}</span>
               </div>
             ))}
-            {stats.recentEchos.length === 0 && <p className="text-xs text-white/30">Aucun écho inscrit</p>}
+            {stats.recentEchos.length === 0 && <p className="text-xs text-white/30">{t("superadmin.dashboard.noEcho")}</p>}
           </div>
         </div>
 
         {/* Top Echos */}
         <div className="glass-card p-5">
-          <h3 className="text-sm font-bold mb-4">Top 10 Échos</h3>
+          <h3 className="text-sm font-bold mb-4">{t("superadmin.dashboard.topEchos")}</h3>
           <div className="space-y-3">
             {stats.topEchos.map((echo, i) => (
               <div key={echo.id} className="flex items-center justify-between">
@@ -302,11 +307,11 @@ export default function SuperAdminOverview() {
                 </div>
                 <div className="text-right">
                   <div className="text-sm font-bold text-accent">{formatFCFA(echo.total_earned)}</div>
-                  <div className="text-xs text-white/30">Solde: {formatFCFA(echo.balance)}</div>
+                  <div className="text-xs text-white/30">{t("superadmin.dashboard.balance", { balance: formatFCFA(echo.balance) })}</div>
                 </div>
               </div>
             ))}
-            {stats.topEchos.length === 0 && <p className="text-xs text-white/30">Aucun écho</p>}
+            {stats.topEchos.length === 0 && <p className="text-xs text-white/30">{t("superadmin.dashboard.noEchoTop")}</p>}
           </div>
         </div>
       </div>
@@ -314,7 +319,7 @@ export default function SuperAdminOverview() {
       {/* Row 7 — Recent campaigns + Pending payouts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="glass-card p-5">
-          <h3 className="text-sm font-bold mb-4">Dernières campagnes</h3>
+          <h3 className="text-sm font-bold mb-4">{t("superadmin.dashboard.latestCampaigns")}</h3>
           <div className="space-y-3">
             {stats.recentCampaigns.map((c) => (
               <div key={c.id} className="flex items-center justify-between">
@@ -331,23 +336,23 @@ export default function SuperAdminOverview() {
                 </span>
               </div>
             ))}
-            {stats.recentCampaigns.length === 0 && <p className="text-xs text-white/30">Aucune campagne</p>}
+            {stats.recentCampaigns.length === 0 && <p className="text-xs text-white/30">{t("superadmin.dashboard.noCampaign")}</p>}
           </div>
         </div>
 
         <div className="glass-card p-5">
-          <h3 className="text-sm font-bold mb-4">Paiements en attente</h3>
+          <h3 className="text-sm font-bold mb-4">{t("superadmin.dashboard.pendingPayoutsTitle")}</h3>
           <div className="space-y-3">
             {stats.pendingPayoutsList.map((p) => (
               <div key={p.id} className="flex items-center justify-between">
                 <div>
                   <div className="text-sm font-semibold">{p.users?.name || "—"}</div>
-                  <div className="text-xs text-white/30">{p.provider === "wave" ? "Wave" : "Orange Money"} · {timeAgo(p.created_at)}</div>
+                  <div className="text-xs text-white/30">{p.provider === "wave" ? t("common.wave") : t("common.orangeMoney")} · {timeAgo(p.created_at)}</div>
                 </div>
                 <span className="text-sm font-bold text-yellow-400">{formatFCFA(p.amount)}</span>
               </div>
             ))}
-            {stats.pendingPayoutsList.length === 0 && <p className="text-xs text-white/30">Aucun paiement en attente</p>}
+            {stats.pendingPayoutsList.length === 0 && <p className="text-xs text-white/30">{t("superadmin.dashboard.noPendingPayments")}</p>}
           </div>
         </div>
       </div>

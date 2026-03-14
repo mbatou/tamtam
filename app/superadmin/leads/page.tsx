@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { timeAgo } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 interface Lead {
   id: string;
@@ -18,6 +19,7 @@ interface Lead {
 type Filter = "all" | "new" | "contacted" | "converted" | "rejected";
 
 export default function SuperadminLeadsPage() {
+  const { t } = useTranslation();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>("all");
@@ -51,7 +53,7 @@ export default function SuperadminLeadsPage() {
       setSelectedLead(updated);
     } else {
       const err = await res.json();
-      alert(err.error || "Erreur");
+      alert(err.error || t("common.error"));
     }
     setUpdating(false);
   }
@@ -59,7 +61,7 @@ export default function SuperadminLeadsPage() {
   const [conflictData, setConflictData] = useState<{ existing_role?: string; can_promote?: boolean } | null>(null);
 
   async function convertLead(id: string, opts?: { overrideEmail?: string; promoteEcho?: boolean }) {
-    if (!opts && !confirm("Créer un compte Batteur pour ce lead ? Un email avec les identifiants sera envoyé.")) return;
+    if (!opts && !confirm(t("superadmin.leads.createBatteur") + " ?")) return;
     setConverting(true);
     setEmailConflict(false);
     setConflictData(null);
@@ -81,7 +83,7 @@ export default function SuperadminLeadsPage() {
       setEmailConflict(true);
       setConflictData({ existing_role: data.existing_role, can_promote: data.can_promote });
     } else {
-      alert(data.error || "Erreur");
+      alert(data.error || t("common.error"));
     }
     setConverting(false);
   }
@@ -102,7 +104,7 @@ export default function SuperadminLeadsPage() {
       rejected: "bg-white/10 text-white/40",
     };
     const labels: Record<string, string> = {
-      new: "Nouveau", contacted: "Contacté", converted: "Converti", rejected: "Rejeté",
+      new: t("superadmin.leads.newStatus"), contacted: t("superadmin.leads.contactedStatus"), converted: t("superadmin.leads.convertedStatus"), rejected: t("superadmin.leads.rejectedStatus"),
     };
     return (
       <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${map[status] || ""}`}>
@@ -122,15 +124,15 @@ export default function SuperadminLeadsPage() {
 
   return (
     <div className="p-6 max-w-7xl">
-      <h1 className="text-2xl font-bold mb-6">Leads Batteur</h1>
+      <h1 className="text-2xl font-bold mb-6">{t("superadmin.leads.title")}</h1>
 
       {/* Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
-          { label: "Total", value: counts.total, color: "text-white" },
-          { label: "Nouveaux", value: counts.new, color: "text-orange-400" },
-          { label: "Contactés", value: counts.contacted, color: "text-blue-400" },
-          { label: "Convertis", value: counts.converted, color: "text-emerald-400" },
+          { label: t("superadmin.leads.total"), value: counts.total, color: "text-white" },
+          { label: t("superadmin.leads.new"), value: counts.new, color: "text-orange-400" },
+          { label: t("superadmin.leads.contacted"), value: counts.contacted, color: "text-blue-400" },
+          { label: t("superadmin.leads.converted"), value: counts.converted, color: "text-emerald-400" },
         ].map((m) => (
           <div key={m.label} className="glass-card p-4">
             <p className="text-xs text-white/40 font-semibold mb-1">{m.label}</p>
@@ -142,7 +144,7 @@ export default function SuperadminLeadsPage() {
       {/* Filter tabs */}
       <div className="flex gap-2 mb-4 overflow-x-auto">
         {(["all", "new", "contacted", "converted", "rejected"] as const).map((f) => {
-          const labels: Record<string, string> = { all: "Tous", new: "Nouveaux", contacted: "Contactés", converted: "Convertis", rejected: "Rejetés" };
+          const labels: Record<string, string> = { all: t("superadmin.leads.allTab"), new: t("superadmin.leads.new"), contacted: t("superadmin.leads.contacted"), converted: t("superadmin.leads.converted"), rejected: t("superadmin.leads.rejectedTab") };
           return (
             <button
               key={f}
@@ -159,19 +161,19 @@ export default function SuperadminLeadsPage() {
 
       {/* Table */}
       {filtered.length === 0 ? (
-        <div className="glass-card p-12 text-center text-white/30 text-sm">Aucun lead</div>
+        <div className="glass-card p-12 text-center text-white/30 text-sm">{t("superadmin.leads.noLeads")}</div>
       ) : (
         <div className="glass-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/5 text-white/40 text-xs">
-                  <th className="text-left p-4 font-semibold">Date</th>
-                  <th className="text-left p-4 font-semibold">Entreprise</th>
-                  <th className="text-left p-4 font-semibold">Contact</th>
-                  <th className="text-left p-4 font-semibold">Email</th>
-                  <th className="text-left p-4 font-semibold">WhatsApp</th>
-                  <th className="text-left p-4 font-semibold">Statut</th>
+                  <th className="text-left p-4 font-semibold">{t("common.date")}</th>
+                  <th className="text-left p-4 font-semibold">{t("superadmin.leads.company")}</th>
+                  <th className="text-left p-4 font-semibold">{t("superadmin.leads.contact")}</th>
+                  <th className="text-left p-4 font-semibold">{t("common.email")}</th>
+                  <th className="text-left p-4 font-semibold">{t("superadmin.leads.whatsapp")}</th>
+                  <th className="text-left p-4 font-semibold">{t("common.status")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -228,26 +230,26 @@ export default function SuperadminLeadsPage() {
             {/* Info */}
             <div className="space-y-3 mb-6">
               <div className="flex justify-between text-sm">
-                <span className="text-white/40">Email</span>
+                <span className="text-white/40">{t("common.email")}</span>
                 <a href={`mailto:${selectedLead.email}`} className="text-primary hover:underline">{selectedLead.email}</a>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-white/40">WhatsApp</span>
+                <span className="text-white/40">{t("superadmin.leads.whatsapp")}</span>
                 {selectedLead.whatsapp ? (
                   <a href={`https://wa.me/221${selectedLead.whatsapp.replace(/\s/g, "")}`} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline">
                     {selectedLead.whatsapp}
                   </a>
                 ) : (
-                  <span className="text-white/20">Non fourni</span>
+                  <span className="text-white/20">{t("superadmin.leads.notProvided")}</span>
                 )}
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-white/40">Date</span>
+                <span className="text-white/40">{t("common.date")}</span>
                 <span>{new Date(selectedLead.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
               </div>
               {selectedLead.message && (
                 <div>
-                  <p className="text-xs text-white/40 mb-1">Message</p>
+                  <p className="text-xs text-white/40 mb-1">{t("superadmin.support.message")}</p>
                   <p className="text-sm bg-white/5 rounded-xl p-3">{selectedLead.message}</p>
                 </div>
               )}
@@ -255,27 +257,27 @@ export default function SuperadminLeadsPage() {
 
             {/* Status */}
             <div className="mb-4">
-              <label className="block text-xs font-semibold text-white/40 mb-2">Statut</label>
+              <label className="block text-xs font-semibold text-white/40 mb-2">{t("common.status")}</label>
               <select
                 value={selectedLead.status}
                 onChange={(e) => updateLead(selectedLead.id, { status: e.target.value })}
                 disabled={updating}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
               >
-                <option value="new">Nouveau</option>
-                <option value="contacted">Contacté</option>
-                <option value="converted">Converti</option>
-                <option value="rejected">Rejeté</option>
+                <option value="new">{t("superadmin.leads.newStatus")}</option>
+                <option value="contacted">{t("superadmin.leads.contactedStatus")}</option>
+                <option value="converted">{t("superadmin.leads.convertedStatus")}</option>
+                <option value="rejected">{t("superadmin.leads.rejectedStatus")}</option>
               </select>
             </div>
 
             {/* Notes */}
             <div className="mb-6">
-              <label className="block text-xs font-semibold text-white/40 mb-2">Notes internes</label>
+              <label className="block text-xs font-semibold text-white/40 mb-2">{t("superadmin.leads.internalNotes")}</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Ajoutez vos notes..."
+                placeholder={t("superadmin.leads.addNotes")}
                 rows={3}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition resize-none"
               />
@@ -284,16 +286,16 @@ export default function SuperadminLeadsPage() {
                 disabled={updating || notes === (selectedLead.notes || "")}
                 className="mt-2 px-4 py-2 rounded-xl bg-white/5 text-white/60 text-xs font-semibold hover:bg-white/10 transition disabled:opacity-30"
               >
-                {updating ? "..." : "Sauvegarder les notes"}
+                {updating ? "..." : t("superadmin.leads.saveNotes")}
               </button>
             </div>
 
             {/* Conversion Result */}
             {conversionResult && (
               <div className="mb-4 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                <p className="text-sm text-emerald-400 font-semibold">Compte Batteur créé avec succès !</p>
+                <p className="text-sm text-emerald-400 font-semibold">{t("superadmin.leads.batteurCreated")}</p>
                 <p className="text-xs text-white/50 mt-1">
-                  Un email avec les identifiants a été envoyé à <span className="text-white/70 font-semibold">{conversionResult.email}</span>
+                  {t("superadmin.leads.credentialsSent", { email: conversionResult.email })}
                 </p>
               </div>
             )}
@@ -302,21 +304,21 @@ export default function SuperadminLeadsPage() {
             {emailConflict && (
               <div className="mb-4 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 space-y-3">
                 <p className="text-sm text-orange-400 font-semibold">
-                  Cet email est déjà utilisé par un compte {conflictData?.existing_role === "echo" ? "Echo" : conflictData?.existing_role || ""}.
+                  {t("superadmin.leads.emailAlreadyUsed", { role: conflictData?.existing_role === "echo" ? "Echo" : conflictData?.existing_role || "" })}
                 </p>
 
                 {/* Option 1: Promote Echo to Batteur */}
                 {conflictData?.can_promote && (
                   <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 space-y-2">
                     <p className="text-xs text-blue-300">
-                      Cette personne est déjà un Echo. Vous pouvez lui donner aussi l&apos;accès Batteur (même compte, même mot de passe).
+                      {t("superadmin.leads.alreadyEcho")}
                     </p>
                     <button
                       onClick={() => convertLead(selectedLead.id, { promoteEcho: true })}
                       disabled={converting}
                       className="w-full px-4 py-2.5 rounded-xl bg-blue-500/10 text-blue-400 text-sm font-semibold hover:bg-blue-500/20 transition disabled:opacity-40"
                     >
-                      {converting ? "Promotion..." : "Promouvoir en Echo + Batteur"}
+                      {converting ? t("superadmin.leads.promoting") : t("superadmin.leads.promoteEchoBatteur")}
                     </button>
                   </div>
                 )}
@@ -324,19 +326,19 @@ export default function SuperadminLeadsPage() {
                 {/* Option 2: Use different email */}
                 <div className="pt-2 border-t border-white/5">
                   <p className="text-xs text-white/40 mb-2">
-                    Ou créer un compte séparé avec un autre email :
+                    {t("superadmin.leads.altEmailLabel")}
                   </p>
                   <input
                     type="email"
                     value={alternativeEmail}
                     onChange={(e) => setAlternativeEmail(e.target.value)}
-                    placeholder="email-alternatif@exemple.com"
+                    placeholder={t("superadmin.leads.altEmailPlaceholder")}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
                   />
                   <button
                     onClick={() => {
                       if (!alternativeEmail || !alternativeEmail.includes("@")) {
-                        alert("Veuillez entrer un email valide");
+                        alert(t("superadmin.leads.invalidEmail"));
                         return;
                       }
                       convertLead(selectedLead.id, { overrideEmail: alternativeEmail });
@@ -344,7 +346,7 @@ export default function SuperadminLeadsPage() {
                     disabled={converting || !alternativeEmail}
                     className="mt-2 w-full px-4 py-2.5 rounded-xl bg-white/5 text-white/60 text-sm font-semibold hover:bg-white/10 transition disabled:opacity-40"
                   >
-                    {converting ? "Création..." : "Créer avec cet email"}
+                    {converting ? t("superadmin.leads.creating") : t("superadmin.leads.createWithEmail")}
                   </button>
                 </div>
               </div>
@@ -358,14 +360,14 @@ export default function SuperadminLeadsPage() {
                   disabled={converting}
                   className="px-4 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/20 transition disabled:opacity-40"
                 >
-                  {converting ? "Création..." : "Créer un compte Batteur"}
+                  {converting ? t("superadmin.leads.creating") : t("superadmin.leads.createBatteur")}
                 </button>
               )}
               <a
-                href={`mailto:${selectedLead.email}?subject=${encodeURIComponent("Tamtam — Votre demande de compte Batteur")}`}
+                href={`mailto:${selectedLead.email}?subject=${encodeURIComponent(t("superadmin.leads.emailSubject"))}`}
                 className="px-4 py-2.5 rounded-xl bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/20 transition"
               >
-                Envoyer un email
+                {t("superadmin.leads.sendEmail")}
               </a>
               {selectedLead.whatsapp && (
                 <a
@@ -374,7 +376,7 @@ export default function SuperadminLeadsPage() {
                   rel="noopener noreferrer"
                   className="px-4 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/20 transition"
                 >
-                  Ouvrir WhatsApp
+                  {t("superadmin.leads.openWhatsApp")}
                 </a>
               )}
             </div>

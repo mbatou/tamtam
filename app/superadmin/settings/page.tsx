@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { timeAgo } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useToast } from "@/components/ui/Toast";
 
 interface Settings {
@@ -42,6 +44,7 @@ const defaultSettings: Settings = {
 };
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -66,7 +69,7 @@ export default function SettingsPage() {
       setAdmins(data.admins || []);
       setLogs(data.recentLogs || []);
     } catch {
-      showToast("Erreur de chargement", "error");
+      showToast(t("superadmin.settings.loadError"), "error");
     }
     setLoading(false);
   }
@@ -80,12 +83,12 @@ export default function SettingsPage() {
         body: JSON.stringify({ key, value }),
       });
       if (res.ok) {
-        showToast("Paramètre sauvegardé", "success");
+        showToast(t("superadmin.settings.saved"), "success");
       } else {
-        showToast("Erreur de sauvegarde", "error");
+        showToast(t("superadmin.settings.saveError"), "error");
       }
     } catch {
-      showToast("Erreur réseau", "error");
+      showToast(t("common.networkError"), "error");
     }
     setSaving(false);
   }
@@ -108,15 +111,20 @@ export default function SettingsPage() {
     <div className="p-6 max-w-3xl">
       {ToastComponent}
 
-      <h1 className="text-2xl font-bold mb-6">Paramètres</h1>
+      <h1 className="text-2xl font-bold mb-6">{t("superadmin.settings.title")}</h1>
+
+      {/* Language */}
+      <div className="glass-card p-6 mb-6">
+        <LanguageSwitcher />
+      </div>
 
       {/* Financial */}
       <section className="glass-card p-6 mb-6">
-        <h2 className="text-lg font-bold mb-4">Paramètres financiers</h2>
+        <h2 className="text-lg font-bold mb-4">{t("superadmin.settings.financial")}</h2>
         <div className="space-y-5">
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-white/60">Commission plateforme</label>
+              <label className="text-sm font-medium text-white/60">{t("superadmin.settings.platformFee")}</label>
               <span className="text-sm font-bold text-primary">{settings.platform_fee_percent}%</span>
             </div>
             <input
@@ -135,7 +143,7 @@ export default function SettingsPage() {
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-white/60">Paiement minimum</label>
+              <label className="text-sm font-medium text-white/60">{t("superadmin.settings.minPayout")}</label>
               <span className="text-sm font-bold text-primary">{settings.min_payout_fcfa} FCFA</span>
             </div>
             <input
@@ -157,11 +165,11 @@ export default function SettingsPage() {
 
       {/* Anti-fraud */}
       <section className="glass-card p-6 mb-6">
-        <h2 className="text-lg font-bold mb-4">Anti-fraude</h2>
+        <h2 className="text-lg font-bold mb-4">{t("superadmin.settings.antifraud")}</h2>
         <div className="space-y-5">
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-white/60">Max clics / lien / heure</label>
+              <label className="text-sm font-medium text-white/60">{t("superadmin.settings.maxClicksPerHour")}</label>
               <span className="text-sm font-bold text-primary">{settings.max_clicks_per_link_per_hour}</span>
             </div>
             <input
@@ -177,7 +185,7 @@ export default function SettingsPage() {
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-white/60">Cooldown IP (heures)</label>
+              <label className="text-sm font-medium text-white/60">{t("superadmin.settings.ipCooldown")}</label>
               <span className="text-sm font-bold text-primary">{settings.ip_cooldown_hours}h</span>
             </div>
             <input
@@ -191,15 +199,15 @@ export default function SettingsPage() {
           </div>
 
           <ToggleSetting
-            label="Rejeter bots automatiquement"
-            description="Bloque les user-agents de type bot/curl/python"
+            label={t("superadmin.settings.rejectBots")}
+            description={t("superadmin.settings.rejectBotsDesc")}
             value={settings.auto_reject_bots === "true"}
             onChange={(v) => updateSetting("auto_reject_bots", v ? "true" : "false")}
           />
 
           <ToggleSetting
-            label="Signaler haut volume"
-            description="Flag automatiquement les IPs suspectes"
+            label={t("superadmin.settings.flagHighVolume")}
+            description={t("superadmin.settings.flagHighVolumeDesc")}
             value={settings.auto_flag_high_volume === "true"}
             onChange={(v) => updateSetting("auto_flag_high_volume", v ? "true" : "false")}
           />
@@ -208,10 +216,10 @@ export default function SettingsPage() {
 
       {/* Campaign settings */}
       <section className="glass-card p-6 mb-6">
-        <h2 className="text-lg font-bold mb-4">Campagnes</h2>
+        <h2 className="text-lg font-bold mb-4">{t("superadmin.settings.campaigns")}</h2>
         <ToggleSetting
-          label="Approbation requise"
-          description="Les campagnes doivent être approuvées avant activation"
+          label={t("superadmin.settings.approvalRequired")}
+          description={t("superadmin.settings.approvalRequiredDesc")}
           value={settings.require_campaign_approval === "true"}
           onChange={(v) => updateSetting("require_campaign_approval", v ? "true" : "false")}
         />
@@ -219,7 +227,7 @@ export default function SettingsPage() {
 
       {/* Admins */}
       <section className="glass-card p-6 mb-6">
-        <h2 className="text-lg font-bold mb-4">Administrateurs ({admins.length})</h2>
+        <h2 className="text-lg font-bold mb-4">{t("superadmin.settings.admins", { count: admins.length })}</h2>
         <div className="space-y-3">
           {admins.map((admin) => (
             <div key={admin.id} className="flex items-center justify-between py-2">
@@ -239,13 +247,13 @@ export default function SettingsPage() {
               </span>
             </div>
           ))}
-          {admins.length === 0 && <p className="text-xs text-white/30">Aucun administrateur</p>}
+          {admins.length === 0 && <p className="text-xs text-white/30">{t("superadmin.settings.noAdmins")}</p>}
         </div>
       </section>
 
       {/* Activity Log */}
       <section className="glass-card p-6 mb-6">
-        <h2 className="text-lg font-bold mb-4">Dernières actions admin</h2>
+        <h2 className="text-lg font-bold mb-4">{t("superadmin.settings.recentActions")}</h2>
         <div className="space-y-3">
           {logs.map((log) => (
             <div key={log.id} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
@@ -258,12 +266,12 @@ export default function SettingsPage() {
               <span className="text-xs text-white/30">{timeAgo(log.created_at)}</span>
             </div>
           ))}
-          {logs.length === 0 && <p className="text-xs text-white/30">Aucune activité récente</p>}
+          {logs.length === 0 && <p className="text-xs text-white/30">{t("superadmin.settings.noActivity")}</p>}
         </div>
       </section>
 
       {saving && (
-        <p className="text-xs text-white/30 text-center">Sauvegarde en cours...</p>
+        <p className="text-xs text-white/30 text-center">{t("superadmin.settings.saving")}</p>
       )}
     </div>
   );

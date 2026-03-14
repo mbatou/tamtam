@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { formatFCFA } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 interface EchoWithStats {
   id: string;
@@ -20,6 +21,7 @@ interface EchoWithStats {
 }
 
 export default function AdminEchosPage() {
+  const { t } = useTranslation();
   const [echos, setEchos] = useState<EchoWithStats[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -41,8 +43,8 @@ export default function AdminEchosPage() {
   return (
     <div className="p-6 max-w-6xl">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold">Échos</h1>
-        <span className="text-sm text-white/40">{echos.length} écho{echos.length !== 1 ? "s" : ""} engagé{echos.length !== 1 ? "s" : ""}</span>
+        <h1 className="text-2xl font-bold">{t("admin.echos.title")}</h1>
+        <span className="text-sm text-white/40">{echos.length} {t("admin.echos.engaged")}</span>
       </div>
       <div className="glass-card overflow-hidden">
         <div className="overflow-x-auto">
@@ -50,13 +52,13 @@ export default function AdminEchosPage() {
             <thead>
               <tr className="border-b border-white/5">
                 <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">#</th>
-                <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">Nom</th>
-                <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">Téléphone</th>
-                <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">Ville</th>
-                <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">Campagnes</th>
-                <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">Clics</th>
-                <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">Gagné (vous)</th>
-                <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">Paiement</th>
+                <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">{t("common.name")}</th>
+                <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">{t("common.phone")}</th>
+                <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">{t("common.city")}</th>
+                <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">{t("admin.echos.campaigns")}</th>
+                <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">{t("common.clicks")}</th>
+                <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">{t("admin.echos.wonByYou")}</th>
+                <th className="text-left px-5 py-4 font-semibold text-white/40 text-xs uppercase">{t("admin.echos.payment")}</th>
               </tr>
             </thead>
             <tbody>
@@ -76,13 +78,13 @@ export default function AdminEchosPage() {
                   </td>
                   <td className="px-5 py-4 font-semibold">{echo.brand_clicks}</td>
                   <td className="px-5 py-4 text-accent font-bold">{formatFCFA(echo.brand_earned)}</td>
-                  <td className="px-5 py-4 text-xs font-semibold">{echo.mobile_money_provider === "wave" ? "Wave" : echo.mobile_money_provider === "orange_money" ? "Orange Money" : "—"}</td>
+                  <td className="px-5 py-4 text-xs font-semibold">{echo.mobile_money_provider === "wave" ? t("common.wave") : echo.mobile_money_provider === "orange_money" ? t("common.orangeMoney") : "—"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        {echos.length === 0 && <div className="p-8 text-center"><p className="text-white/30 text-sm">Aucun écho engagé dans vos campagnes pour le moment.</p></div>}
+        {echos.length === 0 && <div className="p-8 text-center"><p className="text-white/30 text-sm">{t("admin.echos.noEchos")}</p></div>}
       </div>
     </div>
   );

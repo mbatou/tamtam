@@ -5,8 +5,10 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import SoundWave from "@/components/ui/SoundWave";
 import ProgressBar from "@/components/ui/ProgressBar";
+import { useTranslation } from "@/lib/i18n";
 
 export default function RegisterPage() {
+  const { t } = useTranslation();
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -20,11 +22,11 @@ export default function RegisterPage() {
 
   async function handleStep1() {
     if (!name.trim() || !email.trim() || !password.trim()) {
-      setError("Remplis tous les champs obligatoires.");
+      setError(t("auth.registerFillAll"));
       return;
     }
     if (password.length < 6) {
-      setError("Le mot de passe doit contenir au moins 6 caractères.");
+      setError(t("auth.registerPasswordMin"));
       return;
     }
     setError("");
@@ -33,7 +35,7 @@ export default function RegisterPage() {
 
   async function handleStep2() {
     if (!provider) {
-      setError("Choisis un moyen de paiement.");
+      setError(t("auth.registerChoosePayment"));
       return;
     }
     setError("");
@@ -47,7 +49,7 @@ export default function RegisterPage() {
       if (signUpError.message.toLowerCase().includes("already registered") || signUpError.message.toLowerCase().includes("already been registered")) {
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
         if (signInError) {
-          setError("Ce compte existe déjà. Vérifie ton mot de passe ou connecte-toi.");
+          setError(t("auth.registerExists"));
           setLoading(false);
           return;
         }
@@ -76,7 +78,7 @@ export default function RegisterPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error || "Erreur lors de la création du profil");
+        setError(data.error || t("auth.registerProfileError"));
       } else {
         window.location.href = "/dashboard";
       }
@@ -113,11 +115,11 @@ export default function RegisterPage() {
         </div>
 
         <div className="glass-card p-8 animate-slide-up" style={{ opacity: 0 }}>
-          <h1 className="text-2xl font-bold mb-2">Deviens un Écho</h1>
+          <h1 className="text-2xl font-bold mb-2">{t("auth.registerTitle")}</h1>
           <p className="text-sm text-white/40 mb-6">
             {step === 1
-              ? "Dis-nous qui tu es"
-              : "Comment veux-tu recevoir tes gains ?"}
+              ? t("auth.registerStep1")
+              : t("auth.registerStep2")}
           </p>
 
           {error && (
@@ -130,73 +132,73 @@ export default function RegisterPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-white/40 mb-2">
-                  Nom complet *
+                  {t("auth.registerName")}
                 </label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Moussa Diallo"
+                  placeholder={t("auth.registerNamePlaceholder")}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-white/40 mb-2">
-                  Email *
+                  {t("auth.registerEmail")}
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="moussa@email.com"
+                  placeholder={t("auth.registerEmailPlaceholder")}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-white/40 mb-2">
-                  Mot de passe *
+                  {t("auth.registerPassword")}
                 </label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder={t("auth.passwordPlaceholder")}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-white/40 mb-2">
-                  Téléphone
+                  {t("auth.registerPhone")}
                 </label>
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+221 77 123 45 67"
+                  placeholder={t("auth.registerPhonePlaceholder")}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-white/40 mb-2">
-                  Ville
+                  {t("auth.registerCity")}
                 </label>
                 <input
                   type="text"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  placeholder="Dakar"
+                  placeholder={t("auth.registerCityPlaceholder")}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
                 />
               </div>
               <button onClick={handleStep1} className="btn-primary w-full text-center">
-                Continuer
+                {t("auth.registerContinue")}
               </button>
             </div>
           ) : (
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-white/40 mb-3">
-                  Moyen de paiement *
+                  {t("auth.registerPayment")}
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
@@ -208,7 +210,7 @@ export default function RegisterPage() {
                     }`}
                   >
                     <span className="text-3xl block mb-2">🌊</span>
-                    <span className="text-sm font-bold">Wave</span>
+                    <span className="text-sm font-bold">{t("common.wave")}</span>
                   </button>
                   <button
                     onClick={() => setProvider("orange_money")}
@@ -219,7 +221,7 @@ export default function RegisterPage() {
                     }`}
                   >
                     <span className="text-3xl block mb-2">🟠</span>
-                    <span className="text-sm font-bold">Orange Money</span>
+                    <span className="text-sm font-bold">{t("common.orangeMoney")}</span>
                   </button>
                 </div>
               </div>
@@ -229,14 +231,14 @@ export default function RegisterPage() {
                   onClick={() => { setStep(1); setError(""); }}
                   className="btn-outline flex-1 text-center"
                 >
-                  Retour
+                  {t("auth.registerBack")}
                 </button>
                 <button
                   onClick={handleStep2}
                   disabled={loading}
                   className="btn-primary flex-1 text-center disabled:opacity-50"
                 >
-                  {loading ? "..." : "Créer mon compte"}
+                  {loading ? "..." : t("auth.registerCreate")}
                 </button>
               </div>
             </div>
@@ -244,9 +246,9 @@ export default function RegisterPage() {
         </div>
 
         <p className="text-center text-sm text-white/30 mt-6">
-          Déjà un compte ?{" "}
+          {t("auth.registerHasAccount")}{" "}
           <Link href="/login" className="text-primary font-semibold hover:underline">
-            Se connecter
+            {t("auth.registerLogin")}
           </Link>
         </p>
       </div>

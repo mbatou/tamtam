@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatFCFA } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
 import Badge from "@/components/ui/Badge";
 import TabBar from "@/components/ui/TabBar";
@@ -38,6 +39,7 @@ export default function CampaignModerationPageWrapper() {
 }
 
 function CampaignModerationPageContent() {
+  const { t } = useTranslation();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState<Campaign | null>(null);
@@ -87,7 +89,7 @@ function CampaignModerationPageContent() {
           }))
       );
     } catch {
-      showToast("Erreur de chargement", "error");
+      showToast(t("common.networkError"), "error");
     }
     setLoading(false);
   }
@@ -102,25 +104,25 @@ function CampaignModerationPageContent() {
       const data = await res.json();
       if (res.ok) {
         showToast(
-          action === "approve" ? "Campagne approuvee" :
-          action === "reject" ? "Campagne rejetee" :
-          action === "pause" ? "Campagne en pause" : "Campagne relancee",
+          action === "approve" ? t("superadmin.campaigns.approvedTab") :
+          action === "reject" ? t("superadmin.campaigns.rejectedTab") :
+          action === "pause" ? t("superadmin.campaigns.pendingTab") : t("superadmin.campaigns.approvedTab"),
           action === "approve" || action === "resume" ? "success" : "info"
         );
         setSelected(null);
         setRejectReason("");
         loadData();
       } else {
-        showToast(data.error || "Erreur lors de la moderation", "error");
+        showToast(data.error || t("common.error"), "error");
       }
     } catch {
-      showToast("Erreur reseau", "error");
+      showToast(t("common.networkError"), "error");
     }
   }
 
   async function createCampaign() {
     if (!newCamp.batteur_id || !newCamp.title || !newCamp.destination_url) {
-      showToast("Remplissez tous les champs obligatoires", "error");
+      showToast(t("common.error"), "error");
       return;
     }
     setCreating(true);
@@ -132,15 +134,15 @@ function CampaignModerationPageContent() {
       });
       const data = await res.json();
       if (res.ok) {
-        showToast("Campagne creee avec succes", "success");
+        showToast(t("superadmin.campaigns.approvedTab"), "success");
         setShowCreate(false);
         setNewCamp({ batteur_id: "", title: "", description: "", destination_url: "", cpc: "25", budget: "5000" });
         loadData();
       } else {
-        showToast(data.error || "Erreur", "error");
+        showToast(data.error || t("common.error"), "error");
       }
     } catch {
-      showToast("Erreur reseau", "error");
+      showToast(t("common.networkError"), "error");
     }
     setCreating(false);
   }
@@ -172,36 +174,36 @@ function CampaignModerationPageContent() {
       {ToastComponent}
 
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Moderation des campagnes</h1>
+        <h1 className="text-2xl font-bold">{t("superadmin.campaigns.title")}</h1>
         <button
           onClick={() => setShowCreate(true)}
           className="px-4 py-2.5 rounded-xl bg-gradient-primary text-white text-sm font-bold hover:opacity-90 transition"
         >
-          + Creer une campagne
+          {t("superadmin.campaigns.createCampaign")}
         </button>
       </div>
 
       {pendingCount > 0 && (
         <div className="mb-6 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
           <span className="text-yellow-400 text-sm font-semibold">
-            {pendingCount} campagne(s) en attente de validation
+            {pendingCount} {t("superadmin.campaigns.pendingTab")}
           </span>
         </div>
       )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Total" value={campaigns.length.toString()} accent="orange" />
-        <StatCard label="Actives" value={campaigns.filter((c) => c.status === "active").length.toString()} accent="teal" />
-        <StatCard label="En attente" value={pendingCount.toString()} accent="purple" />
-        <StatCard label="Rejetees" value={campaigns.filter((c) => c.moderation_status === "rejected").length.toString()} accent="red" />
+        <StatCard label={t("superadmin.campaigns.allTab")} value={campaigns.length.toString()} accent="orange" />
+        <StatCard label={t("superadmin.campaigns.approvedTab")} value={campaigns.filter((c) => c.status === "active").length.toString()} accent="teal" />
+        <StatCard label={t("superadmin.campaigns.pendingTab")} value={pendingCount.toString()} accent="purple" />
+        <StatCard label={t("superadmin.campaigns.rejectedTab")} value={campaigns.filter((c) => c.moderation_status === "rejected").length.toString()} accent="red" />
       </div>
 
       <TabBar
         tabs={[
-          { key: "all", label: "Toutes", count: campaigns.length },
-          { key: "pending", label: "En attente", count: pendingCount },
-          { key: "approved", label: "Approuvees", count: campaigns.filter((c) => c.moderation_status === "approved").length },
-          { key: "rejected", label: "Rejetees", count: campaigns.filter((c) => c.moderation_status === "rejected").length },
+          { key: "all", label: t("superadmin.campaigns.allTab"), count: campaigns.length },
+          { key: "pending", label: t("superadmin.campaigns.pendingTab"), count: pendingCount },
+          { key: "approved", label: t("superadmin.campaigns.approvedTab"), count: campaigns.filter((c) => c.moderation_status === "approved").length },
+          { key: "rejected", label: t("superadmin.campaigns.rejectedTab"), count: campaigns.filter((c) => c.moderation_status === "rejected").length },
         ]}
         active={filter}
         onChange={setFilter}
@@ -212,13 +214,13 @@ function CampaignModerationPageContent() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs text-white/30 border-b border-white/5">
-              <th className="pb-3 font-semibold">Campagne</th>
-              <th className="pb-3 font-semibold">Moderation</th>
-              <th className="pb-3 font-semibold hidden md:table-cell">Budget</th>
-              <th className="pb-3 font-semibold hidden md:table-cell">CPC</th>
-              <th className="pb-3 font-semibold hidden lg:table-cell">Echos</th>
-              <th className="pb-3 font-semibold hidden lg:table-cell">Clics</th>
-              <th className="pb-3 font-semibold hidden lg:table-cell">Date</th>
+              <th className="pb-3 font-semibold">{t("superadmin.campaigns.campaignLabel")}</th>
+              <th className="pb-3 font-semibold">{t("superadmin.campaigns.moderation")}</th>
+              <th className="pb-3 font-semibold hidden md:table-cell">{t("common.budget")}</th>
+              <th className="pb-3 font-semibold hidden md:table-cell">{t("common.cpc")}</th>
+              <th className="pb-3 font-semibold hidden lg:table-cell">{t("superadmin.campaigns.echos")}</th>
+              <th className="pb-3 font-semibold hidden lg:table-cell">{t("common.clicks")}</th>
+              <th className="pb-3 font-semibold hidden lg:table-cell">{t("common.date")}</th>
             </tr>
           </thead>
           <tbody>
@@ -254,49 +256,49 @@ function CampaignModerationPageContent() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
-                <span className="text-xs text-white/40 block">Batteur</span>
+                <span className="text-xs text-white/40 block">{t("superadmin.finance.batteur")}</span>
                 <span>{selected.users?.name || "—"}</span>
               </div>
               <div>
-                <span className="text-xs text-white/40 block">Status</span>
+                <span className="text-xs text-white/40 block">{t("common.status")}</span>
                 <Badge status={selected.moderation_status || "pending"} />
               </div>
               <div>
-                <span className="text-xs text-white/40 block">Budget</span>
+                <span className="text-xs text-white/40 block">{t("common.budget")}</span>
                 <span>{formatFCFA(selected.budget)}</span>
               </div>
               <div>
-                <span className="text-xs text-white/40 block">CPC</span>
+                <span className="text-xs text-white/40 block">{t("common.cpc")}</span>
                 <span>{selected.cpc} FCFA</span>
               </div>
               <div>
-                <span className="text-xs text-white/40 block">Echos engages</span>
+                <span className="text-xs text-white/40 block">{t("superadmin.campaigns.engagedEchos")}</span>
                 <span>{selected.echo_count}</span>
               </div>
               <div>
-                <span className="text-xs text-white/40 block">Clics totaux</span>
+                <span className="text-xs text-white/40 block">{t("superadmin.campaigns.totalClicks")}</span>
                 <span>{selected.total_clicks}</span>
               </div>
               <div className="col-span-2">
-                <span className="text-xs text-white/40 block mb-1">Budget depense</span>
+                <span className="text-xs text-white/40 block mb-1">{t("superadmin.campaigns.spentBudget")}</span>
                 <ProgressBar value={selected.spent} max={selected.budget} />
                 <span className="text-xs text-white/30 mt-1 block">
                   {formatFCFA(selected.spent)} / {formatFCFA(selected.budget)}
                 </span>
               </div>
               <div className="col-span-2">
-                <span className="text-xs text-white/40 block">URL</span>
+                <span className="text-xs text-white/40 block">{t("common.url")}</span>
                 <span className="text-xs font-mono break-all text-primary">{selected.destination_url}</span>
               </div>
               {selected.description && (
                 <div className="col-span-2">
-                  <span className="text-xs text-white/40 block">Description</span>
+                  <span className="text-xs text-white/40 block">{t("common.description")}</span>
                   <span className="text-xs">{selected.description}</span>
                 </div>
               )}
               {selected.moderation_reason && (
                 <div className="col-span-2">
-                  <span className="text-xs text-white/40 block">Raison du rejet</span>
+                  <span className="text-xs text-white/40 block">{t("superadmin.campaigns.rejectionReason")}</span>
                   <span className="text-xs text-red-400">{selected.moderation_reason}</span>
                 </div>
               )}
@@ -307,7 +309,7 @@ function CampaignModerationPageContent() {
                 <textarea
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder="Raison du rejet (si applicable)..."
+                  placeholder={t("superadmin.campaigns.rejectionReasonPlaceholder")}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition resize-none h-20"
                 />
                 <div className="flex gap-2">
@@ -315,16 +317,16 @@ function CampaignModerationPageContent() {
                     onClick={() => moderateCampaign(selected.id, "approve")}
                     className="flex-1 py-2.5 rounded-xl bg-accent/10 border border-accent/30 text-accent font-bold text-sm"
                   >
-                    Approuver
+                    {t("superadmin.campaigns.approvedTab")}
                   </button>
                   <button
                     onClick={() => {
-                      if (!rejectReason.trim()) { showToast("Raison requise pour le rejet", "error"); return; }
+                      if (!rejectReason.trim()) { showToast(t("common.error"), "error"); return; }
                       moderateCampaign(selected.id, "reject", rejectReason);
                     }}
                     className="flex-1 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-bold text-sm"
                   >
-                    Rejeter
+                    {t("superadmin.campaigns.rejectedTab")}
                   </button>
                 </div>
               </div>
@@ -336,7 +338,7 @@ function CampaignModerationPageContent() {
                   onClick={() => moderateCampaign(selected.id, "pause")}
                   className="w-full py-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 font-bold text-sm"
                 >
-                  Mettre en pause
+                  {t("superadmin.campaigns.pendingTab")}
                 </button>
               </div>
             )}
@@ -347,7 +349,7 @@ function CampaignModerationPageContent() {
                   onClick={() => moderateCampaign(selected.id, "resume")}
                   className="w-full py-2.5 rounded-xl bg-accent/10 border border-accent/30 text-accent font-bold text-sm"
                 >
-                  Relancer
+                  {t("superadmin.campaigns.approvedTab")}
                 </button>
               </div>
             )}
@@ -356,20 +358,20 @@ function CampaignModerationPageContent() {
       </Modal>
 
       {/* Create Campaign Modal */}
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Creer une campagne pour un batteur">
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title={t("superadmin.campaigns.createCampaignTitle")}>
         <div className="space-y-4">
           {/* Select brand */}
           <div>
-            <label className="text-xs text-white/40 block mb-1">Batteur (marque) *</label>
+            <label className="text-xs text-white/40 block mb-1">{t("superadmin.campaigns.batteurLabel")}</label>
             <select
               value={newCamp.batteur_id}
               onChange={(e) => setNewCamp({ ...newCamp, batteur_id: e.target.value })}
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
             >
-              <option value="">Selectionner un batteur...</option>
+              <option value="">{t("superadmin.campaigns.selectBatteur")}</option>
               {batteurs.map((b) => (
                 <option key={b.id} value={b.id}>
-                  {b.name} — Solde: {formatFCFA(b.balance)}
+                  {b.name} — {t("common.balance")}: {formatFCFA(b.balance)}
                 </option>
               ))}
             </select>
@@ -377,34 +379,34 @@ function CampaignModerationPageContent() {
 
           {selectedBatteur && (
             <div className="p-3 rounded-xl bg-white/5 text-xs">
-              <span className="text-white/40">Solde disponible: </span>
+              <span className="text-white/40">{t("superadmin.campaigns.availableBalance")}: </span>
               <span className="font-bold text-accent">{formatFCFA(selectedBatteur.balance)}</span>
             </div>
           )}
 
           <div>
-            <label className="text-xs text-white/40 block mb-1">Titre de la campagne *</label>
+            <label className="text-xs text-white/40 block mb-1">{t("superadmin.campaigns.campaignTitleLabel")}</label>
             <input
               type="text"
               value={newCamp.title}
               onChange={(e) => setNewCamp({ ...newCamp, title: e.target.value })}
-              placeholder="Ex: Promo ete 2026"
+              placeholder={t("superadmin.campaigns.campaignTitlePlaceholder")}
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
             />
           </div>
 
           <div>
-            <label className="text-xs text-white/40 block mb-1">Description</label>
+            <label className="text-xs text-white/40 block mb-1">{t("superadmin.campaigns.description")}</label>
             <textarea
               value={newCamp.description}
               onChange={(e) => setNewCamp({ ...newCamp, description: e.target.value })}
-              placeholder="Description optionnelle..."
+              placeholder={t("superadmin.campaigns.descriptionPlaceholder")}
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition resize-none h-16"
             />
           </div>
 
           <div>
-            <label className="text-xs text-white/40 block mb-1">URL de destination *</label>
+            <label className="text-xs text-white/40 block mb-1">{t("superadmin.campaigns.destinationUrl")}</label>
             <input
               type="url"
               value={newCamp.destination_url}
@@ -416,7 +418,7 @@ function CampaignModerationPageContent() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-white/40 block mb-1">CPC (FCFA) *</label>
+              <label className="text-xs text-white/40 block mb-1">{t("superadmin.campaigns.cpcLabel")}</label>
               <input
                 type="number"
                 value={newCamp.cpc}
@@ -426,7 +428,7 @@ function CampaignModerationPageContent() {
               />
             </div>
             <div>
-              <label className="text-xs text-white/40 block mb-1">Budget (FCFA) *</label>
+              <label className="text-xs text-white/40 block mb-1">{t("superadmin.campaigns.budgetLabel")}</label>
               <input
                 type="number"
                 value={newCamp.budget}
@@ -439,7 +441,7 @@ function CampaignModerationPageContent() {
 
           {selectedBatteur && parseInt(newCamp.budget) > selectedBatteur.balance && (
             <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400">
-              Budget depasse le solde du batteur ({formatFCFA(selectedBatteur.balance)})
+              {t("superadmin.finance.budgetExceeded", { balance: formatFCFA(selectedBatteur.balance) })}
             </div>
           )}
 
@@ -448,7 +450,7 @@ function CampaignModerationPageContent() {
             disabled={creating}
             className="w-full py-3 rounded-xl bg-gradient-primary text-white font-bold text-sm hover:opacity-90 transition disabled:opacity-50"
           >
-            {creating ? "Creation en cours..." : "Creer et approuver la campagne"}
+            {creating ? t("common.loading") : t("superadmin.campaigns.title")}
           </button>
         </div>
       </Modal>

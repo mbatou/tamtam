@@ -4,8 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import SoundWave from "@/components/ui/SoundWave";
+import { useTranslation } from "@/lib/i18n";
 
 export default function ForgotPasswordPage() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -47,23 +49,22 @@ export default function ForgotPasswordPage() {
                   <polyline points="22 4 12 14.01 9 11.01" />
                 </svg>
               </div>
-              <h1 className="text-2xl font-bold mb-2 text-center">Email envoyé !</h1>
+              <h1 className="text-2xl font-bold mb-2 text-center">{t("auth.forgotSent")}</h1>
               <p className="text-sm text-white/40 text-center mb-6">
-                Un lien de réinitialisation a été envoyé à <strong className="text-white/60">{email}</strong>.
-                Vérifie ta boîte de réception (et les spams).
+                {t("auth.forgotSentDesc", { email })}
               </p>
               <Link
                 href="/login"
                 className="block w-full py-3 rounded-btn font-bold text-white text-center bg-gradient-primary hover:opacity-90 transition"
               >
-                Retour à la connexion
+                {t("auth.forgotBackToLogin")}
               </Link>
             </>
           ) : (
             <>
-              <h1 className="text-2xl font-bold mb-2">Mot de passe oublié ?</h1>
+              <h1 className="text-2xl font-bold mb-2">{t("auth.forgotTitle")}</h1>
               <p className="text-xs text-white/30 mb-6">
-                Entre ton adresse email et nous t&apos;enverrons un lien pour réinitialiser ton mot de passe.
+                {t("auth.forgotDesc")}
               </p>
 
               {error && (
@@ -75,13 +76,13 @@ export default function ForgotPasswordPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-white/40 mb-2">
-                    Email
+                    {t("common.email")}
                   </label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="votre@email.com"
+                    placeholder={t("auth.emailPlaceholder")}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
                     onKeyDown={(e) => e.key === "Enter" && !loading && email && handleReset()}
                   />
@@ -91,7 +92,7 @@ export default function ForgotPasswordPage() {
                   disabled={loading || !email}
                   className="w-full py-3 rounded-btn font-bold text-white bg-gradient-primary disabled:opacity-50 transition-all hover:opacity-90 hover:-translate-y-0.5 hover:shadow-lg"
                 >
-                  {loading ? "Envoi en cours..." : "Envoyer le lien"}
+                  {loading ? t("common.sending") : t("auth.forgotSend")}
                 </button>
               </div>
             </>
@@ -100,7 +101,7 @@ export default function ForgotPasswordPage() {
 
         <p className="text-center text-sm text-white/30 mt-6">
           <Link href="/login" className="text-primary font-semibold hover:underline">
-            ← Retour à la connexion
+            {t("auth.forgotBackLink")}
           </Link>
         </p>
       </div>
