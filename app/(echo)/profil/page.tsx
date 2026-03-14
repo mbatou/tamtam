@@ -363,7 +363,9 @@ export default function ProfilPage() {
         )}
       </div>
 
-      <LanguageSwitcher />
+      <div className="mb-5">
+        <LanguageSwitcher />
+      </div>
 
       <button
         onClick={handleLogout}
