@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import AdminSearch from "@/components/AdminSearch";
 
 const navItems = [
   { label: "Vue d'ensemble", href: "/admin/dashboard", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
@@ -34,6 +35,10 @@ export default function AdminSidebar() {
             Admin
           </span>
         </Link>
+
+        <div className="mb-6">
+          <AdminSearch />
+        </div>
 
         <nav className="flex flex-col gap-1 flex-1">
           {navItems.map((item) => {
@@ -78,17 +83,22 @@ export default function AdminSidebar() {
       </aside>
 
       {/* Mobile top bar */}
-      <div className="lg:hidden flex items-center justify-between p-4 border-b border-white/5">
-        <span className="text-xl font-black gradient-text">Tamtam</span>
-        <div className="flex items-center gap-3">
-          <span className="text-[10px] font-semibold bg-secondary/20 text-secondary px-2 py-0.5 rounded-full">
-            Admin
-          </span>
-          <button onClick={handleLogout} className="text-red-400 hover:text-red-300 transition">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
-            </svg>
-          </button>
+      <div className="lg:hidden border-b border-white/5">
+        <div className="flex items-center justify-between p-4">
+          <span className="text-xl font-black gradient-text">Tamtam</span>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-semibold bg-secondary/20 text-secondary px-2 py-0.5 rounded-full">
+              Admin
+            </span>
+            <button onClick={handleLogout} className="text-red-400 hover:text-red-300 transition">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div className="px-4 pb-3">
+          <AdminSearch />
         </div>
       </div>
 
