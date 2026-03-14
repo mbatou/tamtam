@@ -149,14 +149,14 @@ function FinancePageContent() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard label={t("superadmin.dashboard.grossRevenue")} value={formatFCFA(data.grossRevenue)} accent="orange" />
-        <StatCard label={`Commission (${data.feePercent}%)`} value={formatFCFA(data.platformCut)} accent="teal" />
-        <StatCard label="Paye aux Echos" value={formatFCFA(data.sentTotal)} accent="purple" />
+        <StatCard label={t("superadmin.finance.commission", { percent: String(data.feePercent) })} value={formatFCFA(data.platformCut)} accent="teal" />
+        <StatCard label={t("superadmin.dashboard.paidToEchos")} value={formatFCFA(data.sentTotal)} accent="purple" />
         <StatCard label={t("common.pending")} value={formatFCFA(data.pendingTotal)} accent="red" />
       </div>
 
       {/* Reconciliation Bar */}
       <div className="glass-card p-6 mb-8">
-        <h3 className="text-sm font-bold mb-4">Repartition des revenus</h3>
+        <h3 className="text-sm font-bold mb-4">{t("superadmin.finance.revenueDistribution")}</h3>
         <div className="flex h-6 rounded-full overflow-hidden mb-3">
           <div className="bg-gradient-primary" style={{ width: `${platformPct}%` }} />
           <div className="bg-accent" style={{ width: `${paidPct}%` }} />
@@ -165,19 +165,19 @@ function FinancePageContent() {
         <div className="flex gap-4 text-xs">
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-full bg-gradient-primary" />
-            <span className="text-white/50">Plateforme ({Math.round(platformPct)}%)</span>
+            <span className="text-white/50">{t("superadmin.finance.platform")} ({Math.round(platformPct)}%)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-full bg-accent" />
-            <span className="text-white/50">Paye ({Math.round(paidPct)}%)</span>
+            <span className="text-white/50">{t("superadmin.finance.paid")} ({Math.round(paidPct)}%)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-full bg-white/10" />
-            <span className="text-white/50">Restant ({Math.round(remainingPct)}%)</span>
+            <span className="text-white/50">{t("common.remaining")} ({Math.round(remainingPct)}%)</span>
           </div>
         </div>
         <div className="mt-3 text-xs text-white/30">
-          Part Echos: {formatFCFA(echoShare)} · Deja paye: {formatFCFA(data.sentTotal)} · En attente: {formatFCFA(data.pendingTotal)}
+          {t("superadmin.finance.echoShare")}: {formatFCFA(echoShare)} · {t("superadmin.finance.alreadyPaid")}: {formatFCFA(data.sentTotal)} · {t("common.pending")}: {formatFCFA(data.pendingTotal)}
         </div>
       </div>
 
@@ -233,8 +233,8 @@ function FinancePageContent() {
           {pendingPayouts.length === 0 ? (
             <div className="glass-card p-12 text-center">
               <div className="text-4xl mb-3">&#10003;</div>
-              <h3 className="text-lg font-bold mb-1">Aucune demande en attente</h3>
-              <p className="text-sm text-white/40">Toutes les demandes de paiement ont ete traitees.</p>
+              <h3 className="text-lg font-bold mb-1">{t("superadmin.finance.noPayoutRequests")}</h3>
+              <p className="text-sm text-white/40">{t("superadmin.finance.allPayoutsProcessed")}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -251,7 +251,7 @@ function FinancePageContent() {
                     <div>
                       <div className="font-bold">{payout.users?.name || "—"}</div>
                       <div className="text-xs text-white/40">
-                        {payout.users?.phone || ""} · {payout.provider === "wave" ? "Wave" : "Orange Money"}
+                        {payout.users?.phone || ""} · {payout.provider === "wave" ? t("common.wave") : t("common.orangeMoney")}
                       </div>
                     </div>
                   </div>
@@ -266,13 +266,13 @@ function FinancePageContent() {
                       onClick={(e) => { e.stopPropagation(); handlePayout(payout.id, "approve"); }}
                       className="px-4 py-2 rounded-xl bg-accent/10 border border-accent/30 text-accent text-xs font-bold hover:bg-accent/20 transition"
                     >
-                      Payer
+                      {t("common.confirm")}
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); setSelectedPayout(payout); }}
                       className="px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold hover:bg-red-500/20 transition"
                     >
-                      Refuser
+                      {t("common.rejected")}
                     </button>
                   </div>
                 </div>
@@ -288,11 +288,11 @@ function FinancePageContent() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-white/30 border-b border-white/5">
-                <th className="pb-3 font-semibold">Date</th>
-                <th className="pb-3 font-semibold">Echo</th>
-                <th className="pb-3 font-semibold">Montant</th>
-                <th className="pb-3 font-semibold hidden md:table-cell">Fournisseur</th>
-                <th className="pb-3 font-semibold">Status</th>
+                <th className="pb-3 font-semibold">{t("common.date")}</th>
+                <th className="pb-3 font-semibold">{t("superadmin.finance.echo")}</th>
+                <th className="pb-3 font-semibold">{t("common.amount")}</th>
+                <th className="pb-3 font-semibold hidden md:table-cell">{t("superadmin.finance.provider")}</th>
+                <th className="pb-3 font-semibold">{t("common.status")}</th>
               </tr>
             </thead>
             <tbody>
@@ -307,7 +307,7 @@ function FinancePageContent() {
                   </td>
                   <td className="py-3 font-bold">{formatFCFA(payout.amount)}</td>
                   <td className="py-3 hidden md:table-cell text-xs">
-                    {payout.provider === "wave" ? "Wave" : "Orange Money"}
+                    {payout.provider === "wave" ? t("common.wave") : t("common.orangeMoney")}
                   </td>
                   <td className="py-3">
                     <Badge status={payout.status} />
@@ -315,7 +315,7 @@ function FinancePageContent() {
                 </tr>
               ))}
               {completedPayouts.length === 0 && (
-                <tr><td colSpan={5} className="py-6 text-center text-white/30 text-sm">Aucun historique</td></tr>
+                <tr><td colSpan={5} className="py-6 text-center text-white/30 text-sm">{t("superadmin.finance.noHistory")}</td></tr>
               )}
             </tbody>
           </table>
@@ -328,8 +328,8 @@ function FinancePageContent() {
           {pendingRecharges.length === 0 ? (
             <div className="glass-card p-12 text-center">
               <div className="text-4xl mb-3">&#10003;</div>
-              <h3 className="text-lg font-bold mb-1">Aucune recharge en attente</h3>
-              <p className="text-sm text-white/40">Toutes les recharges Wave ont été traitées.</p>
+              <h3 className="text-lg font-bold mb-1">{t("superadmin.finance.noRechargesPending")}</h3>
+              <p className="text-sm text-white/40">{t("superadmin.finance.allRechargesProcessed")}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -357,13 +357,13 @@ function FinancePageContent() {
                       onClick={() => handleRechargeAction(payment.id, "validate")}
                       className="px-4 py-2 rounded-xl bg-accent/10 border border-accent/30 text-accent text-xs font-bold hover:bg-accent/20 transition"
                     >
-                      Valider
+                      {t("common.confirm")}
                     </button>
                     <button
                       onClick={() => handleRechargeAction(payment.id, "reject")}
                       className="px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold hover:bg-red-500/20 transition"
                     >
-                      Refuser
+                      {t("common.rejected")}
                     </button>
                   </div>
                 </div>
@@ -372,7 +372,7 @@ function FinancePageContent() {
           )}
           <div className="mt-4 p-4 rounded-xl bg-blue-500/5 border border-blue-500/10">
             <p className="text-xs text-blue-300/60">
-              Vérifie les paiements sur le dashboard Wave avant de valider. La validation crédite automatiquement le solde du batteur.
+              {t("superadmin.finance.waveVerifyNotice")}
             </p>
           </div>
         </div>
@@ -384,11 +384,11 @@ function FinancePageContent() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-white/30 border-b border-white/5">
-                <th className="pb-3 font-semibold">Date</th>
-                <th className="pb-3 font-semibold">Batteur</th>
-                <th className="pb-3 font-semibold">Montant</th>
-                <th className="pb-3 font-semibold hidden md:table-cell">Methode</th>
-                <th className="pb-3 font-semibold">Status</th>
+                <th className="pb-3 font-semibold">{t("common.date")}</th>
+                <th className="pb-3 font-semibold">{t("superadmin.finance.batteur")}</th>
+                <th className="pb-3 font-semibold">{t("common.amount")}</th>
+                <th className="pb-3 font-semibold hidden md:table-cell">{t("superadmin.finance.method")}</th>
+                <th className="pb-3 font-semibold">{t("common.status")}</th>
               </tr>
             </thead>
             <tbody>
@@ -401,7 +401,7 @@ function FinancePageContent() {
                   <td className="py-3 font-bold">{formatFCFA(payment.amount)}</td>
                   <td className="py-3 hidden md:table-cell text-xs">
                     {payment.payment_method === "admin_topup" ? (
-                      <span className="text-purple-400 font-bold">Recharge admin</span>
+                      <span className="text-purple-400 font-bold">{t("superadmin.finance.adminTopup")}</span>
                     ) : (
                       payment.payment_method || payment.provider || "—"
                     )}
@@ -412,7 +412,7 @@ function FinancePageContent() {
                 </tr>
               ))}
               {processedRecharges.length === 0 && (
-                <tr><td colSpan={5} className="py-6 text-center text-white/30 text-sm">Aucune recharge</td></tr>
+                <tr><td colSpan={5} className="py-6 text-center text-white/30 text-sm">{t("superadmin.finance.noRecharges")}</td></tr>
               )}
             </tbody>
           </table>
@@ -440,16 +440,16 @@ function FinancePageContent() {
             <div className="grid grid-cols-2 gap-3">
               <div className="glass-card p-4 text-center">
                 <div className="text-2xl font-bold">{formatFCFA(selectedPayout.amount)}</div>
-                <div className="text-[10px] text-white/40">Montant demande</div>
+                <div className="text-[10px] text-white/40">{t("superadmin.finance.requestedAmount")}</div>
               </div>
               <div className="glass-card p-4 text-center">
-                <div className="text-lg font-bold">{selectedPayout.provider === "wave" ? "Wave" : "Orange Money"}</div>
-                <div className="text-[10px] text-white/40">Fournisseur</div>
+                <div className="text-lg font-bold">{selectedPayout.provider === "wave" ? t("common.wave") : t("common.orangeMoney")}</div>
+                <div className="text-[10px] text-white/40">{t("superadmin.finance.provider")}</div>
               </div>
             </div>
 
             <div className="text-xs text-white/30">
-              Demande le {new Date(selectedPayout.created_at).toLocaleDateString("fr-FR", {
+              {t("superadmin.finance.requestedOn")} {new Date(selectedPayout.created_at).toLocaleDateString("fr-FR", {
                 weekday: "long",
                 day: "numeric",
                 month: "long",
@@ -464,20 +464,20 @@ function FinancePageContent() {
                 onClick={() => handlePayout(selectedPayout.id, "approve")}
                 className="w-full py-3 rounded-xl bg-accent/10 border border-accent/30 text-accent font-bold text-sm hover:bg-accent/20 transition"
               >
-                Confirmer le paiement
+                {t("common.confirm")}
               </button>
 
               <textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Raison du refus (optionnel)..."
+                placeholder={t("superadmin.finance.rejectReasonPlaceholder")}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition resize-none h-16"
               />
               <button
                 onClick={() => handlePayout(selectedPayout.id, "reject", rejectReason)}
                 className="w-full py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-bold text-sm hover:bg-red-500/20 transition"
               >
-                Refuser le paiement
+                {t("common.rejected")}
               </button>
             </div>
           </div>

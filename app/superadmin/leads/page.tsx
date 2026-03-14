@@ -249,7 +249,7 @@ export default function SuperadminLeadsPage() {
               </div>
               {selectedLead.message && (
                 <div>
-                  <p className="text-xs text-white/40 mb-1">Message</p>
+                  <p className="text-xs text-white/40 mb-1">{t("superadmin.support.message")}</p>
                   <p className="text-sm bg-white/5 rounded-xl p-3">{selectedLead.message}</p>
                 </div>
               )}

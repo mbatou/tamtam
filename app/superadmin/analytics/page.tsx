@@ -197,9 +197,9 @@ export default function AnalyticsPage() {
               <div key={i} className="flex items-center justify-between py-2">
                 <div>
                   <span className="text-sm font-semibold block">{c.title}</span>
-                  <span className="text-xs text-white/30">{c.name} · {c.echos} échos</span>
+                  <span className="text-xs text-white/30">{c.name} · {c.echos} {t("superadmin.campaigns.echos").toLowerCase()}</span>
                 </div>
-                <span className="text-sm font-bold text-primary">{formatNumber(c.clicks)} clics</span>
+                <span className="text-sm font-bold text-primary">{formatNumber(c.clicks)} {t("common.clicks")}</span>
               </div>
             ))}
           </div>

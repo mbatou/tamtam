@@ -46,10 +46,10 @@ interface RoadmapData {
 
 type Phase = "phase_1" | "phase_2" | "phase_3";
 
-const PHASE_META: Record<Phase, { label: string; subtitle: string; weeks: string }> = {
-  phase_1: { label: "PROUVER", subtitle: "Valider le modèle", weeks: "Semaines 1-4" },
-  phase_2: { label: "GRANDIR", subtitle: "Scaler la traction", weeks: "Mois 2-3" },
-  phase_3: { label: "DOMINER", subtitle: "Expansion régionale", weeks: "Mois 4-6" },
+const PHASE_META_KEYS: Record<Phase, { label: string; subtitle: string; weeks: string }> = {
+  phase_1: { label: "superadmin.roadmap.prove", subtitle: "superadmin.roadmap.proveSubtitle", weeks: "superadmin.roadmap.proveWeeks" },
+  phase_2: { label: "superadmin.roadmap.grow", subtitle: "superadmin.roadmap.growSubtitle", weeks: "superadmin.roadmap.growWeeks" },
+  phase_3: { label: "superadmin.roadmap.dominate", subtitle: "superadmin.roadmap.dominateSubtitle", weeks: "superadmin.roadmap.dominateWeeks" },
 };
 
 function getPhaseFromEchos(total: number): Phase {
@@ -58,19 +58,19 @@ function getPhaseFromEchos(total: number): Phase {
   return "phase_1";
 }
 
-function formatMetricValue(key: string, value: number): string {
+function formatMetricValue(key: string, value: number, t: (k: string) => string): string {
   if (key === "total_paid_out" || key === "monthly_revenue") return formatFCFA(value);
   if (key === "fraud_rate_below" || key === "echo_retention_30d") return `${value}%`;
-  if (key === "first_payout_done") return value >= 1 ? "Oui" : "Non";
+  if (key === "first_payout_done") return value >= 1 ? t("superadmin.roadmap.yes") : t("superadmin.roadmap.no");
   if (value >= 10000) return formatNumber(value);
   return value.toLocaleString("fr-FR");
 }
 
-function formatTargetValue(key: string, value: number): string {
+function formatTargetValue(key: string, value: number, t: (k: string) => string): string {
   if (key === "total_paid_out" || key === "monthly_revenue") return formatFCFA(value);
   if (key === "fraud_rate_below") return `< ${value}%`;
   if (key === "echo_retention_30d") return `${value}%`;
-  if (key === "first_payout_done") return "Oui";
+  if (key === "first_payout_done") return t("superadmin.roadmap.yes");
   return value.toLocaleString("fr-FR");
 }
 
@@ -145,7 +145,11 @@ export default function RoadmapPage() {
   }
 
   const currentPhase = getPhaseFromEchos(data.currentValues.total_echos || 0);
-  const phaseMeta = PHASE_META[currentPhase];
+  const getPhaseMetaTranslated = (phase: Phase) => {
+    const keys = PHASE_META_KEYS[phase];
+    return { label: t(keys.label), subtitle: t(keys.subtitle), weeks: t(keys.weeks) };
+  };
+  const phaseMeta = getPhaseMetaTranslated(currentPhase);
   const phaseGoals = data.goals.filter((g) => g.phase === currentPhase);
   const phaseMilestones = data.milestones.filter((m) => m.phase === currentPhase);
 
@@ -234,8 +238,8 @@ export default function RoadmapPage() {
                 </div>
 
                 <div className="mb-3">
-                  <span className="text-2xl font-black">{formatMetricValue(goal.metric_key, current)}</span>
-                  <span className="text-sm text-white/30 ml-1">/ {formatTargetValue(goal.metric_key, goal.target_value)}</span>
+                  <span className="text-2xl font-black">{formatMetricValue(goal.metric_key, current, t)}</span>
+                  <span className="text-sm text-white/30 ml-1">/ {formatTargetValue(goal.metric_key, goal.target_value, t)}</span>
                 </div>
 
                 <div className="h-2 bg-white/5 rounded-full overflow-hidden mb-2">
@@ -317,7 +321,7 @@ export default function RoadmapPage() {
         <h3 className="text-sm font-bold text-white/50 mb-4 uppercase tracking-wider">{t("superadmin.roadmap.allPhases")}</h3>
         <div className="space-y-2">
           {phases.map((phase) => {
-            const meta = PHASE_META[phase];
+            const meta = getPhaseMetaTranslated(phase);
             const progress = getPhaseProgress(phase);
             const isCurrent = phase === currentPhase;
             const isExpanded = expandedPhases.has(phase);
@@ -372,8 +376,8 @@ export default function RoadmapPage() {
                               <span className="text-sm">{goal.icon}</span>
                               <span className="text-xs text-white/40 truncate">{goal.metric_label}</span>
                             </div>
-                            <div className="text-lg font-bold">{formatMetricValue(goal.metric_key, current)}</div>
-                            <div className="text-xs text-white/20 mb-2">/ {formatTargetValue(goal.metric_key, goal.target_value)}</div>
+                            <div className="text-lg font-bold">{formatMetricValue(goal.metric_key, current, t)}</div>
+                            <div className="text-xs text-white/20 mb-2">/ {formatTargetValue(goal.metric_key, goal.target_value, t)}</div>
                             <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                               <div
                                 className="h-full rounded-full"

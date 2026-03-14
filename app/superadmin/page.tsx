@@ -221,8 +221,8 @@ export default function SuperAdminOverview() {
                   contentStyle={{ background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
                   labelFormatter={(v) => formatShortDate(String(v))}
                 />
-                <Bar dataKey="echos" name="Échos" fill="#D35400" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="brands" name="Batteurs" fill="#6C3483" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="echos" name={t("superadmin.dashboard.totalEchos")} fill="#D35400" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="brands" name={t("superadmin.users.batteurs")} fill="#6C3483" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -238,8 +238,8 @@ export default function SuperAdminOverview() {
                   contentStyle={{ background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
                   labelFormatter={(v) => formatShortDate(String(v))}
                 />
-                <Line type="monotone" dataKey="cumulEchos" name="Échos" stroke="#D35400" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="cumulBrands" name="Batteurs" stroke="#6C3483" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="cumulEchos" name={t("superadmin.dashboard.totalEchos")} stroke="#D35400" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="cumulBrands" name={t("superadmin.users.batteurs")} stroke="#6C3483" strokeWidth={2} dot={false} />
                 <Legend wrapperStyle={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }} />
               </LineChart>
             </ResponsiveContainer>
@@ -347,7 +347,7 @@ export default function SuperAdminOverview() {
               <div key={p.id} className="flex items-center justify-between">
                 <div>
                   <div className="text-sm font-semibold">{p.users?.name || "—"}</div>
-                  <div className="text-xs text-white/30">{p.provider === "wave" ? "Wave" : "Orange Money"} · {timeAgo(p.created_at)}</div>
+                  <div className="text-xs text-white/30">{p.provider === "wave" ? t("common.wave") : t("common.orangeMoney")} · {timeAgo(p.created_at)}</div>
                 </div>
                 <span className="text-sm font-bold text-yellow-400">{formatFCFA(p.amount)}</span>
               </div>

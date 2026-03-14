@@ -171,9 +171,9 @@ function SuperadminSupportPageContent() {
       {filteredTickets.length === 0 ? (
         <div className="glass-card p-12 text-center">
           <div className="text-4xl mb-3">&#10003;</div>
-          <h3 className="text-lg font-bold mb-1">Aucun ticket {filter !== "all" ? getStatusLabel(filter).toLowerCase() : ""}</h3>
+          <h3 className="text-lg font-bold mb-1">{t("superadmin.support.noTicket", { status: filter !== "all" ? getStatusLabel(filter).toLowerCase() : "" })}</h3>
           <p className="text-sm text-white/40">
-            {filter === "open" ? "Tous les tickets ont ete traites." : "Aucun ticket dans cette categorie."}
+            {filter === "open" ? t("superadmin.support.allTicketsProcessed") : t("superadmin.support.noTicketInCategory")}
           </p>
         </div>
       ) : (
@@ -253,14 +253,14 @@ function SuperadminSupportPageContent() {
 
             {/* User message */}
             <div className="glass-card p-4">
-              <p className="text-xs text-white/40 font-semibold mb-1">Message</p>
+              <p className="text-xs text-white/40 font-semibold mb-1">{t("superadmin.support.message")}</p>
               <p className="text-sm text-white/80 whitespace-pre-wrap">{selectedTicket.message}</p>
             </div>
 
             {/* Existing reply */}
             {selectedTicket.admin_reply && selectedTicket.status !== "open" && (
               <div className="p-4 rounded-xl bg-accent/5 border border-accent/10">
-                <p className="text-xs text-accent font-semibold mb-1">Votre reponse</p>
+                <p className="text-xs text-accent font-semibold mb-1">{t("superadmin.support.repliedTab")}</p>
                 <p className="text-sm text-white/70 whitespace-pre-wrap">{selectedTicket.admin_reply}</p>
                 {selectedTicket.replied_at && (
                   <p className="text-xs text-white/20 mt-2">{timeAgo(selectedTicket.replied_at)}</p>
@@ -274,7 +274,7 @@ function SuperadminSupportPageContent() {
                 <textarea
                   value={reply}
                   onChange={(e) => setReply(e.target.value)}
-                  placeholder="Ecrire une reponse..."
+                  placeholder={t("superadmin.support.writeReply")}
                   rows={4}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition resize-none"
                 />
@@ -291,7 +291,7 @@ function SuperadminSupportPageContent() {
                     disabled={sending}
                     className="py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white/50 font-bold text-sm hover:bg-white/10 transition disabled:opacity-40"
                   >
-                    Fermer
+                    {t("common.close")}
                   </button>
                 </div>
               </div>
@@ -305,7 +305,7 @@ function SuperadminSupportPageContent() {
                   disabled={sending}
                   className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-white/50 font-bold text-sm hover:bg-white/10 transition disabled:opacity-40"
                 >
-                  Reouvrir le ticket
+                  {t("superadmin.support.openTab")}
                 </button>
               </div>
             )}
