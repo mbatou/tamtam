@@ -8,7 +8,7 @@ interface SearchResults {
   users: { id: string; name: string; phone: string; city: string; role: string; status: string; balance: number; total_earned: number }[];
   campaigns: { id: string; title: string; status: string; cpc: number; budget: number; spent: number; batteur_id: string }[];
   tickets: { id: string; subject: string; status: string; user_id: string; created_at: string }[];
-  payouts: { id: string; echo_id: string; amount: number; provider: string; status: string; created_at: string }[];
+  payouts: { id: string; echo_id: string; amount: number; provider: string; status: string; created_at: string; echo_name?: string }[];
 }
 
 const roleBadge: Record<string, { label: string; cls: string }> = {
@@ -234,7 +234,7 @@ export default function SuperadminSearch() {
                     </svg>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold">{formatFCFA(p.amount)}</p>
+                    <p className="text-sm font-semibold">{formatFCFA(p.amount)}{p.echo_name ? ` — ${p.echo_name}` : ""}</p>
                     <p className="text-xs text-white/40">{p.provider} · {timeAgo(p.created_at)}</p>
                   </div>
                   <span className={`${statusBadge[p.status] || ""} text-[10px]`}>{p.status}</span>
