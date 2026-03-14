@@ -8,6 +8,8 @@ import { useToast } from "@/components/ui/Toast";
 import CampaignDetailModal from "@/components/CampaignDetailModal";
 import { useTranslation } from "@/lib/i18n";
 import type { User, TrackedLinkWithCampaign, Campaign } from "@/lib/types";
+import StreakDisplay from "@/components/gamification/StreakDisplay";
+import TierProgress from "@/components/gamification/TierProgress";
 
 export default function EchoDashboard() {
   const [user, setUser] = useState<User | null>(null);
@@ -18,6 +20,10 @@ export default function EchoDashboard() {
   const [accepting, setAccepting] = useState<string | null>(null);
   const [selectedLink, setSelectedLink] = useState<TrackedLinkWithCampaign | null>(null);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [gamification, setGamification] = useState<{
+    streak: { current_streak: number; longest_streak: number; last_campaign_date: string | null };
+    user: { tier: string; tier_bonus_percent: number; total_valid_clicks: number; total_campaigns_joined: number; referral_count: number } | null;
+  } | null>(null);
   const supabase = createClient();
   const { showToast, ToastComponent } = useToast();
   const { t } = useTranslation();
@@ -34,6 +40,13 @@ export default function EchoDashboard() {
     const campaignsData = await campaignsRes.json();
 
     if (userRes.ok) setUser(userData);
+
+    // Load gamification data
+    fetch("/api/echo/gamification")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => data && setGamification(data))
+      .catch(() => {});
+
     const links = Array.isArray(linksData) ? linksData as TrackedLinkWithCampaign[] : [];
     setActiveLinks(links);
 
@@ -170,6 +183,20 @@ export default function EchoDashboard() {
           </button>
         </div>
       </div>
+
+      {/* Streak display */}
+      {gamification && (
+        <StreakDisplay streak={gamification.streak} />
+      )}
+
+      {/* Tier progress */}
+      {gamification?.user && (
+        <TierProgress
+          tier={gamification.user.tier}
+          tierBonusPercent={gamification.user.tier_bonus_percent}
+          totalClicks={gamification.user.total_valid_clicks}
+        />
+      )}
 
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-2 mb-5">

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { acceptCampaignSchema } from "@/lib/validations";
+import { updateStreak, checkMilestones } from "@/lib/gamification";
 
 export const dynamic = "force-dynamic";
 
@@ -81,5 +82,25 @@ export async function POST(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Update campaigns joined count, streak, and check milestones (async)
+  const echoId = session.user.id;
+  (async () => {
+    await supabase
+      .from("users")
+      .update({
+        total_campaigns_joined: (
+          await supabase
+            .from("tracked_links")
+            .select("id", { count: "exact", head: true })
+            .eq("echo_id", echoId)
+        ).count || 0,
+      })
+      .eq("id", echoId);
+
+    await updateStreak(echoId);
+    await checkMilestones(echoId);
+  })().catch(console.error);
+
   return NextResponse.json(data, { status: 201 });
 }
