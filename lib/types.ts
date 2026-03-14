@@ -11,6 +11,12 @@ export interface User {
   total_earned: number;
   status?: "active" | "verified" | "flagged" | "suspended";
   risk_level?: "low" | "medium" | "high";
+  tier?: "echo" | "argent" | "or" | "diamant";
+  tier_bonus_percent?: number;
+  total_valid_clicks?: number;
+  total_campaigns_joined?: number;
+  referred_by?: string | null;
+  referral_count?: number;
   created_at: string;
 }
 

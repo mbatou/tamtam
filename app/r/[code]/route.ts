@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { rateLimit } from "@/lib/rate-limit";
 import { validateClick } from "@/lib/click-validator";
+import { processGamification } from "@/lib/gamification";
 
 function getSupabase() {
   return createServerClient(
@@ -74,9 +75,20 @@ export async function GET(
 
   // If valid click, update counters (with budget guard)
   if (valid) {
-    const echoEarnings = Math.floor(
+    // Apply tier bonus to echo earnings
+    const { data: echo } = await supabase
+      .from("users")
+      .select("tier_bonus_percent")
+      .eq("id", link.echo_id)
+      .single();
+
+    const baseShare = Math.floor(
       (campaign.cpc * ECHO_SHARE_PERCENT) / 100
     );
+    const tierBonus = Math.round(
+      baseShare * ((echo?.tier_bonus_percent || 0) / 100)
+    );
+    const echoEarnings = baseShare + tierBonus;
 
     // increment_click returns false if budget would be exceeded
     const { data: budgetOk } = await supabase.rpc("increment_click", {
@@ -96,6 +108,13 @@ export async function GET(
         .eq("ip_address", ip)
         .order("created_at", { ascending: false })
         .limit(1);
+    } else {
+      // Update click counter and run gamification (async, don't block redirect)
+      Promise.resolve(
+        supabase.rpc("increment_echo_clicks", { p_echo_id: link.echo_id })
+      )
+        .then(() => processGamification(link.echo_id))
+        .catch(console.error);
     }
   }
 

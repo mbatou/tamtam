@@ -38,6 +38,15 @@ export default function EchoBottomNav() {
       ),
     },
     {
+      label: t("gamification.leaderboard"),
+      href: "/leaderboard",
+      icon: (active: boolean) => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? "#D35400" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M8 21v-6M12 21V9M16 21v-4M4 21h16" />
+        </svg>
+      ),
+    },
+    {
       label: t("nav.profile"),
       href: "/profil",
       icon: (active: boolean) => (
