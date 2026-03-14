@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { formatFCFA, formatNumber, timeAgo } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 interface Goal {
   id: string;
@@ -75,7 +76,6 @@ function formatTargetValue(key: string, value: number): string {
 
 function getGoalProgress(key: string, current: number, target: number): number {
   if (key === "fraud_rate_below") {
-    // Inverse: lower is better. 0% fraud = 100%, target% = threshold
     if (current <= 0) return 100;
     if (current >= target * 2) return 0;
     return Math.max(0, Math.min(100, ((target * 2 - current) / (target * 2)) * 100));
@@ -92,7 +92,6 @@ function getGoalStatus(key: string, current: number, target: number): "on_track"
     if (current <= target * 1.5) return "attention";
     return "behind";
   }
-  // Simple threshold-based status
   if (progress >= 50) return "on_track";
   if (progress >= 25) return "attention";
   return "behind";
@@ -103,6 +102,7 @@ export default function RoadmapPage() {
   const [loading, setLoading] = useState(true);
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [togglingMilestone, setTogglingMilestone] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   const loadData = useCallback(async () => {
     try {
@@ -149,7 +149,6 @@ export default function RoadmapPage() {
   const phaseGoals = data.goals.filter((g) => g.phase === currentPhase);
   const phaseMilestones = data.milestones.filter((m) => m.phase === currentPhase);
 
-  // Overall phase progress
   const phaseProgress = phaseGoals.length > 0
     ? Math.round(
         phaseGoals.reduce((sum, g) => {
@@ -158,7 +157,6 @@ export default function RoadmapPage() {
       )
     : 0;
 
-  // Phase-level progress for accordion
   function getPhaseProgress(phase: string) {
     const goals = data!.goals.filter((g) => g.phase === phase);
     if (goals.length === 0) return 0;
@@ -171,13 +169,19 @@ export default function RoadmapPage() {
 
   const phases: Phase[] = ["phase_1", "phase_2", "phase_3"];
 
+  const statusConfig = {
+    on_track: { label: t("superadmin.roadmap.onTrack"), color: "text-emerald-400", dot: "bg-emerald-400" },
+    attention: { label: t("superadmin.roadmap.attention"), color: "text-yellow-400", dot: "bg-yellow-400" },
+    behind: { label: t("superadmin.roadmap.behind"), color: "text-red-400", dot: "bg-red-400" },
+  };
+
   return (
     <div className="p-6 max-w-7xl space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Roadmap</h1>
+        <h1 className="text-2xl font-bold">{t("superadmin.roadmap.title")}</h1>
         <span className="text-xs text-white/30">
-          Mise à jour: {timeAgo(data.fetchedAt)}
+          {timeAgo(data.fetchedAt, t)}
         </span>
       </div>
 
@@ -187,14 +191,14 @@ export default function RoadmapPage() {
           <span className="text-2xl">🎯</span>
           <div>
             <h2 className="text-xl font-bold">
-              Phase {currentPhase.replace("phase_", "")}: {phaseMeta.label}
+              {t("superadmin.roadmap.phase", { num: currentPhase.replace("phase_", ""), label: phaseMeta.label })}
             </h2>
             <p className="text-xs text-white/40">{phaseMeta.subtitle} — {phaseMeta.weeks}</p>
           </div>
         </div>
 
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-sm text-white/50">Progression globale</span>
+          <span className="text-sm text-white/50">{t("superadmin.roadmap.globalProgress")}</span>
           <span className="text-sm font-bold text-primary">{phaseProgress}%</span>
         </div>
         <div className="h-4 bg-white/5 rounded-full overflow-hidden">
@@ -207,24 +211,19 @@ export default function RoadmapPage() {
           />
         </div>
         <div className="flex justify-between mt-2 text-xs text-white/30">
-          <span>{data.currentValues.total_echos || 0} Échos inscrits</span>
-          <span>Objectif: {phaseGoals.find((g) => g.metric_key === "total_echos")?.target_value || "—"} Échos</span>
+          <span>{data.currentValues.total_echos || 0} {t("superadmin.roadmap.registeredEchos")}</span>
+          <span>{t("superadmin.roadmap.goal", { target: String(phaseGoals.find((g) => g.metric_key === "total_echos")?.target_value || "—") })}</span>
         </div>
       </div>
 
       {/* ===== Section 2: Phase Goals Grid ===== */}
       <div>
-        <h3 className="text-sm font-bold text-white/50 mb-4 uppercase tracking-wider">Objectifs Phase {currentPhase.replace("phase_", "")}</h3>
+        <h3 className="text-sm font-bold text-white/50 mb-4 uppercase tracking-wider">{t("superadmin.roadmap.phaseGoals", { num: currentPhase.replace("phase_", "") })}</h3>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {phaseGoals.map((goal) => {
             const current = data.currentValues[goal.metric_key] || 0;
             const progress = getGoalProgress(goal.metric_key, current, goal.target_value);
             const status = getGoalStatus(goal.metric_key, current, goal.target_value);
-            const statusConfig = {
-              on_track: { label: "On track", color: "text-emerald-400", dot: "bg-emerald-400" },
-              attention: { label: "Attention", color: "text-yellow-400", dot: "bg-yellow-400" },
-              behind: { label: "En retard", color: "text-red-400", dot: "bg-red-400" },
-            };
             const s = statusConfig[status];
 
             return (
@@ -262,7 +261,7 @@ export default function RoadmapPage() {
 
       {/* ===== Section 3: Milestones Timeline ===== */}
       <div>
-        <h3 className="text-sm font-bold text-white/50 mb-4 uppercase tracking-wider">Jalons</h3>
+        <h3 className="text-sm font-bold text-white/50 mb-4 uppercase tracking-wider">{t("superadmin.roadmap.milestones")}</h3>
         <div className="glass-card p-5">
           <div className="space-y-0">
             {phaseMilestones.map((m, i) => {
@@ -271,18 +270,17 @@ export default function RoadmapPage() {
               const dateStr = m.achieved && m.achieved_at
                 ? new Date(m.achieved_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })
                 : m.target_date
-                ? `Cible: ${new Date(m.target_date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}`
+                ? t("superadmin.roadmap.targetDate", { date: new Date(m.target_date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) })
                 : "";
 
               return (
                 <div key={m.id} className="flex items-start gap-4 group">
-                  {/* Timeline line */}
                   <div className="flex flex-col items-center">
                     <button
                       onClick={() => toggleMilestone(m.id, !m.achieved)}
                       disabled={togglingMilestone === m.id}
                       className="text-lg shrink-0 hover:scale-110 transition cursor-pointer disabled:opacity-50"
-                      title={m.achieved ? "Marquer comme non atteint" : "Marquer comme atteint"}
+                      title={m.achieved ? t("superadmin.leads.markUnreached") : t("superadmin.leads.markReached")}
                     >
                       {togglingMilestone === m.id ? "..." : icon}
                     </button>
@@ -291,7 +289,6 @@ export default function RoadmapPage() {
                     )}
                   </div>
 
-                  {/* Content */}
                   <div className="pb-6 min-w-0">
                     <div className="flex items-center gap-3 flex-wrap">
                       <span className={`text-sm font-bold ${m.achieved ? "text-teal-400" : isOverdue ? "text-red-400" : "text-white/60"}`}>
@@ -309,7 +306,7 @@ export default function RoadmapPage() {
               );
             })}
             {phaseMilestones.length === 0 && (
-              <p className="text-sm text-white/30">Aucun jalon pour cette phase</p>
+              <p className="text-sm text-white/30">{t("superadmin.roadmap.noMilestones")}</p>
             )}
           </div>
         </div>
@@ -317,7 +314,7 @@ export default function RoadmapPage() {
 
       {/* ===== Section 4: All Phases Accordion ===== */}
       <div>
-        <h3 className="text-sm font-bold text-white/50 mb-4 uppercase tracking-wider">Toutes les phases</h3>
+        <h3 className="text-sm font-bold text-white/50 mb-4 uppercase tracking-wider">{t("superadmin.roadmap.allPhases")}</h3>
         <div className="space-y-2">
           {phases.map((phase) => {
             const meta = PHASE_META[phase];
@@ -340,12 +337,12 @@ export default function RoadmapPage() {
                   <div className="flex items-center gap-3">
                     <span className="text-sm">{isExpanded ? "▼" : "►"}</span>
                     <span className="text-sm font-bold">
-                      Phase {phase.replace("phase_", "")}: {meta.label}
+                      {t("superadmin.roadmap.phase", { num: phase.replace("phase_", ""), label: meta.label })}
                     </span>
                     <span className="text-xs text-white/30">({meta.weeks})</span>
                     {isCurrent && (
                       <span className="text-[10px] font-bold bg-primary/20 text-primary px-2 py-0.5 rounded-full">
-                        EN COURS
+                        {t("superadmin.roadmap.inProgress")}
                       </span>
                     )}
                   </div>
@@ -400,13 +397,13 @@ export default function RoadmapPage() {
 
       {/* ===== Section 5: Weekly Snapshot ===== */}
       <div>
-        <h3 className="text-sm font-bold text-white/50 mb-4 uppercase tracking-wider">Cette semaine vs semaine dernière</h3>
+        <h3 className="text-sm font-bold text-white/50 mb-4 uppercase tracking-wider">{t("superadmin.roadmap.weekComparison")}</h3>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: "Nouveaux Échos", key: "echos" as const, format: (v: number) => `+${v}` },
-            { label: "Clics", key: "clicks" as const, format: (v: number) => `+${formatNumber(v)}` },
-            { label: "Revenus", key: "revenue" as const, format: (v: number) => `+${formatFCFA(v)}` },
-            { label: "Leads marques", key: "leads" as const, format: (v: number) => `+${v}` },
+            { label: t("superadmin.roadmap.newEchos"), key: "echos" as const, format: (v: number) => `+${v}` },
+            { label: t("common.clicks"), key: "clicks" as const, format: (v: number) => `+${formatNumber(v)}` },
+            { label: t("superadmin.roadmap.revenue"), key: "revenue" as const, format: (v: number) => `+${formatFCFA(v)}` },
+            { label: t("superadmin.roadmap.brandLeads"), key: "leads" as const, format: (v: number) => `+${v}` },
           ].map((item) => {
             const metric = data.weeklyComparison[item.key];
             const change = metric.previous > 0

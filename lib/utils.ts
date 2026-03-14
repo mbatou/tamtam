@@ -17,10 +17,16 @@ export function getTrackingUrl(shortCode: string): string {
   return `${base}/r/${shortCode}`;
 }
 
-export function timeAgo(date: string): string {
+export function timeAgo(date: string, t?: (key: string, vars?: Record<string, string | number>) => string): string {
   const seconds = Math.floor(
     (Date.now() - new Date(date).getTime()) / 1000
   );
+  if (t) {
+    if (seconds < 60) return t("timeAgo.now");
+    if (seconds < 3600) return t("timeAgo.minutes", { min: Math.floor(seconds / 60) });
+    if (seconds < 86400) return t("timeAgo.hours", { h: Math.floor(seconds / 3600) });
+    return t("timeAgo.days", { j: Math.floor(seconds / 86400) });
+  }
   if (seconds < 60) return "à l'instant";
   if (seconds < 3600) return `il y a ${Math.floor(seconds / 60)}min`;
   if (seconds < 86400) return `il y a ${Math.floor(seconds / 3600)}h`;

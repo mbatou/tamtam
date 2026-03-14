@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatFCFA } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
 import Badge from "@/components/ui/Badge";
 import Modal from "@/components/ui/Modal";
@@ -46,6 +47,7 @@ export default function FinancePageWrapper() {
 }
 
 function FinancePageContent() {
+  const { t } = useTranslation();
   const [data, setData] = useState<FinanceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<FinanceTab>("payout_requests");
@@ -73,7 +75,7 @@ function FinancePageContent() {
       setData(json);
       if (highlightId) openPayoutById(json, highlightId);
     } catch {
-      showToast("Erreur de chargement", "error");
+      showToast(t("common.networkError"), "error");
     }
     setLoading(false);
   }
@@ -143,7 +145,7 @@ function FinancePageContent() {
     <div className="p-6 max-w-7xl">
       {ToastComponent}
 
-      <h1 className="text-2xl font-bold mb-6">Controle financier</h1>
+      <h1 className="text-2xl font-bold mb-6">{t("superadmin.finance.title")}</h1>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard label="Revenu brut" value={formatFCFA(data.grossRevenue)} accent="orange" />
@@ -187,7 +189,7 @@ function FinancePageContent() {
             tab === "payout_requests" ? "bg-gradient-primary text-white" : "bg-white/5 text-white/40"
           }`}
         >
-          Demandes de paiement
+          {t("superadmin.finance.payoutRequests")}
           {pendingPayouts.length > 0 && (
             <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
               {pendingPayouts.length}
@@ -200,7 +202,7 @@ function FinancePageContent() {
             tab === "payout_history" ? "bg-gradient-primary text-white" : "bg-white/5 text-white/40"
           }`}
         >
-          Historique paiements ({completedPayouts.length})
+          {t("superadmin.finance.payoutHistory")} ({completedPayouts.length})
         </button>
         <button
           onClick={() => setTab("pending_recharges")}
@@ -208,7 +210,7 @@ function FinancePageContent() {
             tab === "pending_recharges" ? "bg-gradient-primary text-white" : "bg-white/5 text-white/40"
           }`}
         >
-          Recharges Wave
+          {t("superadmin.finance.pendingRecharges")}
           {pendingRecharges.length > 0 && (
             <span className="bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
               {pendingRecharges.length}
@@ -221,7 +223,7 @@ function FinancePageContent() {
             tab === "payments" ? "bg-gradient-primary text-white" : "bg-white/5 text-white/40"
           }`}
         >
-          Historique recharges ({processedRecharges.length})
+          {t("superadmin.finance.payments")} ({processedRecharges.length})
         </button>
       </div>
 

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { formatFCFA } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import type { User } from "@/lib/types";
 
 export default function ProfilPage() {
@@ -23,6 +25,7 @@ export default function ProfilPage() {
 
   const supabase = createClient();
   const router = useRouter();
+  const { t } = useTranslation();
 
   useEffect(() => {
     loadData();
@@ -72,15 +75,15 @@ export default function ProfilPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Erreur");
+        setError(data.error || t("common.error"));
       } else {
         setUser((prev) => prev ? { ...prev, ...data } : prev);
-        setSuccess("Profil mis à jour avec succès !");
+        setSuccess(t("echo.profile.profileUpdated"));
         setEditing(false);
         setTimeout(() => setSuccess(""), 3000);
       }
     } catch {
-      setError("Erreur réseau. Veuillez réessayer.");
+      setError(t("common.networkRetry"));
     }
     setSaving(false);
   }
@@ -90,11 +93,11 @@ export default function ProfilPage() {
     setSuccess("");
 
     if (passwords.new_password.length < 6) {
-      setError("Le mot de passe doit contenir au moins 6 caractères.");
+      setError(t("common.passwordMin"));
       return;
     }
     if (passwords.new_password !== passwords.confirm) {
-      setError("Les mots de passe ne correspondent pas.");
+      setError(t("common.passwordMismatch"));
       return;
     }
 
@@ -107,15 +110,15 @@ export default function ProfilPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Erreur");
+        setError(data.error || t("common.error"));
       } else {
-        setSuccess("Mot de passe mis à jour !");
+        setSuccess(t("common.passwordUpdated"));
         setPasswords({ new_password: "", confirm: "" });
         setShowPassword(false);
         setTimeout(() => setSuccess(""), 3000);
       }
     } catch {
-      setError("Erreur réseau. Veuillez réessayer.");
+      setError(t("common.networkRetry"));
     }
     setPwSaving(false);
   }
@@ -141,7 +144,7 @@ export default function ProfilPage() {
 
   return (
     <div className="px-4 py-5 max-w-lg mx-auto">
-      <h1 className="text-xl font-bold mb-5">Mon Profil</h1>
+      <h1 className="text-xl font-bold mb-5">{t("echo.profile.title")}</h1>
 
       {/* Feedback */}
       {error && (
@@ -173,7 +176,7 @@ export default function ProfilPage() {
               onClick={() => { setEditing(true); setError(""); setSuccess(""); }}
               className="text-xs text-primary font-semibold hover:underline shrink-0"
             >
-              Modifier
+              {t("echo.profile.edit")}
             </button>
           )}
         </div>
@@ -182,9 +185,9 @@ export default function ProfilPage() {
       {/* Edit form */}
       {editing && (
         <div className="glass-card p-5 mb-5 space-y-4">
-          <h3 className="text-sm font-bold">Modifier le profil</h3>
+          <h3 className="text-sm font-bold">{t("echo.profile.editProfile")}</h3>
           <div>
-            <label className="block text-xs font-semibold text-white/40 mb-1">Nom *</label>
+            <label className="block text-xs font-semibold text-white/40 mb-1">{t("echo.profile.nameRequired")}</label>
             <input
               type="text"
               value={form.name}
@@ -193,7 +196,7 @@ export default function ProfilPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-white/40 mb-1">Téléphone</label>
+            <label className="block text-xs font-semibold text-white/40 mb-1">{t("common.phone")}</label>
             <input
               type="tel"
               value={form.phone}
@@ -203,7 +206,7 @@ export default function ProfilPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-white/40 mb-1">Ville</label>
+            <label className="block text-xs font-semibold text-white/40 mb-1">{t("common.city")}</label>
             <input
               type="text"
               value={form.city}
@@ -213,11 +216,11 @@ export default function ProfilPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-white/40 mb-1">Moyen de paiement</label>
+            <label className="block text-xs font-semibold text-white/40 mb-1">{t("echo.profile.paymentMethod")}</label>
             <div className="grid grid-cols-2 gap-3">
               {[
-                { id: "wave", label: "Wave" },
-                { id: "orange_money", label: "Orange Money" },
+                { id: "wave", label: t("common.wave") },
+                { id: "orange_money", label: t("common.orangeMoney") },
               ].map((option) => (
                 <button
                   key={option.id}
@@ -239,7 +242,7 @@ export default function ProfilPage() {
               disabled={saving || !form.name}
               className="flex-1 py-3 rounded-btn font-bold text-white bg-gradient-primary disabled:opacity-50 transition"
             >
-              {saving ? "Enregistrement..." : "Enregistrer"}
+              {saving ? t("echo.profile.saveLoading") : t("echo.profile.saveButton")}
             </button>
             <button
               onClick={() => {
@@ -253,7 +256,7 @@ export default function ProfilPage() {
               }}
               className="px-6 py-3 rounded-btn border border-white/10 text-sm font-semibold text-white/60 hover:bg-white/5 transition"
             >
-              Annuler
+              {t("common.cancel")}
             </button>
           </div>
         </div>
@@ -263,40 +266,40 @@ export default function ProfilPage() {
       <div className="grid grid-cols-3 gap-2 mb-5">
         <div className="glass-card p-3 text-center">
           <p className="text-lg font-black">{stats.totalClicks}</p>
-          <p className="text-[9px] text-white/40 font-semibold">Resonances</p>
+          <p className="text-[9px] text-white/40 font-semibold">{t("echo.profile.resonances")}</p>
         </div>
         <div className="glass-card p-3 text-center">
           <p className="text-lg font-black">{stats.activeCampaigns}</p>
-          <p className="text-[9px] text-white/40 font-semibold">Rythmes</p>
+          <p className="text-[9px] text-white/40 font-semibold">{t("echo.dashboard.rythmes")}</p>
         </div>
         <div className="glass-card p-3 text-center">
           <p className="text-lg font-black text-accent">{formatFCFA(stats.totalEarned)}</p>
-          <p className="text-[9px] text-white/40 font-semibold">Gagne</p>
+          <p className="text-[9px] text-white/40 font-semibold">{t("common.earned")}</p>
         </div>
       </div>
 
       {/* Details */}
       <div className="glass-card divide-y divide-white/5 mb-5">
         <div className="flex justify-between px-4 py-3">
-          <span className="text-xs text-white/40">Solde</span>
+          <span className="text-xs text-white/40">{t("echo.profile.balance")}</span>
           <span className="text-xs font-bold text-primary">{formatFCFA(user?.balance || 0)}</span>
         </div>
         <div className="flex justify-between px-4 py-3">
-          <span className="text-xs text-white/40">Total gagne</span>
+          <span className="text-xs text-white/40">{t("echo.profile.totalEarned")}</span>
           <span className="text-xs font-bold text-accent">{formatFCFA(user?.total_earned || 0)}</span>
         </div>
         <div className="flex justify-between px-4 py-3">
-          <span className="text-xs text-white/40">Moyen de paiement</span>
+          <span className="text-xs text-white/40">{t("echo.profile.paymentMethod")}</span>
           <span className="text-xs font-semibold">
-            {user?.mobile_money_provider === "wave" ? "Wave" : "Orange Money"}
+            {user?.mobile_money_provider === "wave" ? t("common.wave") : t("common.orangeMoney")}
           </span>
         </div>
         <div className="flex justify-between px-4 py-3">
-          <span className="text-xs text-white/40">Ville</span>
+          <span className="text-xs text-white/40">{t("common.city")}</span>
           <span className="text-xs font-semibold">{user?.city || "—"}</span>
         </div>
         <div className="flex justify-between px-4 py-3">
-          <span className="text-xs text-white/40">Membre depuis</span>
+          <span className="text-xs text-white/40">{t("echo.profile.memberSince")}</span>
           <span className="text-xs font-semibold">
             {user?.created_at ? new Date(user.created_at).toLocaleDateString("fr-FR") : "—"}
           </span>
@@ -306,35 +309,35 @@ export default function ProfilPage() {
       {/* Password change */}
       <div className="glass-card p-5 mb-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold">Mot de passe</h3>
+          <h3 className="text-sm font-bold">{t("common.password")}</h3>
           {!showPassword && (
             <button
               onClick={() => { setShowPassword(true); setError(""); setSuccess(""); }}
               className="text-xs text-primary font-semibold hover:underline"
             >
-              Changer
+              {t("echo.profile.changePassword")}
             </button>
           )}
         </div>
         {showPassword ? (
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-semibold text-white/40 mb-1">Nouveau mot de passe</label>
+              <label className="block text-xs font-semibold text-white/40 mb-1">{t("common.newPassword")}</label>
               <input
                 type="password"
                 value={passwords.new_password}
                 onChange={(e) => setPasswords({ ...passwords, new_password: e.target.value })}
-                placeholder="Min. 6 caractères"
+                placeholder={t("common.minChars")}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-white/40 mb-1">Confirmer</label>
+              <label className="block text-xs font-semibold text-white/40 mb-1">{t("common.confirmPassword")}</label>
               <input
                 type="password"
                 value={passwords.confirm}
                 onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
-                placeholder="Répétez le mot de passe"
+                placeholder={t("common.repeatPassword")}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
                 onKeyDown={(e) => e.key === "Enter" && !pwSaving && passwords.new_password && passwords.confirm && handleChangePassword()}
               />
@@ -345,26 +348,28 @@ export default function ProfilPage() {
                 disabled={pwSaving || !passwords.new_password || !passwords.confirm}
                 className="flex-1 py-3 rounded-btn font-bold text-white bg-gradient-primary disabled:opacity-50 transition"
               >
-                {pwSaving ? "Mise à jour..." : "Mettre à jour"}
+                {pwSaving ? t("common.updating") : t("common.update")}
               </button>
               <button
                 onClick={() => { setShowPassword(false); setPasswords({ new_password: "", confirm: "" }); }}
                 className="px-6 py-3 rounded-btn border border-white/10 text-sm font-semibold text-white/60 hover:bg-white/5 transition"
               >
-                Annuler
+                {t("common.cancel")}
               </button>
             </div>
           </div>
         ) : (
-          <p className="text-xs text-white/30">Utilisez un mot de passe fort d&apos;au moins 6 caractères.</p>
+          <p className="text-xs text-white/30">{t("common.passwordStrong")}</p>
         )}
       </div>
+
+      <LanguageSwitcher />
 
       <button
         onClick={handleLogout}
         className="w-full py-3 rounded-btn border border-red-500/20 text-red-400 text-sm font-semibold active:bg-red-500/10 transition"
       >
-        Se deconnecter
+        {t("echo.profile.logout")}
       </button>
     </div>
   );

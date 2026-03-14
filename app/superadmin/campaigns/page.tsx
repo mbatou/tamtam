@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatFCFA } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
 import Badge from "@/components/ui/Badge";
 import TabBar from "@/components/ui/TabBar";
@@ -38,6 +39,7 @@ export default function CampaignModerationPageWrapper() {
 }
 
 function CampaignModerationPageContent() {
+  const { t } = useTranslation();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState<Campaign | null>(null);
@@ -87,7 +89,7 @@ function CampaignModerationPageContent() {
           }))
       );
     } catch {
-      showToast("Erreur de chargement", "error");
+      showToast(t("common.networkError"), "error");
     }
     setLoading(false);
   }
@@ -102,25 +104,25 @@ function CampaignModerationPageContent() {
       const data = await res.json();
       if (res.ok) {
         showToast(
-          action === "approve" ? "Campagne approuvee" :
-          action === "reject" ? "Campagne rejetee" :
-          action === "pause" ? "Campagne en pause" : "Campagne relancee",
+          action === "approve" ? t("superadmin.campaigns.approvedTab") :
+          action === "reject" ? t("superadmin.campaigns.rejectedTab") :
+          action === "pause" ? t("superadmin.campaigns.pendingTab") : t("superadmin.campaigns.approvedTab"),
           action === "approve" || action === "resume" ? "success" : "info"
         );
         setSelected(null);
         setRejectReason("");
         loadData();
       } else {
-        showToast(data.error || "Erreur lors de la moderation", "error");
+        showToast(data.error || t("common.error"), "error");
       }
     } catch {
-      showToast("Erreur reseau", "error");
+      showToast(t("common.networkError"), "error");
     }
   }
 
   async function createCampaign() {
     if (!newCamp.batteur_id || !newCamp.title || !newCamp.destination_url) {
-      showToast("Remplissez tous les champs obligatoires", "error");
+      showToast(t("common.error"), "error");
       return;
     }
     setCreating(true);
@@ -132,15 +134,15 @@ function CampaignModerationPageContent() {
       });
       const data = await res.json();
       if (res.ok) {
-        showToast("Campagne creee avec succes", "success");
+        showToast(t("superadmin.campaigns.approvedTab"), "success");
         setShowCreate(false);
         setNewCamp({ batteur_id: "", title: "", description: "", destination_url: "", cpc: "25", budget: "5000" });
         loadData();
       } else {
-        showToast(data.error || "Erreur", "error");
+        showToast(data.error || t("common.error"), "error");
       }
     } catch {
-      showToast("Erreur reseau", "error");
+      showToast(t("common.networkError"), "error");
     }
     setCreating(false);
   }
@@ -172,7 +174,7 @@ function CampaignModerationPageContent() {
       {ToastComponent}
 
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Moderation des campagnes</h1>
+        <h1 className="text-2xl font-bold">{t("superadmin.campaigns.title")}</h1>
         <button
           onClick={() => setShowCreate(true)}
           className="px-4 py-2.5 rounded-xl bg-gradient-primary text-white text-sm font-bold hover:opacity-90 transition"
@@ -198,10 +200,10 @@ function CampaignModerationPageContent() {
 
       <TabBar
         tabs={[
-          { key: "all", label: "Toutes", count: campaigns.length },
-          { key: "pending", label: "En attente", count: pendingCount },
-          { key: "approved", label: "Approuvees", count: campaigns.filter((c) => c.moderation_status === "approved").length },
-          { key: "rejected", label: "Rejetees", count: campaigns.filter((c) => c.moderation_status === "rejected").length },
+          { key: "all", label: t("superadmin.campaigns.allTab"), count: campaigns.length },
+          { key: "pending", label: t("superadmin.campaigns.pendingTab"), count: pendingCount },
+          { key: "approved", label: t("superadmin.campaigns.approvedTab"), count: campaigns.filter((c) => c.moderation_status === "approved").length },
+          { key: "rejected", label: t("superadmin.campaigns.rejectedTab"), count: campaigns.filter((c) => c.moderation_status === "rejected").length },
         ]}
         active={filter}
         onChange={setFilter}

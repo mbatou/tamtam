@@ -1,7 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import SoundWave from "@/components/ui/SoundWave";
+import { useTranslation } from "@/lib/i18n";
 
 export default function Footer() {
+  const { t } = useTranslation();
+
   return (
     <>
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -27,8 +32,7 @@ export default function Footer() {
               <SoundWave bars={3} className="h-3 opacity-40" />
             </div>
             <p className="text-xs text-white/30 leading-relaxed mb-4">
-              La plateforme de micro-influence au Sénégal.
-              Partage des liens, gagne de l&apos;argent.
+              {t("footer.tagline")}
             </p>
             <a href="mailto:contact@tamma.me" className="text-xs text-secondary/70 hover:text-secondary transition font-semibold">
               contact@tamma.me
@@ -38,17 +42,17 @@ export default function Footer() {
           {/* Échos */}
           <div>
             <h4 className="text-xs font-bold text-white/50 uppercase tracking-widest mb-3">
-              Échos
+              {t("footer.echos")}
             </h4>
             <ul className="space-y-2">
               <li>
                 <Link href="/register" className="text-sm text-white/30 hover:text-white/60 transition">
-                  Devenir un Écho
+                  {t("footer.becomeEcho")}
                 </Link>
               </li>
               <li>
                 <Link href="/login" className="text-sm text-white/30 hover:text-white/60 transition">
-                  Connexion
+                  {t("footer.login")}
                 </Link>
               </li>
             </ul>
@@ -57,17 +61,17 @@ export default function Footer() {
           {/* Marques */}
           <div>
             <h4 className="text-xs font-bold text-white/50 uppercase tracking-widest mb-3">
-              Marques
+              {t("footer.brands")}
             </h4>
             <ul className="space-y-2">
               <li>
                 <Link href="/#pour-les-marques" className="text-sm text-white/30 hover:text-white/60 transition">
-                  Lancer une campagne
+                  {t("footer.launchCampaign")}
                 </Link>
               </li>
               <li>
                 <Link href="/login?tab=batteur" className="text-sm text-white/30 hover:text-white/60 transition">
-                  Espace Batteur
+                  {t("footer.brandSpace")}
                 </Link>
               </li>
             </ul>
@@ -76,17 +80,17 @@ export default function Footer() {
           {/* Légal */}
           <div>
             <h4 className="text-xs font-bold text-white/50 uppercase tracking-widest mb-3">
-              Légal
+              {t("footer.legal")}
             </h4>
             <ul className="space-y-2">
               <li>
                 <Link href="/privacy" className="text-sm text-white/30 hover:text-white/60 transition">
-                  Confidentialité
+                  {t("footer.privacy")}
                 </Link>
               </li>
               <li>
                 <Link href="/terms" className="text-sm text-white/30 hover:text-white/60 transition">
-                  Conditions
+                  {t("footer.terms")}
                 </Link>
               </li>
             </ul>
@@ -95,7 +99,7 @@ export default function Footer() {
 
         <div className="mt-8 pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-white/20">
-            &copy; {new Date().getFullYear()} Tamtam. Partage. Résonne. Gagne.
+            {t("footer.copyright", { year: new Date().getFullYear() })}
           </p>
           <a href="mailto:contact@tamma.me" className="text-xs text-white/20 hover:text-white/40 transition">
             contact@tamma.me

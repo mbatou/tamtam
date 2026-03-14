@@ -3,11 +3,13 @@
 import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatFCFA, timeAgo } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 import type { Campaign } from "@/lib/types";
 
 type View = "list" | "detail" | "form";
 
 export default function AdminCampaignsPage() {
+  const { t } = useTranslation();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>("list");
@@ -89,7 +91,7 @@ export default function AdminCampaignsPage() {
       if (res.ok && data.url) {
         setCreativeUrls((prev) => [...prev, data.url]);
       } else {
-        setError(data.error || "Erreur lors de l'upload");
+        setError(data.error || t("admin.campaigns.uploadError"));
       }
     }
     setUploading(false);
@@ -125,7 +127,7 @@ export default function AdminCampaignsPage() {
       const data = await res.json();
       if (!res.ok) {
         if (data.code === "INSUFFICIENT_BALANCE") setShowRechargePrompt(true);
-        let errorMsg = data.error || "Erreur";
+        let errorMsg = data.error || t("common.error");
         if (data.details) {
           const fields = Object.entries(data.details).map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`).join("; ");
           if (fields) errorMsg += ` (${fields})`;
@@ -140,7 +142,7 @@ export default function AdminCampaignsPage() {
       setSelectedCampaign(data);
       setView("detail");
     } catch {
-      setError("Erreur réseau. Veuillez réessayer.");
+      setError(t("common.networkRetry"));
       setSubmitting(false);
     }
   }
@@ -149,7 +151,7 @@ export default function AdminCampaignsPage() {
     setActionLoading(action);
     try {
       if (action === "delete") {
-        if (!confirm("Supprimer ce rythme ? Le budget non dépensé sera remboursé.")) {
+        if (!confirm(t("admin.campaigns.deleteConfirm"))) {
           setActionLoading(null);
           return;
         }
@@ -160,7 +162,7 @@ export default function AdminCampaignsPage() {
         });
         if (!res.ok) {
           const data = await res.json();
-          alert(data.error || "Erreur");
+          alert(data.error || t("common.error"));
         } else {
           setSelectedCampaign(null);
           setView("list");
@@ -175,9 +177,9 @@ export default function AdminCampaignsPage() {
         if (!res.ok) {
           const data = await res.json();
           if (data.code === "INSUFFICIENT_BALANCE") {
-            alert("Solde insuffisant. Veuillez recharger votre portefeuille.");
+            alert(t("admin.campaigns.insufficientBalance"));
           } else {
-            alert(data.error || "Erreur");
+            alert(data.error || t("common.error"));
           }
         }
       }
@@ -189,7 +191,7 @@ export default function AdminCampaignsPage() {
 
   function getStatusLabel(status: string) {
     const map: Record<string, string> = {
-      active: "Actif", paused: "Pausé", completed: "Terminé", draft: "Brouillon", rejected: "Rejeté",
+      active: t("common.active"), paused: t("common.paused"), completed: t("common.finished"), draft: t("admin.campaigns.draft"), rejected: t("common.rejected"),
     };
     return map[status] || status;
   }
@@ -219,18 +221,18 @@ export default function AdminCampaignsPage() {
       <div className="p-6 max-w-5xl">
         <button onClick={() => { setSelectedCampaign(null); setView("list"); }} className="flex items-center gap-2 text-sm text-white/40 hover:text-white/70 transition mb-6">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-          Retour aux Rythmes
+          {t("admin.campaigns.backToRythmes")}
         </button>
 
         {/* Draft banner */}
         {isDraft && (
           <div className="mb-6 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-yellow-400">Brouillon</p>
-              <p className="text-xs text-white/40">Ce rythme n&apos;est pas encore publié. Publiez-le quand vous êtes prêt.</p>
+              <p className="text-sm font-semibold text-yellow-400">{t("admin.campaigns.draft")}</p>
+              <p className="text-xs text-white/40">{t("admin.campaigns.draftNotice")}</p>
             </div>
             <button onClick={() => handleAction(c.id, "activate")} disabled={actionLoading !== null} className="px-5 py-2.5 rounded-xl bg-accent text-dark text-sm font-bold hover:bg-accent/90 transition disabled:opacity-40">
-              {actionLoading === "activate" ? "..." : "Publier maintenant"}
+              {actionLoading === "activate" ? "..." : t("admin.campaigns.publishNow")}
             </button>
           </div>
         )}
@@ -243,37 +245,37 @@ export default function AdminCampaignsPage() {
               <span className={`badge-${c.status}`}>{getStatusLabel(c.status)}</span>
             </div>
             {c.description && <p className="text-white/40 text-sm max-w-xl">{c.description}</p>}
-            <p className="text-white/20 text-xs mt-2">Créé {timeAgo(c.created_at)}</p>
+            <p className="text-white/20 text-xs mt-2">{timeAgo(c.created_at)}</p>
           </div>
 
           <div className="flex flex-wrap gap-2">
             {isDraft && (
               <button onClick={() => handleAction(c.id, "activate")} disabled={actionLoading !== null} className="px-4 py-2 rounded-xl bg-accent/10 text-accent text-sm font-semibold hover:bg-accent/20 transition disabled:opacity-40">
-                {actionLoading === "activate" ? "..." : "Publier"}
+                {actionLoading === "activate" ? "..." : t("admin.campaigns.publish")}
               </button>
             )}
             {isActive && (
               <button onClick={() => handleAction(c.id, "pause")} disabled={actionLoading !== null} className="px-4 py-2 rounded-xl bg-yellow-500/10 text-yellow-400 text-sm font-semibold hover:bg-yellow-500/20 transition disabled:opacity-40">
-                {actionLoading === "pause" ? "..." : "Mettre en pause"}
+                {actionLoading === "pause" ? "..." : t("admin.campaigns.pause")}
               </button>
             )}
             {isPaused && (
               <button onClick={() => handleAction(c.id, "activate")} disabled={actionLoading !== null} className="px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/20 transition disabled:opacity-40">
-                {actionLoading === "activate" ? "..." : "Réactiver"}
+                {actionLoading === "activate" ? "..." : t("admin.campaigns.reactivate")}
               </button>
             )}
             {(isActive || isPaused) && (
               <button onClick={() => handleAction(c.id, "complete")} disabled={actionLoading !== null} className="px-4 py-2 rounded-xl bg-white/5 text-white/60 text-sm font-semibold hover:bg-white/10 transition disabled:opacity-40">
-                {actionLoading === "complete" ? "..." : "Terminer"}
+                {actionLoading === "complete" ? "..." : t("admin.campaigns.finish")}
               </button>
             )}
             {!isEnded && (
               <button onClick={() => openEditForm(c)} className="px-4 py-2 rounded-xl bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/20 transition">
-                Modifier
+                {t("common.edit")}
               </button>
             )}
             <button onClick={() => handleAction(c.id, "delete")} disabled={actionLoading !== null} className="px-4 py-2 rounded-xl bg-red-500/10 text-red-400 text-sm font-semibold hover:bg-red-500/20 transition disabled:opacity-40">
-              {actionLoading === "delete" ? "..." : "Supprimer"}
+              {actionLoading === "delete" ? "..." : t("common.delete")}
             </button>
           </div>
         </div>
@@ -281,15 +283,15 @@ export default function AdminCampaignsPage() {
         {/* Stats cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="glass-card p-4">
-            <p className="text-xs text-white/40 font-semibold mb-1">Budget</p>
+            <p className="text-xs text-white/40 font-semibold mb-1">{t("common.budget")}</p>
             <p className="text-xl font-bold">{formatFCFA(c.budget)}</p>
           </div>
           <div className="glass-card p-4">
-            <p className="text-xs text-white/40 font-semibold mb-1">Dépensé</p>
+            <p className="text-xs text-white/40 font-semibold mb-1">{t("admin.dashboard.spent")}</p>
             <p className="text-xl font-bold text-accent">{formatFCFA(c.spent)}</p>
           </div>
           <div className="glass-card p-4">
-            <p className="text-xs text-white/40 font-semibold mb-1">Restant</p>
+            <p className="text-xs text-white/40 font-semibold mb-1">{t("admin.campaigns.remaining")}</p>
             <p className="text-xl font-bold text-primary">{formatFCFA(remaining)}</p>
           </div>
           <div className="glass-card p-4">
@@ -301,36 +303,36 @@ export default function AdminCampaignsPage() {
         {/* Progress bar */}
         <div className="glass-card p-5 mb-8">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-semibold">Progression du budget</p>
+            <p className="text-sm font-semibold">{t("admin.campaigns.budgetProgress")}</p>
             <p className="text-sm font-bold text-primary">{Math.round(progress)}%</p>
           </div>
           <div className="h-3 bg-white/5 rounded-full overflow-hidden">
             <div className="h-full bg-gradient-primary rounded-full transition-all duration-500" style={{ width: `${Math.min(progress, 100)}%` }} />
           </div>
           <div className="flex justify-between mt-2 text-xs text-white/30">
-            <span>{formatFCFA(c.spent)} dépensé</span>
-            <span>{formatFCFA(c.budget)} total</span>
+            <span>{formatFCFA(c.spent)}</span>
+            <span>{formatFCFA(c.budget)}</span>
           </div>
         </div>
 
         {/* Details grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           <div className="glass-card p-5">
-            <p className="text-xs text-white/40 font-semibold mb-3">Informations</p>
+            <p className="text-xs text-white/40 font-semibold mb-3">{t("admin.campaigns.info")}</p>
             <div className="space-y-3">
               <div>
-                <p className="text-xs text-white/30">URL de destination</p>
+                <p className="text-xs text-white/30">{t("admin.campaigns.destUrl")}</p>
                 <a href={c.destination_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline break-all">{c.destination_url}</a>
               </div>
               {c.starts_at && (
                 <div>
-                  <p className="text-xs text-white/30">Date de début</p>
+                  <p className="text-xs text-white/30">{t("admin.campaigns.startDate")}</p>
                   <p className="text-sm">{new Date(c.starts_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
                 </div>
               )}
               {c.ends_at && (
                 <div>
-                  <p className="text-xs text-white/30">Date de fin</p>
+                  <p className="text-xs text-white/30">{t("admin.campaigns.endDate")}</p>
                   <p className="text-sm">{new Date(c.ends_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
                 </div>
               )}
@@ -338,7 +340,7 @@ export default function AdminCampaignsPage() {
           </div>
 
           <div className="glass-card p-5">
-            <p className="text-xs text-white/40 font-semibold mb-3">Visuels</p>
+            <p className="text-xs text-white/40 font-semibold mb-3">{t("admin.campaigns.visuals")}</p>
             {c.creative_urls && c.creative_urls.length > 0 ? (
               <div className="grid grid-cols-3 gap-2">
                 {c.creative_urls.map((url, i) => (
@@ -352,7 +354,7 @@ export default function AdminCampaignsPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-white/20">Aucun visuel ajouté</p>
+              <p className="text-sm text-white/20">{t("admin.campaigns.noVisuals")}</p>
             )}
           </div>
         </div>
@@ -366,28 +368,28 @@ export default function AdminCampaignsPage() {
       <div className="p-6 max-w-4xl">
         <button onClick={() => { resetForm(); setView(editingId ? "detail" : "list"); }} className="flex items-center gap-2 text-sm text-white/40 hover:text-white/70 transition mb-6">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-          Retour
+          {t("common.back")}
         </button>
 
-        <h1 className="text-2xl font-bold mb-8">{editingId ? "Modifier le Rythme" : "Nouveau Rythme"}</h1>
+        <h1 className="text-2xl font-bold mb-8">{editingId ? t("admin.campaigns.editRythme") : t("admin.campaigns.newRythme")}</h1>
 
         <div className="glass-card p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
-              <label className="block text-xs font-semibold text-white/40 mb-2">Titre *</label>
-              <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Promo Ramadan 2026" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
+              <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.campaigns.titleLabel")}</label>
+              <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder={t("admin.campaigns.titlePlaceholder")} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs font-semibold text-white/40 mb-2">Description</label>
-              <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Description de la campagne..." rows={3} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition resize-none" />
+              <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.campaigns.description")}</label>
+              <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder={t("admin.campaigns.descPlaceholder")} rows={3} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition resize-none" />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs font-semibold text-white/40 mb-2">URL de destination *</label>
-              <input type="url" value={form.destination_url} onChange={(e) => setForm({ ...form, destination_url: e.target.value })} placeholder="https://marque.sn/promo" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
+              <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.campaigns.destUrlLabel")}</label>
+              <input type="url" value={form.destination_url} onChange={(e) => setForm({ ...form, destination_url: e.target.value })} placeholder={t("admin.campaigns.destUrlPlaceholder")} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-xs font-semibold text-white/40 mb-2">Visuels de campagne</label>
+              <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.campaigns.campaignVisuals")}</label>
               <div className="flex flex-wrap gap-3 mb-3">
                 {creativeUrls.map((url, i) => (
                   <div key={i} className="relative group">
@@ -405,29 +407,29 @@ export default function AdminCampaignsPage() {
                   ) : (
                     <>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                      <span className="text-[10px]">Ajouter</span>
+                      <span className="text-[10px]">{t("admin.campaigns.add")}</span>
                     </>
                   )}
                 </button>
               </div>
               <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" multiple onChange={handleUpload} className="hidden" />
-              <p className="text-xs text-white/20">JPG, PNG, WebP, GIF, MP4, WebM</p>
+              <p className="text-xs text-white/20">{t("admin.campaigns.visualFormats")}</p>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-white/40 mb-2">CPC (FCFA) *</label>
+              <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.campaigns.cpcLabel")}</label>
               <input type="number" value={form.cpc} onChange={(e) => setForm({ ...form, cpc: e.target.value })} placeholder="25" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-white/40 mb-2">Budget total (FCFA) *</label>
+              <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.campaigns.budgetLabel")}</label>
               <input type="number" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="100000" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-white/40 mb-2">Date de début</label>
+              <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.campaigns.startDate")}</label>
               <input type="datetime-local" value={form.starts_at} onChange={(e) => setForm({ ...form, starts_at: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-white/40 mb-2">Date de fin</label>
+              <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.campaigns.endDate")}</label>
               <input type="datetime-local" value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
             </div>
           </div>
@@ -437,7 +439,7 @@ export default function AdminCampaignsPage() {
               <p>{error}</p>
               {showRechargePrompt && (
                 <a href="/admin/wallet" className="inline-block mt-2 px-4 py-2 rounded-xl bg-primary/20 text-primary font-semibold text-xs hover:bg-primary/30 transition">
-                  Recharger mon portefeuille
+                  {t("admin.campaigns.rechargeWallet")}
                 </a>
               )}
             </div>
@@ -445,11 +447,11 @@ export default function AdminCampaignsPage() {
 
           <div className="flex gap-3 mt-6">
             <button onClick={() => handleSubmit(false)} disabled={submitting || !form.title || !form.destination_url || !form.cpc || !form.budget} className="btn-primary flex-1 disabled:opacity-40">
-              {submitting ? "Enregistrement..." : editingId ? "Enregistrer les modifications" : "Lancer le Rythme"}
+              {submitting ? t("common.saving") : editingId ? t("common.save") : t("admin.campaigns.launchRythme")}
             </button>
             {!editingId && (
               <button onClick={() => handleSubmit(true)} disabled={submitting || !form.title || !form.destination_url || !form.cpc || !form.budget} className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 font-semibold text-sm hover:bg-white/10 transition disabled:opacity-40">
-                {submitting ? "..." : "Sauvegarder en brouillon"}
+                {submitting ? "..." : t("admin.campaigns.saveDraft")}
               </button>
             )}
           </div>
@@ -462,8 +464,8 @@ export default function AdminCampaignsPage() {
   return (
     <div className="p-6 max-w-6xl">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold">Rythmes</h1>
-        <button onClick={openNewForm} className="btn-primary text-sm">Nouveau Rythme</button>
+        <h1 className="text-2xl font-bold">{t("admin.campaigns.title")}</h1>
+        <button onClick={openNewForm} className="btn-primary text-sm">{t("admin.campaigns.newRythme")}</button>
       </div>
 
       {campaigns.length === 0 ? (
@@ -473,8 +475,8 @@ export default function AdminCampaignsPage() {
               <path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0-11V3m0 0L9.5 7.5M12 3l2.5 4.5" />
             </svg>
           </div>
-          <p className="text-white/40 text-sm mb-4">Aucun rythme créé pour le moment.</p>
-          <button onClick={openNewForm} className="btn-primary text-sm">Créer votre premier Rythme</button>
+          <p className="text-white/40 text-sm mb-4">{t("admin.campaigns.noRythmes")}</p>
+          <button onClick={openNewForm} className="btn-primary text-sm">{t("admin.campaigns.createFirst")}</button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

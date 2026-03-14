@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { timeAgo } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
 import Modal from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
@@ -33,6 +34,7 @@ export default function SuperadminSupportPageWrapper() {
 }
 
 function SuperadminSupportPageContent() {
+  const { t } = useTranslation();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, open: 0, replied: 0, closed: 0 });
   const [loading, setLoading] = useState(true);
@@ -63,7 +65,7 @@ function SuperadminSupportPageContent() {
       setStats(data.stats || { total: 0, open: 0, replied: 0, closed: 0 });
       if (highlightId) openTicketById(data.tickets || [], highlightId);
     } catch {
-      showToast("Erreur de chargement", "error");
+      showToast(t("common.networkError"), "error");
     }
     setLoading(false);
   }
@@ -88,16 +90,16 @@ function SuperadminSupportPageContent() {
         loadData();
       } else {
         const err = await res.json();
-        showToast(err.error || "Erreur", "error");
+        showToast(err.error || t("common.error"), "error");
       }
     } catch {
-      showToast("Erreur reseau", "error");
+      showToast(t("common.networkError"), "error");
     }
     setSending(false);
   }
 
   function getStatusLabel(status: string) {
-    const map: Record<string, string> = { open: "Ouvert", replied: "Repondu", closed: "Ferme" };
+    const map: Record<string, string> = { open: t("superadmin.support.openTab"), replied: t("superadmin.support.repliedTab"), closed: t("superadmin.support.closedTab") };
     return map[status] || status;
   }
 
@@ -128,7 +130,7 @@ function SuperadminSupportPageContent() {
     <div className="p-6 max-w-7xl">
       {ToastComponent}
 
-      <h1 className="text-2xl font-bold mb-6">Support</h1>
+      <h1 className="text-2xl font-bold mb-6">{t("superadmin.support.title")}</h1>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -141,10 +143,10 @@ function SuperadminSupportPageContent() {
       {/* Filter tabs */}
       <div className="flex gap-2 mb-6 overflow-x-auto">
         {([
-          { key: "open", label: "Ouverts", count: stats.open },
-          { key: "replied", label: "Repondus", count: stats.replied },
-          { key: "closed", label: "Fermes", count: stats.closed },
-          { key: "all", label: "Tous", count: stats.total },
+          { key: "open", label: t("superadmin.support.openTab"), count: stats.open },
+          { key: "replied", label: t("superadmin.support.repliedTab"), count: stats.replied },
+          { key: "closed", label: t("superadmin.support.closedTab"), count: stats.closed },
+          { key: "all", label: t("superadmin.support.allTab"), count: stats.total },
         ] as const).map((tab) => (
           <button
             key={tab.key}

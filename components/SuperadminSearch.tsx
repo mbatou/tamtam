@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { formatFCFA, timeAgo } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 interface SearchResults {
   users: { id: string; name: string; phone: string; city: string; role: string; status: string; balance: number; total_earned: number }[];
@@ -40,6 +41,7 @@ export default function SuperadminSearch() {
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const search = useCallback(async (q: string) => {
     if (q.length < 2) { setResults(null); setOpen(false); return; }
@@ -107,7 +109,7 @@ export default function SuperadminSearch() {
           value={query}
           onChange={(e) => handleChange(e.target.value)}
           onFocus={() => { if (results && query.length >= 2) setOpen(true); }}
-          placeholder="Rechercher utilisateurs, campagnes, tickets, payouts..."
+          placeholder={t("search.placeholder")}
           className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-primary/50 transition"
         />
         {loading && (
@@ -123,7 +125,7 @@ export default function SuperadminSearch() {
 
           {noResults && (
             <div className="p-6 text-center text-white/40 text-sm">
-              Aucun résultat pour &ldquo;{query}&rdquo;
+              {t("search.noResults")} &ldquo;{query}&rdquo;
             </div>
           )}
 
@@ -131,7 +133,7 @@ export default function SuperadminSearch() {
           {results && results.users.length > 0 && (
             <div>
               <div className="px-4 py-2.5 text-[10px] font-bold uppercase text-white/30 tracking-wider bg-white/[0.02] border-b border-white/5">
-                Utilisateurs
+                {t("search.users")}
               </div>
               {results.users.map((u) => (
                 <button
@@ -164,7 +166,7 @@ export default function SuperadminSearch() {
           {results && results.campaigns.length > 0 && (
             <div>
               <div className="px-4 py-2.5 text-[10px] font-bold uppercase text-white/30 tracking-wider bg-white/[0.02] border-b border-white/5">
-                Rythmes (Campagnes)
+                {t("search.campaigns")}
               </div>
               {results.campaigns.map((c) => (
                 <button
@@ -191,12 +193,12 @@ export default function SuperadminSearch() {
           {results && results.tickets.length > 0 && (
             <div>
               <div className="px-4 py-2.5 text-[10px] font-bold uppercase text-white/30 tracking-wider bg-white/[0.02] border-b border-white/5">
-                Tickets support
+                {t("search.tickets")}
               </div>
-              {results.tickets.map((t) => (
+              {results.tickets.map((tk) => (
                 <button
-                  key={t.id}
-                  onClick={() => navigate(`/superadmin/support?id=${t.id}`)}
+                  key={tk.id}
+                  onClick={() => navigate(`/superadmin/support?id=${tk.id}`)}
                   className="w-full px-4 py-3 flex items-center gap-3 hover:bg-white/[0.04] transition text-left border-b border-white/[0.03] last:border-0"
                 >
                   <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
@@ -205,11 +207,11 @@ export default function SuperadminSearch() {
                     </svg>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold truncate">{t.subject}</p>
-                    <p className="text-xs text-white/40">{timeAgo(t.created_at)}</p>
+                    <p className="text-sm font-semibold truncate">{tk.subject}</p>
+                    <p className="text-xs text-white/40">{timeAgo(tk.created_at)}</p>
                   </div>
-                  <span className={`${statusBadge[t.status] || ""} text-[10px]`}>
-                    {t.status === "open" ? "Ouvert" : t.status === "replied" ? "Répondu" : "Fermé"}
+                  <span className={`${statusBadge[tk.status] || ""} text-[10px]`}>
+                    {tk.status === "open" ? t("common.open") : tk.status === "replied" ? t("common.replied") : t("common.closed")}
                   </span>
                 </button>
               ))}
@@ -220,7 +222,7 @@ export default function SuperadminSearch() {
           {results && results.payouts.length > 0 && (
             <div>
               <div className="px-4 py-2.5 text-[10px] font-bold uppercase text-white/30 tracking-wider bg-white/[0.02] border-b border-white/5">
-                Paiements
+                {t("search.payouts")}
               </div>
               {results.payouts.map((p) => (
                 <button

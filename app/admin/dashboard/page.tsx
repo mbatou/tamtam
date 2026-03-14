@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { formatFCFA, formatNumber } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
 import {
   AreaChart, Area, BarChart, Bar,
@@ -28,6 +29,7 @@ function formatShortDate(dateStr: string) {
 }
 
 export default function AdminDashboard() {
+  const { t } = useTranslation();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -60,30 +62,30 @@ export default function AdminDashboard() {
 
   return (
     <div className="p-6 max-w-6xl">
-      <h1 className="text-2xl font-bold mb-8">Vue d&apos;ensemble</h1>
+      <h1 className="text-2xl font-bold mb-8">{t("admin.dashboard.title")}</h1>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Total clics" value={formatNumber(stats.totalClicks)} accent="orange" />
-        <StatCard label="Clics valides" value={formatNumber(stats.validClicks)} accent="teal" />
-        <StatCard label="Échos actifs" value={stats.activeEchos.toString()} accent="purple" />
-        <StatCard label="Budget dépensé" value={formatFCFA(stats.budgetSpent)} accent="orange" />
+        <StatCard label={t("admin.dashboard.totalClicks")} value={formatNumber(stats.totalClicks)} accent="orange" />
+        <StatCard label={t("admin.dashboard.validClicks")} value={formatNumber(stats.validClicks)} accent="teal" />
+        <StatCard label={t("admin.dashboard.activeEchos")} value={stats.activeEchos.toString()} accent="purple" />
+        <StatCard label={t("admin.dashboard.budgetSpent")} value={formatFCFA(stats.budgetSpent)} accent="orange" />
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        <StatCard label="Rythmes actifs" value={stats.activeRythmes.toString()} accent="teal" />
+        <StatCard label={t("admin.dashboard.activeRythmes")} value={stats.activeRythmes.toString()} accent="teal" />
         <StatCard
-          label="Taux de validité"
+          label={t("admin.dashboard.validityRate")}
           value={stats.totalClicks > 0 ? `${validityRate}%` : "—"}
           accent="orange"
         />
-        <StatCard label="Budget restant" value={formatFCFA(stats.budgetTotal - stats.budgetSpent)} accent="purple" />
+        <StatCard label={t("admin.dashboard.remainingBudget")} value={formatFCFA(stats.budgetTotal - stats.budgetSpent)} accent="purple" />
       </div>
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Clicks over time */}
         <div className="glass-card p-5">
-          <h3 className="text-sm font-bold mb-4">Clics (14 derniers jours)</h3>
+          <h3 className="text-sm font-bold mb-4">{t("admin.dashboard.clicksChart")}</h3>
           {stats.clicksChart && stats.clicksChart.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={stats.clicksChart}>
@@ -104,18 +106,18 @@ export default function AdminDashboard() {
                   contentStyle={{ background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
                   labelFormatter={(v) => formatShortDate(String(v))}
                 />
-                <Area type="monotone" dataKey="valid" name="Valides" stroke="#22c55e" fill="url(#gradValidAdmin)" strokeWidth={2} />
-                <Area type="monotone" dataKey="fraud" name="Fraude" stroke="#ef4444" fill="url(#gradFraudAdmin)" strokeWidth={2} />
+                <Area type="monotone" dataKey="valid" name={t("admin.dashboard.validLabel")} stroke="#22c55e" fill="url(#gradValidAdmin)" strokeWidth={2} />
+                <Area type="monotone" dataKey="fraud" name={t("admin.dashboard.fraudLabel")} stroke="#ef4444" fill="url(#gradFraudAdmin)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-xs text-white/30 text-center py-12">Aucun clic pour le moment</p>
+            <p className="text-xs text-white/30 text-center py-12">{t("admin.dashboard.noClicks")}</p>
           )}
         </div>
 
         {/* Campaign budget usage */}
         <div className="glass-card p-5">
-          <h3 className="text-sm font-bold mb-4">Budget par campagne</h3>
+          <h3 className="text-sm font-bold mb-4">{t("admin.dashboard.budgetByCampaign")}</h3>
           {stats.campaignBudgets && stats.campaignBudgets.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={stats.campaignBudgets} layout="vertical">
@@ -126,21 +128,21 @@ export default function AdminDashboard() {
                   contentStyle={{ background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
                   formatter={(value) => formatFCFA(Number(value))}
                 />
-                <Bar dataKey="budget" name="Budget" fill="rgba(211,84,0,0.3)" radius={[0, 4, 4, 0]} />
-                <Bar dataKey="spent" name="Dépensé" fill="#D35400" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="budget" name={t("common.budget")} fill="rgba(211,84,0,0.3)" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="spent" name={t("admin.dashboard.spent")} fill="#D35400" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-xs text-white/30 text-center py-12">Aucune campagne</p>
+            <p className="text-xs text-white/30 text-center py-12">{t("admin.dashboard.noCampaign")}</p>
           )}
         </div>
       </div>
 
       <div className="glass-card p-6">
-        <h2 className="text-lg font-bold mb-4">Top Échos</h2>
+        <h2 className="text-lg font-bold mb-4">{t("admin.dashboard.topEchos")}</h2>
         <div className="space-y-3">
           {stats.topEchos.length === 0 ? (
-            <p className="text-white/30 text-sm">Aucun écho engagé dans vos campagnes pour le moment.</p>
+            <p className="text-white/30 text-sm">{t("admin.dashboard.noEchoEngaged")}</p>
           ) : (
             stats.topEchos.map((echo, i) => (
               <div
@@ -157,7 +159,7 @@ export default function AdminDashboard() {
                   </span>
                   <div>
                     <span className="text-sm font-semibold">{echo.name}</span>
-                    <span className="text-xs text-white/30 ml-2">{echo.clicks} clics</span>
+                    <span className="text-xs text-white/30 ml-2">{echo.clicks} {t("common.clicks")}</span>
                   </div>
                 </div>
                 <span className={`text-sm font-bold ${i === 0 ? "text-primary text-base" : "text-accent"}`}>

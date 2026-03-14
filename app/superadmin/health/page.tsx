@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { timeAgo } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 interface HealthCheck {
   name: string;
@@ -58,10 +59,10 @@ interface HealthData {
   checkedAt: string;
 }
 
-const STATUS_CONFIG = {
-  healthy: { label: "Opérationnel", color: "text-emerald-400", bg: "bg-emerald-400", dot: "bg-emerald-400", border: "border-emerald-400/20" },
-  degraded: { label: "Dégradé", color: "text-yellow-400", bg: "bg-yellow-400", dot: "bg-yellow-400", border: "border-yellow-400/20" },
-  down: { label: "Hors service", color: "text-red-400", bg: "bg-red-400", dot: "bg-red-400", border: "border-red-400/20" },
+const STATUS_CONFIG_STYLES = {
+  healthy: { color: "text-emerald-400", bg: "bg-emerald-400", dot: "bg-emerald-400", border: "border-emerald-400/20" },
+  degraded: { color: "text-yellow-400", bg: "bg-yellow-400", dot: "bg-yellow-400", border: "border-yellow-400/20" },
+  down: { color: "text-red-400", bg: "bg-red-400", dot: "bg-red-400", border: "border-red-400/20" },
 };
 
 const SEVERITY_CONFIG: Record<string, { color: string; bg: string }> = {
@@ -75,6 +76,7 @@ const SEVERITY_CONFIG: Record<string, { color: string; bg: string }> = {
 type Tab = "overview" | "security" | "activity";
 
 export default function HealthPage() {
+  const { t } = useTranslation();
   const [data, setData] = useState<HealthData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,11 +86,11 @@ export default function HealthPage() {
     try {
       setError(null);
       const res = await fetch("/api/superadmin/health");
-      if (!res.ok) throw new Error("Erreur de chargement");
+      if (!res.ok) throw new Error(t("superadmin.health.loadError"));
       const json = await res.json();
       setData(json);
     } catch {
-      setError("Impossible de charger les données de santé");
+      setError(t("superadmin.health.loadErrorDesc"));
     }
     setLoading(false);
   }, []);
@@ -118,18 +120,23 @@ export default function HealthPage() {
         <div className="glass-card p-8 text-center">
           <p className="text-red-400 font-semibold mb-4">{error}</p>
           <button onClick={loadData} className="btn-primary px-6 py-2 rounded-xl text-sm font-semibold">
-            Réessayer
+            {t("superadmin.health.retry")}
           </button>
         </div>
       </div>
     );
   }
 
-  const overallConfig = STATUS_CONFIG[data.overallStatus];
+  const STATUS_LABELS: Record<string, string> = {
+    healthy: t("superadmin.health.operational"),
+    degraded: t("superadmin.health.degraded"),
+    down: t("superadmin.health.down"),
+  };
+  const overallConfig = { ...STATUS_CONFIG_STYLES[data.overallStatus], label: STATUS_LABELS[data.overallStatus] };
   const tabs: { key: Tab; label: string; emoji: string }[] = [
-    { key: "overview", label: "Vue d'ensemble", emoji: "📊" },
-    { key: "security", label: "Sécurité", emoji: "🛡️" },
-    { key: "activity", label: "Activité", emoji: "📋" },
+    { key: "overview", label: t("superadmin.health.overviewTab"), emoji: "📊" },
+    { key: "security", label: t("superadmin.health.securityTab"), emoji: "🛡️" },
+    { key: "activity", label: t("superadmin.health.activityTab"), emoji: "📋" },
   ];
 
   return (
@@ -137,16 +144,16 @@ export default function HealthPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold">Santé Plateforme</h1>
+          <h1 className="text-2xl font-bold">{t("superadmin.health.title")}</h1>
           <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full ${overallConfig.bg}/10`}>
             <div className={`w-2 h-2 rounded-full ${overallConfig.dot} animate-pulse`} />
             <span className={`text-xs font-bold ${overallConfig.color}`}>{overallConfig.label}</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-white/30">Mise à jour: {timeAgo(data.checkedAt)}</span>
+          <span className="text-xs text-white/30">{t("superadmin.health.lastUpdate", { time: timeAgo(data.checkedAt) })}</span>
           <button onClick={loadData} className="text-xs text-white/40 hover:text-white/60 transition px-2 py-1 rounded-lg hover:bg-white/5">
-            Rafraîchir
+            {t("superadmin.health.refresh")}
           </button>
         </div>
       </div>
@@ -193,10 +200,10 @@ export default function HealthPage() {
         <div className="space-y-6">
           {/* Service Health Checks */}
           <div>
-            <h3 className="text-sm font-bold text-white/50 mb-4 uppercase tracking-wider">Services</h3>
+            <h3 className="text-sm font-bold text-white/50 mb-4 uppercase tracking-wider">{t("superadmin.health.servicesTab")}</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {data.checks.map((check) => {
-                const config = STATUS_CONFIG[check.status];
+                const config = { ...STATUS_CONFIG_STYLES[check.status], label: STATUS_LABELS[check.status] };
                 return (
                   <div key={check.name} className={`glass-card p-5 border ${config.border}`}>
                     <div className="flex items-center justify-between mb-3">
@@ -221,7 +228,7 @@ export default function HealthPage() {
 
           {/* Table Counts */}
           <div>
-            <h3 className="text-sm font-bold text-white/50 mb-4 uppercase tracking-wider">Données</h3>
+            <h3 className="text-sm font-bold text-white/50 mb-4 uppercase tracking-wider">{t("superadmin.health.dataTab")}</h3>
             <div className="glass-card p-5">
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
                 {data.tableCounts.map((t) => (
@@ -238,24 +245,24 @@ export default function HealthPage() {
 
           {/* Security Quick Summary */}
           <div>
-            <h3 className="text-sm font-bold text-white/50 mb-4 uppercase tracking-wider">Sécurité (résumé)</h3>
+            <h3 className="text-sm font-bold text-white/50 mb-4 uppercase tracking-wider">{t("superadmin.health.securitySummary")}</h3>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="glass-card p-4">
-                <p className="text-xs text-white/40 font-semibold mb-1">Événements 24h</p>
+                <p className="text-xs text-white/40 font-semibold mb-1">{t("superadmin.health.events24h")}</p>
                 <p className="text-2xl font-bold">{data.securitySummary.events24h}</p>
               </div>
               <div className="glass-card p-4">
-                <p className="text-xs text-white/40 font-semibold mb-1">Événements 7j</p>
+                <p className="text-xs text-white/40 font-semibold mb-1">{t("superadmin.health.events7d")}</p>
                 <p className="text-2xl font-bold">{data.securitySummary.events7d}</p>
               </div>
               <div className="glass-card p-4">
-                <p className="text-xs text-white/40 font-semibold mb-1">Critiques 24h</p>
+                <p className="text-xs text-white/40 font-semibold mb-1">{t("superadmin.health.critical24h")}</p>
                 <p className={`text-2xl font-bold ${data.securitySummary.critical24h > 0 ? "text-red-400" : ""}`}>
                   {data.securitySummary.critical24h}
                 </p>
               </div>
               <div className="glass-card p-4">
-                <p className="text-xs text-white/40 font-semibold mb-1">Haute sévérité 24h</p>
+                <p className="text-xs text-white/40 font-semibold mb-1">{t("superadmin.health.highSeverity24h")}</p>
                 <p className={`text-2xl font-bold ${data.securitySummary.high24h > 0 ? "text-orange-400" : ""}`}>
                   {data.securitySummary.high24h}
                 </p>
@@ -271,21 +278,21 @@ export default function HealthPage() {
           {/* Security Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="glass-card p-4">
-              <p className="text-xs text-white/40 font-semibold mb-1">Événements 24h</p>
+              <p className="text-xs text-white/40 font-semibold mb-1">{t("superadmin.health.events24h")}</p>
               <p className="text-2xl font-bold">{data.securitySummary.events24h}</p>
             </div>
             <div className="glass-card p-4">
-              <p className="text-xs text-white/40 font-semibold mb-1">Événements 7j</p>
+              <p className="text-xs text-white/40 font-semibold mb-1">{t("superadmin.health.events7d")}</p>
               <p className="text-2xl font-bold">{data.securitySummary.events7d}</p>
             </div>
             <div className="glass-card p-4">
-              <p className="text-xs text-white/40 font-semibold mb-1">Critiques 24h</p>
+              <p className="text-xs text-white/40 font-semibold mb-1">{t("superadmin.health.critical24h")}</p>
               <p className={`text-2xl font-bold ${data.securitySummary.critical24h > 0 ? "text-red-400" : ""}`}>
                 {data.securitySummary.critical24h}
               </p>
             </div>
             <div className="glass-card p-4">
-              <p className="text-xs text-white/40 font-semibold mb-1">Haute sévérité 24h</p>
+              <p className="text-xs text-white/40 font-semibold mb-1">{t("superadmin.health.highSeverity24h")}</p>
               <p className={`text-2xl font-bold ${data.securitySummary.high24h > 0 ? "text-orange-400" : ""}`}>
                 {data.securitySummary.high24h}
               </p>
@@ -294,20 +301,20 @@ export default function HealthPage() {
 
           {/* Recent Security Events */}
           <div>
-            <h3 className="text-sm font-bold text-white/50 mb-4 uppercase tracking-wider">Événements récents</h3>
+            <h3 className="text-sm font-bold text-white/50 mb-4 uppercase tracking-wider">{t("superadmin.health.recentEvents")}</h3>
             <div className="glass-card overflow-hidden">
               {data.recentSecurityEvents.length === 0 ? (
-                <div className="p-8 text-center text-white/30 text-sm">Aucun événement de sécurité</div>
+                <div className="p-8 text-center text-white/30 text-sm">{t("superadmin.health.noSecurityEvents")}</div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-white/5">
-                        <th className="text-left p-3 text-xs text-white/30 font-semibold">Date</th>
-                        <th className="text-left p-3 text-xs text-white/30 font-semibold">Type</th>
-                        <th className="text-left p-3 text-xs text-white/30 font-semibold">Sévérité</th>
+                        <th className="text-left p-3 text-xs text-white/30 font-semibold">{t("common.date")}</th>
+                        <th className="text-left p-3 text-xs text-white/30 font-semibold">{t("superadmin.health.type")}</th>
+                        <th className="text-left p-3 text-xs text-white/30 font-semibold">{t("superadmin.health.severity")}</th>
                         <th className="text-left p-3 text-xs text-white/30 font-semibold">IP</th>
-                        <th className="text-left p-3 text-xs text-white/30 font-semibold">Détails</th>
+                        <th className="text-left p-3 text-xs text-white/30 font-semibold">{t("superadmin.health.details")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -346,10 +353,10 @@ export default function HealthPage() {
       {tab === "activity" && (
         <div className="space-y-6">
           <div>
-            <h3 className="text-sm font-bold text-white/50 mb-4 uppercase tracking-wider">Activité admin récente</h3>
+            <h3 className="text-sm font-bold text-white/50 mb-4 uppercase tracking-wider">{t("superadmin.health.recentAdminActivity")}</h3>
             <div className="glass-card overflow-hidden">
               {data.recentActivity.length === 0 ? (
-                <div className="p-8 text-center text-white/30 text-sm">Aucune activité récente</div>
+                <div className="p-8 text-center text-white/30 text-sm">{t("superadmin.health.noRecentActivity")}</div>
               ) : (
                 <div className="divide-y divide-white/[0.03]">
                   {data.recentActivity.map((activity) => (

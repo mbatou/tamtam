@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslation } from "@/lib/i18n";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 interface Profile {
   name: string;
@@ -12,6 +14,7 @@ interface Profile {
 }
 
 export default function AdminSettingsPage() {
+  const { t } = useTranslation();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -54,14 +57,14 @@ export default function AdminSettingsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Erreur");
+        setError(data.error || t("common.error"));
       } else {
         setProfile(data);
         setSuccess(true);
         setTimeout(() => setSuccess(false), 3000);
       }
     } catch {
-      setError("Erreur réseau. Veuillez réessayer.");
+      setError(t("common.networkRetry"));
     }
     setSaving(false);
   }
@@ -71,11 +74,11 @@ export default function AdminSettingsPage() {
     setSuccess(false);
 
     if (passwords.new_password.length < 6) {
-      setError("Le mot de passe doit contenir au moins 6 caractères.");
+      setError(t("common.passwordMin"));
       return;
     }
     if (passwords.new_password !== passwords.confirm) {
-      setError("Les mots de passe ne correspondent pas.");
+      setError(t("common.passwordMismatch"));
       return;
     }
 
@@ -88,7 +91,7 @@ export default function AdminSettingsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Erreur");
+        setError(data.error || t("common.error"));
       } else {
         setSuccess(true);
         setPasswords({ new_password: "", confirm: "" });
@@ -96,7 +99,7 @@ export default function AdminSettingsPage() {
         setTimeout(() => setSuccess(false), 3000);
       }
     } catch {
-      setError("Erreur réseau. Veuillez réessayer.");
+      setError(t("common.networkRetry"));
     }
     setPwSaving(false);
   }
@@ -112,26 +115,26 @@ export default function AdminSettingsPage() {
 
   return (
     <div className="p-6 max-w-3xl">
-      <h1 className="text-2xl font-bold mb-8">Paramètres</h1>
+      <h1 className="text-2xl font-bold mb-8">{t("admin.settings.title")}</h1>
 
       {/* Profile section */}
       <div className="glass-card p-6 mb-6">
-        <h2 className="text-lg font-bold mb-6">Informations du compte</h2>
+        <h2 className="text-lg font-bold mb-6">{t("admin.settings.accountInfo")}</h2>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-white/40 mb-2">Email</label>
+            <label className="block text-xs font-semibold text-white/40 mb-2">{t("common.email")}</label>
             <input
               type="email"
               value={profile?.email || ""}
               disabled
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/40 cursor-not-allowed"
             />
-            <p className="text-xs text-white/20 mt-1">L&apos;email ne peut pas être modifié</p>
+            <p className="text-xs text-white/20 mt-1">{t("admin.settings.emailNoChange")}</p>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-white/40 mb-2">Nom de la marque *</label>
+            <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.settings.brandName")}</label>
             <input
               type="text"
               value={form.name}
@@ -142,7 +145,7 @@ export default function AdminSettingsPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-white/40 mb-2">Téléphone</label>
+            <label className="block text-xs font-semibold text-white/40 mb-2">{t("common.phone")}</label>
             <input
               type="tel"
               value={form.phone}
@@ -153,7 +156,7 @@ export default function AdminSettingsPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-white/40 mb-2">Ville</label>
+            <label className="block text-xs font-semibold text-white/40 mb-2">{t("common.city")}</label>
             <input
               type="text"
               value={form.city}
@@ -164,11 +167,11 @@ export default function AdminSettingsPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-white/40 mb-2">Moyen de paiement préféré</label>
+            <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.settings.preferredPayment")}</label>
             <div className="grid grid-cols-2 gap-3">
               {[
-                { id: "wave", label: "Wave" },
-                { id: "orange_money", label: "Orange Money" },
+                { id: "wave", label: t("common.wave") },
+                { id: "orange_money", label: t("common.orangeMoney") },
               ].map((option) => (
                 <button
                   key={option.id}
@@ -194,7 +197,7 @@ export default function AdminSettingsPage() {
 
         {success && (
           <div className="mt-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">
-            Modifications enregistrées avec succès.
+            {t("admin.settings.saved")}
           </div>
         )}
 
@@ -203,42 +206,42 @@ export default function AdminSettingsPage() {
           disabled={saving || !form.name}
           className="btn-primary mt-6 disabled:opacity-40"
         >
-          {saving ? "Enregistrement..." : "Enregistrer les modifications"}
+          {saving ? t("common.saving") : t("admin.settings.saveChanges")}
         </button>
       </div>
 
       {/* Password section */}
       <div className="glass-card p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold">Mot de passe</h2>
+          <h2 className="text-lg font-bold">{t("common.password")}</h2>
           {!showPassword && (
             <button
               onClick={() => { setShowPassword(true); setError(null); setSuccess(false); }}
               className="text-sm text-primary font-semibold hover:underline"
             >
-              Changer le mot de passe
+              {t("admin.settings.changePassword")}
             </button>
           )}
         </div>
         {showPassword ? (
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-white/40 mb-2">Nouveau mot de passe</label>
+              <label className="block text-xs font-semibold text-white/40 mb-2">{t("common.newPassword")}</label>
               <input
                 type="password"
                 value={passwords.new_password}
                 onChange={(e) => setPasswords({ ...passwords, new_password: e.target.value })}
-                placeholder="Min. 6 caractères"
+                placeholder={t("common.minChars")}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-white/40 mb-2">Confirmer le mot de passe</label>
+              <label className="block text-xs font-semibold text-white/40 mb-2">{t("common.confirmPassword")}</label>
               <input
                 type="password"
                 value={passwords.confirm}
                 onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
-                placeholder="Répétez le mot de passe"
+                placeholder={t("common.repeatPassword")}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
                 onKeyDown={(e) => e.key === "Enter" && !pwSaving && passwords.new_password && passwords.confirm && handleChangePassword()}
               />
@@ -249,31 +252,36 @@ export default function AdminSettingsPage() {
                 disabled={pwSaving || !passwords.new_password || !passwords.confirm}
                 className="btn-primary disabled:opacity-40"
               >
-                {pwSaving ? "Mise à jour..." : "Mettre à jour le mot de passe"}
+                {pwSaving ? t("common.updating") : t("common.update")}
               </button>
               <button
                 onClick={() => { setShowPassword(false); setPasswords({ new_password: "", confirm: "" }); }}
                 className="px-6 py-3 rounded-xl border border-white/10 text-sm font-semibold text-white/60 hover:bg-white/5 transition"
               >
-                Annuler
+                {t("common.cancel")}
               </button>
             </div>
           </div>
         ) : (
-          <p className="text-sm text-white/30">Utilisez un mot de passe fort d&apos;au moins 6 caractères.</p>
+          <p className="text-sm text-white/30">{t("common.passwordStrong")}</p>
         )}
+      </div>
+
+      {/* Language */}
+      <div className="glass-card p-6">
+        <LanguageSwitcher />
       </div>
 
       {/* Account info */}
       <div className="glass-card p-6">
-        <h2 className="text-lg font-bold mb-4">Informations</h2>
+        <h2 className="text-lg font-bold mb-4">{t("admin.settings.info")}</h2>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-white/40">Membre depuis</span>
+            <span className="text-white/40">{t("admin.settings.memberSince")}</span>
             <span>{profile?.created_at ? new Date(profile.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "—"}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-white/40">Type de compte</span>
+            <span className="text-white/40">{t("admin.settings.accountType")}</span>
             <span className="badge-active">Batteur</span>
           </div>
         </div>
