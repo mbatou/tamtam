@@ -24,12 +24,14 @@ export async function GET(request: NextRequest) {
 
   const supabase = auth.supabase;
   const pattern = `%${q}%`;
+  // PostgREST .or() filter values with spaces/commas must be double-quoted
+  const p = `"${pattern}"`;
 
-  // Search all users (echos, brands, admins) by name, phone, city, email, or ID
+  // Search all users (echos, brands, admins) by name, phone, city, or ID
   const { data: users } = await supabase
     .from("users")
     .select("id, name, phone, city, role, status, balance, total_earned")
-    .or(`name.ilike.${pattern},phone.ilike.${pattern},city.ilike.${pattern},id.ilike.${pattern}`)
+    .or(`name.ilike.${p},phone.ilike.${p},city.ilike.${p},id.ilike.${p}`)
     .order("total_earned", { ascending: false })
     .limit(10);
 
@@ -37,7 +39,7 @@ export async function GET(request: NextRequest) {
   const { data: campaigns } = await supabase
     .from("campaigns")
     .select("id, title, status, cpc, budget, spent, batteur_id")
-    .or(`title.ilike.${pattern},id.ilike.${pattern},destination_url.ilike.${pattern}`)
+    .or(`title.ilike.${p},id.ilike.${p},destination_url.ilike.${p}`)
     .order("created_at", { ascending: false })
     .limit(8);
 
@@ -45,7 +47,7 @@ export async function GET(request: NextRequest) {
   const { data: tickets } = await supabase
     .from("support_tickets")
     .select("id, subject, status, user_id, created_at")
-    .or(`subject.ilike.${pattern},message.ilike.${pattern},id.ilike.${pattern}`)
+    .or(`subject.ilike.${p},message.ilike.${p},id.ilike.${p}`)
     .order("created_at", { ascending: false })
     .limit(5);
 
@@ -53,7 +55,7 @@ export async function GET(request: NextRequest) {
   const { data: payouts } = await supabase
     .from("payouts")
     .select("id, echo_id, amount, provider, status, created_at")
-    .or(`id.ilike.${pattern},provider.ilike.${pattern}`)
+    .or(`id.ilike.${p},provider.ilike.${p}`)
     .order("created_at", { ascending: false })
     .limit(5);
 
