@@ -100,6 +100,53 @@ export default function AdminSupportPage() {
         </button>
       </div>
 
+      {/* FAQ Section */}
+      {!showForm && (
+        <div className="glass-card p-6 mb-8">
+          <h2 className="text-sm font-bold mb-4">{t("admin.support.faqTitle")}</h2>
+          <div className="space-y-2">
+            {[
+              { q: t("admin.support.faq1q"), a: t("admin.support.faq1a") },
+              { q: t("admin.support.faq2q"), a: t("admin.support.faq2a") },
+              { q: t("admin.support.faq3q"), a: t("admin.support.faq3a") },
+              { q: t("admin.support.faq4q"), a: t("admin.support.faq4a") },
+              { q: t("admin.support.faq5q"), a: t("admin.support.faq5a") },
+            ].map((faq, i) => (
+              <details key={i} className="group">
+                <summary className="flex items-center gap-2 cursor-pointer py-2 text-sm text-white/70 hover:text-white/90 transition">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary shrink-0 transition-transform group-open:rotate-90"><polyline points="9 18 15 12 9 6"/></svg>
+                  {faq.q}
+                </summary>
+                <p className="text-xs text-white/40 pl-6 pb-2">{faq.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Response time + WhatsApp */}
+      {!showForm && (
+        <div className="flex flex-col sm:flex-row gap-3 mb-8">
+          <div className="glass-card p-4 flex-1">
+            <p className="text-xs text-white/40 mb-1">{t("admin.support.responseTime")}</p>
+            <p className="text-sm font-semibold">{t("admin.support.responseTimeValue")}</p>
+            <p className="text-xs text-white/30 mt-0.5">{t("admin.support.supportHours")}</p>
+          </div>
+          <a
+            href="https://wa.me/221781234567"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="glass-card p-4 flex-1 flex items-center gap-3 hover:border-emerald-500/30 transition group"
+          >
+            <span className="text-2xl">💬</span>
+            <div>
+              <p className="text-sm font-semibold group-hover:text-emerald-400 transition">{t("admin.support.whatsappSupport")}</p>
+              <p className="text-xs text-white/30">{t("admin.support.whatsappSupportDesc")}</p>
+            </div>
+          </a>
+        </div>
+      )}
+
       {success && (
         <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-semibold flex items-center justify-between">
           <span>{t("admin.support.messageSent")}</span>

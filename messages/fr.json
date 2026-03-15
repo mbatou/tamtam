@@ -310,7 +310,39 @@
       "spent": "Dépensé",
       "noCampaign": "Aucune campagne",
       "topEchos": "Top Échos",
-      "noEchoEngaged": "Aucun écho engagé dans vos campagnes pour le moment."
+      "noEchoEngaged": "Aucun écho engagé dans vos campagnes pour le moment.",
+      "totalReach": "Portée totale",
+      "totalReachSub": "personnes ont vu vos liens",
+      "realClicks": "Visiteurs réels",
+      "realClicksSub": "visiteurs vérifiés",
+      "costPerClick": "Coût par clic",
+      "costPerClickSub": "par visiteur réel",
+      "budgetConsumed": "Consommé ✓",
+      "noCampaignActive": "Aucune campagne active",
+      "echosWaiting": "Vos {count} Échos attendent votre prochaine campagne. Lancez-en une — ça prend 2 minutes.",
+      "launchPrompt": "Lancez votre première campagne et atteignez des centaines de personnes via WhatsApp.",
+      "launchRythme": "Lancer un Rythme",
+      "relaunchBest": "Relancer: {name}",
+      "campaignsRunning": "campagne(s) active(s)",
+      "viewDetails": "Voir les détails",
+      "campaignResults": "Résultats campagnes",
+      "bestCampaignInsight": "\"{name}\" a le meilleur coût par clic à {cpc}. Relancez une campagne similaire avec un budget plus élevé.",
+      "topEchosInsight": "Vos 5 meilleurs Échos génèrent {pct}% de vos clics. À votre prochaine campagne, ils seront les premiers à partager."
+    },
+    "onboarding": {
+      "welcome": "Bienvenue sur Tamtam !",
+      "howItWorks": "Vous allez toucher des centaines de personnes à Dakar via leurs contacts WhatsApp de confiance.",
+      "step1": "Créez une campagne (votre lien + budget)",
+      "step2": "Des Échos la partagent sur leur WhatsApp Status",
+      "step3": "Leurs contacts cliquent — vous obtenez des visiteurs réels",
+      "step4": "Vous ne payez que pour les clics vérifiés",
+      "next": "Suivant →",
+      "addFunds": "Rechargez votre portefeuille",
+      "addFundsDesc": "Commencez avec aussi peu que 10 000 FCFA (~16$).",
+      "skip": "Passer pour le moment →",
+      "launchFirst": "Lancez votre premier Rythme !",
+      "createCampaign": "Créer ma première campagne",
+      "exploreDashboard": "Explorer le dashboard d'abord →"
     },
     "campaigns": {
       "title": "Rythmes",
@@ -358,7 +390,13 @@
       "estClicks": "Clics estimés",
       "echoEarnsPerClick": "L'Écho gagne / clic",
       "estEngagementBoost": "Ton CPC est au-dessus de la moyenne — les Échos vont prioriser ta campagne !",
-      "estLowCpcWarning": "Ton CPC est en dessous de la moyenne ({avg}). Les Échos peuvent préférer des campagnes mieux payées."
+      "estLowCpcWarning": "Ton CPC est en dessous de la moyenne ({avg}). Les Échos peuvent préférer des campagnes mieux payées.",
+      "relaunch": "Relancer",
+      "realClicks": "clics réels",
+      "perClick": "clic",
+      "bestCPC": "Meilleur coût/clic",
+      "fullyConsumed": "Consommé ✓",
+      "noRythmesDesc": "Vos Échos attendent votre prochaine campagne. Lancez-en une en 2 minutes."
     },
     "wallet": {
       "title": "Portefeuille",
@@ -384,7 +422,11 @@
       "noCampaign": "Aucune campagne.",
       "paymentRegistered": "Paiement enregistré ! Ton solde sera crédité après validation.",
       "paymentCancelled": "Paiement annulé.",
-      "finalizeWave": "Finalise ton paiement sur Wave. Ton solde sera crédité après validation par l'équipe Tamtam."
+      "finalizeWave": "Finalise ton paiement sur Wave. Ton solde sera crédité après validation par l'équipe Tamtam.",
+      "pendingExplain": "En cours de traitement — généralement terminé en 5 minutes.",
+      "refusedExplain": "Le paiement a été refusé par votre fournisseur. Réessayez ou utilisez un autre moyen.",
+      "cancelledExplain": "Vous avez annulé ce paiement.",
+      "retry": "Réessayer"
     },
     "payouts": {
       "title": "Paiements",
@@ -401,7 +443,9 @@
       "campaigns": "Campagnes",
       "wonByYou": "Gagné (vous)",
       "payment": "Paiement",
-      "noEchos": "Aucun écho engagé dans vos campagnes pour le moment."
+      "noEchos": "Aucun écho engagé dans vos campagnes pour le moment.",
+      "allCities": "Toutes les villes",
+      "topInsight": "Votre meilleur Écho {name} a généré {clicks} clics pour vous. Vos 5 meilleurs représentent {pct}% de vos clics totaux."
     },
     "support": {
       "title": "Support",
@@ -424,7 +468,23 @@
       "contactSupport": "Contacter le support",
       "yourMessage": "Votre message",
       "supportReply": "Réponse du support",
-      "waitingReply": "En attente de réponse..."
+      "waitingReply": "En attente de réponse...",
+      "faqTitle": "Questions fréquentes",
+      "faq1q": "Comment fonctionne le coût par clic ?",
+      "faq1a": "Vous définissez un prix par clic (CPC). Votre budget est déduit à chaque clic vérifié. Vous ne payez que pour les vrais visiteurs.",
+      "faq2q": "Pourquoi certains clics sont invalides ?",
+      "faq2a": "Notre système vérifie chaque clic. Les doublons, bots, et clics suspects sont automatiquement filtrés pour protéger votre budget.",
+      "faq3q": "Comment recharger mon portefeuille ?",
+      "faq3a": "Allez dans Portefeuille → Recharger. Payez via Wave. Votre solde est crédité après validation.",
+      "faq4q": "Combien de temps dure une campagne ?",
+      "faq4a": "Jusqu'à ce que votre budget soit consommé. La plupart des campagnes sont complétées en 2-5 jours.",
+      "faq5q": "Puis-je mettre en pause une campagne ?",
+      "faq5a": "Oui ! Allez dans Rythmes → sélectionnez votre campagne → Mettre en pause. Vous pouvez la réactiver à tout moment.",
+      "responseTime": "Temps de réponse moyen",
+      "responseTimeValue": "< 24 heures",
+      "supportHours": "Lun-Sam, 9h-18h (heure de Dakar)",
+      "whatsappSupport": "Discuter sur WhatsApp",
+      "whatsappSupportDesc": "Besoin d'aide rapide ? Contactez-nous sur WhatsApp."
     },
     "settings": {
       "title": "Paramètres",
@@ -450,7 +510,16 @@
       "noClicksCampaign": "Aucun clic sur cette campagne pour le moment",
       "campaignComparison": "Comparaison des campagnes",
       "campaign": "Campagne",
-      "noAnalytics": "Aucune campagne à analyser pour le moment."
+      "noAnalytics": "Aucune campagne à analyser pour le moment.",
+      "roiTitle": "Votre retour sur investissement",
+      "youSpent": "Vous avez dépensé",
+      "youGot": "Vous avez obtenu",
+      "visitors": "visiteurs réels",
+      "costPerVisitor": "Coût par visiteur",
+      "comparison": "Pour comparaison :",
+      "savings": "Vous économisez environ 40-75% par rapport aux publicités sur les réseaux sociaux.",
+      "realVisitors": "Visiteurs réels",
+      "consumed": "Consommé ✓"
     },
     "antifraud": {
       "title": "Anti-fraude",
