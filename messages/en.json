@@ -322,7 +322,15 @@
       "noRythmes": "No rythmes created yet.",
       "createFirst": "Create your first Rythme",
       "deleteConfirm": "Delete this rythme? Unspent budget will be refunded.",
-      "insufficientBalance": "Insufficient balance. Please recharge your wallet."
+      "insufficientBalance": "Insufficient balance. Please recharge your wallet.",
+      "avgCpcHint": "Platform average: {avg} / click",
+      "cpcBelowAvg": "Below average — consider {recommended}+ for better engagement",
+      "cpcAboveAvg": "Above average — great for visibility!",
+      "estimationTitle": "Estimated results",
+      "estClicks": "Estimated clicks",
+      "echoEarnsPerClick": "Echo earns / click",
+      "estEngagementBoost": "Your CPC is above average — Echos will prioritize your campaign!",
+      "estLowCpcWarning": "Your CPC is below the platform average ({avg}). Echos may prefer higher-paying campaigns."
     },
     "wallet": {
       "title": "Wallet",

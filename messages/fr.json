@@ -322,7 +322,15 @@
       "noRythmes": "Aucun rythme créé pour le moment.",
       "createFirst": "Créer votre premier Rythme",
       "deleteConfirm": "Supprimer ce rythme ? Le budget non dépensé sera remboursé.",
-      "insufficientBalance": "Solde insuffisant. Veuillez recharger votre portefeuille."
+      "insufficientBalance": "Solde insuffisant. Veuillez recharger votre portefeuille.",
+      "avgCpcHint": "Moyenne plateforme : {avg} / clic",
+      "cpcBelowAvg": "En dessous de la moyenne — essayez {recommended}+ pour plus d'engagement",
+      "cpcAboveAvg": "Au-dessus de la moyenne — super pour la visibilité !",
+      "estimationTitle": "Estimation des résultats",
+      "estClicks": "Clics estimés",
+      "echoEarnsPerClick": "L'Écho gagne / clic",
+      "estEngagementBoost": "Ton CPC est au-dessus de la moyenne — les Échos vont prioriser ta campagne !",
+      "estLowCpcWarning": "Ton CPC est en dessous de la moyenne ({avg}). Les Échos peuvent préférer des campagnes mieux payées."
     },
     "wallet": {
       "title": "Portefeuille",
