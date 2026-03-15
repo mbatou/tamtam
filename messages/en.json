@@ -775,7 +775,9 @@
       "emailSubject": "Tamtam — Your Batteur account request",
       "promoting": "Promoting...",
       "markUnreached": "Mark as unreached",
-      "markReached": "Mark as reached"
+      "markReached": "Mark as reached",
+      "newLeadsBanner": "{count} new leads waiting. Oldest: {age}h ago",
+      "startContacting": "Start contacting"
     },
     "briefing": {
       "greeting_morning": "Good morning",
