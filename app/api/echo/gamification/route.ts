@@ -46,9 +46,40 @@ export async function GET() {
         .order("credited_at", { ascending: false }),
     ]);
 
+  // Self-heal: if no streak record exists but user has accepted campaigns, create one
+  let streakData = streakRes.data;
+  if (!streakData) {
+    try {
+      const { data: latestLink } = await supabase
+        .from("tracked_links")
+        .select("created_at")
+        .eq("echo_id", echoId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (latestLink) {
+        const lastDate = new Date(latestLink.created_at).toISOString().split("T")[0];
+        const { data: inserted } = await supabase
+          .from("echo_streaks")
+          .upsert({
+            echo_id: echoId,
+            current_streak: 1,
+            longest_streak: 1,
+            last_campaign_date: lastDate,
+          })
+          .select("current_streak, longest_streak, last_campaign_date")
+          .single();
+        streakData = inserted;
+      }
+    } catch (err) {
+      console.error("Streak self-heal failed:", err);
+    }
+  }
+
   return NextResponse.json({
     user: userRes.data,
-    streak: streakRes.data || {
+    streak: streakData || {
       current_streak: 0,
       longest_streak: 0,
       last_campaign_date: null,
