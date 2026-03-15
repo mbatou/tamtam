@@ -566,7 +566,11 @@
       "noPayouts": "No payout requests",
       "dualRole": "Echo + Brand",
       "approvePayoutDirect": "Approve",
-      "rejectPayoutDirect": "Reject"
+      "rejectPayoutDirect": "Reject",
+      "activityAll": "All activity",
+      "activityActive": "Active",
+      "activityInactive": "Inactive",
+      "neverActive": "never"
     },
     "campaigns": {
       "title": "Campaign moderation",

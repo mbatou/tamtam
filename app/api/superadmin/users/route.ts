@@ -36,12 +36,32 @@ export async function GET() {
   // Detect dual-role users: echo activity (tracked_links) and batteur activity (campaigns created)
   const echoUserIds = new Set<string>();
   const batteurUserIds = new Set<string>();
+  // Last click timestamp per echo (via tracked_links → clicks)
+  const lastClickMap: Record<string, string> = {};
   try {
     const { data: echoLinks } = await supabase.from("tracked_links").select("echo_id");
     if (echoLinks) echoLinks.forEach((l) => echoUserIds.add(l.echo_id));
 
     const { data: batteurCampaigns } = await supabase.from("campaigns").select("batteur_id");
     if (batteurCampaigns) batteurCampaigns.forEach((c) => batteurUserIds.add(c.batteur_id));
+
+    // Get most recent click per echo via tracked_links
+    const { data: lastClicks } = await supabase
+      .from("tracked_links")
+      .select("echo_id, clicks(created_at)")
+      .order("created_at", { ascending: false, referencedTable: "clicks" })
+      .limit(1, { referencedTable: "clicks" });
+    if (lastClicks) {
+      for (const link of lastClicks) {
+        const clickArr = link.clicks as unknown as { created_at: string }[];
+        if (clickArr && clickArr.length > 0) {
+          const clickDate = clickArr[0].created_at;
+          if (!lastClickMap[link.echo_id] || clickDate > lastClickMap[link.echo_id]) {
+            lastClickMap[link.echo_id] = clickDate;
+          }
+        }
+      }
+    }
   } catch {
     // tables may not exist yet
   }
@@ -52,6 +72,7 @@ export async function GET() {
     has_echo_activity: echoUserIds.has(u.id as string),
     has_batteur_activity: batteurUserIds.has(u.id as string),
     is_dual_role: echoUserIds.has(u.id as string) && batteurUserIds.has(u.id as string),
+    last_click_at: lastClickMap[u.id as string] || null,
   }));
 
   return NextResponse.json(enriched);

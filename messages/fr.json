@@ -566,7 +566,11 @@
       "noPayouts": "Aucune demande de retrait",
       "dualRole": "Écho + Marque",
       "approvePayoutDirect": "Approuver",
-      "rejectPayoutDirect": "Rejeter"
+      "rejectPayoutDirect": "Rejeter",
+      "activityAll": "Toute activité",
+      "activityActive": "Actifs",
+      "activityInactive": "Inactifs",
+      "neverActive": "jamais"
     },
     "campaigns": {
       "title": "Modération des campagnes",
