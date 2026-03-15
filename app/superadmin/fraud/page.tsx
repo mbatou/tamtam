@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { formatNumber } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
@@ -11,6 +11,8 @@ import Pagination, { paginate } from "@/components/ui/Pagination";
 import { useToast } from "@/components/ui/Toast";
 import DateRangeSelector, { type DateRange } from "@/components/ui/DateRangeSelector";
 
+// ── Types ──
+
 interface ClickRow {
   id: string;
   ip_address: string | null;
@@ -19,6 +21,7 @@ interface ClickRow {
   country: string | null;
   created_at: string;
   link_id: string;
+  rejection_reason: string | null;
   tracked_links: {
     short_code: string;
     echo_id: string;
@@ -32,34 +35,155 @@ interface BlockedIP {
   id: string;
   ip_address: string;
   reason: string;
+  block_type: string;
+  expires_at: string | null;
+  carrier_ip: boolean;
   created_at: string;
+}
+
+interface CarrierRange {
+  id: string;
+  carrier: string;
+  ip_prefix: string;
+  country: string;
+}
+
+interface IPAnalysis {
+  ip_address: string;
+  total_clicks: number;
+  valid_clicks: number;
+  invalid_clicks: number;
+  unique_links: number;
+  active_days: number;
+  first_click: string;
+  last_click: string;
+  time_span_seconds: number;
+  risk_assessment: string;
+  is_carrier_ip: boolean;
+  carrier: string | null;
+}
+
+interface EchoAnalysis {
+  echo_id: string;
+  name: string;
+  phone: string | null;
+  links_created: number;
+  total_clicks: number;
+  valid_clicks: number;
+  invalid_clicks: number;
+  valid_rate_pct: number;
+  suspicious_repeat_ips: number;
+  risk_level: string;
+}
+
+interface IPDetailClick {
+  id: string;
+  ip_address: string;
+  is_valid: boolean;
+  created_at: string;
+  rejection_reason: string | null;
+  tracked_links: { short_code: string; users: { name: string } | null } | null;
 }
 
 interface FraudData {
   totalClicks: number;
+  validClicks: number;
   flaggedClicks: number;
-  fraudRate: number;
-  suspiciousIPs: { ip: string; count: number }[];
+  rejectionRate: number;
+  rejectionBreakdown: Record<string, number>;
+  revenueSaved: number;
   recentClicks: ClickRow[];
   blockedIPs: BlockedIP[];
+  carrierRanges: CarrierRange[];
+  ipAnalysis: IPAnalysis[];
+  echoAnalysis: EchoAnalysis[];
 }
+
+// ── Helpers ──
+
+const REJECTION_LABELS: Record<string, { label: string; isFraud: boolean }> = {
+  ip_cooldown_24h: { label: "IP cooldown (24h dédup)", isFraud: false },
+  ip_daily_limit: { label: "Limite IP journalière", isFraud: false },
+  link_rate_limit: { label: "Limite lien/heure", isFraud: false },
+  bot_useragent: { label: "Bot user-agent", isFraud: true },
+  speed_bot: { label: "Vitesse (<3s)", isFraud: true },
+  blocked_bot: { label: "IP bloquée (bot)", isFraud: true },
+  blocked_datacenter: { label: "IP datacenter", isFraud: true },
+  blocked_manual: { label: "IP bloquée (manuel)", isFraud: true },
+  missing_user_agent: { label: "UA manquant", isFraud: true },
+  manual_invalidation: { label: "Invalidation manuelle", isFraud: true },
+  // Legacy reasons from old system
+  ip_duplicate_24h: { label: "IP cooldown (24h dédup)", isFraud: false },
+  blocked_ip: { label: "IP bloquée", isFraud: true },
+  bot_detected: { label: "Bot détecté", isFraud: true },
+  ip_global_rate_limit: { label: "Limite IP globale", isFraud: false },
+};
+
+const RISK_COLORS: Record<string, string> = {
+  bot: "text-red-400",
+  targeted_abuse: "text-red-400",
+  suspicious: "text-yellow-400",
+  likely_carrier_ip: "text-blue-400",
+  normal: "text-white/40",
+};
+
+const RISK_LABELS: Record<string, string> = {
+  bot: "Bot",
+  targeted_abuse: "Abus ciblé",
+  suspicious: "Suspect",
+  likely_carrier_ip: "IP opérateur",
+  normal: "Normal",
+};
+
+function formatTimeSpan(seconds: number): string {
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
+  if (seconds < 86400) return `${Math.round(seconds / 3600)}h`;
+  return `${Math.round(seconds / 86400)} jours`;
+}
+
+function getCarrierDot(carrier: string | null): string {
+  if (!carrier) return "";
+  if (carrier.toLowerCase().includes("orange") || carrier.toLowerCase().includes("sonatel")) return "🟠";
+  if (carrier.toLowerCase().includes("free")) return "🔵";
+  if (carrier.toLowerCase().includes("expat")) return "🟢";
+  if (carrier.toLowerCase().includes("wave")) return "🟣";
+  return "⚪";
+}
+
+// ── Main Page ──
 
 export default function FraudPage() {
   const { t } = useTranslation();
   const [data, setData] = useState<FraudData | null>(null);
-  const [filter, setFilter] = useState("all");
-  const [dateRange, setDateRange] = useState<DateRange>({ key: "today", from: null, to: null });
-  const [selectedClick, setSelectedClick] = useState<ClickRow | null>(null);
+  const [dateRange, setDateRange] = useState<DateRange>({ key: "week", from: null, to: null });
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [bulkThreshold, setBulkThreshold] = useState(5);
-  const [bulkBlocking, setBulkBlocking] = useState(false);
-  const PAGE_SIZE = 30;
+  const [activeSection, setActiveSection] = useState("overview");
   const { showToast, ToastComponent } = useToast();
 
-  useEffect(() => { loadData(); }, [dateRange]);
+  // Click log state
+  const [clickFilter, setClickFilter] = useState("all");
+  const [clickPage, setClickPage] = useState(1);
 
-  async function loadData() {
+  // IP analysis state
+  const [ipPage, setIpPage] = useState(1);
+  const [ipSort, setIpSort] = useState<"total_clicks" | "valid_clicks" | "active_days">("total_clicks");
+  const [selectedIP, setSelectedIP] = useState<string | null>(null);
+  const [ipDetails, setIPDetails] = useState<{ clicks: IPDetailClick[]; carrier: string | null; carrier_notes: string | null; is_carrier_ip: boolean } | null>(null);
+  const [ipDetailsLoading, setIPDetailsLoading] = useState(false);
+
+  // Echo analysis state
+  const [echoPage, setEchoPage] = useState(1);
+
+  // Block confirmation state
+  const [blockConfirm, setBlockConfirm] = useState<{ ip: string; carrier: string } | null>(null);
+
+  // Settings state
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  const PAGE_SIZE = 20;
+
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -76,20 +200,48 @@ export default function FraudPage() {
       showToast(t("common.networkError"), "error");
     }
     setLoading(false);
-  }
+  }, [dateRange, showToast, t]);
 
-  async function blockIP(ip: string) {
+  useEffect(() => { loadData(); }, [loadData]);
+
+  // ── Actions ──
+
+  async function blockIP(ip: string, force = false) {
     try {
       const res = await fetch("/api/superadmin/fraud", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "block_ip", ip }),
+        body: JSON.stringify({ action: "block_ip", ip, force }),
       });
+      const result = await res.json();
+
+      if (res.status === 409 && result.requires_confirmation) {
+        setBlockConfirm({ ip, carrier: result.carrier });
+        return;
+      }
+
       if (res.ok) {
         showToast(t("superadmin.fraud.ipBlocked", { ip }), "success");
+        setBlockConfirm(null);
         loadData();
       } else {
-        showToast(t("common.error"), "error");
+        showToast(result.error || t("common.error"), "error");
+      }
+    } catch {
+      showToast(t("common.networkError"), "error");
+    }
+  }
+
+  async function unblockIP(ip: string) {
+    try {
+      const res = await fetch("/api/superadmin/fraud", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "unblock_ip", ip }),
+      });
+      if (res.ok) {
+        showToast(`IP ${ip} débloquée`, "success");
+        loadData();
       }
     } catch {
       showToast(t("common.networkError"), "error");
@@ -105,7 +257,6 @@ export default function FraudPage() {
       });
       if (res.ok) {
         showToast(t("superadmin.fraud.statusUpdated"), "success");
-        setSelectedClick(null);
         loadData();
       }
     } catch {
@@ -113,28 +264,74 @@ export default function FraudPage() {
     }
   }
 
-  async function bulkBlockIPs() {
-    setBulkBlocking(true);
+  async function flagEcho(echoId: string, riskLevel: string) {
     try {
       const res = await fetch("/api/superadmin/fraud", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "bulk_block_ips", threshold: bulkThreshold }),
+        body: JSON.stringify({ action: "flag_echo", echo_id: echoId, risk_level: riskLevel }),
       });
-      const result = await res.json();
       if (res.ok) {
-        showToast(t("superadmin.fraud.bulkBlocked", { count: String(result.blocked || 0) }), "success");
+        showToast("Écho signalé", "success");
         loadData();
       }
     } catch {
       showToast(t("common.networkError"), "error");
     }
-    setBulkBlocking(false);
   }
 
-  // Calculate fraud cost saved (blocked clicks × avg CPC × ECHO_SHARE)
-  const avgCpc = 25; // Approximate platform average CPC
-  const costSaved = data ? data.blockedIPs.length > 0 ? data.flaggedClicks * avgCpc * 0.75 : 0 : 0;
+  async function loadIPDetails(ip: string) {
+    setSelectedIP(ip);
+    setIPDetailsLoading(true);
+    try {
+      const res = await fetch("/api/superadmin/fraud", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "ip_details", ip }),
+      });
+      const result = await res.json();
+      setIPDetails(result);
+    } catch {
+      showToast(t("common.networkError"), "error");
+    }
+    setIPDetailsLoading(false);
+  }
+
+  async function bulkBlockBots() {
+    try {
+      const res = await fetch("/api/superadmin/fraud", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "bulk_block_ips" }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        showToast(`${result.blocked} IPs bot bloquées`, "success");
+        loadData();
+      }
+    } catch {
+      showToast(t("common.networkError"), "error");
+    }
+  }
+
+  async function saveFraudSettings(settings: Record<string, string>) {
+    setSavingSettings(true);
+    try {
+      const res = await fetch("/api/superadmin/fraud", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "update_fraud_settings", settings }),
+      });
+      if (res.ok) {
+        showToast("Paramètres sauvegardés", "success");
+      }
+    } catch {
+      showToast(t("common.networkError"), "error");
+    }
+    setSavingSettings(false);
+  }
+
+  // ── Loading state ──
 
   if (loading || !data) {
     return (
@@ -147,220 +344,659 @@ export default function FraudPage() {
     );
   }
 
+  // ── Computed data ──
+
+  const totalRejected = data.flaggedClicks;
+  const breakdownEntries = Object.entries(data.rejectionBreakdown).sort((a, b) => b[1] - a[1]);
+  const actualFraud = breakdownEntries
+    .filter(([key]) => REJECTION_LABELS[key]?.isFraud)
+    .reduce((sum, [, count]) => sum + count, 0);
+  const actualFraudRate = data.totalClicks > 0 ? ((actualFraud / data.totalClicks) * 100).toFixed(1) : "0";
+
   const filteredClicks = data.recentClicks.filter((c) => {
-    if (filter === "suspects") return !c.is_valid;
-    if (filter === "valid") return c.is_valid;
+    if (clickFilter === "suspects") return !c.is_valid;
+    if (clickFilter === "valid") return c.is_valid;
     return true;
   });
+
+  const sortedIPs = [...data.ipAnalysis].sort((a, b) => {
+    if (ipSort === "active_days") return b.active_days - a.active_days;
+    if (ipSort === "valid_clicks") return b.valid_clicks - a.valid_clicks;
+    return b.total_clicks - a.total_clicks;
+  });
+
+  const botIPs = data.ipAnalysis.filter((ip) => ip.risk_assessment === "bot" || ip.risk_assessment === "targeted_abuse");
+  const carrierIPs = data.ipAnalysis.filter((ip) => ip.is_carrier_ip);
+
+  // ── Render ──
 
   return (
     <div className="p-6 max-w-7xl">
       {ToastComponent}
 
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold">{t("superadmin.fraud.title")}</h1>
         <DateRangeSelector value={dateRange.key} onChange={setDateRange} />
       </div>
 
-      {/* Alert banner */}
-      {data.flaggedClicks > 0 && (
-        <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20">
-          <span className="text-red-400 text-sm font-semibold">
-            {data.flaggedClicks} {t("superadmin.fraud.fraudDetected", { rate: data.fraudRate })}
-          </span>
-        </div>
-      )}
+      {/* Section Navigation */}
+      <TabBar
+        tabs={[
+          { key: "overview", label: "Vue d'ensemble" },
+          { key: "ips", label: "Analyse IP", count: data.ipAnalysis.length },
+          { key: "echos", label: "Analyse Échos", count: data.echoAnalysis.length },
+          { key: "clicks", label: "Journal des clics", count: data.recentClicks.length },
+          { key: "settings", label: "Paramètres" },
+        ]}
+        active={activeSection}
+        onChange={setActiveSection}
+        className="mb-6"
+      />
 
-      {/* Bulk block recommendation */}
-      {data.suspiciousIPs.length > 0 && (
-        <div className="mb-6 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <span className="text-yellow-400 text-sm font-semibold flex-1">
-              {t("superadmin.fraud.bulkRecommendation", { count: String(data.suspiciousIPs.length) })}
-            </span>
-            <div className="flex items-center gap-2">
-              <select
-                value={bulkThreshold}
-                onChange={(e) => setBulkThreshold(Number(e.target.value))}
-                className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white/70 focus:outline-none"
-              >
-                {[3, 5, 10, 20].map((n) => (
-                  <option key={n} value={n}>{n}+ {t("common.clicks")}</option>
-                ))}
-              </select>
-              <button
-                onClick={bulkBlockIPs}
-                disabled={bulkBlocking}
-                className="px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold hover:bg-red-500/30 transition disabled:opacity-40"
-              >
-                {bulkBlocking ? t("common.loading") : t("superadmin.fraud.blockAll")}
-              </button>
-            </div>
+      {/* ══════════════════════════════════════════════
+          SECTION 1: Overview
+          ══════════════════════════════════════════════ */}
+      {activeSection === "overview" && (
+        <div className="space-y-8">
+          {/* Top Stats */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard label="Clics valides" value={formatNumber(data.validClicks)} accent="teal" />
+            <StatCard label="Rejetés" value={formatNumber(data.flaggedClicks)} accent="red" />
+            <StatCard
+              label="Taux de rejet"
+              value={`${data.rejectionRate}%`}
+              sub={`Fraude réelle: ~${actualFraudRate}%`}
+              accent={data.rejectionRate > 30 ? "red" : "orange"}
+            />
+            <StatCard label="Revenu protégé" value={formatNumber(data.revenueSaved) + " F"} accent="teal" />
           </div>
-        </div>
-      )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label={t("superadmin.dashboard.totalClicks")} value={formatNumber(data.totalClicks)} accent="orange" />
-        <StatCard label={t("superadmin.fraud.flaggedClicks")} value={formatNumber(data.flaggedClicks)} accent="red" />
-        <StatCard label={t("superadmin.dashboard.fraudRate")} value={`${data.fraudRate}%`} accent={data.fraudRate > 15 ? "red" : "teal"} />
-        <StatCard label={t("superadmin.fraud.costSaved")} value={formatNumber(Math.round(costSaved)) + " F"} accent="teal" />
-      </div>
+          {/* Rejection Breakdown */}
+          {breakdownEntries.length > 0 && (
+            <div className="glass-card p-6">
+              <h2 className="text-lg font-bold mb-4">Détail des rejets</h2>
+              <div className="space-y-3">
+                {breakdownEntries.map(([reason, count]) => {
+                  const info = REJECTION_LABELS[reason] || { label: reason, isFraud: false };
+                  const pct = totalRejected > 0 ? ((count / totalRejected) * 100).toFixed(0) : "0";
+                  return (
+                    <div key={reason} className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${info.isFraud ? "bg-red-400" : "bg-blue-400"}`} />
+                            {info.label}
+                            {info.isFraud && <span className="text-[10px] text-red-400 font-bold uppercase">fraude</span>}
+                          </span>
+                          <span className="text-xs text-white/50">{formatNumber(count)} ({pct}%)</span>
+                        </div>
+                        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${info.isFraud ? "bg-red-400/60" : "bg-blue-400/40"}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-4 pt-4 border-t border-white/5 flex gap-6 text-xs text-white/40">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-blue-400" /> Dédup / throttling (légitime)
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-red-400" /> Fraude réelle (bots)
+                </span>
+              </div>
+            </div>
+          )}
 
-      {/* IP Clusters */}
-      {data.suspiciousIPs.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-lg font-bold mb-4">{t("superadmin.fraud.suspiciousClusters")}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {data.suspiciousIPs.map((cluster) => (
-              <div key={cluster.ip} className="glass-card p-4 border-l-4 border-l-[#E74C3C]">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-mono text-sm font-bold">{cluster.ip}</span>
-                  <Badge status="flagged" label={`${cluster.count} ${t("common.clicks")}`} />
+          {/* Real-time Alerts */}
+          <div className="glass-card p-6">
+            <h2 className="text-lg font-bold mb-4">Alertes récentes</h2>
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {botIPs.length > 0 && botIPs.slice(0, 5).map((ip) => (
+                <div key={ip.ip_address} className="flex items-start gap-3 p-3 rounded-lg bg-red-500/5 border border-red-500/10">
+                  <span className="text-sm">🤖</span>
+                  <div className="flex-1 text-sm">
+                    <span className="font-mono text-xs">{ip.ip_address}</span>
+                    {" — "}{ip.total_clicks} clics en {formatTimeSpan(ip.time_span_seconds)}
+                    <span className="text-red-400 text-xs ml-2">[Bot détecté]</span>
+                  </div>
                 </div>
-                <button
-                  onClick={() => blockIP(cluster.ip)}
-                  className="text-xs font-bold text-red-400 hover:text-red-300 transition"
-                >
-                  {t("superadmin.fraud.blockIp")}
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Blocked IPs */}
-      {data.blockedIPs.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-lg font-bold mb-4">{t("superadmin.fraud.blockedIps", { count: data.blockedIPs.length })}</h2>
-          <div className="flex flex-wrap gap-2">
-            {data.blockedIPs.map((ip) => (
-              <span key={ip.id} className="px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-mono">
-                {ip.ip_address}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Click Log */}
-      <div>
-        <h2 className="text-lg font-bold mb-4">{t("superadmin.fraud.clickLog")}</h2>
-        <TabBar
-          tabs={[
-            { key: "all", label: t("superadmin.fraud.allTab"), count: data.recentClicks.length },
-            { key: "suspects", label: t("superadmin.fraud.suspectTab"), count: data.recentClicks.filter((c) => !c.is_valid).length },
-            { key: "valid", label: t("superadmin.fraud.validTab"), count: data.recentClicks.filter((c) => c.is_valid).length },
-          ]}
-          active={filter}
-          onChange={(f) => { setFilter(f); setPage(1); }}
-          className="mb-4"
-        />
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs text-white/30 border-b border-white/5">
-                <th className="pb-3 font-semibold">{t("common.date")}</th>
-                <th className="pb-3 font-semibold">{t("superadmin.fraud.ip")}</th>
-                <th className="pb-3 font-semibold hidden lg:table-cell">{t("superadmin.fraud.userAgent")}</th>
-                <th className="pb-3 font-semibold">{t("superadmin.fraud.echoLabel")}</th>
-                <th className="pb-3 font-semibold hidden md:table-cell">{t("superadmin.fraud.campaign")}</th>
-                <th className="pb-3 font-semibold">{t("common.status")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginate(filteredClicks, page, PAGE_SIZE).map((click) => (
-                <tr
-                  key={click.id}
-                  className="border-b border-white/5 hover:bg-white/3 cursor-pointer transition"
-                  onClick={() => setSelectedClick(click)}
-                >
-                  <td className="py-3 text-xs text-white/50">
-                    {new Date(click.created_at).toLocaleDateString("fr-FR", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </td>
-                  <td className="py-3 font-mono text-xs">{click.ip_address || "—"}</td>
-                  <td className="py-3 text-xs text-white/40 max-w-[200px] truncate hidden lg:table-cell">
-                    {click.user_agent?.substring(0, 50) || "—"}
-                  </td>
-                  <td className="py-3 text-xs">{click.tracked_links?.users?.name || "—"}</td>
-                  <td className="py-3 text-xs hidden md:table-cell">{click.tracked_links?.campaigns?.title || "—"}</td>
-                  <td className="py-3">
-                    <Badge status={click.is_valid ? "active" : "flagged"} label={click.is_valid ? t("common.valid") : t("admin.analytics.fraud")} />
-                  </td>
-                </tr>
               ))}
-            </tbody>
-          </table>
-        </div>
+              {data.echoAnalysis
+                .filter((e) => e.risk_level === "high_fraud_risk")
+                .slice(0, 3)
+                .map((echo) => (
+                  <div key={echo.echo_id} className="flex items-start gap-3 p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/10">
+                    <span className="text-sm">📊</span>
+                    <div className="flex-1 text-sm">
+                      Écho <span className="font-bold">{echo.name}</span> — taux valide: {echo.valid_rate_pct}%
+                      <span className="text-yellow-400 text-xs ml-2">[Vérification recommandée]</span>
+                    </div>
+                  </div>
+                ))}
+              {carrierIPs.length > 0 && (
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
+                  <span className="text-sm">📡</span>
+                  <div className="flex-1 text-sm">
+                    {carrierIPs.length} IPs d&apos;opérateurs détectées — protégées contre le blocage
+                    <span className="text-blue-400 text-xs ml-2">[CGNAT Sénégal]</span>
+                  </div>
+                </div>
+              )}
+              {botIPs.length === 0 && data.echoAnalysis.filter((e) => e.risk_level === "high_fraud_risk").length === 0 && (
+                <p className="text-sm text-white/30">Aucune alerte en cours</p>
+              )}
+            </div>
+          </div>
 
-        <Pagination currentPage={page} totalItems={filteredClicks.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
-      </div>
-
-      {/* Click Detail Modal */}
-      <Modal
-        open={!!selectedClick}
-        onClose={() => setSelectedClick(null)}
-        title={t("superadmin.fraud.clickDetail")}
-      >
-        {selectedClick && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <span className="text-xs text-white/40 block">{t("superadmin.fraud.ip")}</span>
-                <span className="font-mono">{selectedClick.ip_address || "—"}</span>
-              </div>
-              <div>
-                <span className="text-xs text-white/40 block">{t("common.status")}</span>
-                <Badge status={selectedClick.is_valid ? "active" : "flagged"} label={selectedClick.is_valid ? t("common.valid") : t("admin.analytics.fraud")} />
-              </div>
-              <div>
-                <span className="text-xs text-white/40 block">{t("superadmin.fraud.echoLabel")}</span>
-                <span>{selectedClick.tracked_links?.users?.name || "—"}</span>
-              </div>
-              <div>
-                <span className="text-xs text-white/40 block">{t("superadmin.fraud.campaign")}</span>
-                <span>{selectedClick.tracked_links?.campaigns?.title || "—"}</span>
-              </div>
-              <div>
-                <span className="text-xs text-white/40 block">{t("superadmin.fraud.country")}</span>
-                <span>{selectedClick.country || "—"}</span>
-              </div>
-              <div>
-                <span className="text-xs text-white/40 block">{t("common.date")}</span>
-                <span className="text-xs">{new Date(selectedClick.created_at).toLocaleString("fr-FR")}</span>
-              </div>
-              <div className="col-span-2">
-                <span className="text-xs text-white/40 block">{t("superadmin.fraud.userAgent")}</span>
-                <span className="text-xs font-mono break-all">{selectedClick.user_agent || "—"}</span>
+          {/* Blocked IPs */}
+          {data.blockedIPs.length > 0 && (
+            <div className="glass-card p-6">
+              <h2 className="text-lg font-bold mb-4">{t("superadmin.fraud.blockedIps", { count: data.blockedIPs.length })}</h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-white/30 border-b border-white/5">
+                      <th className="pb-3 font-semibold">IP</th>
+                      <th className="pb-3 font-semibold">Type</th>
+                      <th className="pb-3 font-semibold">Raison</th>
+                      <th className="pb-3 font-semibold">Expire</th>
+                      <th className="pb-3 font-semibold">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.blockedIPs.map((ip) => (
+                      <tr key={ip.id} className="border-b border-white/5">
+                        <td className="py-2 font-mono text-xs">
+                          {ip.ip_address}
+                          {ip.carrier_ip && <span className="ml-1 text-yellow-400">⚠️</span>}
+                        </td>
+                        <td className="py-2 text-xs">
+                          <Badge
+                            status={ip.block_type === "bot" || ip.block_type === "datacenter" ? "flagged" : "active"}
+                            label={ip.block_type}
+                          />
+                        </td>
+                        <td className="py-2 text-xs text-white/50">{ip.reason}</td>
+                        <td className="py-2 text-xs text-white/50">
+                          {ip.expires_at ? new Date(ip.expires_at).toLocaleDateString("fr-FR") : "Permanent"}
+                        </td>
+                        <td className="py-2">
+                          <button
+                            onClick={() => unblockIP(ip.ip_address)}
+                            className="text-xs text-accent hover:text-accent/80 font-bold"
+                          >
+                            Débloquer
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-            <div className="flex gap-2 pt-2">
+          )}
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════
+          SECTION 2: IP Analysis
+          ══════════════════════════════════════════════ */}
+      {activeSection === "ips" && (
+        <div className="space-y-6">
+          {/* Quick stats */}
+          <div className="flex items-center gap-4 flex-wrap">
+            <span className="text-sm text-white/50">{data.ipAnalysis.length} IPs analysées</span>
+            <span className="text-sm text-red-400">{botIPs.length} bots</span>
+            <span className="text-sm text-blue-400">{carrierIPs.length} IPs opérateur</span>
+            {botIPs.length > 0 && (
               <button
-                onClick={() => toggleClickValidity(selectedClick.id)}
-                className="flex-1 py-2 rounded-xl bg-accent/10 border border-accent/30 text-accent text-xs font-bold"
+                onClick={bulkBlockBots}
+                className="ml-auto px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold hover:bg-red-500/30 transition"
               >
-                {selectedClick.is_valid ? t("superadmin.fraud.markFraud") : t("superadmin.fraud.markValid")}
+                Bloquer tous les bots ({botIPs.length})
               </button>
-              {selectedClick.ip_address && (
+            )}
+          </div>
+
+          {/* Sort controls */}
+          <div className="flex gap-2">
+            {(["total_clicks", "valid_clicks", "active_days"] as const).map((key) => (
+              <button
+                key={key}
+                onClick={() => setIpSort(key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${ipSort === key ? "bg-accent/20 text-accent border border-accent/30" : "bg-white/5 text-white/50 hover:bg-white/10"}`}
+              >
+                {key === "total_clicks" ? "Clics" : key === "valid_clicks" ? "Valides" : "Jours actifs"}
+              </button>
+            ))}
+          </div>
+
+          {/* IP Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-white/30 border-b border-white/5">
+                  <th className="pb-3 font-semibold">Adresse IP</th>
+                  <th className="pb-3 font-semibold">Clics</th>
+                  <th className="pb-3 font-semibold">Valides</th>
+                  <th className="pb-3 font-semibold hidden md:table-cell">Opérateur</th>
+                  <th className="pb-3 font-semibold">Risque</th>
+                  <th className="pb-3 font-semibold hidden lg:table-cell">Durée</th>
+                  <th className="pb-3 font-semibold">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginate(sortedIPs, ipPage, PAGE_SIZE).map((ip) => (
+                  <tr key={ip.ip_address} className="border-b border-white/5 hover:bg-white/3 transition">
+                    <td className="py-3 font-mono text-xs">{ip.ip_address}</td>
+                    <td className="py-3 text-xs">{ip.total_clicks}</td>
+                    <td className="py-3 text-xs">{ip.valid_clicks}</td>
+                    <td className="py-3 text-xs hidden md:table-cell">
+                      {ip.is_carrier_ip ? (
+                        <span>{getCarrierDot(ip.carrier)} {ip.carrier}</span>
+                      ) : (
+                        <span className="text-white/20">—</span>
+                      )}
+                    </td>
+                    <td className="py-3">
+                      <span className={`text-xs font-bold ${RISK_COLORS[ip.risk_assessment] || "text-white/40"}`}>
+                        {RISK_LABELS[ip.risk_assessment] || ip.risk_assessment}
+                      </span>
+                    </td>
+                    <td className="py-3 text-xs text-white/40 hidden lg:table-cell">
+                      {formatTimeSpan(ip.time_span_seconds)}
+                    </td>
+                    <td className="py-3">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => loadIPDetails(ip.ip_address)}
+                          className="text-xs text-accent hover:text-accent/80 font-semibold"
+                        >
+                          Détails
+                        </button>
+                        {ip.is_carrier_ip ? (
+                          <span className="text-xs text-orange-400/70 font-semibold">Protégé</span>
+                        ) : (
+                          !data.blockedIPs.some((b) => b.ip_address === ip.ip_address) && (
+                            <button
+                              onClick={() => blockIP(ip.ip_address)}
+                              className="text-xs text-red-400 hover:text-red-300 font-semibold"
+                            >
+                              Bloquer
+                            </button>
+                          )
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <Pagination currentPage={ipPage} totalItems={sortedIPs.length} pageSize={PAGE_SIZE} onPageChange={setIpPage} />
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════
+          SECTION 3: Écho Fraud Analysis
+          ══════════════════════════════════════════════ */}
+      {activeSection === "echos" && (
+        <div className="space-y-6">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-white/30 border-b border-white/5">
+                  <th className="pb-3 font-semibold">Écho</th>
+                  <th className="pb-3 font-semibold">Clics</th>
+                  <th className="pb-3 font-semibold">Valides</th>
+                  <th className="pb-3 font-semibold">Taux valide</th>
+                  <th className="pb-3 font-semibold hidden md:table-cell">IPs suspectes</th>
+                  <th className="pb-3 font-semibold">Risque</th>
+                  <th className="pb-3 font-semibold">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginate(data.echoAnalysis, echoPage, PAGE_SIZE).map((echo) => (
+                  <tr key={echo.echo_id} className="border-b border-white/5 hover:bg-white/3 transition">
+                    <td className="py-3">
+                      <div>
+                        <span className="text-sm font-semibold">{echo.name}</span>
+                        {echo.phone && <span className="text-xs text-white/30 ml-2">{echo.phone}</span>}
+                      </div>
+                      <span className="text-xs text-white/30">{echo.links_created} liens</span>
+                    </td>
+                    <td className="py-3 text-xs">{echo.total_clicks}</td>
+                    <td className="py-3 text-xs">{echo.valid_clicks}</td>
+                    <td className="py-3">
+                      <span className={`text-sm font-bold ${
+                        echo.valid_rate_pct < 30 ? "text-red-400" :
+                        echo.valid_rate_pct < 50 ? "text-yellow-400" :
+                        "text-emerald-400"
+                      }`}>
+                        {echo.valid_rate_pct}%
+                      </span>
+                    </td>
+                    <td className="py-3 text-xs hidden md:table-cell">
+                      {echo.suspicious_repeat_ips > 0 ? (
+                        <span className="text-yellow-400">{echo.suspicious_repeat_ips}</span>
+                      ) : (
+                        <span className="text-white/20">0</span>
+                      )}
+                    </td>
+                    <td className="py-3">
+                      <Badge
+                        status={
+                          echo.risk_level === "high_fraud_risk" ? "flagged" :
+                          echo.risk_level === "moderate_risk" ? "suspended" :
+                          "active"
+                        }
+                        label={
+                          echo.risk_level === "high_fraud_risk" ? "Haut risque" :
+                          echo.risk_level === "moderate_risk" ? "Modéré" :
+                          "Clean"
+                        }
+                      />
+                    </td>
+                    <td className="py-3">
+                      {echo.risk_level !== "clean" && (
+                        <button
+                          onClick={() => flagEcho(echo.echo_id, "high")}
+                          className="text-xs text-red-400 hover:text-red-300 font-semibold"
+                        >
+                          Signaler
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <Pagination currentPage={echoPage} totalItems={data.echoAnalysis.length} pageSize={PAGE_SIZE} onPageChange={setEchoPage} />
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════
+          SECTION 4: Click Log
+          ══════════════════════════════════════════════ */}
+      {activeSection === "clicks" && (
+        <div className="space-y-4">
+          <TabBar
+            tabs={[
+              { key: "all", label: t("superadmin.fraud.allTab"), count: data.recentClicks.length },
+              { key: "suspects", label: t("superadmin.fraud.suspectTab"), count: data.recentClicks.filter((c) => !c.is_valid).length },
+              { key: "valid", label: t("superadmin.fraud.validTab"), count: data.recentClicks.filter((c) => c.is_valid).length },
+            ]}
+            active={clickFilter}
+            onChange={(f) => { setClickFilter(f); setClickPage(1); }}
+            className="mb-4"
+          />
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-white/30 border-b border-white/5">
+                  <th className="pb-3 font-semibold">{t("common.date")}</th>
+                  <th className="pb-3 font-semibold">{t("superadmin.fraud.ip")}</th>
+                  <th className="pb-3 font-semibold hidden lg:table-cell">Raison</th>
+                  <th className="pb-3 font-semibold">{t("superadmin.fraud.echoLabel")}</th>
+                  <th className="pb-3 font-semibold hidden md:table-cell">{t("superadmin.fraud.campaign")}</th>
+                  <th className="pb-3 font-semibold">{t("common.status")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginate(filteredClicks, clickPage, PAGE_SIZE).map((click) => (
+                  <tr key={click.id} className="border-b border-white/5 hover:bg-white/3 transition">
+                    <td className="py-3 text-xs text-white/50">
+                      {new Date(click.created_at).toLocaleDateString("fr-FR", {
+                        day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+                      })}
+                    </td>
+                    <td className="py-3 font-mono text-xs">{click.ip_address || "—"}</td>
+                    <td className="py-3 text-xs text-white/40 hidden lg:table-cell">
+                      {click.rejection_reason ? (REJECTION_LABELS[click.rejection_reason]?.label || click.rejection_reason) : "—"}
+                    </td>
+                    <td className="py-3 text-xs">{click.tracked_links?.users?.name || "—"}</td>
+                    <td className="py-3 text-xs hidden md:table-cell">{click.tracked_links?.campaigns?.title || "—"}</td>
+                    <td className="py-3">
+                      <button onClick={() => toggleClickValidity(click.id)}>
+                        <Badge status={click.is_valid ? "active" : "flagged"} label={click.is_valid ? t("common.valid") : "Rejeté"} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <Pagination currentPage={clickPage} totalItems={filteredClicks.length} pageSize={PAGE_SIZE} onPageChange={setClickPage} />
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════
+          SECTION 5: Fraud Settings
+          ══════════════════════════════════════════════ */}
+      {activeSection === "settings" && (
+        <FraudSettings onSave={saveFraudSettings} saving={savingSettings} />
+      )}
+
+      {/* ══════════════════════════════════════════════
+          MODALS
+          ══════════════════════════════════════════════ */}
+
+      {/* IP Detail Slide-out */}
+      <Modal
+        open={!!selectedIP}
+        onClose={() => { setSelectedIP(null); setIPDetails(null); }}
+        title={`IP: ${selectedIP || ""}`}
+      >
+        {ipDetailsLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => <div key={i} className="skeleton h-12 rounded-lg" />)}
+          </div>
+        ) : ipDetails ? (
+          <div className="space-y-4">
+            {/* Carrier info */}
+            {ipDetails.is_carrier_ip && (
+              <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                <p className="text-sm font-bold text-orange-400">
+                  {getCarrierDot(ipDetails.carrier)} Opérateur: {ipDetails.carrier}
+                </p>
+                {ipDetails.carrier_notes && (
+                  <p className="text-xs text-orange-400/70 mt-1">{ipDetails.carrier_notes}</p>
+                )}
+                <p className="text-xs text-orange-400/60 mt-2">
+                  ⚠️ IP partagée (CGNAT). Le blocage affectera tous les abonnés de cette antenne.
+                </p>
+              </div>
+            )}
+
+            {/* Click timeline */}
+            <div>
+              <h3 className="text-sm font-bold mb-3">Chronologie des clics ({ipDetails.clicks.length})</h3>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {ipDetails.clicks.map((click) => {
+                  const link = Array.isArray(click.tracked_links) ? click.tracked_links[0] : click.tracked_links;
+                  return (
+                    <div key={click.id} className="flex items-center gap-3 text-xs py-1.5 border-b border-white/5">
+                      <span className={`w-1.5 h-1.5 rounded-full ${click.is_valid ? "bg-emerald-400" : "bg-red-400"}`} />
+                      <span className="text-white/40 w-28 shrink-0">
+                        {new Date(click.created_at).toLocaleString("fr-FR", {
+                          month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit",
+                        })}
+                      </span>
+                      <span className="font-mono text-white/60">/r/{link?.short_code || "?"}</span>
+                      <span className="text-white/30">({link?.users?.name || "?"})</span>
+                      {click.rejection_reason && (
+                        <span className="text-red-400/60 ml-auto">{REJECTION_LABELS[click.rejection_reason]?.label || click.rejection_reason}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-2">
+              {ipDetails.is_carrier_ip ? (
+                <div className="flex-1 py-2 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-bold text-center">
+                  IP protégée — opérateur {ipDetails.carrier}
+                </div>
+              ) : (
                 <button
-                  onClick={() => { blockIP(selectedClick.ip_address!); setSelectedClick(null); }}
+                  onClick={() => { blockIP(selectedIP!); setSelectedIP(null); setIPDetails(null); }}
                   className="flex-1 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold"
                 >
-                  {t("superadmin.fraud.blockIp")}
+                  Bloquer cette IP
                 </button>
               )}
             </div>
           </div>
+        ) : null}
+      </Modal>
+
+      {/* Carrier Block Confirmation */}
+      <Modal
+        open={!!blockConfirm}
+        onClose={() => setBlockConfirm(null)}
+        title="⚠️ IP opérateur détectée"
+      >
+        {blockConfirm && (
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20">
+              <p className="text-sm text-orange-400">
+                Cette IP appartient au réseau de <strong>{blockConfirm.carrier}</strong>.
+                Le blocage rejettera les clics de <strong>tous les abonnés</strong> de cette antenne — potentiellement des milliers de personnes.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setBlockConfirm(null)}
+                className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-bold"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => { blockIP(blockConfirm.ip, true); }}
+                className="flex-1 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-bold"
+              >
+                Bloquer quand même
+              </button>
+            </div>
+          </div>
         )}
       </Modal>
+    </div>
+  );
+}
+
+// ── Fraud Settings Component ──
+
+function FraudSettings({ onSave, saving }: { onSave: (s: Record<string, string>) => void; saving: boolean }) {
+  const [cooldownHours, setCooldownHours] = useState("24");
+  const [linkHourlyLimit, setLinkHourlyLimit] = useState("30");
+  const [ipDailyLimit, setIpDailyLimit] = useState("8");
+  const [speedSeconds, setSpeedSeconds] = useState("3");
+  const [autoBlockDatacenter, setAutoBlockDatacenter] = useState(true);
+  const [carrierProtection, setCarrierProtection] = useState(true);
+
+  return (
+    <div className="glass-card p-6 max-w-xl space-y-6">
+      <h2 className="text-lg font-bold">Paramètres anti-fraude</h2>
+
+      <div className="space-y-4">
+        <div>
+          <label className="text-xs text-white/50 block mb-1">Cooldown IP par lien (heures)</label>
+          <input
+            type="number"
+            value={cooldownHours}
+            onChange={(e) => setCooldownHours(e.target.value)}
+            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent/50"
+          />
+          <p className="text-xs text-white/30 mt-1">Même IP + même lien = 1 clic valide par période</p>
+        </div>
+
+        <div>
+          <label className="text-xs text-white/50 block mb-1">Limite clics par lien / heure</label>
+          <input
+            type="number"
+            value={linkHourlyLimit}
+            onChange={(e) => setLinkHourlyLimit(e.target.value)}
+            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent/50"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs text-white/50 block mb-1">Limite clics valides par IP / jour</label>
+          <input
+            type="number"
+            value={ipDailyLimit}
+            onChange={(e) => setIpDailyLimit(e.target.value)}
+            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent/50"
+          />
+          <p className="text-xs text-white/30 mt-1">Maximum de clics valides par IP par jour (tous liens confondus)</p>
+        </div>
+
+        <div>
+          <label className="text-xs text-white/50 block mb-1">Intervalle minimum entre clics (secondes)</label>
+          <input
+            type="number"
+            value={speedSeconds}
+            onChange={(e) => setSpeedSeconds(e.target.value)}
+            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent/50"
+          />
+          <p className="text-xs text-white/30 mt-1">Clics plus rapides = bot automatique</p>
+        </div>
+
+        <div className="flex items-center justify-between py-2">
+          <div>
+            <span className="text-sm">Auto-bloquer IPs datacenter</span>
+            <p className="text-xs text-white/30">Bloquer automatiquement les IPs identifiées comme datacenter</p>
+          </div>
+          <button
+            onClick={() => setAutoBlockDatacenter(!autoBlockDatacenter)}
+            className={`w-12 h-6 rounded-full transition-colors ${autoBlockDatacenter ? "bg-accent" : "bg-white/10"}`}
+          >
+            <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${autoBlockDatacenter ? "translate-x-6" : "translate-x-0.5"}`} />
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between py-2">
+          <div>
+            <span className="text-sm">Protection IPs opérateur</span>
+            <p className="text-xs text-white/30">Empêcher le blocage des IPs CGNAT des opérateurs sénégalais (recommandé)</p>
+          </div>
+          <button
+            onClick={() => setCarrierProtection(!carrierProtection)}
+            className={`w-12 h-6 rounded-full transition-colors ${carrierProtection ? "bg-accent" : "bg-white/10"}`}
+          >
+            <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${carrierProtection ? "translate-x-6" : "translate-x-0.5"}`} />
+          </button>
+        </div>
+      </div>
+
+      <button
+        onClick={() => onSave({
+          fraud_ip_cooldown_hours: cooldownHours,
+          fraud_link_hourly_limit: linkHourlyLimit,
+          fraud_ip_daily_valid_limit: ipDailyLimit,
+          fraud_speed_check_seconds: speedSeconds,
+          fraud_auto_block_datacenter: String(autoBlockDatacenter),
+          fraud_carrier_ip_protection: String(carrierProtection),
+        })}
+        disabled={saving}
+        className="w-full py-2.5 rounded-xl bg-accent/20 border border-accent/30 text-accent text-sm font-bold hover:bg-accent/30 transition disabled:opacity-40"
+      >
+        {saving ? "Sauvegarde..." : "Sauvegarder les paramètres"}
+      </button>
     </div>
   );
 }

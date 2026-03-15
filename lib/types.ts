@@ -74,7 +74,47 @@ export interface BlockedIP {
   ip_address: string;
   reason: string | null;
   blocked_by: string | null;
+  block_type: "manual" | "bot" | "datacenter" | "temporary";
+  expires_at: string | null;
+  click_count: number;
+  carrier_ip: boolean;
   created_at: string;
+}
+
+export interface CarrierIPRange {
+  id: string;
+  carrier: string;
+  ip_prefix: string;
+  country: string;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface FraudIPAnalysis {
+  ip_address: string;
+  total_clicks: number;
+  valid_clicks: number;
+  invalid_clicks: number;
+  unique_links: number;
+  active_days: number;
+  first_click: string;
+  last_click: string;
+  time_span_seconds: number;
+  risk_assessment: "bot" | "targeted_abuse" | "likely_carrier_ip" | "suspicious" | "normal";
+  is_carrier_ip: boolean;
+}
+
+export interface FraudEchoAnalysis {
+  echo_id: string;
+  name: string;
+  phone: string | null;
+  links_created: number;
+  total_clicks: number;
+  valid_clicks: number;
+  invalid_clicks: number;
+  valid_rate_pct: number;
+  suspicious_repeat_ips: number;
+  risk_level: "high_fraud_risk" | "moderate_risk" | "clean";
 }
 
 export interface PlatformSetting {
