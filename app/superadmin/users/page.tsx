@@ -25,6 +25,20 @@ interface UserRow {
   click_stats: { total: number; valid: number; fraud: number; rate: number };
 }
 
+interface CampaignHistory {
+  campaign_id: string;
+  title: string;
+  status: string;
+  cpc: number;
+  clicks?: number;
+  earned?: number;
+  joined_at?: string;
+  budget?: number;
+  spent?: number;
+  echos?: number;
+  created_at?: string;
+}
+
 export default function UsersPageWrapper() {
   return <Suspense><UsersPageContent /></Suspense>;
 }
@@ -51,15 +65,48 @@ function UsersPageContent() {
     city: "",
   });
 
+  // Campaign history state
+  const [history, setHistory] = useState<CampaignHistory[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
   // Top-up state
   const [showTopup, setShowTopup] = useState(false);
   const [topupUser, setTopupUser] = useState<UserRow | null>(null);
   const [topupAmount, setTopupAmount] = useState("");
   const [toppingUp, setToppingUp] = useState(false);
 
+  async function loadHistory(user: UserRow) {
+    setHistoryLoading(true);
+    setHistory([]);
+    try {
+      const res = await fetch(`/api/superadmin/users/history?user_id=${user.id}&role=${user.role}`);
+      if (res.ok) {
+        const data = await res.json();
+        setHistory(data.campaigns || []);
+      }
+    } catch { /* silently fail */ }
+    setHistoryLoading(false);
+  }
+
+  function selectUser(user: UserRow) {
+    setSelected(user);
+    loadHistory(user);
+  }
+
   const openUserById = useCallback((userList: UserRow[], id: string) => {
     const match = userList.find((u) => u.id === id);
-    if (match) setSelected(match);
+    if (match) {
+      setSelected(match);
+      // Load history in next tick to avoid calling during render
+      setTimeout(() => {
+        setHistoryLoading(true);
+        setHistory([]);
+        fetch(`/api/superadmin/users/history?user_id=${match.id}&role=${match.role}`)
+          .then((r) => r.ok ? r.json() : null)
+          .then((data) => data && setHistory(data.campaigns || []))
+          .finally(() => setHistoryLoading(false));
+      }, 0);
+    }
   }, []);
 
   useEffect(() => { loadData(); }, []);
@@ -255,7 +302,7 @@ function UsersPageContent() {
               <tr
                 key={user.id}
                 className="border-b border-white/5 hover:bg-white/3 cursor-pointer transition"
-                onClick={() => setSelected(user)}
+                onClick={() => selectUser(user)}
               >
                 <td className="py-3">
                   <div className="flex items-center gap-3">
@@ -299,7 +346,7 @@ function UsersPageContent() {
       </div>
 
       {/* User Detail Modal */}
-      <Modal open={!!selected} onClose={() => setSelected(null)} title={selected?.name || ""}>
+      <Modal open={!!selected} onClose={() => { setSelected(null); setHistory([]); }} title={selected?.name || ""}>
         {selected && (
           <div className="space-y-4">
             <div className="flex items-center gap-4">
@@ -334,6 +381,62 @@ function UsersPageContent() {
                 <div className="text-lg font-bold text-red-400">{selected.click_stats.rate}%</div>
                 <div className="text-[10px] text-white/40">{t("superadmin.users.fraudRate")}</div>
               </div>
+            </div>
+
+            {/* Campaign history */}
+            <div className="pt-3 border-t border-white/5">
+              <h4 className="text-xs font-bold text-white/50 mb-3">
+                {selected.role === "echo"
+                  ? t("superadmin.users.campaignsJoined")
+                  : t("superadmin.users.campaignsLaunched")}
+              </h4>
+
+              {historyLoading ? (
+                <div className="space-y-2">
+                  {[1, 2].map((i) => <div key={i} className="skeleton h-14 rounded-xl" />)}
+                </div>
+              ) : history.length === 0 ? (
+                <p className="text-xs text-white/20 text-center py-3">{t("superadmin.users.noCampaigns")}</p>
+              ) : (
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {history.map((c) => {
+                    const statusColors: Record<string, string> = {
+                      active: "text-emerald-400 bg-emerald-500/10",
+                      completed: "text-blue-400 bg-blue-500/10",
+                      paused: "text-yellow-400 bg-yellow-500/10",
+                      draft: "text-white/40 bg-white/5",
+                      rejected: "text-red-400 bg-red-500/10",
+                    };
+                    const isEcho = selected.role === "echo";
+                    return (
+                      <div key={c.campaign_id + (c.joined_at || c.created_at || "")} className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                        <div className="flex items-start justify-between gap-2 mb-1.5">
+                          <span className="text-sm font-semibold truncate flex-1">{c.title}</span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${statusColors[c.status] || "text-white/40 bg-white/5"}`}>
+                            {c.status}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-white/40">
+                          {isEcho ? (
+                            <>
+                              <span>{t("superadmin.users.histClicks")}: <strong className="text-white/70">{c.clicks}</strong></span>
+                              <span>{t("superadmin.users.histEarned")}: <strong className="text-accent">{formatFCFA(c.earned || 0)}</strong></span>
+                              <span>CPC: {formatFCFA(c.cpc)}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>{t("common.budget")}: <strong className="text-white/70">{formatFCFA(c.budget || 0)}</strong></span>
+                              <span>{t("admin.dashboard.spent")}: <strong className="text-accent">{formatFCFA(c.spent || 0)}</strong></span>
+                              <span>{t("superadmin.users.histEchos")}: <strong className="text-white/70">{c.echos}</strong></span>
+                              <span>CPC: {formatFCFA(c.cpc)}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Top-up button for batteurs */}

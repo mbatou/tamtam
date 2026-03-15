@@ -519,7 +519,13 @@
       "recharging": "Recharging...",
       "newBalanceResult": "New balance: {balance}",
       "invalidAmount": "Invalid amount",
-      "loadError": "Loading error"
+      "loadError": "Loading error",
+      "campaignsJoined": "Campaigns joined",
+      "campaignsLaunched": "Campaigns launched",
+      "noCampaigns": "No campaigns yet",
+      "histClicks": "Clicks",
+      "histEarned": "Earned",
+      "histEchos": "Echos"
     },
     "campaigns": {
       "title": "Campaign moderation",
