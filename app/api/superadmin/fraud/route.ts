@@ -34,47 +34,80 @@ export async function GET(request: NextRequest) {
   let totalQuery = supabase.from("clicks").select("*", { count: "exact", head: true });
   let validQuery = supabase.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", true);
   let flaggedQuery = supabase.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", false);
-  let recentQuery = supabase.from("clicks").select("id, ip_address, user_agent, is_valid, country, created_at, link_id, rejection_reason, tracked_links!link_id(short_code, echo_id, campaign_id, users!echo_id(name), campaigns!campaign_id(title))").order("created_at", { ascending: false }).limit(200);
 
-  // Rejection reason breakdown query
-  let rejectionQuery = supabase.from("clicks").select("rejection_reason").eq("is_valid", false).not("rejection_reason", "is", null);
+  // Try with rejection_reason column (added by antifraud migration)
+  const recentSelect = "id, ip_address, user_agent, is_valid, country, created_at, link_id, rejection_reason, tracked_links!link_id(short_code, echo_id, campaign_id, users!echo_id(name), campaigns!campaign_id(title))";
+  const recentSelectFallback = "id, ip_address, user_agent, is_valid, country, created_at, link_id, tracked_links!link_id(short_code, echo_id, campaign_id, users!echo_id(name), campaigns!campaign_id(title))";
+
+  let recentQuery = supabase.from("clicks").select(recentSelect).order("created_at", { ascending: false }).limit(200);
 
   if (sinceDate) {
     totalQuery = totalQuery.gte("created_at", sinceDate);
     validQuery = validQuery.gte("created_at", sinceDate);
     flaggedQuery = flaggedQuery.gte("created_at", sinceDate);
     recentQuery = recentQuery.gte("created_at", sinceDate);
-    rejectionQuery = rejectionQuery.gte("created_at", sinceDate);
   }
   if (untilDate) {
     totalQuery = totalQuery.lte("created_at", untilDate);
     validQuery = validQuery.lte("created_at", untilDate);
     flaggedQuery = flaggedQuery.lte("created_at", untilDate);
     recentQuery = recentQuery.lte("created_at", untilDate);
-    rejectionQuery = rejectionQuery.lte("created_at", untilDate);
   }
 
+  // Core queries (clicks table — always exists)
   const [
     { count: totalClicks },
     { count: validClicks },
     { count: flaggedClicks },
-    { data: recentClicks },
-    { data: rejectionData },
+    recentResult,
     { data: blockedIPs },
-    { data: carrierRanges },
-    { data: ipAnalysis },
-    { data: echoAnalysis },
   ] = await Promise.all([
     totalQuery,
     validQuery,
     flaggedQuery,
     recentQuery,
-    rejectionQuery,
     supabase.from("blocked_ips").select("*").order("created_at", { ascending: false }),
-    supabase.from("carrier_ip_ranges").select("*"),
-    supabase.from("fraud_ip_analysis").select("*").order("total_clicks", { ascending: false }).limit(100),
-    supabase.from("fraud_echo_analysis").select("*").order("total_clicks", { ascending: false }).limit(50),
   ]);
+
+  // Fallback: if rejection_reason column doesn't exist, re-query without it
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let recentClicks: any[] | null = recentResult.data;
+  if (!recentClicks && recentResult.error) {
+    let fallbackQuery = supabase.from("clicks").select(recentSelectFallback).order("created_at", { ascending: false }).limit(200);
+    if (sinceDate) fallbackQuery = fallbackQuery.gte("created_at", sinceDate);
+    if (untilDate) fallbackQuery = fallbackQuery.lte("created_at", untilDate);
+    const { data } = await fallbackQuery;
+    recentClicks = data;
+  }
+
+  // Rejection reason breakdown (only works if column exists)
+  let rejectionData: { rejection_reason: string }[] | null = null;
+  {
+    let rejectionQuery = supabase.from("clicks").select("rejection_reason").eq("is_valid", false).not("rejection_reason", "is", null);
+    if (sinceDate) rejectionQuery = rejectionQuery.gte("created_at", sinceDate);
+    if (untilDate) rejectionQuery = rejectionQuery.lte("created_at", untilDate);
+    const { data } = await rejectionQuery;
+    rejectionData = data;
+  }
+
+  // Optional queries (views/tables from antifraud migration — may not exist yet)
+  let carrierRanges: { carrier: string; ip_prefix: string; country: string }[] | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let ipAnalysis: any[] | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let echoAnalysis: any[] | null = null;
+  try {
+    const [crRes, ipRes, echoRes] = await Promise.all([
+      supabase.from("carrier_ip_ranges").select("*"),
+      supabase.from("fraud_ip_analysis").select("*").order("total_clicks", { ascending: false }).limit(100),
+      supabase.from("fraud_echo_analysis").select("*").order("total_clicks", { ascending: false }).limit(50),
+    ]);
+    carrierRanges = crRes.data;
+    ipAnalysis = ipRes.data;
+    echoAnalysis = echoRes.data;
+  } catch {
+    // Views/tables from migration not applied yet — continue with empty data
+  }
 
   // Build rejection breakdown
   const rejectionBreakdown: Record<string, number> = {};
