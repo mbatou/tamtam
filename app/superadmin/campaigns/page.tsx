@@ -131,8 +131,11 @@ function CampaignModerationPageContent() {
         body: JSON.stringify({ campaign_id: campaignId }),
       });
       const data = await res.json();
-      if (res.ok) {
+      if (res.ok && data.sent > 0) {
         showToast(t("superadmin.campaigns.notifySent", { count: data.sent }), "success");
+      } else if (res.ok && data.sent === 0) {
+        const errMsg = data.errors?.[0] || t("common.error");
+        showToast(`0 emails sent: ${errMsg}`, "error");
       } else {
         showToast(data.error || t("common.error"), "error");
       }
