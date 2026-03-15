@@ -227,7 +227,7 @@ export default function RythmesPage() {
               >
                 <span className="text-xl block mb-1">🤝</span>
                 <span className="text-xs font-bold block">{t("echo.rythmes.inviteFriend")}</span>
-                <span className="text-[10px] text-accent block mt-0.5">+500 FCFA</span>
+                <span className="text-[10px] text-accent block mt-0.5">+150 FCFA</span>
               </button>
               <button
                 onClick={() => window.location.href = "/leaderboard"}
