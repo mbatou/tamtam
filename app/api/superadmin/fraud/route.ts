@@ -4,12 +4,35 @@ import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
   if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   const supabase = createServiceClient();
+
+  // Period filter
+  const period = request.nextUrl.searchParams.get("period") || "all";
+  let sinceDate: string | null = null;
+  const now = new Date();
+  if (period === "today") {
+    sinceDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  } else if (period === "week") {
+    sinceDate = new Date(now.getTime() - 7 * 86400000).toISOString();
+  }
+
+  // Build queries with optional date filter
+  let totalQuery = supabase.from("clicks").select("*", { count: "exact", head: true });
+  let flaggedQuery = supabase.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", false);
+  let recentQuery = supabase.from("clicks").select("id, ip_address, user_agent, is_valid, country, created_at, link_id, tracked_links!link_id(short_code, echo_id, campaign_id, users!echo_id(name), campaigns!campaign_id(title))").order("created_at", { ascending: false }).limit(200);
+  let fraudIPQuery = supabase.from("clicks").select("ip_address").eq("is_valid", false);
+
+  if (sinceDate) {
+    totalQuery = totalQuery.gte("created_at", sinceDate);
+    flaggedQuery = flaggedQuery.gte("created_at", sinceDate);
+    recentQuery = recentQuery.gte("created_at", sinceDate);
+    fraudIPQuery = fraudIPQuery.gte("created_at", sinceDate);
+  }
 
   const [
     { count: totalClicks },
@@ -18,10 +41,10 @@ export async function GET() {
     { data: fraudIPs },
     { data: blockedIPs },
   ] = await Promise.all([
-    supabase.from("clicks").select("*", { count: "exact", head: true }),
-    supabase.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", false),
-    supabase.from("clicks").select("id, ip_address, user_agent, is_valid, country, created_at, link_id, tracked_links!link_id(short_code, echo_id, campaign_id, users!echo_id(name), campaigns!campaign_id(title))").order("created_at", { ascending: false }).limit(100),
-    supabase.from("clicks").select("ip_address").eq("is_valid", false),
+    totalQuery,
+    flaggedQuery,
+    recentQuery,
+    fraudIPQuery,
     supabase.from("blocked_ips").select("*").order("created_at", { ascending: false }),
   ]);
 
