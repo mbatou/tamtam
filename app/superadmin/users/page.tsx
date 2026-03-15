@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { formatFCFA } from "@/lib/utils";
+import { formatFCFA, timeAgo } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
 import Badge from "@/components/ui/Badge";
@@ -24,6 +24,7 @@ interface UserRow {
   mobile_money_provider: string | null;
   created_at: string;
   click_stats: { total: number; valid: number; fraud: number; rate: number };
+  last_click_at: string | null;
   is_dual_role?: boolean;
   has_echo_activity?: boolean;
   has_batteur_activity?: boolean;
@@ -62,6 +63,7 @@ function UsersPageContent() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [filter, setFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [activityFilter, setActivityFilter] = useState<"all" | "active" | "inactive">("all");
   const [selected, setSelected] = useState<UserRow | null>(null);
   const [loading, setLoading] = useState(true);
   const { showToast, ToastComponent } = useToast();
@@ -284,6 +286,8 @@ function UsersPageContent() {
     if (roleFilter === "dual") {
       if (!u.is_dual_role && !(u.has_echo_activity && u.has_batteur_activity)) return false;
     }
+    if (activityFilter === "active" && u.click_stats.total === 0) return false;
+    if (activityFilter === "inactive" && u.click_stats.total > 0) return false;
     if (filter === "verified") return u.status === "verified";
     if (filter === "flagged") return u.status === "flagged";
     if (filter === "suspended") return u.status === "suspended";
@@ -344,6 +348,21 @@ function UsersPageContent() {
             }`}
           >
             {r.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Activity filter */}
+      <div className="flex gap-2 mb-4">
+        {(["all", "active", "inactive"] as const).map((key) => (
+          <button
+            key={key}
+            onClick={() => { setActivityFilter(key); setPage(1); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+              activityFilter === key ? "bg-accent/20 text-accent border border-accent/30" : "bg-white/5 text-white/40"
+            }`}
+          >
+            {key === "all" ? t("superadmin.users.activityAll") : key === "active" ? t("superadmin.users.activityActive") : t("superadmin.users.activityInactive")}
           </button>
         ))}
       </div>
@@ -427,8 +446,11 @@ function UsersPageContent() {
                 </td>
                 <td className="py-3 font-bold hidden md:table-cell">{formatFCFA(user.total_earned)}</td>
                 <td className="py-3 hidden lg:table-cell">{formatFCFA(user.balance)}</td>
-                <td className="py-3 text-xs text-white/40 hidden lg:table-cell">
-                  {new Date(user.created_at).toLocaleDateString("fr-FR")}
+                <td className="py-3 hidden lg:table-cell">
+                  <div className="text-xs text-white/40">{new Date(user.created_at).toLocaleDateString("fr-FR")}</div>
+                  <div className={`text-[10px] ${user.last_click_at ? "text-accent/70" : "text-white/20"}`}>
+                    {user.last_click_at ? timeAgo(user.last_click_at, t) : t("superadmin.users.neverActive")}
+                  </div>
                 </td>
               </tr>
             ))}

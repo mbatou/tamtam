@@ -9,6 +9,7 @@ import TabBar from "@/components/ui/TabBar";
 import Modal from "@/components/ui/Modal";
 import Pagination, { paginate } from "@/components/ui/Pagination";
 import { useToast } from "@/components/ui/Toast";
+import DateRangeSelector, { type DateRange } from "@/components/ui/DateRangeSelector";
 
 interface ClickRow {
   id: string;
@@ -47,19 +48,28 @@ export default function FraudPage() {
   const { t } = useTranslation();
   const [data, setData] = useState<FraudData | null>(null);
   const [filter, setFilter] = useState("all");
-  const [period, setPeriod] = useState<"today" | "week" | "all">("today");
+  const [dateRange, setDateRange] = useState<DateRange>({ key: "today", from: null, to: null });
   const [selectedClick, setSelectedClick] = useState<ClickRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [bulkThreshold, setBulkThreshold] = useState(5);
+  const [bulkBlocking, setBulkBlocking] = useState(false);
   const PAGE_SIZE = 30;
   const { showToast, ToastComponent } = useToast();
 
-  useEffect(() => { loadData(); }, [period]);
+  useEffect(() => { loadData(); }, [dateRange]);
 
   async function loadData() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/superadmin/fraud?period=${period}`);
+      const params = new URLSearchParams();
+      if (dateRange.from) {
+        params.set("from", dateRange.from);
+        if (dateRange.to) params.set("to", dateRange.to);
+      } else {
+        params.set("period", dateRange.key);
+      }
+      const res = await fetch(`/api/superadmin/fraud?${params}`);
       const json = await res.json();
       setData(json);
     } catch {
@@ -103,6 +113,29 @@ export default function FraudPage() {
     }
   }
 
+  async function bulkBlockIPs() {
+    setBulkBlocking(true);
+    try {
+      const res = await fetch("/api/superadmin/fraud", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "bulk_block_ips", threshold: bulkThreshold }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        showToast(t("superadmin.fraud.bulkBlocked", { count: String(result.blocked || 0) }), "success");
+        loadData();
+      }
+    } catch {
+      showToast(t("common.networkError"), "error");
+    }
+    setBulkBlocking(false);
+  }
+
+  // Calculate fraud cost saved (blocked clicks × avg CPC × ECHO_SHARE)
+  const avgCpc = 25; // Approximate platform average CPC
+  const costSaved = data ? data.blockedIPs.length > 0 ? data.flaggedClicks * avgCpc * 0.75 : 0 : 0;
+
   if (loading || !data) {
     return (
       <div className="p-6 space-y-4">
@@ -124,23 +157,9 @@ export default function FraudPage() {
     <div className="p-6 max-w-7xl">
       {ToastComponent}
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold">{t("superadmin.fraud.title")}</h1>
-        <div className="flex gap-1 bg-white/5 rounded-xl p-1">
-          {(["today", "week", "all"] as const).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                period === p
-                  ? "bg-primary text-white"
-                  : "text-white/50 hover:text-white/80"
-              }`}
-            >
-              {t(`superadmin.fraud.period_${p}`)}
-            </button>
-          ))}
-        </div>
+        <DateRangeSelector value={dateRange.key} onChange={setDateRange} />
       </div>
 
       {/* Alert banner */}
@@ -152,12 +171,41 @@ export default function FraudPage() {
         </div>
       )}
 
+      {/* Bulk block recommendation */}
+      {data.suspiciousIPs.length > 0 && (
+        <div className="mb-6 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <span className="text-yellow-400 text-sm font-semibold flex-1">
+              {t("superadmin.fraud.bulkRecommendation", { count: String(data.suspiciousIPs.length) })}
+            </span>
+            <div className="flex items-center gap-2">
+              <select
+                value={bulkThreshold}
+                onChange={(e) => setBulkThreshold(Number(e.target.value))}
+                className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white/70 focus:outline-none"
+              >
+                {[3, 5, 10, 20].map((n) => (
+                  <option key={n} value={n}>{n}+ {t("common.clicks")}</option>
+                ))}
+              </select>
+              <button
+                onClick={bulkBlockIPs}
+                disabled={bulkBlocking}
+                className="px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold hover:bg-red-500/30 transition disabled:opacity-40"
+              >
+                {bulkBlocking ? t("common.loading") : t("superadmin.fraud.blockAll")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard label={t("superadmin.dashboard.totalClicks")} value={formatNumber(data.totalClicks)} accent="orange" />
         <StatCard label={t("superadmin.fraud.flaggedClicks")} value={formatNumber(data.flaggedClicks)} accent="red" />
-        <StatCard label={t("superadmin.dashboard.fraudRate")} value={`${data.fraudRate}%`} accent="red" />
-        <StatCard label={t("superadmin.fraud.suspiciousIps")} value={data.suspiciousIPs.length.toString()} accent="purple" />
+        <StatCard label={t("superadmin.dashboard.fraudRate")} value={`${data.fraudRate}%`} accent={data.fraudRate > 15 ? "red" : "teal"} />
+        <StatCard label={t("superadmin.fraud.costSaved")} value={formatNumber(Math.round(costSaved)) + " F"} accent="teal" />
       </div>
 
       {/* IP Clusters */}

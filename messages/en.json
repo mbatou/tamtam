@@ -71,6 +71,14 @@
     "showing": "Showing",
     "of": "of"
   },
+  "dateRange": {
+    "today": "Today",
+    "thisWeek": "This week",
+    "thisMonth": "This month",
+    "allTime": "All time",
+    "custom": "Custom",
+    "apply": "Apply"
+  },
   "timeAgo": {
     "now": "just now",
     "minutes": "{min}min ago",
@@ -486,7 +494,15 @@
       "noEchoTop": "No echo",
       "latestCampaigns": "Latest campaigns",
       "pendingPayoutsTitle": "Pending payments",
-      "noPendingPayments": "No pending payments"
+      "noPendingPayments": "No pending payments",
+      "activeEchos7d": "{count} active (7d)",
+      "campaignHealth": "{active} active campaigns, {budget}% budget remaining",
+      "conversionFunnel": "Conversion funnel",
+      "funnelRegistered": "Registered",
+      "funnelActive": "Active (7d)",
+      "funnelValidClicks": "Valid clicks",
+      "funnelPaid": "Paid out",
+      "signupAnnotation": "{total} signups in 14 days (avg {avg}/day)"
     },
     "users": {
       "title": "Users",
@@ -550,7 +566,11 @@
       "noPayouts": "No payout requests",
       "dualRole": "Echo + Brand",
       "approvePayoutDirect": "Approve",
-      "rejectPayoutDirect": "Reject"
+      "rejectPayoutDirect": "Reject",
+      "activityAll": "All activity",
+      "activityActive": "Active",
+      "activityInactive": "Inactive",
+      "neverActive": "never"
     },
     "campaigns": {
       "title": "Campaign moderation",
@@ -580,7 +600,8 @@
       "rejectionReasonPlaceholder": "Rejection reason (if applicable)...",
       "notifyEchos": "Notify all Echos",
       "notifying": "Sending notifications...",
-      "notifySent": "{count} notification(s) sent to Echos"
+      "notifySent": "{count} notification(s) sent to Echos",
+      "clone": "Clone campaign"
     },
     "finance": {
       "title": "Finance",
@@ -607,6 +628,13 @@
       "adminTopup": "Admin top-up",
       "waveVerifyNotice": "Verify payments on the Wave dashboard before validating. Validation automatically credits the batteur's balance.",
       "commission": "Commission ({percent}%)",
+      "commissionDetail": "Commission ({percent}%) — {clicks} valid clicks",
+      "withdrawalCount": "Withdrawals",
+      "avgWithdrawal": "Average",
+      "totalWithdrawals": "Total withdrawn",
+      "paymentCount": "Payments",
+      "avgPayment": "Average",
+      "totalPayments": "Total paid",
       "echo": "Echo",
       "batteur": "Batteur",
       "budgetExceeded": "Budget exceeds batteur's balance ({balance})",
@@ -689,7 +717,11 @@
       "statusUpdated": "Status updated",
       "period_today": "Today",
       "period_week": "This week",
-      "period_all": "All time"
+      "period_all": "All time",
+      "bulkRecommendation": "{count} IPs have multiple suspicious clicks",
+      "blockAll": "Block all",
+      "bulkBlocked": "{count} IPs blocked",
+      "costSaved": "Fraud cost saved"
     },
     "health": {
       "title": "Platform Health",
@@ -717,7 +749,12 @@
       "severity": "Severity",
       "details": "Details",
       "recentAdminActivity": "Recent admin activity",
-      "noRecentActivity": "No recent activity"
+      "noRecentActivity": "No recent activity",
+      "goToFraud": "Go to Anti-Fraud",
+      "goToFinance": "Go to Finance",
+      "goToCampaigns": "Go to Campaigns",
+      "uptime": "100% (7d)",
+      "issues": "Issues detected"
     },
     "leads": {
       "title": "Batteur Leads",
@@ -755,7 +792,42 @@
       "emailSubject": "Tamtam — Your Batteur account request",
       "promoting": "Promoting...",
       "markUnreached": "Mark as unreached",
-      "markReached": "Mark as reached"
+      "markReached": "Mark as reached",
+      "newLeadsBanner": "{count} new leads waiting. Oldest: {age}h ago",
+      "startContacting": "Start contacting"
+    },
+    "briefing": {
+      "greeting_morning": "Good morning",
+      "greeting_afternoon": "Good afternoon",
+      "greeting_evening": "Good evening",
+      "dayCount": "Day {count} since launch",
+      "actionRequired": "Action required",
+      "allClear": "All clear!",
+      "allClearDesc": "No urgent actions needed right now.",
+      "todayNumbers": "Today's numbers",
+      "signupsToday": "Signups today",
+      "clicksToday": "Clicks today",
+      "activeCampaigns": "Active campaigns",
+      "totalEchos": "Total Echos",
+      "totalValidClicks": "Valid clicks",
+      "totalPaid": "Paid to Echos",
+      "trendsTitle": "Trends vs yesterday",
+      "vsYesterday": "vs yesterday",
+      "financialSnapshot": "Financial snapshot",
+      "commissionEarned": "Commission earned",
+      "pendingPayoutsLabel": "Pending payouts",
+      "grossRevenue": "Gross revenue",
+      "suggestedActions": "Suggested actions",
+      "leadsAction": "{count} new leads waiting (oldest: {age}h ago)",
+      "payoutsAction": "{count} pending payouts ({amount})",
+      "fraudAction": "Fraud rate at {rate}% — review needed",
+      "noCampaignsAction": "No active campaigns — platform is idle",
+      "ipsAction": "{count} suspicious IPs to block",
+      "suggestLeads": "Process new leads",
+      "suggestPayouts": "Review pending payouts",
+      "suggestFraud": "Investigate fraud alerts",
+      "suggestCampaigns": "Create or activate campaigns",
+      "suggestBlockIps": "Block suspicious IPs"
     },
     "roadmap": {
       "title": "Roadmap",
@@ -786,7 +858,10 @@
       "dominateSubtitle": "Regional expansion",
       "dominateWeeks": "Months 4-6",
       "yes": "Yes",
-      "no": "No"
+      "no": "No",
+      "weeklyFocus": "This week's focus",
+      "pacing": "{needed} more needed to reach goal",
+      "goalReached": "Goal reached!"
     }
   },
   "gamification": {
@@ -852,7 +927,13 @@
     "clicks": "Clicks",
     "campaigns": "Campaigns",
     "referrals": "Referrals",
-    "yourRankPeriod": "You are ranked #{rank} {period}"
+    "yourRankPeriod": "You are ranked #{rank} {period}",
+    "noCampaignsWarning": "No active campaigns. Echos cannot build streaks without campaigns to join.",
+    "createCampaign": "+ Create Campaign",
+    "roiTitle": "Gamification ROI",
+    "bonusesPaid": "Bonuses paid",
+    "engagedEchos": "Engaged Echos",
+    "costPerEngaged": "Cost per engaged Echo"
   },
   "footer": {
     "echos": "Echos",

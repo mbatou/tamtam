@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { formatFCFA } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
@@ -75,6 +76,7 @@ export default function SuperadminGamification() {
   >({});
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [leaderboardPeriod, setLeaderboardPeriod] = useState("week");
+  const [activeCampaigns, setActiveCampaigns] = useState(0);
 
   // Settings state
   const [gamificationEnabled, setGamificationEnabled] = useState(true);
@@ -102,6 +104,7 @@ export default function SuperadminGamification() {
     setAchievements(data.achievements || []);
     setMilestones(data.milestones || []);
     setStreakRewards(data.streakRewards || []);
+    setActiveCampaigns(data.activeCampaigns || 0);
 
     // Tier distribution
     const tiers: Record<string, number> = { echo: 0, argent: 0, or: 0, diamant: 0 };
@@ -257,6 +260,46 @@ export default function SuperadminGamification() {
           icon="💰"
         />
       </div>
+
+      {/* Warning callout */}
+      {activeCampaigns === 0 && (
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <span className="text-red-400 text-sm font-semibold flex-1">
+              {t("gamification.noCampaignsWarning")}
+            </span>
+            <Link
+              href="/superadmin/campaigns"
+              className="px-4 py-2 rounded-xl bg-gradient-primary text-white text-xs font-bold hover:opacity-90 transition whitespace-nowrap text-center"
+            >
+              {t("gamification.createCampaign")}
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Gamification ROI */}
+      {totalBonusDistributed > 0 && (
+        <div className="glass-card p-5">
+          <h2 className="text-sm font-bold mb-3">{t("gamification.roiTitle")}</h2>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <div className="text-lg font-bold text-red-400">{formatFCFA(totalBonusDistributed)}</div>
+              <div className="text-[10px] text-white/40">{t("gamification.bonusesPaid")}</div>
+            </div>
+            <div>
+              <div className="text-lg font-bold text-accent">{activeStreaks.length}</div>
+              <div className="text-[10px] text-white/40">{t("gamification.engagedEchos")}</div>
+            </div>
+            <div>
+              <div className="text-lg font-bold text-primary">
+                {activeStreaks.length > 0 ? formatFCFA(Math.round(totalBonusDistributed / activeStreaks.length)) : "—"}
+              </div>
+              <div className="text-[10px] text-white/40">{t("gamification.costPerEngaged")}</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Section 2: Tier Distribution */}
       <div className="glass-card p-5">

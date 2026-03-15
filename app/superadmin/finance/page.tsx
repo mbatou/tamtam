@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { formatFCFA } from "@/lib/utils";
+import { formatFCFA, formatNumber } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
 import Badge from "@/components/ui/Badge";
@@ -37,6 +37,7 @@ interface FinanceData {
   feePercent: number;
   sentTotal: number;
   pendingTotal: number;
+  validClicks: number;
   payouts: PayoutRow[];
   payments: PaymentRow[];
 }
@@ -163,7 +164,7 @@ function FinancePageContent() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard label={t("superadmin.dashboard.grossRevenue")} value={formatFCFA(data.grossRevenue)} accent="orange" />
-        <StatCard label={t("superadmin.finance.commission", { percent: String(data.feePercent) })} value={formatFCFA(data.platformCut)} accent="teal" />
+        <StatCard label={t("superadmin.finance.commissionDetail", { percent: String(data.feePercent), clicks: formatNumber(data.validClicks) })} value={formatFCFA(data.platformCut)} accent="teal" />
         <StatCard label={t("superadmin.dashboard.paidToEchos")} value={formatFCFA(data.sentTotal)} accent="purple" />
         <StatCard label={t("common.pending")} value={formatFCFA(data.pendingTotal)} accent="red" />
       </div>
@@ -299,6 +300,22 @@ function FinancePageContent() {
       {/* Payout History Tab */}
       {tab === "payout_history" && (
         <>
+        {completedPayouts.length > 0 && (
+          <div className="flex flex-wrap gap-4 mb-4 text-sm">
+            <div className="glass-card px-4 py-3">
+              <span className="text-white/40 text-xs">{t("superadmin.finance.withdrawalCount")}</span>
+              <div className="font-bold">{completedPayouts.length}</div>
+            </div>
+            <div className="glass-card px-4 py-3">
+              <span className="text-white/40 text-xs">{t("superadmin.finance.avgWithdrawal")}</span>
+              <div className="font-bold">{formatFCFA(Math.round(completedPayouts.reduce((s, p) => s + p.amount, 0) / completedPayouts.length))}</div>
+            </div>
+            <div className="glass-card px-4 py-3">
+              <span className="text-white/40 text-xs">{t("superadmin.finance.totalWithdrawals")}</span>
+              <div className="font-bold">{formatFCFA(completedPayouts.reduce((s, p) => s + p.amount, 0))}</div>
+            </div>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -398,6 +415,22 @@ function FinancePageContent() {
       {/* Processed Recharges History Tab */}
       {tab === "payments" && (
         <>
+        {processedRecharges.length > 0 && (
+          <div className="flex flex-wrap gap-4 mb-4 text-sm">
+            <div className="glass-card px-4 py-3">
+              <span className="text-white/40 text-xs">{t("superadmin.finance.paymentCount")}</span>
+              <div className="font-bold">{processedRecharges.length}</div>
+            </div>
+            <div className="glass-card px-4 py-3">
+              <span className="text-white/40 text-xs">{t("superadmin.finance.avgPayment")}</span>
+              <div className="font-bold">{formatFCFA(Math.round(processedRecharges.reduce((s, p) => s + p.amount, 0) / processedRecharges.length))}</div>
+            </div>
+            <div className="glass-card px-4 py-3">
+              <span className="text-white/40 text-xs">{t("superadmin.finance.totalPayments")}</span>
+              <div className="font-bold">{formatFCFA(processedRecharges.reduce((s, p) => s + p.amount, 0))}</div>
+            </div>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
