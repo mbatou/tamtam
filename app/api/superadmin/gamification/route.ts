@@ -22,6 +22,7 @@ export async function GET() {
     streakRewardsRes,
     tierRes,
     settingsRes,
+    activeCampaignsRes,
   ] = await Promise.all([
     supabase
       .from("users")
@@ -36,6 +37,10 @@ export async function GET() {
       .from("platform_settings")
       .select("key, value")
       .in("key", ["gamification_enabled", "gamification_monthly_cap"]),
+    supabase
+      .from("campaigns")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "active"),
   ]);
 
   return NextResponse.json({
@@ -46,5 +51,6 @@ export async function GET() {
     streakRewards: streakRewardsRes.data || [],
     tiers: tierRes.data || [],
     settings: settingsRes.data || [],
+    activeCampaigns: activeCampaignsRes.count || 0,
   });
 }

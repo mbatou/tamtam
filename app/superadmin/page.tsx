@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { formatFCFA, formatNumber, timeAgo } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
@@ -32,6 +33,8 @@ interface Stats {
   campaignsByStatus: Record<string, number>;
   signupsChart: { date: string; count: number }[];
   acquisitionChart: { date: string; echos: number; brands: number; cumulEchos: number; cumulBrands: number }[];
+  activeEchos7d: number;
+  budgetRemainingPercent: number;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -101,7 +104,7 @@ export default function SuperAdminOverview() {
 
       {/* Row 1 — Critical KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label={t("superadmin.dashboard.totalEchos")} value={formatNumber(stats.totalEchos)} accent="orange" />
+        <StatCard label={t("superadmin.dashboard.totalEchos")} value={formatNumber(stats.totalEchos)} sub={t("superadmin.dashboard.activeEchos7d", { count: String(stats.activeEchos7d || 0) })} accent="orange" />
         <StatCard label={t("superadmin.dashboard.activeCampaigns")} value={stats.activeCampaigns.toString()} accent="teal" />
         <StatCard label={t("superadmin.dashboard.grossRevenue")} value={formatFCFA(stats.platformRevenue)} accent="purple" />
         <StatCard
@@ -109,6 +112,48 @@ export default function SuperAdminOverview() {
           value={`${stats.fraudRate}%`}
           accent={stats.fraudRate > 10 ? "red" : "teal"}
         />
+      </div>
+
+      {/* Campaign Health Banner */}
+      {stats.activeCampaigns === 0 ? (
+        <Link href="/superadmin/campaigns" className="block p-4 rounded-xl bg-red-500/10 border border-red-500/20 hover:bg-red-500/15 transition">
+          <div className="flex items-center gap-3">
+            <span className="text-red-400 font-bold text-sm">{t("superadmin.dashboard.noActiveCampaign")}</span>
+            <span className="text-white/30">&rarr;</span>
+          </div>
+        </Link>
+      ) : (
+        <div className={`p-4 rounded-xl border ${stats.budgetRemainingPercent > 50 ? "bg-green-500/10 border-green-500/20" : stats.budgetRemainingPercent > 20 ? "bg-yellow-500/10 border-yellow-500/20" : "bg-red-500/10 border-red-500/20"}`}>
+          <div className="flex items-center gap-3">
+            <span className={`font-bold text-sm ${stats.budgetRemainingPercent > 50 ? "text-green-400" : stats.budgetRemainingPercent > 20 ? "text-yellow-400" : "text-red-400"}`}>
+              {t("superadmin.dashboard.campaignHealth", { active: String(stats.activeCampaigns), budget: String(stats.budgetRemainingPercent) })}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Conversion Funnel */}
+      <div className="glass-card p-5">
+        <h3 className="text-sm font-bold mb-4">{t("superadmin.dashboard.conversionFunnel")}</h3>
+        <div className="flex items-center gap-2 overflow-x-auto">
+          {[
+            { label: t("superadmin.dashboard.funnelRegistered"), value: stats.totalEchos, color: "bg-primary" },
+            { label: t("superadmin.dashboard.funnelActive"), value: stats.activeEchos7d || 0, color: "bg-accent" },
+            { label: t("superadmin.dashboard.funnelValidClicks"), value: stats.validClicks, color: "bg-green-500" },
+            { label: t("superadmin.dashboard.funnelPaid"), value: stats.paidToEchos > 0 ? 1 : 0, color: "bg-purple-500" },
+          ].map((step, i, arr) => (
+            <div key={i} className="flex items-center gap-2 flex-1 min-w-0">
+              <div className="flex-1 text-center">
+                <div className={`h-2 rounded-full ${step.color} mb-2`} style={{ opacity: 0.3 + (0.7 * (1 - i / arr.length)) }} />
+                <div className="text-lg font-bold">{i === 3 ? formatFCFA(stats.paidToEchos) : formatNumber(step.value)}</div>
+                <div className="text-[10px] text-white/40 mt-0.5">{step.label}</div>
+              </div>
+              {i < arr.length - 1 && (
+                <span className="text-white/15 text-lg shrink-0">&rarr;</span>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Row 2 — Money */}
@@ -205,6 +250,15 @@ export default function SuperAdminOverview() {
             <Bar dataKey="count" name={t("superadmin.dashboard.signups")} fill="#D35400" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
+        {stats.signupsChart && stats.signupsChart.length > 0 && (() => {
+          const total = stats.signupsChart.reduce((s, d) => s + d.count, 0);
+          const avg = (total / stats.signupsChart.length).toFixed(1);
+          return (
+            <p className="text-xs text-white/30 mt-2 text-center">
+              {t("superadmin.dashboard.signupAnnotation", { total: String(total), avg })}
+            </p>
+          );
+        })()}
       </div>
 
       {/* Row 4b — User acquisition (30 days) */}

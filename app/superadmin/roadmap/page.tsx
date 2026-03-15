@@ -220,6 +220,42 @@ export default function RoadmapPage() {
         </div>
       </div>
 
+      {/* ===== This Week's Focus ===== */}
+      {(() => {
+        const goalsWithProgress = phaseGoals.map((g) => ({
+          ...g,
+          progress: getGoalProgress(g.metric_key, data.currentValues[g.metric_key] || 0, g.target_value),
+          status: getGoalStatus(g.metric_key, data.currentValues[g.metric_key] || 0, g.target_value),
+        }));
+        const worstGoals = goalsWithProgress
+          .filter((g) => g.progress < 100)
+          .sort((a, b) => a.progress - b.progress)
+          .slice(0, 3);
+
+        if (worstGoals.length === 0) return null;
+
+        return (
+          <div className="glass-card p-5 border border-yellow-500/20 bg-yellow-500/5">
+            <h3 className="text-sm font-bold text-yellow-400 uppercase tracking-wider mb-3">
+              {t("superadmin.roadmap.weeklyFocus")}
+            </h3>
+            <div className="space-y-2">
+              {worstGoals.map((g) => {
+                const s = statusConfig[g.status];
+                return (
+                  <div key={g.id} className="flex items-center gap-3">
+                    <span className="text-base">{g.icon}</span>
+                    <span className="text-sm text-white/70 flex-1">{g.metric_label}</span>
+                    <span className={`text-xs font-bold ${s.color}`}>{Math.round(g.progress)}%</span>
+                    <div className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ===== Section 2: Phase Goals Grid ===== */}
       <div>
         <h3 className="text-sm font-bold text-white/50 mb-4 uppercase tracking-wider">{t("superadmin.roadmap.phaseGoals", { num: currentPhase.replace("phase_", "") })}</h3>
@@ -230,8 +266,17 @@ export default function RoadmapPage() {
             const status = getGoalStatus(goal.metric_key, current, goal.target_value);
             const s = statusConfig[status];
 
+            const borderColor = status === "on_track" ? "border-emerald-500/30" : status === "attention" ? "border-yellow-500/30" : "border-red-500/30";
+            // Pacing: estimate projected end based on current rate
+            const needed = goal.target_value - current;
+            const pacingText = needed > 0 && current > 0
+              ? t("superadmin.roadmap.pacing", { needed: formatMetricValue(goal.metric_key, needed, t) })
+              : needed <= 0
+              ? t("superadmin.roadmap.goalReached")
+              : "";
+
             return (
-              <div key={goal.id} className="glass-card p-5 hover:border-white/10 transition">
+              <div key={goal.id} className={`glass-card p-5 hover:border-white/10 transition border-l-4 ${borderColor}`}>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-lg">{goal.icon}</span>
                   <span className="text-xs text-white/40 font-semibold truncate">{goal.metric_label}</span>
@@ -257,6 +302,9 @@ export default function RoadmapPage() {
                   <span className={`text-xs font-semibold ${s.color}`}>{s.label}</span>
                   <span className="text-xs text-white/20 ml-auto">{Math.round(progress)}%</span>
                 </div>
+                {pacingText && (
+                  <p className="text-[10px] text-white/25 mt-1.5">{pacingText}</p>
+                )}
               </div>
             );
           })}

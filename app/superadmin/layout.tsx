@@ -2,16 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import SuperadminSearch from "@/components/SuperadminSearch";
 
+interface PendingCounts {
+  pendingLeads: number;
+  pendingPayouts: number;
+  pendingCampaigns: number;
+  highFraud: boolean;
+}
+
 const navItems = [
-  { label: "Roadmap", href: "/superadmin/roadmap", emoji: "🎯" },
+  { label: "Briefing", href: "/superadmin/briefing", emoji: "☀️" },
   { label: "Vue d'ensemble", href: "/superadmin", emoji: "🏠", exact: true },
-  { label: "Anti-Fraude", href: "/superadmin/fraud", emoji: "🛡️" },
-  { label: "Modération", href: "/superadmin/campaigns", emoji: "🥁" },
-  { label: "Leads", href: "/superadmin/leads", emoji: "📩" },
-  { label: "Finances", href: "/superadmin/finance", emoji: "💰" },
+  { label: "Roadmap", href: "/superadmin/roadmap", emoji: "🎯" },
+  { label: "Anti-Fraude", href: "/superadmin/fraud", emoji: "🛡️", badgeKey: "fraud" as const },
+  { label: "Modération", href: "/superadmin/campaigns", emoji: "🥁", badgeKey: "campaigns" as const },
+  { label: "Leads", href: "/superadmin/leads", emoji: "📩", badgeKey: "leads" as const },
+  { label: "Finances", href: "/superadmin/finance", emoji: "💰", badgeKey: "payouts" as const },
   { label: "Utilisateurs", href: "/superadmin/users", emoji: "👥" },
   { label: "Gamification", href: "/superadmin/gamification", emoji: "🎮" },
   { label: "Santé", href: "/superadmin/health", emoji: "🩺" },
@@ -19,9 +27,34 @@ const navItems = [
   { label: "Paramètres", href: "/superadmin/settings", emoji: "⚙️" },
 ];
 
+function getBadgeCount(counts: PendingCounts | null, key?: string): number {
+  if (!counts || !key) return 0;
+  switch (key) {
+    case "leads": return counts.pendingLeads;
+    case "payouts": return counts.pendingPayouts;
+    case "campaigns": return counts.pendingCampaigns;
+    case "fraud": return counts.highFraud ? 1 : 0;
+    default: return 0;
+  }
+}
+
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [counts, setCounts] = useState<PendingCounts | null>(null);
+
+  const fetchCounts = useCallback(() => {
+    fetch("/api/superadmin/pending-counts")
+      .then((r) => r.json())
+      .then((d) => setCounts(d))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 60000);
+    return () => clearInterval(interval);
+  }, [fetchCounts]);
 
   const today = new Date().toLocaleDateString("fr-FR", {
     weekday: "long",
@@ -56,19 +89,34 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
             const active = (item as { exact?: boolean }).exact
               ? pathname === item.href
               : pathname.startsWith(item.href);
+            const badgeCount = getBadgeCount(counts, (item as { badgeKey?: string }).badgeKey);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all relative ${
                   active
                     ? "bg-gradient-primary text-white shadow-lg"
                     : "text-white/50 hover:text-white/80 hover:bg-white/5"
                 }`}
                 title={collapsed ? item.label : undefined}
               >
-                <span className="text-base shrink-0">{item.emoji}</span>
-                {!collapsed && <span>{item.label}</span>}
+                <span className="text-base shrink-0 relative">
+                  {item.emoji}
+                  {badgeCount > 0 && (
+                    <span className="absolute -top-1 -right-1.5 w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+                  )}
+                </span>
+                {!collapsed && (
+                  <>
+                    <span className="flex-1">{item.label}</span>
+                    {badgeCount > 0 && (
+                      <span className="text-[10px] font-bold bg-orange-400/20 text-orange-400 px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                        {badgeCount}
+                      </span>
+                    )}
+                  </>
+                )}
               </Link>
             );
           })}
@@ -94,6 +142,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
             <SuperadminSearch />
           </div>
           <div className="flex items-center gap-3 shrink-0">
+            <QuickActions counts={counts} />
             <DashboardSwitcher />
             <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-xs font-bold text-white">
               SA
@@ -112,15 +161,21 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
             const active = (item as { exact?: boolean }).exact
               ? pathname === item.href
               : pathname.startsWith(item.href);
+            const badgeCount = getBadgeCount(counts, (item as { badgeKey?: string }).badgeKey);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition relative ${
                   active ? "bg-gradient-primary text-white" : "text-white/40 bg-white/5"
                 }`}
               >
-                <span>{item.emoji}</span>
+                <span className="relative">
+                  {item.emoji}
+                  {badgeCount > 0 && (
+                    <span className="absolute -top-0.5 -right-1 w-1.5 h-1.5 rounded-full bg-orange-400" />
+                  )}
+                </span>
                 <span>{item.label}</span>
               </Link>
             );
@@ -129,6 +184,45 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
 
         <main className="flex-1 overflow-auto">{children}</main>
       </div>
+    </div>
+  );
+}
+
+function QuickActions({ counts }: { counts: PendingCounts | null }) {
+  const totalPending = (counts?.pendingPayouts || 0) + (counts?.pendingLeads || 0);
+
+  return (
+    <div className="hidden md:flex items-center gap-2">
+      <Link
+        href="/superadmin/campaigns?action=create"
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition text-[11px] font-semibold text-white/50 hover:text-white/80"
+      >
+        <span>+</span>
+        <span>Campaign</span>
+      </Link>
+      <Link
+        href="/superadmin/users?action=create"
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition text-[11px] font-semibold text-white/50 hover:text-white/80"
+      >
+        <span>+</span>
+        <span>Batteur</span>
+      </Link>
+      {totalPending > 0 && (
+        <Link
+          href="/superadmin/finance"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-orange-400/10 hover:bg-orange-400/20 transition text-[11px] font-bold text-orange-400"
+        >
+          <span>{totalPending} pending</span>
+        </Link>
+      )}
+      {counts?.highFraud && (
+        <Link
+          href="/superadmin/fraud"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-400/10 hover:bg-red-400/20 transition text-[11px] font-bold text-red-400 animate-pulse"
+        >
+          <span>Fraud alert</span>
+        </Link>
+      )}
     </div>
   );
 }

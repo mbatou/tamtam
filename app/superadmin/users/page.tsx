@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { formatFCFA } from "@/lib/utils";
+import { formatFCFA, timeAgo } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
 import Badge from "@/components/ui/Badge";
@@ -24,6 +24,7 @@ interface UserRow {
   mobile_money_provider: string | null;
   created_at: string;
   click_stats: { total: number; valid: number; fraud: number; rate: number };
+  last_click_at: string | null;
   is_dual_role?: boolean;
   has_echo_activity?: boolean;
   has_batteur_activity?: boolean;
@@ -62,6 +63,7 @@ function UsersPageContent() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [filter, setFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [activityFilter, setActivityFilter] = useState<"all" | "active" | "inactive">("all");
   const [selected, setSelected] = useState<UserRow | null>(null);
   const [loading, setLoading] = useState(true);
   const { showToast, ToastComponent } = useToast();
@@ -276,10 +278,16 @@ function UsersPageContent() {
 
   const echos = users.filter((u) => u.role === "echo");
   const batteurs = users.filter((u) => u.role === "batteur");
+  const dualRoleUsers = users.filter((u) => u.is_dual_role || (u.has_echo_activity && u.has_batteur_activity));
 
   const displayUsers = users.filter((u) => {
     if (roleFilter === "echo" && u.role !== "echo") return false;
     if (roleFilter === "batteur" && u.role !== "batteur") return false;
+    if (roleFilter === "dual") {
+      if (!u.is_dual_role && !(u.has_echo_activity && u.has_batteur_activity)) return false;
+    }
+    if (activityFilter === "active" && u.click_stats.total === 0) return false;
+    if (activityFilter === "inactive" && u.click_stats.total > 0) return false;
     if (filter === "verified") return u.status === "verified";
     if (filter === "flagged") return u.status === "flagged";
     if (filter === "suspended") return u.status === "suspended";
@@ -328,15 +336,33 @@ function UsersPageContent() {
           { key: "all", label: t("superadmin.users.all") },
           { key: "echo", label: t("superadmin.users.echosFilter") },
           { key: "batteur", label: t("superadmin.users.batteursFilter") },
+          ...(dualRoleUsers.length > 0 ? [{ key: "dual", label: `${t("superadmin.users.dualRole")} (${dualRoleUsers.length})` }] : []),
         ].map((r) => (
           <button
             key={r.key}
             onClick={() => { setRoleFilter(r.key); setPage(1); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-              roleFilter === r.key ? "bg-gradient-primary text-white" : "bg-white/5 text-white/40"
+              roleFilter === r.key
+                ? r.key === "dual" ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" : "bg-gradient-primary text-white"
+                : r.key === "dual" ? "bg-purple-500/5 text-purple-400/60 border border-purple-500/10" : "bg-white/5 text-white/40"
             }`}
           >
             {r.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Activity filter */}
+      <div className="flex gap-2 mb-4">
+        {(["all", "active", "inactive"] as const).map((key) => (
+          <button
+            key={key}
+            onClick={() => { setActivityFilter(key); setPage(1); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+              activityFilter === key ? "bg-accent/20 text-accent border border-accent/30" : "bg-white/5 text-white/40"
+            }`}
+          >
+            {key === "all" ? t("superadmin.users.activityAll") : key === "active" ? t("superadmin.users.activityActive") : t("superadmin.users.activityInactive")}
           </button>
         ))}
       </div>
@@ -381,11 +407,19 @@ function UsersPageContent() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-semibold">{user.name}</span>
-                        {user.is_dual_role && (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20">
+                        {user.is_dual_role ? (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 whitespace-nowrap">
                             {t("superadmin.users.dualRole")}
                           </span>
-                        )}
+                        ) : user.has_echo_activity && user.role !== "echo" ? (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20 whitespace-nowrap">
+                            + Echo
+                          </span>
+                        ) : user.has_batteur_activity && user.role !== "batteur" ? (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/20 whitespace-nowrap">
+                            + Brand
+                          </span>
+                        ) : null}
                       </div>
                       <div className="text-xs text-white/30">{user.city || user.phone || ""}</div>
                     </div>
@@ -412,8 +446,11 @@ function UsersPageContent() {
                 </td>
                 <td className="py-3 font-bold hidden md:table-cell">{formatFCFA(user.total_earned)}</td>
                 <td className="py-3 hidden lg:table-cell">{formatFCFA(user.balance)}</td>
-                <td className="py-3 text-xs text-white/40 hidden lg:table-cell">
-                  {new Date(user.created_at).toLocaleDateString("fr-FR")}
+                <td className="py-3 hidden lg:table-cell">
+                  <div className="text-xs text-white/40">{new Date(user.created_at).toLocaleDateString("fr-FR")}</div>
+                  <div className={`text-[10px] ${user.last_click_at ? "text-accent/70" : "text-white/20"}`}>
+                    {user.last_click_at ? timeAgo(user.last_click_at, t) : t("superadmin.users.neverActive")}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -432,13 +469,21 @@ function UsersPageContent() {
                 {selected.name.charAt(0).toUpperCase()}
               </div>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-bold text-lg">{selected.name}</h3>
-                  {selected.is_dual_role && (
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20">
+                  {selected.is_dual_role ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
                       {t("superadmin.users.dualRole")}
                     </span>
-                  )}
+                  ) : selected.has_echo_activity && selected.role !== "echo" ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20">
+                      + Echo
+                    </span>
+                  ) : selected.has_batteur_activity && selected.role !== "batteur" ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/20">
+                      + Brand
+                    </span>
+                  ) : null}
                 </div>
                 <p className="text-xs text-white/40">{selected.phone || ""} · {selected.city || ""} · {selected.role}</p>
               </div>

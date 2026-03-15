@@ -99,22 +99,42 @@ export default function SuperadminLeadsPage() {
     converted: leads.filter((l) => l.status === "converted").length,
   };
 
-  const statusBadge = (status: string) => {
-    const map: Record<string, string> = {
-      new: "bg-orange-500/20 text-orange-400",
-      contacted: "bg-blue-500/20 text-blue-400",
-      converted: "bg-emerald-500/20 text-emerald-400",
-      rejected: "bg-white/10 text-white/40",
-    };
+  // Calculate urgency for "new" leads based on age
+  function getLeadAgeHours(createdAt: string): number {
+    return Math.round((Date.now() - new Date(createdAt).getTime()) / 3600000);
+  }
+
+  const statusBadge = (status: string, createdAt?: string) => {
+    let badgeClass = "";
+    if (status === "new" && createdAt) {
+      const ageH = getLeadAgeHours(createdAt);
+      if (ageH > 24) badgeClass = "bg-red-500/20 text-red-400";
+      else if (ageH > 2) badgeClass = "bg-orange-500/20 text-orange-400";
+      else badgeClass = "bg-emerald-500/20 text-emerald-400";
+    } else {
+      const map: Record<string, string> = {
+        new: "bg-orange-500/20 text-orange-400",
+        contacted: "bg-blue-500/20 text-blue-400",
+        converted: "bg-emerald-500/20 text-emerald-400",
+        rejected: "bg-white/10 text-white/40",
+      };
+      badgeClass = map[status] || "";
+    }
     const labels: Record<string, string> = {
       new: t("superadmin.leads.newStatus"), contacted: t("superadmin.leads.contactedStatus"), converted: t("superadmin.leads.convertedStatus"), rejected: t("superadmin.leads.rejectedStatus"),
     };
     return (
-      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${map[status] || ""}`}>
+      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${badgeClass}`}>
         {labels[status] || status}
       </span>
     );
   };
+
+  // Oldest new lead age
+  const newLeads = leads.filter((l) => l.status === "new");
+  const oldestNewLeadAge = newLeads.length > 0
+    ? Math.max(...newLeads.map((l) => getLeadAgeHours(l.created_at)))
+    : 0;
 
   if (loading) {
     return (
@@ -143,6 +163,23 @@ export default function SuperadminLeadsPage() {
           </div>
         ))}
       </div>
+
+      {/* New leads banner */}
+      {newLeads.length > 0 && (
+        <div className={`mb-4 p-4 rounded-xl border ${oldestNewLeadAge > 24 ? "bg-red-500/10 border-red-500/20" : "bg-orange-500/10 border-orange-500/20"}`}>
+          <div className="flex items-center gap-3">
+            <span className={`font-bold text-sm ${oldestNewLeadAge > 24 ? "text-red-400" : "text-orange-400"}`}>
+              {t("superadmin.leads.newLeadsBanner", { count: String(newLeads.length), age: String(oldestNewLeadAge) })}
+            </span>
+            <button
+              onClick={() => { setFilter("new"); setPage(1); }}
+              className="text-xs font-bold text-white/50 hover:text-white/80 transition ml-auto"
+            >
+              {t("superadmin.leads.startContacting")} &rarr;
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Filter tabs */}
       <div className="flex gap-2 mb-4 overflow-x-auto">
@@ -195,21 +232,46 @@ export default function SuperadminLeadsPage() {
                       </a>
                     </td>
                     <td className="p-4">
-                      {lead.whatsapp ? (
-                        <a
-                          href={`https://wa.me/221${lead.whatsapp.replace(/\s/g, "")}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-emerald-400 hover:underline"
-                        >
-                          {lead.whatsapp}
-                        </a>
-                      ) : (
-                        <span className="text-white/20">—</span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {lead.whatsapp ? (
+                          <a
+                            href={`https://wa.me/221${lead.whatsapp.replace(/\s/g, "")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-emerald-400 hover:underline"
+                          >
+                            {lead.whatsapp}
+                          </a>
+                        ) : (
+                          <span className="text-white/20">—</span>
+                        )}
+                        {/* Quick contact icons */}
+                        <div className="flex items-center gap-1 ml-auto">
+                          {lead.whatsapp && (
+                            <a
+                              href={`https://wa.me/221${lead.whatsapp.replace(/\s/g, "")}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 hover:bg-emerald-500/20 transition"
+                              title="WhatsApp"
+                            >
+                              <span className="text-xs">W</span>
+                            </a>
+                          )}
+                          <a
+                            href={`mailto:${lead.email}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 transition"
+                            title="Email"
+                          >
+                            <span className="text-xs">@</span>
+                          </a>
+                        </div>
+                      </div>
                     </td>
-                    <td className="p-4">{statusBadge(lead.status)}</td>
+                    <td className="p-4">{statusBadge(lead.status, lead.created_at)}</td>
                   </tr>
                 ))}
               </tbody>

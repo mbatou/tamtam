@@ -71,6 +71,14 @@
     "showing": "Affichage",
     "of": "sur"
   },
+  "dateRange": {
+    "today": "Aujourd'hui",
+    "thisWeek": "Cette semaine",
+    "thisMonth": "Ce mois",
+    "allTime": "Tout",
+    "custom": "Personnalisé",
+    "apply": "Appliquer"
+  },
   "timeAgo": {
     "now": "à l'instant",
     "minutes": "il y a {min}min",
@@ -486,7 +494,15 @@
       "noEchoTop": "Aucun écho",
       "latestCampaigns": "Dernières campagnes",
       "pendingPayoutsTitle": "Paiements en attente",
-      "noPendingPayments": "Aucun paiement en attente"
+      "noPendingPayments": "Aucun paiement en attente",
+      "activeEchos7d": "{count} actifs (7j)",
+      "campaignHealth": "{active} campagnes actives, {budget}% du budget restant",
+      "conversionFunnel": "Entonnoir de conversion",
+      "funnelRegistered": "Inscrits",
+      "funnelActive": "Actifs (7j)",
+      "funnelValidClicks": "Clics valides",
+      "funnelPaid": "Payés",
+      "signupAnnotation": "{total} inscriptions en 14 jours (moy. {avg}/jour)"
     },
     "users": {
       "title": "Utilisateurs",
@@ -550,7 +566,11 @@
       "noPayouts": "Aucune demande de retrait",
       "dualRole": "Écho + Marque",
       "approvePayoutDirect": "Approuver",
-      "rejectPayoutDirect": "Rejeter"
+      "rejectPayoutDirect": "Rejeter",
+      "activityAll": "Toute activité",
+      "activityActive": "Actifs",
+      "activityInactive": "Inactifs",
+      "neverActive": "jamais"
     },
     "campaigns": {
       "title": "Modération des campagnes",
@@ -580,7 +600,8 @@
       "rejectionReasonPlaceholder": "Raison du rejet (si applicable)...",
       "notifyEchos": "Notifier tous les Échos",
       "notifying": "Envoi des notifications...",
-      "notifySent": "{count} notification(s) envoyée(s) aux Échos"
+      "notifySent": "{count} notification(s) envoyée(s) aux Échos",
+      "clone": "Dupliquer la campagne"
     },
     "finance": {
       "title": "Finance",
@@ -607,6 +628,13 @@
       "adminTopup": "Recharge admin",
       "waveVerifyNotice": "Vérifie les paiements sur le dashboard Wave avant de valider. La validation crédite automatiquement le solde du batteur.",
       "commission": "Commission ({percent}%)",
+      "commissionDetail": "Commission ({percent}%) — {clicks} clics valides",
+      "withdrawalCount": "Retraits",
+      "avgWithdrawal": "Moyenne",
+      "totalWithdrawals": "Total retiré",
+      "paymentCount": "Paiements",
+      "avgPayment": "Moyenne",
+      "totalPayments": "Total payé",
       "echo": "Écho",
       "batteur": "Batteur",
       "budgetExceeded": "Budget dépasse le solde du batteur ({balance})",
@@ -689,7 +717,11 @@
       "statusUpdated": "Status mis à jour",
       "period_today": "Aujourd'hui",
       "period_week": "Cette semaine",
-      "period_all": "Tout"
+      "period_all": "Tout",
+      "bulkRecommendation": "{count} IPs ont des clics suspects multiples",
+      "blockAll": "Tout bloquer",
+      "bulkBlocked": "{count} IPs bloquées",
+      "costSaved": "Coût fraude évité"
     },
     "health": {
       "title": "Santé Plateforme",
@@ -717,7 +749,12 @@
       "severity": "Sévérité",
       "details": "Détails",
       "recentAdminActivity": "Activité admin récente",
-      "noRecentActivity": "Aucune activité récente"
+      "noRecentActivity": "Aucune activité récente",
+      "goToFraud": "Voir Anti-Fraude",
+      "goToFinance": "Voir Finance",
+      "goToCampaigns": "Voir Campagnes",
+      "uptime": "100% (7j)",
+      "issues": "Problèmes détectés"
     },
     "leads": {
       "title": "Leads Batteur",
@@ -755,7 +792,42 @@
       "emailSubject": "Tamtam — Votre demande de compte Batteur",
       "promoting": "Promotion...",
       "markUnreached": "Marquer comme non atteint",
-      "markReached": "Marquer comme atteint"
+      "markReached": "Marquer comme atteint",
+      "newLeadsBanner": "{count} nouveaux leads en attente. Plus ancien : il y a {age}h",
+      "startContacting": "Commencer à contacter"
+    },
+    "briefing": {
+      "greeting_morning": "Bonjour",
+      "greeting_afternoon": "Bon après-midi",
+      "greeting_evening": "Bonsoir",
+      "dayCount": "Jour {count} depuis le lancement",
+      "actionRequired": "Actions requises",
+      "allClear": "Tout est en ordre !",
+      "allClearDesc": "Aucune action urgente pour le moment.",
+      "todayNumbers": "Chiffres du jour",
+      "signupsToday": "Inscriptions aujourd'hui",
+      "clicksToday": "Clics aujourd'hui",
+      "activeCampaigns": "Campagnes actives",
+      "totalEchos": "Total Échos",
+      "totalValidClicks": "Clics valides",
+      "totalPaid": "Payé aux Échos",
+      "trendsTitle": "Tendances vs hier",
+      "vsYesterday": "vs hier",
+      "financialSnapshot": "Aperçu financier",
+      "commissionEarned": "Commission gagnée",
+      "pendingPayoutsLabel": "Retraits en attente",
+      "grossRevenue": "Revenu brut",
+      "suggestedActions": "Actions suggérées",
+      "leadsAction": "{count} nouveaux leads en attente (plus ancien : il y a {age}h)",
+      "payoutsAction": "{count} retraits en attente ({amount})",
+      "fraudAction": "Taux de fraude à {rate}% — vérification requise",
+      "noCampaignsAction": "Aucune campagne active — la plateforme est inactive",
+      "ipsAction": "{count} IPs suspectes à bloquer",
+      "suggestLeads": "Traiter les nouveaux leads",
+      "suggestPayouts": "Vérifier les retraits en attente",
+      "suggestFraud": "Investiguer les alertes de fraude",
+      "suggestCampaigns": "Créer ou activer des campagnes",
+      "suggestBlockIps": "Bloquer les IPs suspectes"
     },
     "roadmap": {
       "title": "Roadmap",
@@ -786,7 +858,10 @@
       "dominateSubtitle": "Expansion régionale",
       "dominateWeeks": "Mois 4-6",
       "yes": "Oui",
-      "no": "Non"
+      "no": "Non",
+      "weeklyFocus": "Focus de la semaine",
+      "pacing": "Encore {needed} pour atteindre l'objectif",
+      "goalReached": "Objectif atteint !"
     }
   },
   "gamification": {
@@ -852,7 +927,13 @@
     "clicks": "Clics",
     "campaigns": "Campagnes",
     "referrals": "Parrainages",
-    "yourRankPeriod": "Tu es classé(e) #{rank} {period}"
+    "yourRankPeriod": "Tu es classé(e) #{rank} {period}",
+    "noCampaignsWarning": "Aucune campagne active. Les échos ne peuvent pas construire de streak sans campagnes.",
+    "createCampaign": "+ Créer une campagne",
+    "roiTitle": "ROI Gamification",
+    "bonusesPaid": "Bonus payés",
+    "engagedEchos": "Échos engagés",
+    "costPerEngaged": "Coût par écho engagé"
   },
   "footer": {
     "echos": "Échos",
