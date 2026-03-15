@@ -550,7 +550,7 @@ export default function ProfilPage() {
         {gamification && (
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5 text-[10px] text-white/30">
             <span>{t("echo.profile.friendsInvited")}: {gamification.referralCount}</span>
-            <span>{t("echo.profile.bonusEarned")}: {formatFCFA(gamification.referralCount * 500)}</span>
+            <span>{t("echo.profile.bonusEarned")}: {formatFCFA(gamification.referralCount * 150)}</span>
           </div>
         )}
       </div>
