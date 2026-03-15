@@ -218,7 +218,8 @@ export default function AdminCampaignsPage() {
   if (view === "detail" && selectedCampaign) {
     const c = selectedCampaign;
     const progress = c.budget > 0 ? (c.spent / c.budget) * 100 : 0;
-    const remaining = c.budget - c.spent;
+    const remaining = Math.max(0, c.budget - c.spent);
+    const budgetConsumed = c.spent >= c.budget;
     const isActive = c.status === "active";
     const isPaused = c.status === "paused";
     const isDraft = c.status === "draft";
@@ -299,7 +300,9 @@ export default function AdminCampaignsPage() {
           </div>
           <div className="glass-card p-4">
             <p className="text-xs text-white/40 font-semibold mb-1">{t("admin.campaigns.remaining")}</p>
-            <p className="text-xl font-bold text-primary">{formatFCFA(remaining)}</p>
+            <p className={`text-xl font-bold ${budgetConsumed ? "text-emerald-400" : "text-primary"}`}>
+              {budgetConsumed ? t("admin.campaigns.fullyConsumed") : formatFCFA(remaining)}
+            </p>
           </div>
           <div className="glass-card p-4">
             <p className="text-xs text-white/40 font-semibold mb-1">CPC</p>
@@ -536,53 +539,108 @@ export default function AdminCampaignsPage() {
               <path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0-11V3m0 0L9.5 7.5M12 3l2.5 4.5" />
             </svg>
           </div>
-          <p className="text-white/40 text-sm mb-4">{t("admin.campaigns.noRythmes")}</p>
+          <p className="text-white/40 text-sm mb-2">{t("admin.campaigns.noRythmes")}</p>
+          <p className="text-xs text-white/30 mb-4">{t("admin.campaigns.noRythmesDesc")}</p>
           <button onClick={openNewForm} className="btn-primary text-sm">{t("admin.campaigns.createFirst")}</button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {campaigns.map((campaign) => {
             const progress = campaign.budget > 0 ? (campaign.spent / campaign.budget) * 100 : 0;
+            const estimatedClicks = campaign.cpc > 0 ? Math.floor(campaign.spent / campaign.cpc) : 0;
+            const actualCPC = estimatedClicks > 0 ? Math.round(campaign.spent / estimatedClicks) : campaign.cpc;
+            const isFinished = campaign.status === "completed";
+            const budgetConsumed = progress >= 100;
+
+            // Find best campaign by CPC for badge
+            const allFinished = campaigns.filter(c => c.status === "completed" && c.spent > 0);
+            const bestCPCId = allFinished.length > 1
+              ? allFinished.sort((a, b) => {
+                  const aCPC = a.cpc > 0 ? Math.floor(a.spent / a.cpc) : 0;
+                  const bCPC = b.cpc > 0 ? Math.floor(b.spent / b.cpc) : 0;
+                  return (aCPC > 0 ? a.spent / aCPC : Infinity) - (bCPC > 0 ? b.spent / bCPC : Infinity);
+                })[0]?.id
+              : null;
+
             return (
               <div
                 key={campaign.id}
-                onClick={() => openDetail(campaign)}
-                className="glass-card p-5 cursor-pointer hover:border-primary/30 transition-all group"
+                className="glass-card p-5 hover:border-primary/30 transition-all group"
               >
-                {campaign.creative_urls && campaign.creative_urls.length > 0 ? (
-                  <div className="h-32 rounded-xl overflow-hidden mb-4 border border-white/5">
-                    <img src={campaign.creative_urls[0]} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                <div onClick={() => openDetail(campaign)} className="cursor-pointer">
+                  {campaign.creative_urls && campaign.creative_urls.length > 0 ? (
+                    <div className="h-32 rounded-xl overflow-hidden mb-4 border border-white/5">
+                      <img src={campaign.creative_urls[0]} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    </div>
+                  ) : (
+                    <div className="h-32 rounded-xl mb-4 bg-white/[0.02] border border-white/5 flex items-center justify-center">
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-white/10">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+                      </svg>
+                    </div>
+                  )}
+
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-sm truncate">{campaign.title}</h3>
+                      {campaign.description && <p className="text-xs text-white/30 truncate mt-0.5">{campaign.description}</p>}
+                    </div>
+                    <span className={`badge-${campaign.status} shrink-0`}>{getStatusLabel(campaign.status)}</span>
                   </div>
-                ) : (
-                  <div className="h-32 rounded-xl mb-4 bg-white/[0.02] border border-white/5 flex items-center justify-center">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-white/10">
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
-                    </svg>
+
+                  {/* Budget progress */}
+                  <div className="mb-3">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-white/40">{formatFCFA(campaign.spent)}</span>
+                      <span className={budgetConsumed ? "text-emerald-400 font-semibold" : "text-white/40"}>
+                        {budgetConsumed ? t("admin.campaigns.fullyConsumed") : formatFCFA(campaign.budget)}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${budgetConsumed ? "bg-emerald-500" : "bg-gradient-primary"}`} style={{ width: `${Math.min(progress, 100)}%` }} />
+                    </div>
                   </div>
+
+                  {/* Metrics row */}
+                  <div className="flex items-center gap-3 text-xs text-white/40 mb-2">
+                    <span>{estimatedClicks} {t("admin.campaigns.realClicks")}</span>
+                    <span>·</span>
+                    <span>{formatFCFA(actualCPC)}/{t("admin.campaigns.perClick")}</span>
+                  </div>
+
+                  {/* Performance badge */}
+                  {bestCPCId === campaign.id && allFinished.length > 1 && (
+                    <div className="mb-2">
+                      <span className="text-[10px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-full">{t("admin.campaigns.bestCPC")}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Relaunch button for finished campaigns */}
+                {isFinished && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setForm({
+                        title: campaign.title,
+                        description: campaign.description || "",
+                        destination_url: campaign.destination_url,
+                        cpc: campaign.cpc.toString(),
+                        budget: campaign.budget.toString(),
+                        starts_at: "",
+                        ends_at: "",
+                      });
+                      setCreativeUrls(campaign.creative_urls || []);
+                      setEditingId(null);
+                      setError(null);
+                      setShowRechargePrompt(false);
+                      setView("form");
+                    }}
+                    className="w-full mt-2 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-bold hover:bg-primary/20 transition"
+                  >
+                    {t("admin.campaigns.relaunch")}
+                  </button>
                 )}
-
-                <div className="flex items-start justify-between gap-2 mb-3">
-                  <div className="min-w-0">
-                    <h3 className="font-bold text-sm truncate">{campaign.title}</h3>
-                    {campaign.description && <p className="text-xs text-white/30 truncate mt-0.5">{campaign.description}</p>}
-                  </div>
-                  <span className={`badge-${campaign.status} shrink-0`}>{getStatusLabel(campaign.status)}</span>
-                </div>
-
-                <div className="mb-3">
-                  <div className="flex justify-between text-xs text-white/40 mb-1">
-                    <span>{formatFCFA(campaign.spent)}</span>
-                    <span>{formatFCFA(campaign.budget)}</span>
-                  </div>
-                  <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-primary rounded-full" style={{ width: `${Math.min(progress, 100)}%` }} />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between text-xs text-white/30">
-                  <span>CPC: {formatFCFA(campaign.cpc)}</span>
-                  <span>{timeAgo(campaign.created_at)}</span>
-                </div>
               </div>
             );
           })}

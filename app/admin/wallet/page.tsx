@@ -269,25 +269,45 @@ function AdminWalletPage() {
                     <td className="px-5 py-3 font-bold">{formatFCFA(payment.amount)}</td>
                     <td className="px-5 py-3 text-white/60">{payment.payment_method || "—"}</td>
                     <td className="px-5 py-3">
-                      <span className={
-                        payment.status === "completed"
-                          ? "text-accent font-semibold"
-                          : payment.status === "pending"
-                          ? "text-primary-light font-semibold"
-                          : payment.status === "cancelled"
-                          ? "text-white/30"
-                          : "text-red-400 font-semibold"
-                      }>
-                        {payment.status === "completed"
-                          ? t("admin.wallet.validated")
-                          : payment.status === "pending"
-                          ? t("admin.wallet.pendingValidation")
-                          : payment.status === "cancelled"
-                          ? t("admin.wallet.cancelled")
-                          : t("admin.wallet.refused")}
-                      </span>
+                      <div>
+                        <span className={
+                          payment.status === "completed"
+                            ? "text-emerald-400 font-semibold"
+                            : payment.status === "pending"
+                            ? "text-primary-light font-semibold"
+                            : payment.status === "cancelled"
+                            ? "text-white/30"
+                            : "text-red-400 font-semibold"
+                        }>
+                          {payment.status === "completed"
+                            ? `${t("admin.wallet.validated")} ✓`
+                            : payment.status === "pending"
+                            ? t("admin.wallet.pendingValidation")
+                            : payment.status === "cancelled"
+                            ? t("admin.wallet.cancelled")
+                            : t("admin.wallet.refused")}
+                        </span>
+                        {/* Payment status explanation */}
+                        <p className="text-[10px] text-white/25 mt-0.5">
+                          {payment.status === "pending" && t("admin.wallet.pendingExplain")}
+                          {payment.status === "failed" && t("admin.wallet.refusedExplain")}
+                          {payment.status === "cancelled" && t("admin.wallet.cancelledExplain")}
+                        </p>
+                      </div>
                     </td>
-                    <td className="px-5 py-3 text-white/40 text-xs">{timeAgo(payment.created_at)}</td>
+                    <td className="px-5 py-3 text-white/40 text-xs">
+                      <div>
+                        {timeAgo(payment.created_at)}
+                        {payment.status === "failed" && (
+                          <button
+                            onClick={() => { setRechargeAmount(payment.amount.toString()); setShowRecharge(true); }}
+                            className="block text-primary font-semibold mt-1 hover:underline"
+                          >
+                            {t("admin.wallet.retry")}
+                          </button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -317,7 +337,10 @@ function AdminWalletPage() {
                 <tr key={tx.id} className="border-b border-white/5 hover:bg-white/[0.02]">
                   <td className="px-5 py-3 font-semibold">{tx.title}</td>
                   <td className="px-5 py-3 text-white/60">{formatFCFA(tx.budget)}</td>
-                  <td className="px-5 py-3 text-accent">{formatFCFA(tx.spent)}</td>
+                  <td className={`px-5 py-3 font-semibold ${tx.spent >= tx.budget ? "text-emerald-400" : "text-white/70"}`}>
+                    {formatFCFA(Math.min(tx.spent, tx.budget))}
+                    {tx.spent >= tx.budget && " ✓"}
+                  </td>
                   <td className="px-5 py-3">
                     <span className={`badge-${tx.status}`}>
                       {tx.status === "active" ? t("common.active") : tx.status === "paused" ? t("common.paused") : tx.status === "completed" ? t("common.finished") : t("admin.campaigns.draft")}

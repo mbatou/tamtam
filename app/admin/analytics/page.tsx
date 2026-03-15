@@ -43,10 +43,11 @@ export default function AdminAnalyticsPage() {
   }
 
   function downloadCSV(campaigns: CampaignAnalytics[]) {
-    const header = "Campagne,Statut,Budget (FCFA),Dépensé (FCFA),CPC (FCFA),Clics totaux,Clics valides,Clics fraude,Échos,Créée le\n";
-    const rows = campaigns.map((c) =>
-      `"${c.title}",${getStatusLabel(c.status)},${c.budget},${c.spent},${c.cpc},${c.totalClicks},${c.validClicks},${c.fraudClicks},${c.echoCount},${new Date(c.created_at).toLocaleDateString("fr-FR")}`
-    ).join("\n");
+    const header = "Campagne,Statut,Budget (FCFA),Dépensé (FCFA),CPC (FCFA),Portée totale,Visiteurs réels,Coût par visiteur,Échos\n";
+    const rows = campaigns.map((c) => {
+      const cpc = c.validClicks > 0 ? Math.round(c.spent / c.validClicks) : 0;
+      return `"${c.title}",${getStatusLabel(c.status)},${c.budget},${c.spent},${cpc},${c.totalClicks},${c.validClicks},${cpc},${c.echoCount}`;
+    }).join("\n");
 
     const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -85,7 +86,8 @@ export default function AdminAnalyticsPage() {
       <div className="p-6 max-w-6xl">
         <h1 className="text-2xl font-bold mb-8">{t("admin.analytics.title")}</h1>
         <div className="glass-card p-12 text-center">
-          <p className="text-white/40 text-sm">{t("admin.analytics.noAnalytics")}</p>
+          <p className="text-white/40 text-sm mb-4">{t("admin.analytics.noAnalytics")}</p>
+          <a href="/admin/campaigns" className="btn-primary text-sm inline-block">{t("admin.dashboard.launchRythme")}</a>
         </div>
       </div>
     );
@@ -98,15 +100,20 @@ export default function AdminAnalyticsPage() {
     (acc, c) => ({
       clicks: acc.clicks + c.totalClicks,
       valid: acc.valid + c.validClicks,
-      fraud: acc.fraud + c.fraudClicks,
       spent: acc.spent + c.spent,
       budget: acc.budget + c.budget,
     }),
-    { clicks: 0, valid: 0, fraud: 0, spent: 0, budget: 0 }
+    { clicks: 0, valid: 0, spent: 0, budget: 0 }
   );
 
-  const validityRate = totals.clicks > 0 ? Math.round((totals.valid / totals.clicks) * 100) : 0;
+  const costPerClick = totals.valid > 0 ? Math.round(totals.spent / totals.valid) : 0;
   const progress = selected.budget > 0 ? Math.round((selected.spent / selected.budget) * 100) : 0;
+  const selectedCPC = selected.validClicks > 0 ? Math.round(selected.spent / selected.validClicks) : 0;
+
+  // Find best campaign by CPC
+  const bestCampaign = [...campaigns]
+    .filter(c => c.validClicks > 0)
+    .sort((a, b) => (a.spent / a.validClicks) - (b.spent / b.validClicks))[0];
 
   return (
     <div className="p-6 max-w-6xl">
@@ -123,13 +130,56 @@ export default function AdminAnalyticsPage() {
         </button>
       </div>
 
-      {/* Global KPIs */}
+      {/* Global KPIs — brand-friendly */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label={t("admin.dashboard.totalClicks")} value={formatNumber(totals.clicks)} accent="orange" />
-        <StatCard label={t("admin.dashboard.validClicks")} value={formatNumber(totals.valid)} accent="teal" />
-        <StatCard label={t("admin.analytics.validityRate")} value={totals.clicks > 0 ? `${validityRate}%` : "—"} accent="purple" />
+        <StatCard label={t("admin.dashboard.totalReach")} value={formatNumber(totals.clicks)} accent="orange" />
+        <StatCard label={t("admin.analytics.realVisitors")} value={formatNumber(totals.valid)} accent="teal" />
+        <StatCard label={t("admin.dashboard.costPerClick")} value={costPerClick > 0 ? formatFCFA(costPerClick) : "—"} accent="purple" />
         <StatCard label={t("admin.dashboard.budgetSpent")} value={formatFCFA(totals.spent)} accent="orange" />
       </div>
+
+      {/* ── ROI Calculator ── */}
+      {totals.valid > 0 && (
+        <div className="glass-card p-6 mb-8">
+          <h3 className="text-sm font-bold mb-4">{t("admin.analytics.roiTitle")}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="p-4 rounded-xl bg-white/[0.03] text-center">
+              <p className="text-xs text-white/40 mb-1">{t("admin.analytics.youSpent")}</p>
+              <p className="text-xl font-black text-primary">{formatFCFA(totals.spent)}</p>
+            </div>
+            <div className="p-4 rounded-xl bg-white/[0.03] text-center">
+              <p className="text-xs text-white/40 mb-1">{t("admin.analytics.youGot")}</p>
+              <p className="text-xl font-black text-accent">{formatNumber(totals.valid)} {t("admin.analytics.visitors")}</p>
+            </div>
+            <div className="p-4 rounded-xl bg-white/[0.03] text-center">
+              <p className="text-xs text-white/40 mb-1">{t("admin.analytics.costPerVisitor")}</p>
+              <p className="text-xl font-black">{formatFCFA(costPerClick)}</p>
+            </div>
+          </div>
+          <div className="p-4 rounded-xl bg-accent/5 border border-accent/10">
+            <p className="text-sm text-white/70 mb-2">{t("admin.analytics.comparison")}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div className="flex justify-between">
+                <span className="text-white/40">Facebook Ads</span>
+                <span className="font-semibold">200-500 FCFA/clic</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-white/40">Instagram Ads</span>
+                <span className="font-semibold">300-800 FCFA/clic</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-accent font-bold">Tamtam</span>
+                <span className="font-bold text-accent">{formatFCFA(costPerClick)}/clic</span>
+              </div>
+            </div>
+            {costPerClick < 200 && (
+              <p className="text-xs text-accent mt-3 font-semibold">
+                {t("admin.analytics.savings")}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Campaign selector */}
       <div className="glass-card p-5 mb-6">
@@ -151,16 +201,16 @@ export default function AdminAnalyticsPage() {
         {/* Selected campaign KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
           <div className="p-3 rounded-xl bg-white/[0.03]">
-            <p className="text-[10px] text-white/40 font-semibold mb-0.5">{t("common.clicks")}</p>
+            <p className="text-[10px] text-white/40 font-semibold mb-0.5">{t("admin.dashboard.totalReach")}</p>
             <p className="text-lg font-bold">{formatNumber(selected.totalClicks)}</p>
           </div>
           <div className="p-3 rounded-xl bg-white/[0.03]">
-            <p className="text-[10px] text-white/40 font-semibold mb-0.5">{t("admin.analytics.valid")}</p>
+            <p className="text-[10px] text-white/40 font-semibold mb-0.5">{t("admin.analytics.realVisitors")}</p>
             <p className="text-lg font-bold text-emerald-400">{formatNumber(selected.validClicks)}</p>
           </div>
           <div className="p-3 rounded-xl bg-white/[0.03]">
-            <p className="text-[10px] text-white/40 font-semibold mb-0.5">{t("admin.analytics.fraud")}</p>
-            <p className="text-lg font-bold text-red-400">{formatNumber(selected.fraudClicks)}</p>
+            <p className="text-[10px] text-white/40 font-semibold mb-0.5">{t("admin.dashboard.costPerClick")}</p>
+            <p className="text-lg font-bold text-purple-400">{selectedCPC > 0 ? formatFCFA(selectedCPC) : "—"}</p>
           </div>
           <div className="p-3 rounded-xl bg-white/[0.03]">
             <p className="text-[10px] text-white/40 font-semibold mb-0.5">{t("admin.dashboard.activeEchos")}</p>
@@ -168,7 +218,9 @@ export default function AdminAnalyticsPage() {
           </div>
           <div className="p-3 rounded-xl bg-white/[0.03]">
             <p className="text-[10px] text-white/40 font-semibold mb-0.5">{t("common.budget")}</p>
-            <p className="text-lg font-bold text-primary">{progress}%</p>
+            <p className={`text-lg font-bold ${progress >= 100 ? "text-emerald-400" : "text-primary"}`}>
+              {progress >= 100 ? t("admin.analytics.consumed") : `${progress}%`}
+            </p>
           </div>
         </div>
 
@@ -182,10 +234,6 @@ export default function AdminAnalyticsPage() {
                   <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
                   <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                 </linearGradient>
-                <linearGradient id="gradFraudAn" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
               <XAxis dataKey="date" tickFormatter={formatShortDate} tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
@@ -194,8 +242,7 @@ export default function AdminAnalyticsPage() {
                 contentStyle={{ background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
                 labelFormatter={(v) => formatShortDate(String(v))}
               />
-              <Area type="monotone" dataKey="valid" name={t("admin.analytics.valid")} stroke="#22c55e" fill="url(#gradValidAn)" strokeWidth={2} />
-              <Area type="monotone" dataKey="fraud" name={t("admin.analytics.fraud")} stroke="#ef4444" fill="url(#gradFraudAn)" strokeWidth={2} />
+              <Area type="monotone" dataKey="valid" name={t("admin.analytics.realVisitors")} stroke="#22c55e" fill="url(#gradValidAn)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         ) : (
@@ -203,7 +250,7 @@ export default function AdminAnalyticsPage() {
         )}
       </div>
 
-      {/* All campaigns comparison table */}
+      {/* Campaign comparison table — brand friendly */}
       <div className="glass-card p-5">
         <h3 className="text-sm font-bold mb-4">{t("admin.analytics.campaignComparison")}</h3>
         <div className="overflow-x-auto">
@@ -213,28 +260,40 @@ export default function AdminAnalyticsPage() {
                 <th className="pb-3 font-semibold">{t("admin.analytics.campaign")}</th>
                 <th className="pb-3 font-semibold">{t("common.status")}</th>
                 <th className="pb-3 font-semibold text-right">{t("common.budget")}</th>
-                <th className="pb-3 font-semibold text-right">{t("admin.dashboard.spent")}</th>
-                <th className="pb-3 font-semibold text-right">{t("common.clicks")}</th>
-                <th className="pb-3 font-semibold text-right">{t("admin.analytics.valid")}</th>
+                <th className="pb-3 font-semibold text-right">{t("admin.dashboard.budgetSpent")}</th>
+                <th className="pb-3 font-semibold text-right">{t("admin.analytics.realVisitors")}</th>
+                <th className="pb-3 font-semibold text-right">{t("admin.dashboard.costPerClick")}</th>
                 <th className="pb-3 font-semibold text-right">{t("admin.dashboard.activeEchos")}</th>
               </tr>
             </thead>
             <tbody>
-              {campaigns.map((c) => (
-                <tr
-                  key={c.id}
-                  onClick={() => setSelectedId(c.id)}
-                  className={`border-t border-white/5 cursor-pointer hover:bg-white/[0.03] transition ${c.id === selected.id ? "bg-white/[0.05]" : ""}`}
-                >
-                  <td className="py-3 font-semibold">{c.title}</td>
-                  <td className="py-3"><span className={`badge-${c.status}`}>{getStatusLabel(c.status)}</span></td>
-                  <td className="py-3 text-right text-white/50">{formatFCFA(c.budget)}</td>
-                  <td className="py-3 text-right font-semibold text-primary">{formatFCFA(c.spent)}</td>
-                  <td className="py-3 text-right">{formatNumber(c.totalClicks)}</td>
-                  <td className="py-3 text-right text-emerald-400">{formatNumber(c.validClicks)}</td>
-                  <td className="py-3 text-right">{c.echoCount}</td>
-                </tr>
-              ))}
+              {campaigns.map((c) => {
+                const cpc = c.validClicks > 0 ? Math.round(c.spent / c.validClicks) : 0;
+                const isBest = bestCampaign && c.id === bestCampaign.id && campaigns.length > 1;
+                return (
+                  <tr
+                    key={c.id}
+                    onClick={() => setSelectedId(c.id)}
+                    className={`border-t border-white/5 cursor-pointer hover:bg-white/[0.03] transition ${c.id === selected.id ? "bg-white/[0.05]" : ""} ${isBest ? "bg-accent/[0.03]" : ""}`}
+                  >
+                    <td className="py-3 font-semibold">
+                      {c.title}
+                      {isBest && <span className="ml-2 text-[10px] text-accent font-bold">MEILLEUR CPC</span>}
+                    </td>
+                    <td className="py-3"><span className={`badge-${c.status}`}>{getStatusLabel(c.status)}</span></td>
+                    <td className="py-3 text-right text-white/50">{formatFCFA(c.budget)}</td>
+                    <td className="py-3 text-right">
+                      <span className={c.spent >= c.budget ? "text-emerald-400 font-semibold" : "text-white/70"}>
+                        {formatFCFA(c.spent)}
+                        {c.spent >= c.budget && " ✓"}
+                      </span>
+                    </td>
+                    <td className="py-3 text-right text-emerald-400">{formatNumber(c.validClicks)}</td>
+                    <td className="py-3 text-right font-semibold">{cpc > 0 ? formatFCFA(cpc) : "—"}</td>
+                    <td className="py-3 text-right">{c.echoCount}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
