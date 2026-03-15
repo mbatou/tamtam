@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import TabBar from "@/components/ui/TabBar";
 import { useTranslation } from "@/lib/i18n";
 
@@ -17,7 +17,16 @@ export default function LeaderboardPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [period, setPeriod] = useState<"week" | "month" | "all">("week");
   const [loading, setLoading] = useState(true);
+  const [ranks, setRanks] = useState<{ week: number; month: number; all: number } | null>(null);
+  const currentUserRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
+
+  // Load ranks once on mount
+  useEffect(() => {
+    fetch("/api/echo/rank")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => data && setRanks(data));
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -52,10 +61,16 @@ export default function LeaderboardPage() {
     loadData();
   }, [loadData]);
 
-  const currentUserRank =
-    currentUserId
-      ? entries.findIndex((e) => e.user_id === currentUserId) + 1
-      : 0;
+  // Auto-scroll to the current user's row after data loads
+  useEffect(() => {
+    if (!loading && currentUserRef.current) {
+      setTimeout(() => {
+        currentUserRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 200);
+    }
+  }, [loading, entries, currentUserId]);
+
+  const currentRank = ranks ? ranks[period] : 0;
 
   const tierBadge = (tier: string) => {
     switch (tier) {
@@ -100,11 +115,35 @@ export default function LeaderboardPage() {
       <h1 className="text-xl font-bold mb-4">{t("gamification.leaderboard")}</h1>
 
       {/* Rank banner */}
-      {currentUserRank > 0 && (
-        <div className="glass-card p-4 mb-4 border border-primary/20 text-center">
-          <p className="text-sm font-bold">
-            {t("gamification.yourRank", { rank: currentUserRank })}
+      {currentRank > 0 && (
+        <div className="glass-card p-4 mb-4 border border-primary/20">
+          <p className="text-center text-lg font-black mb-2">
+            #{currentRank}
           </p>
+          <p className="text-center text-sm text-white/60">
+            {t("gamification.yourRankPeriod", {
+              rank: currentRank,
+              period: t(`gamification.${period === "week" ? "thisWeek" : period === "month" ? "thisMonth" : "allTime"}`).toLowerCase(),
+            })}
+          </p>
+          {/* All period ranks */}
+          {ranks && (
+            <div className="grid grid-cols-3 gap-2 mt-3">
+              {(["week", "month", "all"] as const).map((p) => (
+                <div
+                  key={p}
+                  className={`text-center rounded-lg py-1.5 ${p === period ? "bg-primary/10" : "bg-white/5"}`}
+                >
+                  <p className={`text-xs font-bold ${p === period ? "text-primary" : "text-white/60"}`}>
+                    {ranks[p] > 0 ? `#${ranks[p]}` : "—"}
+                  </p>
+                  <p className="text-[9px] text-white/40">
+                    {t(`gamification.${p === "week" ? "thisWeek" : p === "month" ? "thisMonth" : "allTime"}`)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -151,6 +190,7 @@ export default function LeaderboardPage() {
             return (
               <div
                 key={entry.user_id}
+                ref={isCurrentUser ? currentUserRef : undefined}
                 className={`grid grid-cols-[40px_1fr_60px_70px] gap-2 px-4 py-3 items-center transition-colors ${
                   medalBg(rank)
                 } ${isCurrentUser ? "border border-primary rounded-lg" : "border-b border-white/5"}`}

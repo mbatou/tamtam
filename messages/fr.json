@@ -801,7 +801,8 @@
     "milestone": "Badge",
     "clicks": "Clics",
     "campaigns": "Campagnes",
-    "referrals": "Parrainages"
+    "referrals": "Parrainages",
+    "yourRankPeriod": "Tu es classé(e) #{rank} {period}"
   },
   "footer": {
     "echos": "Échos",
