@@ -1,15 +1,12 @@
--- Add referral_code column to users for reliable referral lookup
-ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code text UNIQUE;
-
--- Create index for fast lookup
-CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code) WHERE referral_code IS NOT NULL;
+-- Add referral_code column WITHOUT unique constraint first
+ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code text;
 
 -- Generate referral codes for existing users (FIRSTNAME-TT pattern)
 UPDATE users
 SET referral_code = UPPER(SPLIT_PART(name, ' ', 1)) || '-TT'
 WHERE referral_code IS NULL AND name IS NOT NULL AND role = 'echo';
 
--- Handle duplicates by appending a number
+-- Deduplicate: keep the earliest user with the base code, append number for others
 DO $$
 DECLARE
   r RECORD;
@@ -38,6 +35,12 @@ BEGIN
     END LOOP;
   END LOOP;
 END $$;
+
+-- Now add the unique constraint after dedup is done
+ALTER TABLE users ADD CONSTRAINT users_referral_code_key UNIQUE (referral_code);
+
+-- Create index for fast lookup
+CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code) WHERE referral_code IS NOT NULL;
 
 -- RPC function to increment referral_count atomically
 CREATE OR REPLACE FUNCTION increment_referral_count(p_user_id uuid)
