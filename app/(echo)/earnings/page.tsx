@@ -12,6 +12,9 @@ export default function EarningsPage() {
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
+  const [showWithdrawForm, setShowWithdrawForm] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawError, setWithdrawError] = useState("");
   const { showToast, ToastComponent } = useToast();
   const { t } = useTranslation();
 
@@ -36,24 +39,47 @@ export default function EarningsPage() {
     setLoading(false);
   }
 
+  function roundToFive(n: number) {
+    return Math.floor(n / 5) * 5;
+  }
+
+  function validateAmount(val: string): string {
+    const num = parseInt(val);
+    if (!num || num <= 0) return t("echo.earnings.enterAmount");
+    if (num < MIN_PAYOUT_AMOUNT) return t("echo.earnings.minWithdraw") + " " + formatFCFA(MIN_PAYOUT_AMOUNT);
+    if (num % 5 !== 0) return t("echo.earnings.multipleOfFive");
+    if (num > (user?.balance || 0)) return t("echo.earnings.insufficientBalance");
+    return "";
+  }
+
   async function requestPayout() {
-    if (!user || user.balance < MIN_PAYOUT_AMOUNT) return;
+    const amount = parseInt(withdrawAmount);
+    const err = validateAmount(withdrawAmount);
+    if (err) {
+      setWithdrawError(err);
+      return;
+    }
+
     setRequesting(true);
+    setWithdrawError("");
 
     const res = await fetch("/api/echo/payouts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        amount: user.balance,
-        provider: user.mobile_money_provider,
+        amount,
+        provider: user?.mobile_money_provider,
       }),
     });
 
     if (res.ok) {
       showToast(t("echo.earnings.requestSent"), "success");
+      setShowWithdrawForm(false);
+      setWithdrawAmount("");
       await loadData();
     } else {
-      showToast(t("echo.earnings.requestError"), "error");
+      const data = await res.json().catch(() => ({}));
+      showToast(data.error || t("echo.earnings.requestError"), "error");
     }
     setRequesting(false);
   }
@@ -96,19 +122,86 @@ export default function EarningsPage() {
             <div className="w-4 h-4 border-2 border-primary-light border-t-transparent rounded-full animate-spin shrink-0" />
             {t("echo.earnings.processing")}
           </div>
+        ) : showWithdrawForm ? (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-white/40 mb-1.5">
+                {t("echo.earnings.withdrawAmountLabel")}
+              </label>
+              <input
+                type="number"
+                value={withdrawAmount}
+                onChange={(e) => { setWithdrawAmount(e.target.value); setWithdrawError(""); }}
+                placeholder={t("echo.earnings.amountPlaceholder", { max: formatFCFA(roundToFive(user?.balance || 0)) })}
+                min={MIN_PAYOUT_AMOUNT}
+                max={roundToFive(user?.balance || 0)}
+                step={5}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+              />
+              <p className="text-[10px] text-white/30 mt-1">
+                {t("echo.earnings.multipleOfFiveHint")}
+              </p>
+            </div>
+
+            {/* Quick amount buttons */}
+            <div className="flex gap-2">
+              {[
+                roundToFive(user?.balance || 0),
+                roundToFive((user?.balance || 0) * 0.5),
+                roundToFive((user?.balance || 0) * 0.25),
+              ]
+                .filter((a) => a >= MIN_PAYOUT_AMOUNT)
+                .filter((v, i, arr) => arr.indexOf(v) === i)
+                .map((amt) => (
+                  <button
+                    key={amt}
+                    onClick={() => { setWithdrawAmount(amt.toString()); setWithdrawError(""); }}
+                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${
+                      withdrawAmount === amt.toString()
+                        ? "bg-gradient-primary text-white"
+                        : "bg-white/5 text-white/40 hover:bg-white/10"
+                    }`}
+                  >
+                    {formatFCFA(amt)}
+                  </button>
+                ))}
+            </div>
+
+            {withdrawError && (
+              <p className="text-xs text-red-400">{withdrawError}</p>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={requestPayout}
+                disabled={requesting || !withdrawAmount}
+                className="btn-primary flex-1 text-center text-sm !py-3 disabled:opacity-40"
+              >
+                {requesting
+                  ? t("echo.earnings.sending")
+                  : t("echo.earnings.confirmWithdraw", {
+                      provider: user?.mobile_money_provider === "wave" ? t("common.wave") : t("common.orangeMoney"),
+                    })}
+              </button>
+              <button
+                onClick={() => { setShowWithdrawForm(false); setWithdrawAmount(""); setWithdrawError(""); }}
+                className="px-4 py-3 rounded-btn border border-white/10 text-sm text-white/50 hover:bg-white/5 transition"
+              >
+                {t("common.cancel")}
+              </button>
+            </div>
+          </div>
         ) : (
           <button
-            onClick={requestPayout}
-            disabled={!canWithdraw || requesting}
+            onClick={() => setShowWithdrawForm(true)}
+            disabled={!canWithdraw}
             className="btn-primary w-full text-center text-sm !py-3 disabled:opacity-40"
           >
-            {requesting
-              ? t("echo.earnings.sending")
-              : t("echo.earnings.withdrawVia", { amount: formatFCFA(user?.balance || 0), provider: user?.mobile_money_provider === "wave" ? t("common.wave") : t("common.orangeMoney") })}
+            {t("echo.earnings.withdraw")}
           </button>
         )}
 
-        {!canWithdraw && !hasPendingPayout && (
+        {!canWithdraw && !hasPendingPayout && !showWithdrawForm && (
           <p className="text-[10px] text-white/30 mt-2.5 text-center">
             {t("echo.earnings.minWithdraw")} {formatFCFA(MIN_PAYOUT_AMOUNT)}
           </p>

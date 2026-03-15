@@ -73,17 +73,34 @@ export async function POST() {
     );
   }
 
+  const withdrawAmount = user.balance;
+
+  // Debit balance immediately
+  const { error: balanceError } = await supabase
+    .from("users")
+    .update({ balance: 0 })
+    .eq("id", session.user.id);
+
+  if (balanceError) {
+    return NextResponse.json({ error: balanceError.message }, { status: 500 });
+  }
+
   const { data, error } = await supabase
     .from("payouts")
     .insert({
       echo_id: session.user.id,
-      amount: user.balance,
+      amount: withdrawAmount,
       provider: user.mobile_money_provider,
     })
     .select()
     .single();
 
   if (error) {
+    // Rollback balance
+    await supabase
+      .from("users")
+      .update({ balance: withdrawAmount })
+      .eq("id", session.user.id);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
@@ -97,7 +114,7 @@ export async function POST() {
   sendPayoutRequestNotification({
     echoName: echoUser?.name || "Inconnu",
     echoPhone: echoUser?.phone || "",
-    amount: user.balance,
+    amount: withdrawAmount,
     provider: user.mobile_money_provider || "wave",
   }).catch(() => {});
 

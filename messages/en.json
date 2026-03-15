@@ -237,7 +237,15 @@
       "history": "Withdrawal history",
       "noWithdraw": "No withdrawals yet.",
       "requestSent": "Withdrawal request sent!",
-      "requestError": "Error with the request"
+      "requestError": "Error with the request",
+      "withdraw": "Withdraw",
+      "withdrawAmountLabel": "Amount to withdraw (FCFA)",
+      "amountPlaceholder": "Max: {max}",
+      "multipleOfFive": "Amount must be a multiple of 5",
+      "multipleOfFiveHint": "Amount must be a multiple of 5 (mobile money requirement)",
+      "enterAmount": "Enter an amount",
+      "insufficientBalance": "Amount exceeds your balance",
+      "confirmWithdraw": "Withdraw via {provider}"
     },
     "profile": {
       "title": "My Profile",

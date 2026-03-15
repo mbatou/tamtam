@@ -16,13 +16,33 @@ export async function POST(
 
   const supabase = createServiceClient();
 
-  try {
-    await supabase.rpc("process_payout", {
-      p_payout_id: params.id,
-      p_status: "failed",
-    });
-    return NextResponse.json({ success: true });
-  } catch {
+  // Get payout details for refund
+  const { data: payout } = await supabase
+    .from("payouts")
+    .select("echo_id, amount")
+    .eq("id", params.id)
+    .eq("status", "pending")
+    .single();
+
+  if (!payout) {
+    return NextResponse.json({ error: "Payout not found or not pending" }, { status: 404 });
+  }
+
+  // Mark as failed
+  const { error } = await supabase
+    .from("payouts")
+    .update({ status: "failed", failure_reason: "Refusé par l'admin", completed_at: new Date().toISOString() })
+    .eq("id", params.id);
+
+  if (error) {
     return NextResponse.json({ error: "Failed to process payout" }, { status: 500 });
   }
+
+  // Refund balance since it was debited at request time
+  await supabase.rpc("increment_echo_balance", {
+    p_echo_id: payout.echo_id,
+    p_amount: payout.amount,
+  });
+
+  return NextResponse.json({ success: true });
 }

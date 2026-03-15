@@ -53,6 +53,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Validate multiple of 5
+  if (parsed.data.amount % 5 !== 0) {
+    return NextResponse.json({ error: "Le montant doit être un multiple de 5" }, { status: 400 });
+  }
+
   const supabase = createServiceClient();
 
   // Verify user balance
@@ -66,6 +71,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Solde insuffisant" }, { status: 400 });
   }
 
+  // Debit balance immediately
+  const newBalance = user.balance - parsed.data.amount;
+  const { error: balanceError } = await supabase
+    .from("users")
+    .update({ balance: newBalance })
+    .eq("id", session.user.id);
+
+  if (balanceError) {
+    return NextResponse.json({ error: balanceError.message }, { status: 500 });
+  }
+
   const { data, error } = await supabase.from("payouts").insert({
     echo_id: session.user.id,
     amount: parsed.data.amount,
@@ -73,6 +89,11 @@ export async function POST(request: NextRequest) {
   }).select().single();
 
   if (error) {
+    // Rollback balance if payout creation fails
+    await supabase
+      .from("users")
+      .update({ balance: user.balance })
+      .eq("id", session.user.id);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
