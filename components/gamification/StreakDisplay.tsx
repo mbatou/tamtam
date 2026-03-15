@@ -14,10 +14,10 @@ interface StreakProps {
 const THRESHOLDS = [1, 2, 3, 5, 7, 10];
 
 const REWARDS: Record<number, number> = {
-  3: 50,
-  5: 100,
-  7: 200,
-  10: 500,
+  3: 100,
+  5: 250,
+  7: 500,
+  10: 1000,
 };
 
 export default function StreakDisplay({ streak }: StreakProps) {

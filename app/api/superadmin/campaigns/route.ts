@@ -9,8 +9,7 @@ async function notifyEchosNewCampaign(supabase: ReturnType<typeof createServiceC
     const { data: echos } = await supabase
       .from("users")
       .select("id, name")
-      .eq("role", "echo")
-      .eq("status", "active");
+      .eq("role", "echo");
     if (!echos?.length) return;
 
     const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });

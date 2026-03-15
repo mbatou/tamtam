@@ -538,7 +538,10 @@
       "totalClicks": "Clics totaux",
       "spentBudget": "Budget dépensé",
       "rejectionReason": "Raison du rejet",
-      "rejectionReasonPlaceholder": "Raison du rejet (si applicable)..."
+      "rejectionReasonPlaceholder": "Raison du rejet (si applicable)...",
+      "notifyEchos": "Notifier tous les Échos",
+      "notifying": "Envoi des notifications...",
+      "notifySent": "{count} notification(s) envoyée(s) aux Échos"
     },
     "finance": {
       "title": "Finance",
