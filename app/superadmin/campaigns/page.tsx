@@ -8,6 +8,7 @@ import StatCard from "@/components/StatCard";
 import Badge from "@/components/ui/Badge";
 import TabBar from "@/components/ui/TabBar";
 import Modal from "@/components/ui/Modal";
+import Pagination, { paginate } from "@/components/ui/Pagination";
 import ProgressBar from "@/components/ui/ProgressBar";
 import { useToast } from "@/components/ui/Toast";
 
@@ -50,6 +51,8 @@ function CampaignModerationPageContent() {
   const highlightId = searchParams.get("id");
 
   const [notifying, setNotifying] = useState(false);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 30;
 
   // Create campaign state
   const [showCreate, setShowCreate] = useState(false);
@@ -231,7 +234,7 @@ function CampaignModerationPageContent() {
           { key: "rejected", label: t("superadmin.campaigns.rejectedTab"), count: campaigns.filter((c) => c.moderation_status === "rejected").length },
         ]}
         active={filter}
-        onChange={setFilter}
+        onChange={(f) => { setFilter(f); setPage(1); }}
         className="mb-6"
       />
 
@@ -249,7 +252,7 @@ function CampaignModerationPageContent() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((campaign) => (
+            {paginate(filtered, page, PAGE_SIZE).map((campaign) => (
               <tr
                 key={campaign.id}
                 className="border-b border-white/5 hover:bg-white/3 cursor-pointer transition"
@@ -274,6 +277,8 @@ function CampaignModerationPageContent() {
           </tbody>
         </table>
       </div>
+
+      <Pagination currentPage={page} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
 
       {/* Campaign Detail Modal */}
       <Modal open={!!selected} onClose={() => { setSelected(null); setRejectReason(""); }} title={selected?.title || ""}>

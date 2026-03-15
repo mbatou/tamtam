@@ -33,9 +33,25 @@ export async function GET() {
     // RPC may not exist yet
   }
 
+  // Detect dual-role users: echo activity (tracked_links) and batteur activity (campaigns created)
+  const echoUserIds = new Set<string>();
+  const batteurUserIds = new Set<string>();
+  try {
+    const { data: echoLinks } = await supabase.from("tracked_links").select("echo_id");
+    if (echoLinks) echoLinks.forEach((l) => echoUserIds.add(l.echo_id));
+
+    const { data: batteurCampaigns } = await supabase.from("campaigns").select("batteur_id");
+    if (batteurCampaigns) batteurCampaigns.forEach((c) => batteurUserIds.add(c.batteur_id));
+  } catch {
+    // tables may not exist yet
+  }
+
   const enriched = (users || []).map((u: Record<string, unknown>) => ({
     ...u,
     click_stats: clickStats[u.id as string] || { total: 0, valid: 0, fraud: 0, rate: 0 },
+    has_echo_activity: echoUserIds.has(u.id as string),
+    has_batteur_activity: batteurUserIds.has(u.id as string),
+    is_dual_role: echoUserIds.has(u.id as string) && batteurUserIds.has(u.id as string),
   }));
 
   return NextResponse.json(enriched);

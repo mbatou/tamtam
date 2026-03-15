@@ -7,6 +7,7 @@ import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
 import Badge from "@/components/ui/Badge";
 import Modal from "@/components/ui/Modal";
+import Pagination, { paginate } from "@/components/ui/Pagination";
 import { useToast } from "@/components/ui/Toast";
 
 interface PayoutRow {
@@ -55,6 +56,9 @@ function FinancePageContent() {
   const [rejectReason, setRejectReason] = useState("");
   const [confirmAction, setConfirmAction] = useState<{ payout: PayoutRow; action: "approve" | "reject"; reason?: string } | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [paymentsPage, setPaymentsPage] = useState(1);
+  const PAGE_SIZE = 30;
   const { showToast, ToastComponent } = useToast();
   const searchParams = useSearchParams();
   const highlightId = searchParams.get("id");
@@ -294,6 +298,7 @@ function FinancePageContent() {
 
       {/* Payout History Tab */}
       {tab === "payout_history" && (
+        <>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -306,7 +311,7 @@ function FinancePageContent() {
               </tr>
             </thead>
             <tbody>
-              {completedPayouts.map((payout) => (
+              {paginate(completedPayouts, historyPage, PAGE_SIZE).map((payout) => (
                 <tr key={payout.id} className="border-b border-white/5">
                   <td className="py-3 text-xs text-white/50">
                     {new Date(payout.created_at).toLocaleDateString("fr-FR")}
@@ -330,6 +335,8 @@ function FinancePageContent() {
             </tbody>
           </table>
         </div>
+        <Pagination currentPage={historyPage} totalItems={completedPayouts.length} pageSize={PAGE_SIZE} onPageChange={setHistoryPage} />
+        </>
       )}
 
       {/* Pending Recharges (Wave) Tab */}
@@ -390,6 +397,7 @@ function FinancePageContent() {
 
       {/* Processed Recharges History Tab */}
       {tab === "payments" && (
+        <>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -402,7 +410,7 @@ function FinancePageContent() {
               </tr>
             </thead>
             <tbody>
-              {processedRecharges.map((payment) => (
+              {paginate(processedRecharges, paymentsPage, PAGE_SIZE).map((payment) => (
                 <tr key={payment.id} className="border-b border-white/5">
                   <td className="py-3 text-xs text-white/50">
                     {new Date(payment.created_at).toLocaleDateString("fr-FR")}
@@ -427,6 +435,8 @@ function FinancePageContent() {
             </tbody>
           </table>
         </div>
+        <Pagination currentPage={paymentsPage} totalItems={processedRecharges.length} pageSize={PAGE_SIZE} onPageChange={setPaymentsPage} />
+        </>
       )}
 
       {/* Payout Detail / Reject Modal */}
