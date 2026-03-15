@@ -494,7 +494,15 @@
       "noEchoTop": "Aucun écho",
       "latestCampaigns": "Dernières campagnes",
       "pendingPayoutsTitle": "Paiements en attente",
-      "noPendingPayments": "Aucun paiement en attente"
+      "noPendingPayments": "Aucun paiement en attente",
+      "activeEchos7d": "{count} actifs (7j)",
+      "campaignHealth": "{active} campagnes actives, {budget}% du budget restant",
+      "conversionFunnel": "Entonnoir de conversion",
+      "funnelRegistered": "Inscrits",
+      "funnelActive": "Actifs (7j)",
+      "funnelValidClicks": "Clics valides",
+      "funnelPaid": "Payés",
+      "signupAnnotation": "{total} inscriptions en 14 jours (moy. {avg}/jour)"
     },
     "users": {
       "title": "Utilisateurs",

@@ -53,6 +53,33 @@ export async function GET() {
   const pendingPayoutAmount = (pendingPayoutsList || []).reduce((s: number, p: { amount: number }) => s + p.amount, 0);
   const fraudRate = (totalClicks || 0) > 0 ? ((fraudClicks || 0) / (totalClicks || 1) * 100) : 0;
 
+  // --- Active echos in last 7 days (echos with clicks) ---
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const { data: activeEchoLinks } = await supabase
+    .from("tracked_links")
+    .select("echo_id, clicks!inner(created_at)")
+    .gte("clicks.created_at", sevenDaysAgo.toISOString());
+
+  const activeEchoSet = new Set<string>();
+  if (activeEchoLinks) {
+    for (const link of activeEchoLinks) {
+      if (link.echo_id) activeEchoSet.add(link.echo_id);
+    }
+  }
+  const activeEchos7d = activeEchoSet.size;
+
+  // Budget remaining for active campaigns
+  const totalBudgetActive = (allCampaigns || [])
+    .filter((c: { status?: string }) => (c as { status?: string }).status === "active")
+    .reduce((s: number, c: { budget: number; spent: number }) => s + ((c.budget || 0) - (c.spent || 0)), 0);
+  const totalBudgetActiveAll = (allCampaigns || [])
+    .filter((c: { status?: string }) => (c as { status?: string }).status === "active")
+    .reduce((s: number, c: { budget: number }) => s + (c.budget || 0), 0);
+  const budgetRemainingPercent = totalBudgetActiveAll > 0
+    ? Math.round((totalBudgetActive / totalBudgetActiveAll) * 100)
+    : 0;
+
   // --- Chart data: clicks per day (last 14 days) ---
   const fourteenDaysAgo = new Date();
   fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 13);
@@ -163,5 +190,7 @@ export async function GET() {
     campaignsByStatus,
     signupsChart,
     acquisitionChart,
+    activeEchos7d,
+    budgetRemainingPercent,
   });
 }

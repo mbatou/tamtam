@@ -494,7 +494,15 @@
       "noEchoTop": "No echo",
       "latestCampaigns": "Latest campaigns",
       "pendingPayoutsTitle": "Pending payments",
-      "noPendingPayments": "No pending payments"
+      "noPendingPayments": "No pending payments",
+      "activeEchos7d": "{count} active (7d)",
+      "campaignHealth": "{active} active campaigns, {budget}% budget remaining",
+      "conversionFunnel": "Conversion funnel",
+      "funnelRegistered": "Registered",
+      "funnelActive": "Active (7d)",
+      "funnelValidClicks": "Valid clicks",
+      "funnelPaid": "Paid out",
+      "signupAnnotation": "{total} signups in 14 days (avg {avg}/day)"
     },
     "users": {
       "title": "Users",
