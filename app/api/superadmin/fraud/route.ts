@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
   const supabase = createServiceClient();
 
-  // Period filter (supports legacy period param + from/to)
+  // Period filter
   const period = request.nextUrl.searchParams.get("period") || "all";
   const fromParam = request.nextUrl.searchParams.get("from");
   const toParam = request.nextUrl.searchParams.get("to");
@@ -32,56 +32,87 @@ export async function GET(request: NextRequest) {
 
   // Build queries with optional date filter
   let totalQuery = supabase.from("clicks").select("*", { count: "exact", head: true });
+  let validQuery = supabase.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", true);
   let flaggedQuery = supabase.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", false);
-  let recentQuery = supabase.from("clicks").select("id, ip_address, user_agent, is_valid, country, created_at, link_id, tracked_links!link_id(short_code, echo_id, campaign_id, users!echo_id(name), campaigns!campaign_id(title))").order("created_at", { ascending: false }).limit(200);
-  let fraudIPQuery = supabase.from("clicks").select("ip_address").eq("is_valid", false);
+  let recentQuery = supabase.from("clicks").select("id, ip_address, user_agent, is_valid, country, created_at, link_id, rejection_reason, tracked_links!link_id(short_code, echo_id, campaign_id, users!echo_id(name), campaigns!campaign_id(title))").order("created_at", { ascending: false }).limit(200);
+
+  // Rejection reason breakdown query
+  let rejectionQuery = supabase.from("clicks").select("rejection_reason").eq("is_valid", false).not("rejection_reason", "is", null);
 
   if (sinceDate) {
     totalQuery = totalQuery.gte("created_at", sinceDate);
+    validQuery = validQuery.gte("created_at", sinceDate);
     flaggedQuery = flaggedQuery.gte("created_at", sinceDate);
     recentQuery = recentQuery.gte("created_at", sinceDate);
-    fraudIPQuery = fraudIPQuery.gte("created_at", sinceDate);
+    rejectionQuery = rejectionQuery.gte("created_at", sinceDate);
   }
   if (untilDate) {
     totalQuery = totalQuery.lte("created_at", untilDate);
+    validQuery = validQuery.lte("created_at", untilDate);
     flaggedQuery = flaggedQuery.lte("created_at", untilDate);
     recentQuery = recentQuery.lte("created_at", untilDate);
-    fraudIPQuery = fraudIPQuery.lte("created_at", untilDate);
+    rejectionQuery = rejectionQuery.lte("created_at", untilDate);
   }
 
   const [
     { count: totalClicks },
+    { count: validClicks },
     { count: flaggedClicks },
     { data: recentClicks },
-    { data: fraudIPs },
+    { data: rejectionData },
     { data: blockedIPs },
+    { data: carrierRanges },
+    { data: ipAnalysis },
+    { data: echoAnalysis },
   ] = await Promise.all([
     totalQuery,
+    validQuery,
     flaggedQuery,
     recentQuery,
-    fraudIPQuery,
+    rejectionQuery,
     supabase.from("blocked_ips").select("*").order("created_at", { ascending: false }),
+    supabase.from("carrier_ip_ranges").select("*"),
+    supabase.from("fraud_ip_analysis").select("*").order("total_clicks", { ascending: false }).limit(100),
+    supabase.from("fraud_echo_analysis").select("*").order("total_clicks", { ascending: false }).limit(50),
   ]);
 
-  // Build IP clusters
-  const ipCounts: Record<string, number> = {};
-  if (fraudIPs) {
-    for (const c of fraudIPs) {
-      if (c.ip_address) ipCounts[c.ip_address] = (ipCounts[c.ip_address] || 0) + 1;
+  // Build rejection breakdown
+  const rejectionBreakdown: Record<string, number> = {};
+  if (rejectionData) {
+    for (const r of rejectionData) {
+      const reason = r.rejection_reason || "unknown";
+      rejectionBreakdown[reason] = (rejectionBreakdown[reason] || 0) + 1;
     }
   }
-  const suspiciousIPs = Object.entries(ipCounts)
-    .filter(([, count]) => count >= 3)
-    .sort((a, b) => b[1] - a[1])
-    .map(([ip, count]) => ({ ip, count }));
+
+  // Enrich IP analysis with carrier info
+  const enrichedIpAnalysis = (ipAnalysis || []).map((ip) => {
+    const matchedCarrier = (carrierRanges || []).find((cr) =>
+      ip.ip_address?.startsWith(cr.ip_prefix)
+    );
+    return {
+      ...ip,
+      carrier: matchedCarrier?.carrier || null,
+      carrier_country: matchedCarrier?.country || null,
+    };
+  });
+
+  // Revenue saved calculation (rejected clicks × avg CPC × echo share)
+  const avgCpc = 25;
+  const revenueSaved = (flaggedClicks || 0) * avgCpc * (ECHO_SHARE_PERCENT / 100);
 
   return NextResponse.json({
     totalClicks: totalClicks || 0,
+    validClicks: validClicks || 0,
     flaggedClicks: flaggedClicks || 0,
-    fraudRate: (totalClicks || 0) > 0 ? parseFloat(((flaggedClicks || 0) / (totalClicks || 1) * 100).toFixed(1)) : 0,
-    suspiciousIPs,
+    rejectionRate: (totalClicks || 0) > 0 ? parseFloat(((flaggedClicks || 0) / (totalClicks || 1) * 100).toFixed(1)) : 0,
+    rejectionBreakdown,
+    revenueSaved: Math.round(revenueSaved),
     recentClicks: recentClicks || [],
     blockedIPs: blockedIPs || [],
+    carrierRanges: carrierRanges || [],
+    ipAnalysis: enrichedIpAnalysis,
+    echoAnalysis: echoAnalysis || [],
   });
 }
 
@@ -94,26 +125,87 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { action, ip, click_id } = body;
 
+  if (action === "block_ip" && ip) {
+    const blockType = body.block_type || "manual";
+
+    // Check if this is a carrier IP
+    const { data: carrierMatch } = await supabase
+      .from("carrier_ip_ranges")
+      .select("carrier, ip_prefix")
+      .limit(100);
+
+    const matchedCarrier = (carrierMatch || []).find((cr) => ip.startsWith(cr.ip_prefix));
+
+    if (matchedCarrier && !body.force) {
+      return NextResponse.json({
+        error: "carrier_ip",
+        carrier: matchedCarrier.carrier,
+        message: `This IP belongs to ${matchedCarrier.carrier}'s carrier network. Blocking will affect all subscribers on this cell tower.`,
+        requires_confirmation: true,
+      }, { status: 409 });
+    }
+
+    await supabase.from("blocked_ips").upsert({
+      ip_address: ip,
+      blocked_by: session.user.id,
+      reason: body.reason || "Bloqué par superadmin",
+      block_type: blockType,
+      carrier_ip: !!matchedCarrier,
+      expires_at: body.expires_at || null,
+    });
+
+    try {
+      await supabase.from("admin_activity_log").insert({
+        admin_id: session.user.id,
+        action: "block_ip",
+        target_type: "ip",
+        target_id: ip,
+        details: { block_type: blockType, carrier: matchedCarrier?.carrier || null },
+      });
+    } catch { /* admin_activity_log may not exist yet */ }
+
+    return NextResponse.json({ success: true });
+  }
+
+  if (action === "unblock_ip" && ip) {
+    await supabase.from("blocked_ips").delete().eq("ip_address", ip);
+    try {
+      await supabase.from("admin_activity_log").insert({
+        admin_id: session.user.id,
+        action: "unblock_ip",
+        target_type: "ip",
+        target_id: ip,
+      });
+    } catch {}
+    return NextResponse.json({ success: true });
+  }
+
   if (action === "bulk_block_ips") {
     const threshold = body.threshold || 5;
-    // Get all fraud IPs above threshold
-    const { data: fraudIPsData } = await supabase.from("clicks").select("ip_address").eq("is_valid", false);
-    const ipCounts: Record<string, number> = {};
-    if (fraudIPsData) {
-      for (const c of fraudIPsData) {
-        if (c.ip_address) ipCounts[c.ip_address] = (ipCounts[c.ip_address] || 0) + 1;
-      }
-    }
-    const ipsToBlock = Object.entries(ipCounts).filter(([, count]) => count >= threshold).map(([ipAddr]) => ipAddr);
+    // Get IP analysis data — only block non-carrier IPs assessed as bot/suspicious
+    const { data: ipAnalysis } = await supabase
+      .from("fraud_ip_analysis")
+      .select("ip_address, risk_assessment, is_carrier_ip")
+      .in("risk_assessment", ["bot", "targeted_abuse", "suspicious"]);
 
     // Get already blocked IPs
     const { data: existingBlocked } = await supabase.from("blocked_ips").select("ip_address");
     const blockedSet = new Set((existingBlocked || []).map((b) => b.ip_address));
-    const newIps = ipsToBlock.filter((ipAddr) => !blockedSet.has(ipAddr));
 
-    if (newIps.length > 0) {
+    // Filter: only non-carrier IPs that are bots
+    const ipsToBlock = (ipAnalysis || [])
+      .filter((ip) => !ip.is_carrier_ip && !blockedSet.has(ip.ip_address))
+      .filter((ip) => ip.risk_assessment === "bot" || ip.risk_assessment === "targeted_abuse");
+
+    if (ipsToBlock.length > 0) {
       await supabase.from("blocked_ips").insert(
-        newIps.map((ipAddr) => ({ ip_address: ipAddr, blocked_by: session.user.id, reason: `Bulk block (${threshold}+ flagged clicks)` }))
+        ipsToBlock.map((ip) => ({
+          ip_address: ip.ip_address,
+          blocked_by: session.user.id,
+          reason: `Auto-blocked: ${ip.risk_assessment}`,
+          block_type: "bot" as const,
+          carrier_ip: false,
+        }))
       );
       try {
         await supabase.from("admin_activity_log").insert({
@@ -121,23 +213,14 @@ export async function POST(request: NextRequest) {
           action: "bulk_block_ips",
           target_type: "ip",
           target_id: "bulk",
-          details: { count: newIps.length, threshold },
+          details: { count: ipsToBlock.length, threshold },
         });
       } catch {}
     }
-    return NextResponse.json({ success: true, blocked: newIps.length });
-  }
-
-  if (action === "block_ip" && ip) {
-    await supabase.from("blocked_ips").upsert({ ip_address: ip, blocked_by: session.user.id, reason: "Bloqué par superadmin" });
-    try {
-      await supabase.from("admin_activity_log").insert({ admin_id: session.user.id, action: "block_ip", target_type: "ip", target_id: ip });
-    } catch { /* admin_activity_log may not exist yet */ }
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, blocked: ipsToBlock.length });
   }
 
   if (action === "toggle_validity" && click_id) {
-    // Get click data
     const { data: click } = await supabase
       .from("clicks")
       .select("id, is_valid, link_id")
@@ -146,9 +229,11 @@ export async function POST(request: NextRequest) {
 
     if (click) {
       const newValid = !click.is_valid;
-      await supabase.from("clicks").update({ is_valid: newValid }).eq("id", click_id);
+      await supabase.from("clicks").update({
+        is_valid: newValid,
+        rejection_reason: newValid ? null : "manual_invalidation",
+      }).eq("id", click_id);
 
-      // Get link + campaign info for counter adjustments
       const { data: link } = await supabase
         .from("tracked_links")
         .select("echo_id, campaign_id, campaigns(cpc)")
@@ -180,9 +265,73 @@ export async function POST(request: NextRequest) {
           target_type: "click",
           target_id: click_id,
         });
-      } catch { /* admin_activity_log may not exist yet */ }
+      } catch {}
     }
     return NextResponse.json({ success: true });
+  }
+
+  if (action === "flag_echo" && body.echo_id) {
+    const riskLevel = body.risk_level || "high";
+    await supabase.from("users").update({ risk_level: riskLevel }).eq("id", body.echo_id);
+    try {
+      await supabase.from("admin_activity_log").insert({
+        admin_id: session.user.id,
+        action: "flag_echo_fraud",
+        target_type: "user",
+        target_id: body.echo_id,
+        details: { risk_level: riskLevel },
+      });
+    } catch {}
+    return NextResponse.json({ success: true });
+  }
+
+  if (action === "update_fraud_settings") {
+    const settings = body.settings as Record<string, string>;
+    const validKeys = [
+      "fraud_ip_cooldown_hours",
+      "fraud_link_hourly_limit",
+      "fraud_ip_daily_valid_limit",
+      "fraud_speed_check_seconds",
+      "fraud_auto_block_datacenter",
+      "fraud_carrier_ip_protection",
+    ];
+
+    for (const [key, value] of Object.entries(settings)) {
+      if (validKeys.includes(key)) {
+        await supabase.from("platform_settings").upsert({
+          key,
+          value: String(value),
+          updated_at: new Date().toISOString(),
+          updated_by: session.user.id,
+        });
+      }
+    }
+
+    return NextResponse.json({ success: true });
+  }
+
+  // Get IP details (click timeline)
+  if (action === "ip_details" && ip) {
+    const { data: clicks } = await supabase
+      .from("clicks")
+      .select("id, ip_address, is_valid, created_at, rejection_reason, tracked_links!link_id(short_code, users!echo_id(name))")
+      .eq("ip_address", ip)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    const { data: carrierMatch } = await supabase
+      .from("carrier_ip_ranges")
+      .select("carrier, ip_prefix, notes")
+      .limit(100);
+
+    const matched = (carrierMatch || []).find((cr) => ip.startsWith(cr.ip_prefix));
+
+    return NextResponse.json({
+      clicks: clicks || [],
+      carrier: matched?.carrier || null,
+      carrier_notes: matched?.notes || null,
+      is_carrier_ip: !!matched,
+    });
   }
 
   return NextResponse.json({ error: "Action invalide" }, { status: 400 });
