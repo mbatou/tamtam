@@ -49,9 +49,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Aucun echo trouvé" }, { status: 404 });
   }
 
-  // Get auth emails
-  const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-  const emailMap = new Map(authUsers?.map((u) => [u.id, u.email]) || []);
+  // Get all auth emails (paginate through all pages)
+  const emailMap = new Map<string, string>();
+  let page = 1;
+  while (true) {
+    const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ page, perPage: 50 });
+    if (!authUsers || authUsers.length === 0) break;
+    for (const u of authUsers) {
+      if (u.email) emailMap.set(u.id, u.email);
+    }
+    if (authUsers.length < 50) break;
+    page++;
+  }
 
   let sent = 0;
   let failed = 0;

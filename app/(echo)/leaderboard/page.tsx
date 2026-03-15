@@ -29,7 +29,15 @@ export default function LeaderboardPage() {
 
     if (leaderboardRes.ok) {
       const data = await leaderboardRes.json();
-      setEntries(Array.isArray(data) ? data : []);
+      const raw = data.leaderboard || data;
+      const mapped = (Array.isArray(raw) ? raw : []).map((e: Record<string, unknown>) => ({
+        user_id: e.echo_id || e.user_id,
+        name: e.name,
+        tier: e.tier || "echo",
+        rythmes_joined: e.campaigns_joined ?? e.rythmes_joined ?? 0,
+        resonances: e.total_clicks ?? e.resonances ?? 0,
+      }));
+      setEntries(mapped);
     }
 
     if (userRes.ok) {

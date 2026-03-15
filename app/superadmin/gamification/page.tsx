@@ -90,46 +90,29 @@ export default function SuperadminGamification() {
   }, [leaderboardPeriod]);
 
   async function loadData() {
-    const [
-      echosRes,
-      streaksRes,
-      achievementsRes,
-      milestonesRes,
-      streakRewardsRes,
-      tierRes,
-      settingsRes,
-    ] = await Promise.all([
-      supabase
-        .from("users")
-        .select("id", { count: "exact", head: true })
-        .eq("role", "echo"),
-      supabase.from("echo_streaks").select("echo_id, current_streak, longest_streak"),
-      supabase.from("echo_achievements").select("echo_id, milestone_id, reward_fcfa, achieved_at"),
-      supabase.from("gamification_milestones").select("*").order("sort_order"),
-      supabase.from("streak_rewards").select("echo_id, reward_fcfa, credited_at"),
-      supabase.from("users").select("tier").eq("role", "echo"),
-      supabase
-        .from("platform_settings")
-        .select("key, value")
-        .in("key", ["gamification_enabled", "gamification_monthly_cap"]),
-    ]);
+    const res = await fetch("/api/superadmin/gamification");
+    if (!res.ok) {
+      setLoading(false);
+      return;
+    }
+    const data = await res.json();
 
-    setTotalEchos(echosRes.count || 0);
-    setStreaks(streaksRes.data || []);
-    setAchievements(achievementsRes.data || []);
-    setMilestones(milestonesRes.data || []);
-    setStreakRewards(streakRewardsRes.data || []);
+    setTotalEchos(data.totalEchos || 0);
+    setStreaks(data.streaks || []);
+    setAchievements(data.achievements || []);
+    setMilestones(data.milestones || []);
+    setStreakRewards(data.streakRewards || []);
 
     // Tier distribution
     const tiers: Record<string, number> = { echo: 0, argent: 0, or: 0, diamant: 0 };
-    (tierRes.data || []).forEach((u) => {
+    (data.tiers || []).forEach((u: { tier: string }) => {
       const tier = u.tier || "echo";
       tiers[tier] = (tiers[tier] || 0) + 1;
     });
     setTierDistribution(tiers);
 
     // Settings
-    (settingsRes.data || []).forEach((s) => {
+    (data.settings || []).forEach((s: { key: string; value: string }) => {
       if (s.key === "gamification_enabled") setGamificationEnabled(s.value === "true");
       if (s.key === "gamification_monthly_cap") setMonthlyBudgetCap(parseInt(s.value) || 100000);
     });
