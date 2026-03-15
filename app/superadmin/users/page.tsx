@@ -39,6 +39,16 @@ interface CampaignHistory {
   created_at?: string;
 }
 
+interface PayoutHistory {
+  id: string;
+  amount: number;
+  provider: string | null;
+  status: string;
+  created_at: string;
+  failure_reason?: string | null;
+  completed_at?: string | null;
+}
+
 export default function UsersPageWrapper() {
   return <Suspense><UsersPageContent /></Suspense>;
 }
@@ -66,8 +76,11 @@ function UsersPageContent() {
   });
 
   // Campaign history state
-  const [history, setHistory] = useState<CampaignHistory[]>([]);
+  const [echoCampaigns, setEchoCampaigns] = useState<CampaignHistory[]>([]);
+  const [batteurCampaigns, setBatteurCampaigns] = useState<CampaignHistory[]>([]);
+  const [payoutHistory, setPayoutHistory] = useState<PayoutHistory[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyTab, setHistoryTab] = useState<"echo" | "batteur" | "payouts">("echo");
 
   // Top-up state
   const [showTopup, setShowTopup] = useState(false);
@@ -77,12 +90,20 @@ function UsersPageContent() {
 
   async function loadHistory(user: UserRow) {
     setHistoryLoading(true);
-    setHistory([]);
+    setEchoCampaigns([]);
+    setBatteurCampaigns([]);
+    setPayoutHistory([]);
     try {
       const res = await fetch(`/api/superadmin/users/history?user_id=${user.id}&role=${user.role}`);
       if (res.ok) {
         const data = await res.json();
-        setHistory(data.campaigns || []);
+        setEchoCampaigns(data.echoCampaigns || []);
+        setBatteurCampaigns(data.batteurCampaigns || []);
+        setPayoutHistory(data.payouts || []);
+        // Auto-select the right tab
+        if (data.echoCampaigns?.length > 0) setHistoryTab("echo");
+        else if (data.batteurCampaigns?.length > 0) setHistoryTab("batteur");
+        else setHistoryTab("echo");
       }
     } catch { /* silently fail */ }
     setHistoryLoading(false);
@@ -97,13 +118,22 @@ function UsersPageContent() {
     const match = userList.find((u) => u.id === id);
     if (match) {
       setSelected(match);
-      // Load history in next tick to avoid calling during render
       setTimeout(() => {
         setHistoryLoading(true);
-        setHistory([]);
+        setEchoCampaigns([]);
+        setBatteurCampaigns([]);
+        setPayoutHistory([]);
         fetch(`/api/superadmin/users/history?user_id=${match.id}&role=${match.role}`)
           .then((r) => r.ok ? r.json() : null)
-          .then((data) => data && setHistory(data.campaigns || []))
+          .then((data) => {
+            if (data) {
+              setEchoCampaigns(data.echoCampaigns || []);
+              setBatteurCampaigns(data.batteurCampaigns || []);
+              setPayoutHistory(data.payouts || []);
+              if (data.echoCampaigns?.length > 0) setHistoryTab("echo");
+              else if (data.batteurCampaigns?.length > 0) setHistoryTab("batteur");
+            }
+          })
           .finally(() => setHistoryLoading(false));
       }, 0);
     }
@@ -346,7 +376,7 @@ function UsersPageContent() {
       </div>
 
       {/* User Detail Modal */}
-      <Modal open={!!selected} onClose={() => { setSelected(null); setHistory([]); }} title={selected?.name || ""}>
+      <Modal open={!!selected} onClose={() => { setSelected(null); setEchoCampaigns([]); setBatteurCampaigns([]); setPayoutHistory([]); }} title={selected?.name || ""}>
         {selected && (
           <div className="space-y-4">
             <div className="flex items-center gap-4">
@@ -383,64 +413,145 @@ function UsersPageContent() {
               </div>
             </div>
 
-            {/* Campaign history */}
+            {/* History tabs: Echo / Brand / Payouts */}
             <div className="pt-3 border-t border-white/5">
-              <h4 className="text-xs font-bold text-white/50 mb-3">
-                {selected.role === "echo"
-                  ? t("superadmin.users.campaignsJoined")
-                  : t("superadmin.users.campaignsLaunched")}
-              </h4>
+              {/* Tab buttons */}
+              <div className="flex gap-1 mb-3">
+                {echoCampaigns.length > 0 && (
+                  <button
+                    onClick={() => setHistoryTab("echo")}
+                    className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition ${
+                      historyTab === "echo" ? "bg-primary/20 text-primary" : "bg-white/5 text-white/40"
+                    }`}
+                  >
+                    {t("superadmin.users.campaignsJoined")} ({echoCampaigns.length})
+                  </button>
+                )}
+                {batteurCampaigns.length > 0 && (
+                  <button
+                    onClick={() => setHistoryTab("batteur")}
+                    className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition ${
+                      historyTab === "batteur" ? "bg-accent/20 text-accent" : "bg-white/5 text-white/40"
+                    }`}
+                  >
+                    {t("superadmin.users.campaignsLaunched")} ({batteurCampaigns.length})
+                  </button>
+                )}
+                <button
+                  onClick={() => setHistoryTab("payouts")}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition flex items-center gap-1.5 ${
+                    historyTab === "payouts" ? "bg-purple-500/20 text-purple-400" : "bg-white/5 text-white/40"
+                  }`}
+                >
+                  {t("superadmin.users.payoutRequests")} ({payoutHistory.length})
+                  {payoutHistory.filter((p) => p.status === "pending").length > 0 && (
+                    <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] text-center">
+                      {payoutHistory.filter((p) => p.status === "pending").length}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* If no tabs have data and not in payouts, show empty */}
+              {echoCampaigns.length === 0 && batteurCampaigns.length === 0 && historyTab !== "payouts" && (
+                <button
+                  onClick={() => setHistoryTab("echo")}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold mb-3 ${
+                    historyTab === "echo" ? "bg-primary/20 text-primary" : "bg-white/5 text-white/40"
+                  }`}
+                >
+                  {t("superadmin.users.campaignsJoined")} (0)
+                </button>
+              )}
 
               {historyLoading ? (
                 <div className="space-y-2">
                   {[1, 2].map((i) => <div key={i} className="skeleton h-14 rounded-xl" />)}
                 </div>
-              ) : history.length === 0 ? (
-                <p className="text-xs text-white/20 text-center py-3">{t("superadmin.users.noCampaigns")}</p>
+              ) : historyTab === "payouts" ? (
+                /* Payout history */
+                payoutHistory.length === 0 ? (
+                  <p className="text-xs text-white/20 text-center py-3">{t("superadmin.users.noPayouts")}</p>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    {payoutHistory.map((p) => {
+                      const statusColors: Record<string, string> = {
+                        pending: "text-yellow-400 bg-yellow-500/10",
+                        sent: "text-emerald-400 bg-emerald-500/10",
+                        failed: "text-red-400 bg-red-500/10",
+                      };
+                      return (
+                        <div key={p.id} className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                          <div className="flex items-start justify-between gap-2 mb-1.5">
+                            <span className="text-sm font-semibold">{formatFCFA(p.amount)}</span>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${statusColors[p.status] || "text-white/40 bg-white/5"}`}>
+                              {p.status === "pending" ? t("common.pending") : p.status === "sent" ? t("common.sent") : t("common.failed")}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-white/40">
+                            <span>{t("superadmin.finance.provider")}: <strong className="text-white/70">{p.provider === "wave" ? t("common.wave") : t("common.orangeMoney")}</strong></span>
+                            <span>{new Date(p.created_at).toLocaleDateString("fr-FR")}</span>
+                            {p.failure_reason && (
+                              <span className="text-red-400">{p.failure_reason}</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
               ) : (
-                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                  {history.map((c) => {
-                    const statusColors: Record<string, string> = {
-                      active: "text-emerald-400 bg-emerald-500/10",
-                      completed: "text-blue-400 bg-blue-500/10",
-                      paused: "text-yellow-400 bg-yellow-500/10",
-                      draft: "text-white/40 bg-white/5",
-                      rejected: "text-red-400 bg-red-500/10",
-                    };
-                    const isEcho = selected.role === "echo";
-                    return (
-                      <div key={c.campaign_id + (c.joined_at || c.created_at || "")} className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                        <div className="flex items-start justify-between gap-2 mb-1.5">
-                          <span className="text-sm font-semibold truncate flex-1">{c.title}</span>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${statusColors[c.status] || "text-white/40 bg-white/5"}`}>
-                            {c.status}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-white/40">
-                          {isEcho ? (
-                            <>
-                              <span>{t("superadmin.users.histClicks")}: <strong className="text-white/70">{c.clicks}</strong></span>
-                              <span>{t("superadmin.users.histEarned")}: <strong className="text-accent">{formatFCFA(c.earned || 0)}</strong></span>
-                              <span>CPC: {formatFCFA(c.cpc)}</span>
-                            </>
-                          ) : (
-                            <>
-                              <span>{t("common.budget")}: <strong className="text-white/70">{formatFCFA(c.budget || 0)}</strong></span>
-                              <span>{t("admin.dashboard.spent")}: <strong className="text-accent">{formatFCFA(c.spent || 0)}</strong></span>
-                              <span>{t("superadmin.users.histEchos")}: <strong className="text-white/70">{c.echos}</strong></span>
-                              <span>CPC: {formatFCFA(c.cpc)}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                /* Campaign history (echo or batteur) */
+                (() => {
+                  const displayCampaigns = historyTab === "batteur" ? batteurCampaigns : echoCampaigns;
+                  const isEcho = historyTab === "echo";
+                  return displayCampaigns.length === 0 ? (
+                    <p className="text-xs text-white/20 text-center py-3">{t("superadmin.users.noCampaigns")}</p>
+                  ) : (
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      {displayCampaigns.map((c) => {
+                        const statusColors: Record<string, string> = {
+                          active: "text-emerald-400 bg-emerald-500/10",
+                          completed: "text-blue-400 bg-blue-500/10",
+                          paused: "text-yellow-400 bg-yellow-500/10",
+                          draft: "text-white/40 bg-white/5",
+                          rejected: "text-red-400 bg-red-500/10",
+                        };
+                        return (
+                          <div key={c.campaign_id + (c.joined_at || c.created_at || "")} className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                            <div className="flex items-start justify-between gap-2 mb-1.5">
+                              <span className="text-sm font-semibold truncate flex-1">{c.title}</span>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${statusColors[c.status] || "text-white/40 bg-white/5"}`}>
+                                {c.status}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-white/40">
+                              {isEcho ? (
+                                <>
+                                  <span>{t("superadmin.users.histClicks")}: <strong className="text-white/70">{c.clicks}</strong></span>
+                                  <span>{t("superadmin.users.histEarned")}: <strong className="text-accent">{formatFCFA(c.earned || 0)}</strong></span>
+                                  <span>CPC: {formatFCFA(c.cpc)}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span>{t("common.budget")}: <strong className="text-white/70">{formatFCFA(c.budget || 0)}</strong></span>
+                                  <span>{t("admin.dashboard.spent")}: <strong className="text-accent">{formatFCFA(c.spent || 0)}</strong></span>
+                                  <span>{t("superadmin.users.histEchos")}: <strong className="text-white/70">{c.echos}</strong></span>
+                                  <span>CPC: {formatFCFA(c.cpc)}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()
               )}
             </div>
 
-            {/* Top-up button for batteurs */}
-            {selected.role === "batteur" && (
+            {/* Top-up button for batteurs, admins, and superadmins */}
+            {(selected.role === "batteur" || selected.role === "admin" || selected.role === "superadmin") && (
               <div className="pt-2 border-t border-white/5">
                 <button
                   onClick={() => {
