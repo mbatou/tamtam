@@ -339,6 +339,7 @@
       "friendsInvited": "Friends invited",
       "bonusEarned": "Bonus earned",
       "referralCopied": "Referral link copied!",
+      "referralPaused": "The referral program is currently on pause. It will be back soon!",
       "inviteWhatsappText": "Join me on Tamtam and earn money by sharing links on WhatsApp! 👉 https://tamma.me/register?ref={code}"
     },
     "rythmes": {
