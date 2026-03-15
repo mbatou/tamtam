@@ -138,20 +138,35 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === "approve") {
-    // Always pass all 3 args to avoid PostgreSQL overload ambiguity
-    const { error } = await supabase.rpc("process_payout", {
-      p_payout_id: payout_id,
-      p_status: "sent",
-      p_reason: "",
-    });
+    // Balance already debited at request time — just mark as sent
+    const { error } = await supabase
+      .from("payouts")
+      .update({ status: "sent", completed_at: new Date().toISOString() })
+      .eq("id", payout_id)
+      .eq("status", "pending");
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   } else if (action === "reject") {
-    const { error } = await supabase.rpc("process_payout", {
-      p_payout_id: payout_id,
-      p_status: "failed",
-      p_reason: reason || "Refusé par l'admin",
+    // Refund balance since it was debited at request time
+    const { data: payout } = await supabase
+      .from("payouts")
+      .select("echo_id, amount")
+      .eq("id", payout_id)
+      .eq("status", "pending")
+      .single();
+
+    if (!payout) return NextResponse.json({ error: "Payout not found or not pending" }, { status: 404 });
+
+    const { error: updateErr } = await supabase
+      .from("payouts")
+      .update({ status: "failed", failure_reason: reason || "Refusé par l'admin", completed_at: new Date().toISOString() })
+      .eq("id", payout_id);
+    if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
+
+    // Refund the echo's balance
+    await supabase.rpc("increment_echo_balance", {
+      p_echo_id: payout.echo_id,
+      p_amount: payout.amount,
     });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   } else {
     return NextResponse.json({ error: "Action invalide" }, { status: 400 });
   }

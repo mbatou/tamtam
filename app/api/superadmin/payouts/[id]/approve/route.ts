@@ -22,13 +22,16 @@ export async function POST(
 
   const supabase = createServiceClient();
 
-  try {
-    await supabase.rpc("process_payout", {
-      p_payout_id: params.id,
-      p_status: "sent",
-    });
-    return NextResponse.json({ success: true });
-  } catch {
+  // Balance already debited at request time — just mark as sent
+  const { error } = await supabase
+    .from("payouts")
+    .update({ status: "sent", completed_at: new Date().toISOString() })
+    .eq("id", params.id)
+    .eq("status", "pending");
+
+  if (error) {
     return NextResponse.json({ error: "Failed to process payout" }, { status: 500 });
   }
+
+  return NextResponse.json({ success: true });
 }

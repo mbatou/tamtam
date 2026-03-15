@@ -34,7 +34,7 @@ export const acceptCampaignSchema = z.object({
 });
 
 export const payoutRequestSchema = z.object({
-  amount: z.number().int().min(500, "Minimum 500 FCFA"),
+  amount: z.number().int().min(500, "Minimum 500 FCFA").refine((n) => n % 5 === 0, "Le montant doit être un multiple de 5"),
   provider: z.enum(["wave", "orange_money"]).optional(),
 });
 

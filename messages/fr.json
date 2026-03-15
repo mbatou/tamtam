@@ -237,7 +237,15 @@
       "history": "Historique des retraits",
       "noWithdraw": "Aucun retrait effectue.",
       "requestSent": "Demande de retrait envoyee !",
-      "requestError": "Erreur lors de la demande"
+      "requestError": "Erreur lors de la demande",
+      "withdraw": "Retirer",
+      "withdrawAmountLabel": "Montant à retirer (FCFA)",
+      "amountPlaceholder": "Max : {max}",
+      "multipleOfFive": "Le montant doit être un multiple de 5",
+      "multipleOfFiveHint": "Le montant doit être un multiple de 5 (exigence mobile money)",
+      "enterAmount": "Saisis un montant",
+      "insufficientBalance": "Le montant dépasse ton solde",
+      "confirmWithdraw": "Retirer via {provider}"
     },
     "profile": {
       "title": "Mon Profil",
