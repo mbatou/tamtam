@@ -835,7 +835,10 @@
       "dominateSubtitle": "Expansion régionale",
       "dominateWeeks": "Mois 4-6",
       "yes": "Oui",
-      "no": "Non"
+      "no": "Non",
+      "weeklyFocus": "Focus de la semaine",
+      "pacing": "Encore {needed} pour atteindre l'objectif",
+      "goalReached": "Objectif atteint !"
     }
   },
   "gamification": {
