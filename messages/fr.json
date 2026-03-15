@@ -519,7 +519,13 @@
       "recharging": "Recharge en cours...",
       "newBalanceResult": "Nouveau solde: {balance}",
       "invalidAmount": "Montant invalide",
-      "loadError": "Erreur de chargement"
+      "loadError": "Erreur de chargement",
+      "campaignsJoined": "Campagnes rejointes",
+      "campaignsLaunched": "Campagnes lancées",
+      "noCampaigns": "Aucune campagne",
+      "histClicks": "Clics",
+      "histEarned": "Gagné",
+      "histEchos": "Échos"
     },
     "campaigns": {
       "title": "Modération des campagnes",
