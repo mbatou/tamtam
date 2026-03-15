@@ -17,6 +17,7 @@ export default function EarningsPage() {
   const [withdrawError, setWithdrawError] = useState("");
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
   const [lastWithdrawn, setLastWithdrawn] = useState(0);
+  const [minPayout, setMinPayout] = useState(MIN_PAYOUT_AMOUNT);
   const { showToast, ToastComponent } = useToast();
   const { t } = useTranslation();
 
@@ -25,9 +26,10 @@ export default function EarningsPage() {
   }, []);
 
   async function loadData() {
-    const [userRes, payoutsRes] = await Promise.all([
+    const [userRes, payoutsRes, settingsRes] = await Promise.all([
       fetch("/api/echo/user"),
       fetch("/api/echo/payouts"),
+      fetch("/api/echo/settings"),
     ]);
 
     if (userRes.ok) {
@@ -37,6 +39,10 @@ export default function EarningsPage() {
     if (payoutsRes.ok) {
       const payoutsData = await payoutsRes.json();
       setPayouts(Array.isArray(payoutsData) ? payoutsData : []);
+    }
+    if (settingsRes.ok) {
+      const settingsData = await settingsRes.json();
+      if (settingsData.min_payout_fcfa) setMinPayout(settingsData.min_payout_fcfa);
     }
     setLoading(false);
   }
@@ -48,7 +54,7 @@ export default function EarningsPage() {
   function validateAmount(val: string): string {
     const num = parseInt(val);
     if (!num || num <= 0) return t("echo.earnings.enterAmount");
-    if (num < MIN_PAYOUT_AMOUNT) return t("echo.earnings.minWithdraw") + " " + formatFCFA(MIN_PAYOUT_AMOUNT);
+    if (num < minPayout) return t("echo.earnings.minWithdraw") + " " + formatFCFA(minPayout);
     if (num % 5 !== 0) return t("echo.earnings.multipleOfFive");
     if (num > (user?.balance || 0)) return t("echo.earnings.insufficientBalance");
     return "";
@@ -105,7 +111,7 @@ export default function EarningsPage() {
     );
   }
 
-  const canWithdraw = (user?.balance || 0) >= MIN_PAYOUT_AMOUNT;
+  const canWithdraw = (user?.balance || 0) >= minPayout;
   const hasPendingPayout = payouts.some((p) => p.status === "pending");
   const totalEarned = user?.total_earned || 0;
   const balance = user?.balance || 0;
@@ -170,7 +176,7 @@ export default function EarningsPage() {
                 value={withdrawAmount}
                 onChange={(e) => { setWithdrawAmount(e.target.value); setWithdrawError(""); }}
                 placeholder={t("echo.earnings.amountPlaceholder", { max: formatFCFA(roundToFive(balance)) })}
-                min={MIN_PAYOUT_AMOUNT}
+                min={minPayout}
                 max={roundToFive(balance)}
                 step={5}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
@@ -187,7 +193,7 @@ export default function EarningsPage() {
                 roundToFive(balance * 0.5),
                 roundToFive(balance * 0.25),
               ]
-                .filter((a) => a >= MIN_PAYOUT_AMOUNT)
+                .filter((a) => a >= minPayout)
                 .filter((v, i, arr) => arr.indexOf(v) === i)
                 .map((amt) => (
                   <button
@@ -244,7 +250,7 @@ export default function EarningsPage() {
 
         {!canWithdraw && !hasPendingPayout && !showWithdrawForm && (
           <p className="text-[10px] text-white/30 mt-2.5 text-center">
-            {t("echo.earnings.minWithdraw")} {formatFCFA(MIN_PAYOUT_AMOUNT)}
+            {t("echo.earnings.minWithdraw")} {formatFCFA(minPayout)}
           </p>
         )}
       </div>

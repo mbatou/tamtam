@@ -56,6 +56,7 @@ export default function ProfilPage() {
   const [ranks, setRanks] = useState<{ week: number; month: number; all: number } | null>(null);
 
   const [acceptingTerms, setAcceptingTerms] = useState(false);
+  const [referralEnabled, setReferralEnabled] = useState(true);
 
   // Password change
   const [showPassword, setShowPassword] = useState(false);
@@ -71,11 +72,12 @@ export default function ProfilPage() {
   }, []);
 
   async function loadData() {
-    const [userRes, linksRes, gamRes, rankRes] = await Promise.all([
+    const [userRes, linksRes, gamRes, rankRes, settingsRes] = await Promise.all([
       fetch("/api/echo/user"),
       fetch("/api/echo/links"),
       fetch("/api/echo/gamification"),
       fetch("/api/echo/rank"),
+      fetch("/api/echo/settings"),
     ]);
 
     if (userRes.ok) {
@@ -119,6 +121,11 @@ export default function ProfilPage() {
     if (rankRes.ok) {
       const rankData = await rankRes.json();
       setRanks(rankData);
+    }
+
+    if (settingsRes.ok) {
+      const settingsData = await settingsRes.json();
+      setReferralEnabled(settingsData.referral_program_enabled !== false);
     }
 
     setLoading(false);
@@ -511,7 +518,7 @@ export default function ProfilPage() {
       )}
 
       {/* Referral section */}
-      <div className="glass-card p-4 mb-5">
+      {referralEnabled && <div className="glass-card p-4 mb-5">
         <h3 className="text-sm font-bold mb-2">🤝 {t("echo.profile.inviteFriends")}</h3>
         <p className="text-xs text-white/40 mb-3">{t("echo.profile.inviteDesc")}</p>
         <div className="flex gap-2">
@@ -538,7 +545,7 @@ export default function ProfilPage() {
             <span>{t("echo.profile.bonusEarned")}: {formatFCFA(gamification.referralCount * 500)}</span>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Details */}
       <div className="glass-card divide-y divide-white/5 mb-5">

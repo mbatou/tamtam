@@ -60,6 +60,18 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServiceClient();
 
+  // Fetch dynamic min payout setting
+  const { data: minPayoutSetting } = await supabase
+    .from("platform_settings")
+    .select("value")
+    .eq("key", "min_payout_fcfa")
+    .single();
+  const minPayout = parseInt(minPayoutSetting?.value || "1000") || 1000;
+
+  if (parsed.data.amount < minPayout) {
+    return NextResponse.json({ error: `Montant minimum: ${minPayout} FCFA` }, { status: 400 });
+  }
+
   // Verify user balance
   const { data: user } = await supabase
     .from("users")

@@ -33,9 +33,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Look up referrer if referral_code provided
+  // Check if referral program is enabled
+  const { data: referralSetting } = await supabase
+    .from("platform_settings")
+    .select("value")
+    .eq("key", "referral_program_enabled")
+    .single();
+  const referralEnabled = referralSetting?.value !== "false";
+
+  // Look up referrer if referral_code provided and program is enabled
   let referrerId: string | null = null;
-  if (referral_code) {
+  if (referral_code && referralEnabled) {
     const { data: referrer } = await supabase
       .from("users")
       .select("id")
