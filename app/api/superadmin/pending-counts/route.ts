@@ -14,12 +14,10 @@ export async function GET() {
     { count: pendingLeads },
     { count: pendingPayouts },
     { count: pendingCampaigns },
-    { data: fraudIPs },
   ] = await Promise.all([
     supabase.from("brand_leads").select("*", { count: "exact", head: true }).eq("status", "new"),
     supabase.from("payouts").select("*", { count: "exact", head: true }).eq("status", "pending"),
     supabase.from("campaigns").select("*", { count: "exact", head: true }).eq("status", "pending"),
-    supabase.from("clicks").select("ip_address").eq("is_valid", false),
   ]);
 
   // Calculate fraud rate
