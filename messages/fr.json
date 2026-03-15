@@ -339,6 +339,7 @@
       "friendsInvited": "Amis invités",
       "bonusEarned": "Bonus gagné",
       "referralCopied": "Lien de parrainage copié !",
+      "referralPaused": "Le programme de parrainage est actuellement en pause. Il sera de retour bientôt !",
       "inviteWhatsappText": "Rejoins-moi sur Tamtam et gagne de l'argent en partageant des liens sur WhatsApp ! 👉 https://tamma.me/register?ref={code}"
     },
     "rythmes": {
