@@ -53,6 +53,8 @@ function FinancePageContent() {
   const [tab, setTab] = useState<FinanceTab>("payout_requests");
   const [selectedPayout, setSelectedPayout] = useState<PayoutRow | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [confirmAction, setConfirmAction] = useState<{ payout: PayoutRow; action: "approve" | "reject"; reason?: string } | null>(null);
+  const [processing, setProcessing] = useState(false);
   const { showToast, ToastComponent } = useToast();
   const searchParams = useSearchParams();
   const highlightId = searchParams.get("id");
@@ -80,17 +82,24 @@ function FinancePageContent() {
     setLoading(false);
   }
 
-  async function handlePayout(payoutId: string, action: "approve" | "reject", reason?: string) {
+  function requestPayoutAction(payout: PayoutRow, action: "approve" | "reject", reason?: string) {
+    setConfirmAction({ payout, action, reason });
+  }
+
+  async function executePayoutAction() {
+    if (!confirmAction) return;
+    setProcessing(true);
     try {
       const res = await fetch("/api/superadmin/finance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payout_id: payoutId, action, reason }),
+        body: JSON.stringify({ payout_id: confirmAction.payout.id, action: confirmAction.action, reason: confirmAction.reason }),
       });
       if (res.ok) {
-        showToast(action === "approve" ? t("common.sent") : t("common.rejected"), action === "approve" ? "success" : "info");
+        showToast(confirmAction.action === "approve" ? t("common.sent") : t("common.rejected"), confirmAction.action === "approve" ? "success" : "info");
         setSelectedPayout(null);
         setRejectReason("");
+        setConfirmAction(null);
         loadData();
       } else {
         const err = await res.json();
@@ -99,6 +108,7 @@ function FinancePageContent() {
     } catch {
       showToast(t("common.networkError"), "error");
     }
+    setProcessing(false);
   }
 
   async function handleRechargeAction(paymentId: string, action: "validate" | "reject", reason?: string) {
@@ -263,7 +273,7 @@ function FinancePageContent() {
                   </div>
                   <div className="flex gap-2 ml-4">
                     <button
-                      onClick={(e) => { e.stopPropagation(); handlePayout(payout.id, "approve"); }}
+                      onClick={(e) => { e.stopPropagation(); requestPayoutAction(payout, "approve"); }}
                       className="px-4 py-2 rounded-xl bg-accent/10 border border-accent/30 text-accent text-xs font-bold hover:bg-accent/20 transition"
                     >
                       {t("common.confirm")}
@@ -461,7 +471,7 @@ function FinancePageContent() {
 
             <div className="space-y-3 pt-2 border-t border-white/5">
               <button
-                onClick={() => handlePayout(selectedPayout.id, "approve")}
+                onClick={() => requestPayoutAction(selectedPayout, "approve")}
                 className="w-full py-3 rounded-xl bg-accent/10 border border-accent/30 text-accent font-bold text-sm hover:bg-accent/20 transition"
               >
                 {t("common.confirm")}
@@ -474,10 +484,96 @@ function FinancePageContent() {
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition resize-none h-16"
               />
               <button
-                onClick={() => handlePayout(selectedPayout.id, "reject", rejectReason)}
+                onClick={() => requestPayoutAction(selectedPayout, "reject", rejectReason)}
                 className="w-full py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-bold text-sm hover:bg-red-500/20 transition"
               >
                 {t("common.rejected")}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Confirmation Modal (2nd step) */}
+      <Modal
+        open={!!confirmAction}
+        onClose={() => setConfirmAction(null)}
+        title={t("superadmin.finance.confirmActionTitle")}
+      >
+        {confirmAction && (
+          <div className="space-y-4">
+            <div className={`p-4 rounded-xl border ${
+              confirmAction.action === "approve"
+                ? "bg-accent/5 border-accent/20"
+                : "bg-red-500/5 border-red-500/20"
+            }`}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
+                  confirmAction.action === "approve"
+                    ? "bg-accent/20 text-accent"
+                    : "bg-red-500/20 text-red-400"
+                }`}>
+                  {confirmAction.action === "approve" ? "✓" : "✕"}
+                </div>
+                <div>
+                  <div className="font-bold text-sm">
+                    {confirmAction.action === "approve"
+                      ? t("superadmin.finance.confirmApproveTitle")
+                      : t("superadmin.finance.confirmRejectTitle")}
+                  </div>
+                  <div className="text-xs text-white/40">{t("superadmin.finance.confirmActionDesc")}</div>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-white/40">{t("superadmin.finance.echo")}</span>
+                  <span className="font-bold">{confirmAction.payout.users?.name || "—"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/40">{t("common.amount")}</span>
+                  <span className="font-bold">{formatFCFA(confirmAction.payout.amount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/40">{t("superadmin.finance.provider")}</span>
+                  <span className="font-bold">{confirmAction.payout.provider === "wave" ? t("common.wave") : t("common.orangeMoney")}</span>
+                </div>
+                {confirmAction.reason && (
+                  <div className="pt-2 border-t border-white/5">
+                    <span className="text-white/40 text-xs">{t("superadmin.finance.rejectionReason")}</span>
+                    <p className="text-sm mt-1">{confirmAction.reason}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {confirmAction.action === "reject" && (
+              <p className="text-xs text-red-400/70">
+                {t("superadmin.finance.rejectWarning")}
+              </p>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmAction(null)}
+                className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 font-bold text-sm hover:bg-white/10 transition"
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                onClick={executePayoutAction}
+                disabled={processing}
+                className={`flex-1 py-3 rounded-xl font-bold text-sm transition disabled:opacity-50 ${
+                  confirmAction.action === "approve"
+                    ? "bg-accent/10 border border-accent/30 text-accent hover:bg-accent/20"
+                    : "bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20"
+                }`}
+              >
+                {processing
+                  ? t("common.loading")
+                  : confirmAction.action === "approve"
+                    ? t("superadmin.finance.confirmApproveButton")
+                    : t("superadmin.finance.confirmRejectButton")}
               </button>
             </div>
           </div>

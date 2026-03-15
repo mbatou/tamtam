@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!user) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-    if (user.role !== "batteur") return NextResponse.json({ error: "L'utilisateur n'est pas un batteur" }, { status: 400 });
+    if (user.role === "echo") return NextResponse.json({ error: "Les echos ne peuvent pas être rechargés directement" }, { status: 400 });
 
     const topupAmount = parseInt(amount);
     const newBalance = (user.balance || 0) + topupAmount;

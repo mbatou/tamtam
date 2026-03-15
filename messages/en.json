@@ -541,7 +541,9 @@
       "noCampaigns": "No campaigns yet",
       "histClicks": "Clicks",
       "histEarned": "Earned",
-      "histEchos": "Echos"
+      "histEchos": "Echos",
+      "payoutRequests": "Payout requests",
+      "noPayouts": "No payout requests"
     },
     "campaigns": {
       "title": "Campaign moderation",
@@ -600,7 +602,15 @@
       "commission": "Commission ({percent}%)",
       "echo": "Echo",
       "batteur": "Batteur",
-      "budgetExceeded": "Budget exceeds batteur's balance ({balance})"
+      "budgetExceeded": "Budget exceeds batteur's balance ({balance})",
+      "confirmActionTitle": "Confirm action",
+      "confirmApproveTitle": "Approve this payout?",
+      "confirmRejectTitle": "Reject this payout?",
+      "confirmActionDesc": "This action cannot be undone.",
+      "confirmApproveButton": "Yes, approve payout",
+      "confirmRejectButton": "Yes, reject payout",
+      "rejectionReason": "Rejection reason",
+      "rejectWarning": "The amount will be refunded to the echo's balance."
     },
     "support": {
       "title": "Support",
