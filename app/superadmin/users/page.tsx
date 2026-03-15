@@ -24,6 +24,9 @@ interface UserRow {
   mobile_money_provider: string | null;
   created_at: string;
   click_stats: { total: number; valid: number; fraud: number; rate: number };
+  referral_count: number;
+  referred_by: string | null;
+  referral_code: string | null;
   last_click_at: string | null;
   is_dual_role?: boolean;
   has_echo_activity?: boolean;
@@ -512,6 +515,42 @@ function UsersPageContent() {
                 <div className="text-[10px] text-white/40">{t("superadmin.users.fraudRate")}</div>
               </div>
             </div>
+
+            {/* Referral info */}
+            {(selected.referral_count > 0 || selected.referred_by) && (
+              <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/10">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm">🤝</span>
+                  <span className="text-xs font-bold text-purple-300">{t("superadmin.users.referralInfo")}</span>
+                </div>
+                <div className="flex flex-wrap gap-4 text-xs">
+                  {selected.referral_code && (
+                    <div>
+                      <span className="text-white/40">{t("superadmin.users.referralCode")}: </span>
+                      <span className="font-bold text-purple-300">{selected.referral_code}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-white/40">{t("superadmin.users.referrals")}: </span>
+                    <span className="font-bold text-accent">{selected.referral_count}</span>
+                  </div>
+                  {selected.referred_by && (
+                    <div>
+                      <span className="text-white/40">{t("superadmin.users.referredBy")}: </span>
+                      <button
+                        onClick={() => {
+                          const referrer = users.find((u) => u.id === selected.referred_by);
+                          if (referrer) selectUser(referrer);
+                        }}
+                        className="font-bold text-primary hover:underline"
+                      >
+                        {users.find((u) => u.id === selected.referred_by)?.name || selected.referred_by.slice(0, 8)}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* History tabs: Echo / Brand / Payouts */}
             <div className="pt-3 border-t border-white/5">

@@ -304,7 +304,7 @@
       "withdrawSent": "Withdrawal of {amount} sent!",
       "withdrawSentHint": "You'll receive the money on your mobile money account shortly.",
       "shareGain": "Share my earnings",
-      "shareText": "I just earned {amount} on Tamtam by sharing links on my WhatsApp! Join me 👉 https://tamtam.sn",
+      "shareText": "I just earned {amount} on Tamtam by sharing links on my WhatsApp! Join me 👉 https://tamma.me",
       "potentialHint": "The more rythmes you share, the more you earn. Top Echos earn 10,000+ FCFA/month!",
       "topEchosEarn": "Top Echos earn 10,000+ FCFA/month"
     },
@@ -339,7 +339,7 @@
       "friendsInvited": "Friends invited",
       "bonusEarned": "Bonus earned",
       "referralCopied": "Referral link copied!",
-      "inviteWhatsappText": "Join me on Tamtam and earn money by sharing links on WhatsApp! Use my code {code} 👉 https://tamtam.sn"
+      "inviteWhatsappText": "Join me on Tamtam and earn money by sharing links on WhatsApp! 👉 https://tamma.me/register?ref={code}"
     },
     "rythmes": {
       "title": "Rythmes",
@@ -669,6 +669,10 @@
       "suspend": "Suspend",
       "resetBalance": "Reset balance",
       "promoteAdmin": "Promote to Admin",
+      "referralInfo": "Referral info",
+      "referralCode": "Code",
+      "referrals": "Referrals",
+      "referredBy": "Referred by",
       "actionDone": "Action \"{action}\" completed",
       "createBatteurTitle": "Create a batteur account (brand)",
       "brandNameLabel": "Brand name *",

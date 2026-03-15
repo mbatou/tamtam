@@ -1,14 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import SoundWave from "@/components/ui/SoundWave";
 import ProgressBar from "@/components/ui/ProgressBar";
 import { useTranslation } from "@/lib/i18n";
 
 export default function RegisterPage() {
+  return <Suspense><RegisterPageContent /></Suspense>;
+}
+
+function RegisterPageContent() {
   const { t } = useTranslation();
+  const searchParams = useSearchParams();
+  const referralCode = searchParams.get("ref") || "";
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -79,6 +86,7 @@ export default function RegisterPage() {
           phone: phone.length > 4 ? phone : null,
           city: city || null,
           mobile_money_provider: provider,
+          referral_code: referralCode || undefined,
         }),
       });
       if (!res.ok) {
