@@ -922,7 +922,13 @@
     "clicks": "Clics",
     "campaigns": "Campagnes",
     "referrals": "Parrainages",
-    "yourRankPeriod": "Tu es classé(e) #{rank} {period}"
+    "yourRankPeriod": "Tu es classé(e) #{rank} {period}",
+    "noCampaignsWarning": "Aucune campagne active. Les échos ne peuvent pas construire de streak sans campagnes.",
+    "createCampaign": "+ Créer une campagne",
+    "roiTitle": "ROI Gamification",
+    "bonusesPaid": "Bonus payés",
+    "engagedEchos": "Échos engagés",
+    "costPerEngaged": "Coût par écho engagé"
   },
   "footer": {
     "echos": "Échos",

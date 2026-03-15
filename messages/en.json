@@ -922,7 +922,13 @@
     "clicks": "Clicks",
     "campaigns": "Campaigns",
     "referrals": "Referrals",
-    "yourRankPeriod": "You are ranked #{rank} {period}"
+    "yourRankPeriod": "You are ranked #{rank} {period}",
+    "noCampaignsWarning": "No active campaigns. Echos cannot build streaks without campaigns to join.",
+    "createCampaign": "+ Create Campaign",
+    "roiTitle": "Gamification ROI",
+    "bonusesPaid": "Bonuses paid",
+    "engagedEchos": "Engaged Echos",
+    "costPerEngaged": "Cost per engaged Echo"
   },
   "footer": {
     "echos": "Echos",
