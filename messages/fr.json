@@ -811,6 +811,8 @@
       "rejectBotsDesc": "Bloque les user-agents de type bot/curl/python",
       "flagHighVolume": "Signaler haut volume",
       "flagHighVolumeDesc": "Flag automatiquement les IPs suspectes",
+      "referralProgram": "Programme de parrainage",
+      "referralProgramDesc": "Permettre aux échos d'inviter des amis et gagner 500 FCFA par parrainage",
       "campaigns": "Campagnes",
       "approvalRequired": "Approbation requise",
       "approvalRequiredDesc": "Les campagnes doivent être approuvées avant activation",

@@ -1,6 +1,6 @@
 export const PLATFORM_FEE_PERCENT = 25;
 export const ECHO_SHARE_PERCENT = 75;
-export const MIN_PAYOUT_AMOUNT = 500; // FCFA
+export const MIN_PAYOUT_AMOUNT = 1000; // FCFA
 
 export const ANTI_FRAUD = {
   IP_COOLDOWN_HOURS: 24,

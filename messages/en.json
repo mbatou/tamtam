@@ -811,6 +811,8 @@
       "rejectBotsDesc": "Block bot/curl/python user-agents",
       "flagHighVolume": "Flag high volume",
       "flagHighVolumeDesc": "Auto-flag suspicious IPs",
+      "referralProgram": "Referral program",
+      "referralProgramDesc": "Allow echos to invite friends and earn 500 FCFA per referral",
       "campaigns": "Campaigns",
       "approvalRequired": "Approval required",
       "approvalRequiredDesc": "Campaigns must be approved before activation",

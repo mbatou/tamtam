@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/Toast";
 interface Settings {
   platform_fee_percent: string;
   min_payout_fcfa: string;
+  referral_program_enabled: string;
   max_clicks_per_link_per_hour: string;
   ip_cooldown_hours: string;
   auto_reject_bots: string;
@@ -35,7 +36,8 @@ interface LogEntry {
 
 const defaultSettings: Settings = {
   platform_fee_percent: "25",
-  min_payout_fcfa: "500",
+  min_payout_fcfa: "1000",
+  referral_program_enabled: "true",
   max_clicks_per_link_per_hour: "50",
   ip_cooldown_hours: "24",
   auto_reject_bots: "true",
@@ -160,6 +162,12 @@ export default function SettingsPage() {
               <span>5 000 FCFA</span>
             </div>
           </div>
+          <ToggleSetting
+            label={t("superadmin.settings.referralProgram")}
+            description={t("superadmin.settings.referralProgramDesc")}
+            value={settings.referral_program_enabled === "true"}
+            onChange={(v) => updateSetting("referral_program_enabled", v ? "true" : "false")}
+          />
         </div>
       </section>
 
