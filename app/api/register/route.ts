@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 
-const REFERRAL_BONUS_FCFA = 500;
+const REFERRAL_BONUS_FCFA = 150;
 
 export async function POST(req: NextRequest) {
   const { userId, name, phone, city, mobile_money_provider, referral_code } = await req.json();
