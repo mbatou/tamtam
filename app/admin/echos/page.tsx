@@ -24,6 +24,7 @@ export default function AdminEchosPage() {
   const { t } = useTranslation();
   const [echos, setEchos] = useState<EchoWithStats[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cityFilter, setCityFilter] = useState("all");
 
   useEffect(() => { loadEchos(); }, []);
 
@@ -40,12 +41,47 @@ export default function AdminEchosPage() {
     return <div className="flex items-center justify-center py-20"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
   }
 
+  // Extract unique cities for filter
+  const cities = Array.from(new Set(echos.map(e => e.city).filter(Boolean))).sort();
+  const filteredEchos = cityFilter === "all" ? echos : echos.filter(e => e.city === cityFilter);
+
+  // Top performer insight
+  const topEcho = echos[0];
+  const topTotal = echos.slice(0, 5).reduce((sum, e) => sum + e.brand_clicks, 0);
+  const totalClicks = echos.reduce((sum, e) => sum + e.brand_clicks, 0);
+  const topPct = totalClicks > 0 ? Math.round((topTotal / totalClicks) * 100) : 0;
+
   return (
     <div className="p-6 max-w-6xl">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold">{t("admin.echos.title")}</h1>
-        <span className="text-sm text-white/40">{echos.length} {t("admin.echos.engaged")}</span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">{t("admin.echos.title")}</h1>
+          <span className="text-sm text-white/40">{echos.length} {t("admin.echos.engaged")}</span>
+        </div>
+        {cities.length > 1 && (
+          <select
+            value={cityFilter}
+            onChange={(e) => setCityFilter(e.target.value)}
+            className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary transition"
+          >
+            <option value="all" className="bg-[#1a1a2e]">{t("admin.echos.allCities")}</option>
+            {cities.map(city => (
+              <option key={city} value={city} className="bg-[#1a1a2e]">{city}</option>
+            ))}
+          </select>
+        )}
       </div>
+
+      {/* Top performer insight */}
+      {topEcho && echos.length >= 3 && (
+        <div className="glass-card p-4 mb-6 flex items-center gap-3">
+          <span className="text-lg">🏆</span>
+          <p className="text-sm text-white/60">
+            {t("admin.echos.topInsight", { name: topEcho.name, clicks: String(topEcho.brand_clicks), pct: String(topPct) })}
+          </p>
+        </div>
+      )}
+
       <div className="glass-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -62,7 +98,7 @@ export default function AdminEchosPage() {
               </tr>
             </thead>
             <tbody>
-              {echos.map((echo, i) => (
+              {filteredEchos.map((echo, i) => (
                 <tr key={echo.id} className="border-b border-white/5 hover:bg-white/[0.02]">
                   <td className="px-5 py-4">
                     <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${i < 3 ? "bg-gradient-primary text-white" : "bg-white/5 text-white/40"}`}>{i + 1}</span>
@@ -73,7 +109,7 @@ export default function AdminEchosPage() {
                   <td className="px-5 py-4">
                     <div className="flex flex-col gap-0.5">
                       <span className="text-sm font-bold">{echo.campaign_count}</span>
-                      <span className="text-[10px] text-white/30 line-clamp-1">{echo.campaign_names.join(", ")}</span>
+                      <span className="text-[10px] text-white/30 line-clamp-1" title={echo.campaign_names.join(", ")}>{echo.campaign_names.join(", ")}</span>
                     </div>
                   </td>
                   <td className="px-5 py-4 font-semibold">{echo.brand_clicks}</td>
@@ -84,7 +120,7 @@ export default function AdminEchosPage() {
             </tbody>
           </table>
         </div>
-        {echos.length === 0 && <div className="p-8 text-center"><p className="text-white/30 text-sm">{t("admin.echos.noEchos")}</p></div>}
+        {filteredEchos.length === 0 && <div className="p-8 text-center"><p className="text-white/30 text-sm">{t("admin.echos.noEchos")}</p></div>}
       </div>
     </div>
   );

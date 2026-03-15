@@ -310,7 +310,39 @@
       "spent": "Spent",
       "noCampaign": "No campaign",
       "topEchos": "Top Echos",
-      "noEchoEngaged": "No echo engaged in your campaigns yet."
+      "noEchoEngaged": "No echo engaged in your campaigns yet.",
+      "totalReach": "Total Reach",
+      "totalReachSub": "people saw your links",
+      "realClicks": "Real Visitors",
+      "realClicksSub": "verified visitors",
+      "costPerClick": "Cost per Click",
+      "costPerClickSub": "per real visitor",
+      "budgetConsumed": "Consumed ✓",
+      "noCampaignActive": "No active campaign",
+      "echosWaiting": "Your {count} Echos are waiting for your next campaign. Launch one — it takes 2 minutes.",
+      "launchPrompt": "Launch your first campaign and reach hundreds of people via WhatsApp.",
+      "launchRythme": "Launch a Rythme",
+      "relaunchBest": "Relaunch: {name}",
+      "campaignsRunning": "active campaign(s)",
+      "viewDetails": "View details",
+      "campaignResults": "Campaign Results",
+      "bestCampaignInsight": "\"{name}\" has the best cost per click at {cpc}. Relaunch a similar campaign with a higher budget.",
+      "topEchosInsight": "Your top 5 Echos generate {pct}% of your clicks. On your next campaign, they'll be the first to share."
+    },
+    "onboarding": {
+      "welcome": "Welcome to Tamtam!",
+      "howItWorks": "You're about to reach hundreds of people in Dakar through their trusted WhatsApp contacts.",
+      "step1": "Create a campaign (your link + budget)",
+      "step2": "Echos share it on their WhatsApp Status",
+      "step3": "Their contacts click — you get real visitors",
+      "step4": "You only pay for verified clicks",
+      "next": "Next →",
+      "addFunds": "Add funds to your wallet",
+      "addFundsDesc": "Start with as little as 10,000 FCFA (~$16).",
+      "skip": "Skip for now →",
+      "launchFirst": "Launch your first Rythme!",
+      "createCampaign": "Create my first campaign",
+      "exploreDashboard": "Explore the dashboard first →"
     },
     "campaigns": {
       "title": "Rythmes",
@@ -358,7 +390,13 @@
       "estClicks": "Estimated clicks",
       "echoEarnsPerClick": "Echo earns / click",
       "estEngagementBoost": "Your CPC is above average — Echos will prioritize your campaign!",
-      "estLowCpcWarning": "Your CPC is below the platform average ({avg}). Echos may prefer higher-paying campaigns."
+      "estLowCpcWarning": "Your CPC is below the platform average ({avg}). Echos may prefer higher-paying campaigns.",
+      "relaunch": "Relaunch",
+      "realClicks": "real clicks",
+      "perClick": "click",
+      "bestCPC": "Best cost/click",
+      "fullyConsumed": "Consumed ✓",
+      "noRythmesDesc": "Your Echos are waiting for your next campaign. Launch one in 2 minutes."
     },
     "wallet": {
       "title": "Wallet",
@@ -384,7 +422,11 @@
       "noCampaign": "No campaign.",
       "paymentRegistered": "Payment registered! Your balance will be credited after validation.",
       "paymentCancelled": "Payment cancelled.",
-      "finalizeWave": "Complete your payment on Wave. Your balance will be credited after validation by the Tamtam team."
+      "finalizeWave": "Complete your payment on Wave. Your balance will be credited after validation by the Tamtam team.",
+      "pendingExplain": "Processing — usually completed within 5 minutes.",
+      "refusedExplain": "Payment was declined by your provider. Try again or use a different method.",
+      "cancelledExplain": "You cancelled this payment.",
+      "retry": "Retry"
     },
     "payouts": {
       "title": "Payments",
@@ -401,7 +443,9 @@
       "campaigns": "Campaigns",
       "wonByYou": "Won (you)",
       "payment": "Payment",
-      "noEchos": "No echo engaged in your campaigns yet."
+      "noEchos": "No echo engaged in your campaigns yet.",
+      "allCities": "All cities",
+      "topInsight": "Your best Echo {name} generated {clicks} clicks for you. Your top 5 represent {pct}% of your total clicks."
     },
     "support": {
       "title": "Support",
@@ -424,7 +468,23 @@
       "contactSupport": "Contact support",
       "yourMessage": "Your message",
       "supportReply": "Support reply",
-      "waitingReply": "Waiting for reply..."
+      "waitingReply": "Waiting for reply...",
+      "faqTitle": "Frequently asked questions",
+      "faq1q": "How does cost per click work?",
+      "faq1a": "You set a price per click (CPC). Your budget is deducted for each verified click. You only pay for real visitors.",
+      "faq2q": "Why are some clicks invalid?",
+      "faq2a": "Our system verifies every click. Duplicates, bots, and suspicious clicks are automatically filtered to protect your budget.",
+      "faq3q": "How do I recharge my wallet?",
+      "faq3a": "Go to Wallet → Recharge. Pay via Wave. Your balance is credited after validation.",
+      "faq4q": "How long does a campaign last?",
+      "faq4a": "Until your budget is consumed. Most campaigns are completed in 2-5 days.",
+      "faq5q": "Can I pause a campaign?",
+      "faq5a": "Yes! Go to Rythmes → select your campaign → Pause. You can reactivate it at any time.",
+      "responseTime": "Average response time",
+      "responseTimeValue": "< 24 hours",
+      "supportHours": "Mon-Sat, 9am-6pm (Dakar time)",
+      "whatsappSupport": "Chat on WhatsApp",
+      "whatsappSupportDesc": "Need quick help? Contact us on WhatsApp."
     },
     "settings": {
       "title": "Settings",
@@ -450,7 +510,16 @@
       "noClicksCampaign": "No clicks on this campaign yet",
       "campaignComparison": "Campaign comparison",
       "campaign": "Campaign",
-      "noAnalytics": "No campaign to analyze yet."
+      "noAnalytics": "No campaign to analyze yet.",
+      "roiTitle": "Your advertising ROI",
+      "youSpent": "You spent",
+      "youGot": "You got",
+      "visitors": "visitors",
+      "costPerVisitor": "Cost per visitor",
+      "comparison": "Comparison",
+      "savings": "savings vs traditional ads",
+      "realVisitors": "Real Visitors",
+      "consumed": "Consumed ✓"
     },
     "antifraud": {
       "title": "Anti-fraud",
