@@ -801,7 +801,8 @@
     "milestone": "Badge",
     "clicks": "Clicks",
     "campaigns": "Campaigns",
-    "referrals": "Referrals"
+    "referrals": "Referrals",
+    "yourRankPeriod": "You are ranked #{rank} {period}"
   },
   "footer": {
     "echos": "Echos",

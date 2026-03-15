@@ -8,6 +8,13 @@ import { useTranslation } from "@/lib/i18n";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import type { User } from "@/lib/types";
 
+const TIER_INFO: Record<string, { icon: string; label: string }> = {
+  echo: { icon: "🔵", label: "tierName_echo" },
+  argent: { icon: "🥈", label: "tierName_argent" },
+  or: { icon: "🥇", label: "tierName_or" },
+  diamant: { icon: "💎", label: "tierName_diamant" },
+};
+
 export default function ProfilPage() {
   const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState({ totalClicks: 0, activeCampaigns: 0, totalEarned: 0 });
@@ -17,6 +24,15 @@ export default function ProfilPage() {
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
   const [form, setForm] = useState({ name: "", phone: "", city: "", mobile_money_provider: "" });
+  const [gamification, setGamification] = useState<{
+    tier: string;
+    tierBonusPercent: number;
+    totalClicks: number;
+    achievementsCount: number;
+    totalAchievements: number;
+    streak: number;
+  } | null>(null);
+  const [ranks, setRanks] = useState<{ week: number; month: number; all: number } | null>(null);
 
   // Password change
   const [showPassword, setShowPassword] = useState(false);
@@ -32,9 +48,11 @@ export default function ProfilPage() {
   }, []);
 
   async function loadData() {
-    const [userRes, linksRes] = await Promise.all([
+    const [userRes, linksRes, gamRes, rankRes] = await Promise.all([
       fetch("/api/echo/user"),
       fetch("/api/echo/links"),
+      fetch("/api/echo/gamification"),
+      fetch("/api/echo/rank"),
     ]);
 
     if (userRes.ok) {
@@ -57,6 +75,23 @@ export default function ProfilPage() {
         return sum + Math.floor(l.click_count * (l.campaigns?.cpc || 0) * 0.75);
       }, 0);
       setStats({ totalClicks, activeCampaigns, totalEarned });
+    }
+
+    if (gamRes.ok) {
+      const gam = await gamRes.json();
+      setGamification({
+        tier: gam.user?.tier || "echo",
+        tierBonusPercent: gam.user?.tier_bonus_percent || 0,
+        totalClicks: gam.user?.total_valid_clicks || 0,
+        achievementsCount: gam.achievements?.length || 0,
+        totalAchievements: gam.milestones?.length || 0,
+        streak: gam.streak?.current_streak || 0,
+      });
+    }
+
+    if (rankRes.ok) {
+      const rankData = await rankRes.json();
+      setRanks(rankData);
     }
 
     setLoading(false);
@@ -166,7 +201,12 @@ export default function ProfilPage() {
               {user?.name?.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <h2 className="text-lg font-bold truncate">{user?.name}</h2>
+              <div className="flex items-center gap-1.5">
+                <h2 className="text-lg font-bold truncate">{user?.name}</h2>
+                {gamification && (
+                  <span className="text-base">{TIER_INFO[gamification.tier]?.icon || "🔵"}</span>
+                )}
+              </div>
               <p className="text-xs text-white/40">{user?.phone}</p>
               {user?.city && <p className="text-xs text-white/30">{user.city}</p>}
             </div>
@@ -277,6 +317,61 @@ export default function ProfilPage() {
           <p className="text-[9px] text-white/40 font-semibold">{t("common.earned")}</p>
         </div>
       </div>
+
+      {/* Tier & Rank badges */}
+      {gamification && (
+        <div className="glass-card p-4 mb-5">
+          {/* Tier badge */}
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-3xl">{TIER_INFO[gamification.tier]?.icon || "🔵"}</span>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-bold">
+                {t(`gamification.${TIER_INFO[gamification.tier]?.label || "tierName_echo"}`)}
+              </h3>
+              <p className="text-xs text-white/40">
+                {t("gamification.tierBonus", { percent: gamification.tierBonusPercent })}
+              </p>
+            </div>
+            {gamification.streak > 0 && (
+              <div className="text-center px-3 py-1.5 rounded-xl bg-[#D35400]/10 border border-[#D35400]/20">
+                <p className="text-sm font-black text-[#D35400]">🔥 {gamification.streak}</p>
+                <p className="text-[9px] text-white/40">{t("gamification.streak")}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Rank cards */}
+          {ranks && (ranks.week > 0 || ranks.month > 0 || ranks.all > 0) && (
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <div className="bg-white/5 rounded-xl p-2.5 text-center">
+                <p className="text-sm font-black">{ranks.week > 0 ? `#${ranks.week}` : "—"}</p>
+                <p className="text-[9px] text-white/40">{t("gamification.thisWeek")}</p>
+              </div>
+              <div className="bg-white/5 rounded-xl p-2.5 text-center">
+                <p className="text-sm font-black">{ranks.month > 0 ? `#${ranks.month}` : "—"}</p>
+                <p className="text-[9px] text-white/40">{t("gamification.thisMonth")}</p>
+              </div>
+              <div className="bg-white/5 rounded-xl p-2.5 text-center">
+                <p className="text-sm font-black">{ranks.all > 0 ? `#${ranks.all}` : "—"}</p>
+                <p className="text-[9px] text-white/40">{t("gamification.allTime")}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Achievements summary */}
+          <div className="flex items-center justify-between pt-3 border-t border-white/5">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">🏆</span>
+              <span className="text-xs text-white/60">
+                {t("gamification.achievements")}
+              </span>
+            </div>
+            <span className="text-xs font-bold">
+              {gamification.achievementsCount} / {gamification.totalAchievements}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Details */}
       <div className="glass-card divide-y divide-white/5 mb-5">
