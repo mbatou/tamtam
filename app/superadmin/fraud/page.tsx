@@ -7,6 +7,7 @@ import StatCard from "@/components/StatCard";
 import Badge from "@/components/ui/Badge";
 import TabBar from "@/components/ui/TabBar";
 import Modal from "@/components/ui/Modal";
+import Pagination, { paginate } from "@/components/ui/Pagination";
 import { useToast } from "@/components/ui/Toast";
 
 interface ClickRow {
@@ -49,6 +50,8 @@ export default function FraudPage() {
   const [period, setPeriod] = useState<"today" | "week" | "all">("today");
   const [selectedClick, setSelectedClick] = useState<ClickRow | null>(null);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 30;
   const { showToast, ToastComponent } = useToast();
 
   useEffect(() => { loadData(); }, [period]);
@@ -204,7 +207,7 @@ export default function FraudPage() {
             { key: "valid", label: t("superadmin.fraud.validTab"), count: data.recentClicks.filter((c) => c.is_valid).length },
           ]}
           active={filter}
-          onChange={setFilter}
+          onChange={(f) => { setFilter(f); setPage(1); }}
           className="mb-4"
         />
 
@@ -221,7 +224,7 @@ export default function FraudPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredClicks.slice(0, 50).map((click) => (
+              {paginate(filteredClicks, page, PAGE_SIZE).map((click) => (
                 <tr
                   key={click.id}
                   className="border-b border-white/5 hover:bg-white/3 cursor-pointer transition"
@@ -249,6 +252,8 @@ export default function FraudPage() {
             </tbody>
           </table>
         </div>
+
+        <Pagination currentPage={page} totalItems={filteredClicks.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
       </div>
 
       {/* Click Detail Modal */}

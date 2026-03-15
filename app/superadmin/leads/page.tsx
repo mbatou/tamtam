@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { timeAgo } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
+import Pagination, { paginate } from "@/components/ui/Pagination";
 
 interface Lead {
   id: string;
@@ -29,6 +30,8 @@ export default function SuperadminLeadsPage() {
   const [converting, setConverting] = useState(false);
   const [emailConflict, setEmailConflict] = useState(false);
   const [alternativeEmail, setAlternativeEmail] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 30;
   const [conversionResult, setConversionResult] = useState<{ email: string; success: boolean } | null>(null);
 
   useEffect(() => { loadLeads(); }, []);
@@ -148,7 +151,7 @@ export default function SuperadminLeadsPage() {
           return (
             <button
               key={f}
-              onClick={() => setFilter(f)}
+              onClick={() => { setFilter(f); setPage(1); }}
               className={`px-4 py-2 rounded-xl text-xs font-semibold transition whitespace-nowrap ${
                 filter === f ? "bg-gradient-primary text-white" : "bg-white/5 text-white/40 hover:text-white/60"
               }`}
@@ -177,7 +180,7 @@ export default function SuperadminLeadsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((lead) => (
+                {paginate(filtered, page, PAGE_SIZE).map((lead) => (
                   <tr
                     key={lead.id}
                     onClick={() => { setSelectedLead(lead); setNotes(lead.notes || ""); setEmailConflict(false); setAlternativeEmail(""); setConversionResult(null); setConflictData(null); }}
@@ -213,6 +216,10 @@ export default function SuperadminLeadsPage() {
             </table>
           </div>
         </div>
+      )}
+
+      {filtered.length > 0 && (
+        <Pagination currentPage={page} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
       )}
 
       {/* Detail Modal */}

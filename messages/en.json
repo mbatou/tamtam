@@ -67,6 +67,10 @@
     "create": "Create",
     "balance": "Balance"
   },
+  "pagination": {
+    "showing": "Showing",
+    "of": "of"
+  },
   "timeAgo": {
     "now": "just now",
     "minutes": "{min}min ago",
@@ -543,7 +547,10 @@
       "histEarned": "Earned",
       "histEchos": "Echos",
       "payoutRequests": "Payout requests",
-      "noPayouts": "No payout requests"
+      "noPayouts": "No payout requests",
+      "dualRole": "Echo + Brand",
+      "approvePayoutDirect": "Approve",
+      "rejectPayoutDirect": "Reject"
     },
     "campaigns": {
       "title": "Campaign moderation",

@@ -8,6 +8,7 @@ import StatCard from "@/components/StatCard";
 import Badge from "@/components/ui/Badge";
 import TabBar from "@/components/ui/TabBar";
 import Modal from "@/components/ui/Modal";
+import Pagination, { paginate } from "@/components/ui/Pagination";
 import { useToast } from "@/components/ui/Toast";
 
 interface UserRow {
@@ -23,6 +24,9 @@ interface UserRow {
   mobile_money_provider: string | null;
   created_at: string;
   click_stats: { total: number; valid: number; fraud: number; rate: number };
+  is_dual_role?: boolean;
+  has_echo_activity?: boolean;
+  has_batteur_activity?: boolean;
 }
 
 interface CampaignHistory {
@@ -81,6 +85,15 @@ function UsersPageContent() {
   const [payoutHistory, setPayoutHistory] = useState<PayoutHistory[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyTab, setHistoryTab] = useState<"echo" | "batteur" | "payouts">("echo");
+
+  // Pagination
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 30;
+
+  // Payout action state (inline approve/reject from user modal)
+  const [payoutActionLoading, setPayoutActionLoading] = useState<string | null>(null);
+  const [payoutRejectId, setPayoutRejectId] = useState<string | null>(null);
+  const [payoutRejectReason, setPayoutRejectReason] = useState("");
 
   // Top-up state
   const [showTopup, setShowTopup] = useState(false);
@@ -237,6 +250,30 @@ function UsersPageContent() {
     setToppingUp(false);
   }
 
+  async function handlePayoutAction(payoutId: string, action: "approve" | "reject", reason?: string) {
+    setPayoutActionLoading(payoutId);
+    try {
+      const res = await fetch("/api/superadmin/finance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payout_id: payoutId, action, reason }),
+      });
+      if (res.ok) {
+        showToast(action === "approve" ? t("common.sent") : t("common.rejected"), action === "approve" ? "success" : "info");
+        setPayoutRejectId(null);
+        setPayoutRejectReason("");
+        // Reload history for current user
+        if (selected) loadHistory(selected);
+      } else {
+        const err = await res.json();
+        showToast(err.error || t("common.error"), "error");
+      }
+    } catch {
+      showToast(t("common.networkError"), "error");
+    }
+    setPayoutActionLoading(null);
+  }
+
   const echos = users.filter((u) => u.role === "echo");
   const batteurs = users.filter((u) => u.role === "batteur");
 
@@ -248,6 +285,8 @@ function UsersPageContent() {
     if (filter === "suspended") return u.status === "suspended";
     return true;
   });
+
+  const paginatedUsers = paginate(displayUsers, page, PAGE_SIZE);
 
   const totalPaid = echos.reduce((sum, u) => sum + u.total_earned, 0);
 
@@ -292,7 +331,7 @@ function UsersPageContent() {
         ].map((r) => (
           <button
             key={r.key}
-            onClick={() => setRoleFilter(r.key)}
+            onClick={() => { setRoleFilter(r.key); setPage(1); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
               roleFilter === r.key ? "bg-gradient-primary text-white" : "bg-white/5 text-white/40"
             }`}
@@ -310,7 +349,7 @@ function UsersPageContent() {
           { key: "suspended", label: t("superadmin.users.suspended"), count: users.filter((u) => u.status === "suspended").length },
         ]}
         active={filter}
-        onChange={setFilter}
+        onChange={(f) => { setFilter(f); setPage(1); }}
         className="mb-6"
       />
 
@@ -328,7 +367,7 @@ function UsersPageContent() {
             </tr>
           </thead>
           <tbody>
-            {displayUsers.map((user) => (
+            {paginatedUsers.map((user) => (
               <tr
                 key={user.id}
                 className="border-b border-white/5 hover:bg-white/3 cursor-pointer transition"
@@ -340,7 +379,14 @@ function UsersPageContent() {
                       {user.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <div className="font-semibold">{user.name}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{user.name}</span>
+                        {user.is_dual_role && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20">
+                            {t("superadmin.users.dualRole")}
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-white/30">{user.city || user.phone || ""}</div>
                     </div>
                   </div>
@@ -375,6 +421,8 @@ function UsersPageContent() {
         </table>
       </div>
 
+      <Pagination currentPage={page} totalItems={displayUsers.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
+
       {/* User Detail Modal */}
       <Modal open={!!selected} onClose={() => { setSelected(null); setEchoCampaigns([]); setBatteurCampaigns([]); setPayoutHistory([]); }} title={selected?.name || ""}>
         {selected && (
@@ -384,7 +432,14 @@ function UsersPageContent() {
                 {selected.name.charAt(0).toUpperCase()}
               </div>
               <div>
-                <h3 className="font-bold text-lg">{selected.name}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-lg">{selected.name}</h3>
+                  {selected.is_dual_role && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20">
+                      {t("superadmin.users.dualRole")}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-white/40">{selected.phone || ""} · {selected.city || ""} · {selected.role}</p>
               </div>
             </div>
@@ -473,15 +528,17 @@ function UsersPageContent() {
                 payoutHistory.length === 0 ? (
                   <p className="text-xs text-white/20 text-center py-3">{t("superadmin.users.noPayouts")}</p>
                 ) : (
-                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                     {payoutHistory.map((p) => {
                       const statusColors: Record<string, string> = {
                         pending: "text-yellow-400 bg-yellow-500/10",
                         sent: "text-emerald-400 bg-emerald-500/10",
                         failed: "text-red-400 bg-red-500/10",
                       };
+                      const isPending = p.status === "pending";
+                      const isRejecting = payoutRejectId === p.id;
                       return (
-                        <div key={p.id} className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                        <div key={p.id} className={`p-3 rounded-xl border transition ${isPending ? "bg-yellow-500/[0.03] border-yellow-500/10" : "bg-white/[0.03] border-white/5"}`}>
                           <div className="flex items-start justify-between gap-2 mb-1.5">
                             <span className="text-sm font-semibold">{formatFCFA(p.amount)}</span>
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${statusColors[p.status] || "text-white/40 bg-white/5"}`}>
@@ -495,6 +552,51 @@ function UsersPageContent() {
                               <span className="text-red-400">{p.failure_reason}</span>
                             )}
                           </div>
+                          {/* Inline approve/reject for pending payouts */}
+                          {isPending && !isRejecting && (
+                            <div className="flex gap-2 mt-2">
+                              <button
+                                onClick={() => handlePayoutAction(p.id, "approve")}
+                                disabled={payoutActionLoading === p.id}
+                                className="flex-1 py-1.5 rounded-lg bg-accent/10 border border-accent/30 text-accent text-[11px] font-bold hover:bg-accent/20 transition disabled:opacity-50"
+                              >
+                                {payoutActionLoading === p.id ? "..." : t("superadmin.users.approvePayoutDirect")}
+                              </button>
+                              <button
+                                onClick={() => setPayoutRejectId(p.id)}
+                                className="flex-1 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-[11px] font-bold hover:bg-red-500/20 transition"
+                              >
+                                {t("superadmin.users.rejectPayoutDirect")}
+                              </button>
+                            </div>
+                          )}
+                          {/* Reject reason input */}
+                          {isRejecting && (
+                            <div className="mt-2 space-y-2">
+                              <textarea
+                                value={payoutRejectReason}
+                                onChange={(e) => setPayoutRejectReason(e.target.value)}
+                                placeholder={t("superadmin.finance.rejectReasonPlaceholder")}
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-red-400 transition resize-none h-12"
+                                autoFocus
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => { setPayoutRejectId(null); setPayoutRejectReason(""); }}
+                                  className="flex-1 py-1.5 rounded-lg bg-white/5 text-white/40 text-[11px] font-bold"
+                                >
+                                  {t("common.cancel")}
+                                </button>
+                                <button
+                                  onClick={() => handlePayoutAction(p.id, "reject", payoutRejectReason)}
+                                  disabled={payoutActionLoading === p.id}
+                                  className="flex-1 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-[11px] font-bold disabled:opacity-50"
+                                >
+                                  {payoutActionLoading === p.id ? "..." : t("common.confirm")}
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}

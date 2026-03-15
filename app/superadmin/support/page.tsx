@@ -6,6 +6,7 @@ import { timeAgo } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
 import Modal from "@/components/ui/Modal";
+import Pagination, { paginate } from "@/components/ui/Pagination";
 import { useToast } from "@/components/ui/Toast";
 
 interface Ticket {
@@ -42,6 +43,8 @@ function SuperadminSupportPageContent() {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 30;
   const { showToast, ToastComponent } = useToast();
   const searchParams = useSearchParams();
   const highlightId = searchParams.get("id");
@@ -150,7 +153,7 @@ function SuperadminSupportPageContent() {
         ] as const).map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setFilter(tab.key)}
+            onClick={() => { setFilter(tab.key); setPage(1); }}
             className={`px-4 py-2 rounded-xl text-sm font-bold transition whitespace-nowrap flex items-center gap-2 ${
               filter === tab.key ? "bg-gradient-primary text-white" : "bg-white/5 text-white/40"
             }`}
@@ -178,7 +181,7 @@ function SuperadminSupportPageContent() {
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredTickets.map((ticket) => (
+          {paginate(filteredTickets, page, PAGE_SIZE).map((ticket) => (
             <div
               key={ticket.id}
               onClick={() => { setSelectedTicket(ticket); setReply(ticket.admin_reply || ""); }}
@@ -209,6 +212,10 @@ function SuperadminSupportPageContent() {
             </div>
           ))}
         </div>
+      )}
+
+      {filteredTickets.length > 0 && (
+        <Pagination currentPage={page} totalItems={filteredTickets.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
       )}
 
       {/* Ticket Detail Modal */}
