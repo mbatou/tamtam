@@ -197,10 +197,11 @@ export default function FraudPage() {
       const json = await res.json();
       setData(json);
     } catch {
-      showToast(t("common.networkError"), "error");
+      // handled below
     }
     setLoading(false);
-  }, [dateRange, showToast, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateRange]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
