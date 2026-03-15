@@ -24,11 +24,13 @@ export async function GET() {
     { data: payouts },
     { data: payments },
     { data: feeSetting },
+    { count: validClicksCount },
   ] = await Promise.all([
     supabase.from("campaigns").select("id, title, spent, budget"),
     supabase.from("payouts").select("*, users!echo_id(name, phone)").order("created_at", { ascending: false }),
     supabase.from("payments").select("*, users!user_id(name)").order("created_at", { ascending: false }).limit(100),
     supabase.from("platform_settings").select("value").eq("key", "platform_fee_percent").single(),
+    supabase.from("clicks").select("id", { count: "exact", head: true }).eq("is_valid", true),
   ]);
 
   const feePercent = parseInt(feeSetting?.value || "25");
@@ -43,6 +45,7 @@ export async function GET() {
     feePercent,
     sentTotal,
     pendingTotal,
+    validClicks: validClicksCount || 0,
     payouts: payouts || [],
     payments: payments || [],
   });
