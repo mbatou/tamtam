@@ -65,12 +65,13 @@ export async function GET(
     return NextResponse.redirect(campaign.destination_url);
   }
 
-  // Insert click record
+  // Insert click record with rejection reason for analytics
   await supabase.from("clicks").insert({
     link_id: link.id,
     ip_address: ip,
     user_agent: userAgent.substring(0, 500),
     is_valid: valid,
+    rejection_reason: valid ? null : reason,
   });
 
   // If valid click, update counters (with budget guard)

@@ -3,8 +3,10 @@ export const ECHO_SHARE_PERCENT = 75;
 export const MIN_PAYOUT_AMOUNT = 500; // FCFA
 
 export const ANTI_FRAUD = {
-  IP_DEDUP_HOURS: 24,
-  MAX_CLICKS_PER_HOUR: 50,
+  IP_COOLDOWN_HOURS: 24,
+  LINK_HOURLY_LIMIT: 30,
+  IP_DAILY_VALID_LIMIT: 8,
+  SPEED_CHECK_SECONDS: 3,
 };
 
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
