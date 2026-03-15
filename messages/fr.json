@@ -71,6 +71,14 @@
     "showing": "Affichage",
     "of": "sur"
   },
+  "dateRange": {
+    "today": "Aujourd'hui",
+    "thisWeek": "Cette semaine",
+    "thisMonth": "Ce mois",
+    "allTime": "Tout",
+    "custom": "Personnalisé",
+    "apply": "Appliquer"
+  },
   "timeAgo": {
     "now": "à l'instant",
     "minutes": "il y a {min}min",

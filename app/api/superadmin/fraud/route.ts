@@ -11,14 +11,23 @@ export async function GET(request: NextRequest) {
 
   const supabase = createServiceClient();
 
-  // Period filter
+  // Period filter (supports legacy period param + from/to)
   const period = request.nextUrl.searchParams.get("period") || "all";
+  const fromParam = request.nextUrl.searchParams.get("from");
+  const toParam = request.nextUrl.searchParams.get("to");
   let sinceDate: string | null = null;
+  let untilDate: string | null = null;
   const now = new Date();
-  if (period === "today") {
+
+  if (fromParam) {
+    sinceDate = fromParam;
+    untilDate = toParam || null;
+  } else if (period === "today") {
     sinceDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
   } else if (period === "week") {
     sinceDate = new Date(now.getTime() - 7 * 86400000).toISOString();
+  } else if (period === "month") {
+    sinceDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   }
 
   // Build queries with optional date filter
@@ -32,6 +41,12 @@ export async function GET(request: NextRequest) {
     flaggedQuery = flaggedQuery.gte("created_at", sinceDate);
     recentQuery = recentQuery.gte("created_at", sinceDate);
     fraudIPQuery = fraudIPQuery.gte("created_at", sinceDate);
+  }
+  if (untilDate) {
+    totalQuery = totalQuery.lte("created_at", untilDate);
+    flaggedQuery = flaggedQuery.lte("created_at", untilDate);
+    recentQuery = recentQuery.lte("created_at", untilDate);
+    fraudIPQuery = fraudIPQuery.lte("created_at", untilDate);
   }
 
   const [

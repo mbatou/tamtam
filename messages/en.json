@@ -71,6 +71,14 @@
     "showing": "Showing",
     "of": "of"
   },
+  "dateRange": {
+    "today": "Today",
+    "thisWeek": "This week",
+    "thisMonth": "This month",
+    "allTime": "All time",
+    "custom": "Custom",
+    "apply": "Apply"
+  },
   "timeAgo": {
     "now": "just now",
     "minutes": "{min}min ago",
