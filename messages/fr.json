@@ -67,6 +67,10 @@
     "create": "Créer",
     "balance": "Solde"
   },
+  "pagination": {
+    "showing": "Affichage",
+    "of": "sur"
+  },
   "timeAgo": {
     "now": "à l'instant",
     "minutes": "il y a {min}min",
@@ -543,7 +547,10 @@
       "histEarned": "Gagné",
       "histEchos": "Échos",
       "payoutRequests": "Demandes de retrait",
-      "noPayouts": "Aucune demande de retrait"
+      "noPayouts": "Aucune demande de retrait",
+      "dualRole": "Écho + Marque",
+      "approvePayoutDirect": "Approuver",
+      "rejectPayoutDirect": "Rejeter"
     },
     "campaigns": {
       "title": "Modération des campagnes",
