@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { formatFCFA } from "@/lib/utils";
@@ -33,6 +34,8 @@ export default function ProfilPage() {
     streak: number;
   } | null>(null);
   const [ranks, setRanks] = useState<{ week: number; month: number; all: number } | null>(null);
+
+  const [acceptingTerms, setAcceptingTerms] = useState(false);
 
   // Password change
   const [showPassword, setShowPassword] = useState(false);
@@ -163,6 +166,23 @@ export default function ProfilPage() {
     router.push("/");
   }
 
+  async function handleAcceptTerms() {
+    setAcceptingTerms(true);
+    try {
+      const res = await fetch("/api/echo/accept-terms", { method: "POST" });
+      if (res.ok) {
+        setUser((prev) => prev ? { ...prev, terms_accepted_at: new Date().toISOString() } : prev);
+        setSuccess(t("echo.profile.termsAccepted"));
+        setTimeout(() => setSuccess(""), 3000);
+      } else {
+        setError(t("common.error"));
+      }
+    } catch {
+      setError(t("common.networkRetry"));
+    }
+    setAcceptingTerms(false);
+  }
+
   if (loading) {
     return (
       <div className="px-4 py-5 max-w-lg mx-auto space-y-3">
@@ -180,6 +200,33 @@ export default function ProfilPage() {
   return (
     <div className="px-4 py-5 max-w-lg mx-auto">
       <h1 className="text-xl font-bold mb-5">{t("echo.profile.title")}</h1>
+
+      {/* Terms acceptance alert for existing users */}
+      {user && !user.terms_accepted_at && (
+        <div className="mb-4 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+          <div className="flex items-start gap-3">
+            <span className="text-lg shrink-0">&#9888;&#65039;</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-yellow-400 mb-1">
+                {t("echo.profile.termsRequired")}
+              </p>
+              <p className="text-xs text-white/40 mb-3">
+                {t("echo.profile.termsRequiredDesc")}{" "}
+                <Link href="/terms" target="_blank" className="text-primary font-semibold hover:underline">
+                  {t("echo.profile.readTerms")}
+                </Link>
+              </p>
+              <button
+                onClick={handleAcceptTerms}
+                disabled={acceptingTerms}
+                className="px-4 py-2 rounded-xl bg-gradient-primary text-white text-xs font-bold hover:opacity-90 transition disabled:opacity-50"
+              >
+                {acceptingTerms ? "..." : t("echo.profile.acceptTerms")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Feedback */}
       {error && (
