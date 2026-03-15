@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatFCFA, timeAgo } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import type { Campaign } from "@/lib/types";
+import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 
 type View = "list" | "detail" | "form";
 
@@ -24,10 +25,16 @@ export default function AdminCampaignsPage() {
   const [error, setError] = useState<string | null>(null);
   const [showRechargePrompt, setShowRechargePrompt] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [avgCpc, setAvgCpc] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
   useEffect(() => { loadCampaigns(); }, []);
+  useEffect(() => {
+    fetch("/api/campaigns/avg-cpc")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => data && setAvgCpc(data.avgCpc));
+  }, []);
 
   async function loadCampaigns() {
     const { data: { session } } = await supabase.auth.getSession();
@@ -419,6 +426,23 @@ export default function AdminCampaignsPage() {
             <div>
               <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.campaigns.cpcLabel")}</label>
               <input type="number" value={form.cpc} onChange={(e) => setForm({ ...form, cpc: e.target.value })} placeholder="25" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
+              {avgCpc > 0 && (
+                <div className="mt-2">
+                  <p className="text-xs text-white/40">
+                    {t("admin.campaigns.avgCpcHint", { avg: formatFCFA(avgCpc) })}
+                  </p>
+                  {Number(form.cpc) > 0 && Number(form.cpc) < avgCpc && (
+                    <p className="text-xs text-yellow-400 mt-1">
+                      {t("admin.campaigns.cpcBelowAvg", { recommended: formatFCFA(Math.round(avgCpc * 1.25)) })}
+                    </p>
+                  )}
+                  {Number(form.cpc) >= avgCpc && (
+                    <p className="text-xs text-emerald-400 mt-1">
+                      {t("admin.campaigns.cpcAboveAvg")}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.campaigns.budgetLabel")}</label>
@@ -433,6 +457,43 @@ export default function AdminCampaignsPage() {
               <input type="datetime-local" value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
             </div>
           </div>
+
+          {/* Estimation section */}
+          {Number(form.cpc) > 0 && Number(form.budget) > 0 && (() => {
+            const cpc = Number(form.cpc);
+            const budget = Number(form.budget);
+            const estimatedClicks = Math.floor(budget / cpc);
+            const echoEarningsPerClick = Math.floor(cpc * ECHO_SHARE_PERCENT / 100);
+            const isAboveAvg = avgCpc > 0 && cpc >= avgCpc;
+            return (
+              <div className="mt-5 p-4 rounded-xl bg-white/[0.03] border border-white/10">
+                <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+                  {t("admin.campaigns.estimationTitle")}
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white/5 rounded-lg p-3 text-center">
+                    <p className="text-lg font-black text-primary">{estimatedClicks.toLocaleString()}</p>
+                    <p className="text-[10px] text-white/40">{t("admin.campaigns.estClicks")}</p>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-3 text-center">
+                    <p className="text-lg font-black text-accent">{formatFCFA(echoEarningsPerClick)}</p>
+                    <p className="text-[10px] text-white/40">{t("admin.campaigns.echoEarnsPerClick")}</p>
+                  </div>
+                </div>
+                {isAboveAvg && (
+                  <p className="text-xs text-emerald-400 mt-3 text-center">
+                    {t("admin.campaigns.estEngagementBoost")}
+                  </p>
+                )}
+                {avgCpc > 0 && cpc < avgCpc && (
+                  <p className="text-xs text-yellow-400/70 mt-3 text-center">
+                    {t("admin.campaigns.estLowCpcWarning", { avg: formatFCFA(avgCpc) })}
+                  </p>
+                )}
+              </div>
+            );
+          })()}
 
           {error && (
             <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
