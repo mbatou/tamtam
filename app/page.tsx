@@ -529,10 +529,9 @@ export default function LandingPage() {
               </div>
               <div className="pt-4 border-t border-white/5">
                 <p className="text-xs text-white/30 mb-1">{t("landing.brandContact")}</p>
-                <div className="flex items-center gap-2">
-                  <WhatsAppIcon size={14} className="text-[#25D366]" />
-                  <span className="text-sm font-semibold text-[#25D366]">+221 78 163 34 95</span>
-                </div>
+                <a href="mailto:support@tamma.me" className="text-sm font-semibold text-secondary hover:text-secondary/80 transition">
+                  support@tamma.me
+                </a>
               </div>
             </div>
           </div>
