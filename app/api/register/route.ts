@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
       phone: phone || null,
       city: city || null,
       mobile_money_provider,
+      terms_accepted_at: new Date().toISOString(),
     },
     { onConflict: "id" }
   );

@@ -190,6 +190,9 @@
     "registerCreate": "Create my account",
     "registerHasAccount": "Already have an account?",
     "registerLogin": "Log in",
+    "registerAcceptTerms": "You must accept the terms and conditions",
+    "registerTermsLabel": "I accept the",
+    "registerTermsLink": "Terms and Conditions",
     "forgotTitle": "Forgot password?",
     "forgotDesc": "Enter your email address and we'll send you a reset link.",
     "forgotSend": "Send reset link",
@@ -261,7 +264,12 @@
       "memberSince": "Member since",
       "changePassword": "Change",
       "profileUpdated": "Profile updated successfully!",
-      "logout": "Log out"
+      "logout": "Log out",
+      "termsRequired": "Terms and Conditions required",
+      "termsRequiredDesc": "Please accept our terms and conditions to continue using Tamtam.",
+      "readTerms": "Read the terms",
+      "acceptTerms": "I accept the Terms and Conditions",
+      "termsAccepted": "Terms and conditions accepted!"
     },
     "rythmes": {
       "title": "Rythmes",

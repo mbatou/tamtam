@@ -16,6 +16,7 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("+221");
   const [city, setCity] = useState("");
   const [provider, setProvider] = useState<"wave" | "orange_money" | "">("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const supabase = createClient();
@@ -36,6 +37,10 @@ export default function RegisterPage() {
   async function handleStep2() {
     if (!provider) {
       setError(t("auth.registerChoosePayment"));
+      return;
+    }
+    if (!termsAccepted) {
+      setError(t("auth.registerAcceptTerms"));
       return;
     }
     setError("");
@@ -225,6 +230,22 @@ export default function RegisterPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Terms checkbox */}
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-white/20 bg-white/5 accent-primary shrink-0"
+                />
+                <span className="text-xs text-white/50">
+                  {t("auth.registerTermsLabel")}{" "}
+                  <Link href="/terms" target="_blank" className="text-primary font-semibold hover:underline">
+                    {t("auth.registerTermsLink")}
+                  </Link>
+                </span>
+              </label>
 
               <div className="flex gap-3">
                 <button
