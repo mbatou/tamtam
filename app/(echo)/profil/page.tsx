@@ -16,6 +16,22 @@ const TIER_INFO: Record<string, { icon: string; label: string }> = {
   diamant: { icon: "💎", label: "tierName_diamant" },
 };
 
+interface Milestone {
+  id: string;
+  key: string;
+  title: string;
+  icon: string;
+  reward_fcfa: number;
+  condition_type: string;
+  condition_value: number;
+}
+
+interface Achievement {
+  milestone_id: string;
+  reward_fcfa: number;
+  achieved_at: string;
+}
+
 export default function ProfilPage() {
   const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState({ totalClicks: 0, activeCampaigns: 0, totalEarned: 0 });
@@ -32,6 +48,10 @@ export default function ProfilPage() {
     achievementsCount: number;
     totalAchievements: number;
     streak: number;
+    milestones: Milestone[];
+    achievements: Achievement[];
+    totalCampaignsJoined: number;
+    referralCount: number;
   } | null>(null);
   const [ranks, setRanks] = useState<{ week: number; month: number; all: number } | null>(null);
 
@@ -73,11 +93,11 @@ export default function ProfilPage() {
       const linksData = await linksRes.json();
       const links = Array.isArray(linksData) ? linksData : [];
       const totalClicks = links.reduce((sum: number, l: { click_count: number }) => sum + l.click_count, 0);
-      const activeCampaigns = links.filter((l: { campaigns?: { status: string } }) => l.campaigns?.status === "active").length;
+      const totalCampaigns = links.length;
       const totalEarned = links.reduce((sum: number, l: { click_count: number; campaigns?: { cpc: number } }) => {
         return sum + Math.floor(l.click_count * (l.campaigns?.cpc || 0) * 0.75);
       }, 0);
-      setStats({ totalClicks, activeCampaigns, totalEarned });
+      setStats({ totalClicks, activeCampaigns: totalCampaigns, totalEarned });
     }
 
     if (gamRes.ok) {
@@ -89,6 +109,10 @@ export default function ProfilPage() {
         achievementsCount: gam.achievements?.length || 0,
         totalAchievements: gam.milestones?.length || 0,
         streak: gam.streak?.current_streak || 0,
+        milestones: gam.milestones || [],
+        achievements: gam.achievements || [],
+        totalCampaignsJoined: gam.user?.total_campaigns_joined || 0,
+        referralCount: gam.user?.referral_count || 0,
       });
     }
 
@@ -183,6 +207,13 @@ export default function ProfilPage() {
     setAcceptingTerms(false);
   }
 
+  function copyReferralLink() {
+    const code = user?.name?.split(" ")[0]?.toUpperCase() + "-TT";
+    navigator.clipboard.writeText(`https://tamma.me/?ref=${code}`);
+    setSuccess(t("echo.profile.referralCopied"));
+    setTimeout(() => setSuccess(""), 3000);
+  }
+
   if (loading) {
     return (
       <div className="px-4 py-5 max-w-lg mx-auto space-y-3">
@@ -196,6 +227,25 @@ export default function ProfilPage() {
       </div>
     );
   }
+
+  // Badge grid data
+  const achievedIds = new Set(gamification?.achievements?.map((a) => a.milestone_id) || []);
+
+  // Helper to get progress for a milestone
+  function getMilestoneProgress(m: Milestone): number {
+    if (!gamification) return 0;
+    if (m.condition_type === "clicks") return gamification.totalClicks;
+    if (m.condition_type === "campaigns") return gamification.totalCampaignsJoined;
+    if (m.condition_type === "referrals") return gamification.referralCount;
+    if (m.condition_type === "streak") return gamification.streak;
+    return 0;
+  }
+
+  // Member since
+  const memberSinceDate = user?.created_at ? new Date(user.created_at) : null;
+  const daysSinceJoined = memberSinceDate
+    ? Math.floor((Date.now() - memberSinceDate.getTime()) / 86400000)
+    : 0;
 
   return (
     <div className="px-4 py-5 max-w-lg mx-auto">
@@ -267,6 +317,17 @@ export default function ProfilPage() {
             </button>
           )}
         </div>
+        {/* Member since + tenure badge */}
+        {memberSinceDate && (
+          <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
+            <p className="text-[10px] text-white/30">
+              {t("echo.profile.memberSince")} {memberSinceDate.toLocaleDateString("fr-FR")} — {daysSinceJoined} {t("echo.profile.days")}
+            </p>
+            {daysSinceJoined <= 30 && (
+              <span className="text-[10px] text-primary font-bold">🌟 {t("echo.profile.earlyMember")}</span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Edit form */}
@@ -353,11 +414,11 @@ export default function ProfilPage() {
       <div className="grid grid-cols-3 gap-2 mb-5">
         <div className="glass-card p-3 text-center">
           <p className="text-lg font-black">{stats.totalClicks}</p>
-          <p className="text-[9px] text-white/40 font-semibold">{t("echo.profile.resonances")}</p>
+          <p className="text-[9px] text-white/40 font-semibold">{t("echo.dashboard.validClicks")}</p>
         </div>
         <div className="glass-card p-3 text-center">
           <p className="text-lg font-black">{stats.activeCampaigns}</p>
-          <p className="text-[9px] text-white/40 font-semibold">{t("echo.dashboard.rythmes")}</p>
+          <p className="text-[9px] text-white/40 font-semibold">{t("echo.dashboard.rythmesJoined")}</p>
         </div>
         <div className="glass-card p-3 text-center">
           <p className="text-lg font-black text-accent">{formatFCFA(stats.totalEarned)}</p>
@@ -404,21 +465,80 @@ export default function ProfilPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
 
-          {/* Achievements summary */}
-          <div className="flex items-center justify-between pt-3 border-t border-white/5">
-            <div className="flex items-center gap-2">
-              <span className="text-sm">🏆</span>
-              <span className="text-xs text-white/60">
-                {t("gamification.achievements")}
-              </span>
-            </div>
-            <span className="text-xs font-bold">
-              {gamification.achievementsCount} / {gamification.totalAchievements}
-            </span>
+      {/* Visual Badge Grid */}
+      {gamification && gamification.milestones.length > 0 && (
+        <div className="glass-card p-4 mb-5">
+          <h3 className="text-sm font-bold mb-3">
+            {t("echo.profile.myBadges")} ({gamification.achievementsCount}/{gamification.totalAchievements})
+          </h3>
+          <div className="grid grid-cols-3 gap-3">
+            {gamification.milestones.map((m) => {
+              const isUnlocked = achievedIds.has(m.id);
+              const progress = getMilestoneProgress(m);
+              const pct = Math.min(Math.round((progress / m.condition_value) * 100), 100);
+
+              return (
+                <div
+                  key={m.id}
+                  className={`rounded-xl p-3 text-center transition ${
+                    isUnlocked
+                      ? "bg-accent/10 border border-accent/20"
+                      : "bg-white/3 border border-white/5 opacity-50"
+                  }`}
+                >
+                  <span className={`text-2xl block mb-1 ${isUnlocked ? "" : "grayscale"}`}>{m.icon}</span>
+                  <p className="text-[10px] font-bold leading-tight">{t(`gamification.milestone_${m.key}`, { default: m.title })}</p>
+                  {isUnlocked ? (
+                    <p className="text-[9px] text-accent mt-1">✓ +{formatFCFA(m.reward_fcfa)}</p>
+                  ) : (
+                    <div className="mt-1">
+                      <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                        <div className="h-full bg-white/30 rounded-full" style={{ width: `${pct}%` }} />
+                      </div>
+                      <p className="text-[9px] text-white/30 mt-0.5">
+                        {m.condition_value - progress} {t("echo.profile.remaining")}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
+
+      {/* Referral section */}
+      <div className="glass-card p-4 mb-5">
+        <h3 className="text-sm font-bold mb-2">🤝 {t("echo.profile.inviteFriends")}</h3>
+        <p className="text-xs text-white/40 mb-3">{t("echo.profile.inviteDesc")}</p>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              const code = user?.name?.split(" ")[0]?.toUpperCase() + "-TT";
+              const text = t("echo.profile.inviteWhatsappText", { code });
+              window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+            }}
+            className="flex-1 py-2.5 rounded-xl bg-[#25D366]/10 border border-[#25D366]/30 text-[#25D366] text-xs font-bold"
+          >
+            {t("echo.profile.shareWhatsApp")}
+          </button>
+          <button
+            onClick={copyReferralLink}
+            className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold"
+          >
+            {t("echo.profile.copyLink")}
+          </button>
+        </div>
+        {gamification && (
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5 text-[10px] text-white/30">
+            <span>{t("echo.profile.friendsInvited")}: {gamification.referralCount}</span>
+            <span>{t("echo.profile.bonusEarned")}: {formatFCFA(gamification.referralCount * 500)}</span>
+          </div>
+        )}
+      </div>
 
       {/* Details */}
       <div className="glass-card divide-y divide-white/5 mb-5">
@@ -439,12 +559,6 @@ export default function ProfilPage() {
         <div className="flex justify-between px-4 py-3">
           <span className="text-xs text-white/40">{t("common.city")}</span>
           <span className="text-xs font-semibold">{user?.city || "—"}</span>
-        </div>
-        <div className="flex justify-between px-4 py-3">
-          <span className="text-xs text-white/40">{t("echo.profile.memberSince")}</span>
-          <span className="text-xs font-semibold">
-            {user?.created_at ? new Date(user.created_at).toLocaleDateString("fr-FR") : "—"}
-          </span>
         </div>
       </div>
 
