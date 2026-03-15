@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { timeAgo } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 
@@ -161,21 +162,44 @@ export default function HealthPage() {
       {/* Anomalies Banner */}
       {data.anomalies.length > 0 && (
         <div className="space-y-2">
-          {data.anomalies.map((a, i) => (
-            <div
-              key={i}
-              className={`flex items-center gap-3 p-4 rounded-xl border ${
-                a.severity === "critical"
-                  ? "bg-red-500/5 border-red-500/20"
-                  : "bg-yellow-500/5 border-yellow-500/20"
-              }`}
-            >
-              <span className="text-lg">{a.severity === "critical" ? "🚨" : "⚠️"}</span>
-              <span className={`text-sm font-semibold ${a.severity === "critical" ? "text-red-400" : "text-yellow-400"}`}>
-                {a.message}
-              </span>
-            </div>
-          ))}
+          {data.anomalies.map((a, i) => {
+            const actionLink = a.type === "fraud" ? "/superadmin/fraud"
+              : a.type === "payouts" ? "/superadmin/finance?tab=payout_requests"
+              : a.type === "budget" ? "/superadmin/campaigns"
+              : a.type === "security" ? "/superadmin/health"
+              : null;
+            const actionLabel = a.type === "fraud" ? t("superadmin.health.goToFraud")
+              : a.type === "payouts" ? t("superadmin.health.goToFinance")
+              : a.type === "budget" ? t("superadmin.health.goToCampaigns")
+              : null;
+            return (
+              <div
+                key={i}
+                className={`flex items-center gap-3 p-4 rounded-xl border ${
+                  a.severity === "critical"
+                    ? "bg-red-500/5 border-red-500/20"
+                    : "bg-yellow-500/5 border-yellow-500/20"
+                }`}
+              >
+                <span className="text-lg">{a.severity === "critical" ? "🚨" : "⚠️"}</span>
+                <span className={`text-sm font-semibold flex-1 ${a.severity === "critical" ? "text-red-400" : "text-yellow-400"}`}>
+                  {a.message}
+                </span>
+                {actionLink && actionLabel && (
+                  <Link
+                    href={actionLink}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition ${
+                      a.severity === "critical"
+                        ? "bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30"
+                        : "bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/30"
+                    }`}
+                  >
+                    {actionLabel}
+                  </Link>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -213,9 +237,14 @@ export default function HealthPage() {
                         <span className={`text-xs font-semibold ${config.color}`}>{config.label}</span>
                       </div>
                     </div>
-                    <div className="flex items-end gap-1">
-                      <span className="text-2xl font-black">{check.latencyMs}</span>
-                      <span className="text-xs text-white/30 mb-1">ms</span>
+                    <div className="flex items-end justify-between">
+                      <div className="flex items-end gap-1">
+                        <span className="text-2xl font-black">{check.latencyMs}</span>
+                        <span className="text-xs text-white/30 mb-1">ms</span>
+                      </div>
+                      <span className={`text-[10px] font-semibold ${check.status === "healthy" ? "text-emerald-400/60" : "text-white/20"}`}>
+                        {check.status === "healthy" ? t("superadmin.health.uptime") : t("superadmin.health.issues")}
+                      </span>
                     </div>
                     {check.details && (
                       <p className="text-xs text-red-400/70 mt-2">{check.details}</p>

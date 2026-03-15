@@ -749,7 +749,12 @@
       "severity": "Sévérité",
       "details": "Détails",
       "recentAdminActivity": "Activité admin récente",
-      "noRecentActivity": "Aucune activité récente"
+      "noRecentActivity": "Aucune activité récente",
+      "goToFraud": "Voir Anti-Fraude",
+      "goToFinance": "Voir Finance",
+      "goToCampaigns": "Voir Campagnes",
+      "uptime": "100% (7j)",
+      "issues": "Problèmes détectés"
     },
     "leads": {
       "title": "Leads Batteur",

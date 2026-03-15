@@ -749,7 +749,12 @@
       "severity": "Severity",
       "details": "Details",
       "recentAdminActivity": "Recent admin activity",
-      "noRecentActivity": "No recent activity"
+      "noRecentActivity": "No recent activity",
+      "goToFraud": "Go to Anti-Fraud",
+      "goToFinance": "Go to Finance",
+      "goToCampaigns": "Go to Campaigns",
+      "uptime": "100% (7d)",
+      "issues": "Issues detected"
     },
     "leads": {
       "title": "Batteur Leads",
