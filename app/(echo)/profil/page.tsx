@@ -518,23 +518,31 @@ export default function ProfilPage() {
       )}
 
       {/* Referral section */}
-      {referralEnabled && <div className="glass-card p-4 mb-5">
+      <div className={`glass-card p-4 mb-5 ${!referralEnabled ? "opacity-50" : ""}`}>
         <h3 className="text-sm font-bold mb-2">🤝 {t("echo.profile.inviteFriends")}</h3>
-        <p className="text-xs text-white/40 mb-3">{t("echo.profile.inviteDesc")}</p>
+        {!referralEnabled && (
+          <div className="flex items-center gap-2 mb-3 py-2 px-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+            <span className="text-yellow-400 text-sm">⏸</span>
+            <p className="text-xs text-yellow-300/80">{t("echo.profile.referralPaused")}</p>
+          </div>
+        )}
+        {referralEnabled && <p className="text-xs text-white/40 mb-3">{t("echo.profile.inviteDesc")}</p>}
         <div className="flex gap-2">
           <button
+            disabled={!referralEnabled}
             onClick={() => {
               const code = user?.referral_code || (user?.name?.split(" ")[0]?.toUpperCase() + "-TT");
               const text = t("echo.profile.inviteWhatsappText", { code });
               window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
             }}
-            className="flex-1 py-2.5 rounded-xl bg-[#25D366]/10 border border-[#25D366]/30 text-[#25D366] text-xs font-bold"
+            className={`flex-1 py-2.5 rounded-xl text-xs font-bold ${referralEnabled ? "bg-[#25D366]/10 border border-[#25D366]/30 text-[#25D366]" : "bg-white/5 border border-white/10 text-white/20 cursor-not-allowed"}`}
           >
             {t("echo.profile.shareWhatsApp")}
           </button>
           <button
+            disabled={!referralEnabled}
             onClick={copyReferralLink}
-            className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold"
+            className={`flex-1 py-2.5 rounded-xl text-xs font-semibold ${referralEnabled ? "bg-white/5 border border-white/10" : "bg-white/5 border border-white/10 text-white/20 cursor-not-allowed"}`}
           >
             {t("echo.profile.copyLink")}
           </button>
@@ -545,7 +553,7 @@ export default function ProfilPage() {
             <span>{t("echo.profile.bonusEarned")}: {formatFCFA(gamification.referralCount * 500)}</span>
           </div>
         )}
-      </div>}
+      </div>
 
       {/* Details */}
       <div className="glass-card divide-y divide-white/5 mb-5">
