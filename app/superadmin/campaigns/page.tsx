@@ -261,14 +261,36 @@ function CampaignModerationPageContent() {
                 <td className="py-3">
                   <div className="font-semibold">{campaign.title}</div>
                   <div className="text-xs text-white/30">{campaign.users?.name || "—"}</div>
+                  {/* Inline budget bar */}
+                  {campaign.budget > 0 && (
+                    <div className="mt-1 h-1 w-full max-w-[120px] bg-white/5 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${Math.min(100, (campaign.spent / campaign.budget) * 100)}%`,
+                          background: (campaign.spent / campaign.budget) > 0.9 ? "#ef4444" : (campaign.spent / campaign.budget) > 0.7 ? "#eab308" : "#22c55e",
+                        }}
+                      />
+                    </div>
+                  )}
                 </td>
                 <td className="py-3">
                   <Badge status={campaign.moderation_status || "pending"} />
                 </td>
-                <td className="py-3 hidden md:table-cell">{formatFCFA(campaign.budget)}</td>
+                <td className="py-3 hidden md:table-cell">
+                  <div>{formatFCFA(campaign.budget)}</div>
+                  <div className="text-[10px] text-white/25">{formatFCFA(campaign.spent)} {t("superadmin.campaigns.spentBudget").toLowerCase()}</div>
+                </td>
                 <td className="py-3 hidden md:table-cell">{campaign.cpc} FCFA</td>
                 <td className="py-3 hidden lg:table-cell">{campaign.echo_count}</td>
-                <td className="py-3 hidden lg:table-cell">{campaign.total_clicks}</td>
+                <td className="py-3 hidden lg:table-cell">
+                  <div>{campaign.total_clicks}</div>
+                  {campaign.total_clicks > 0 && (
+                    <div className="text-[10px] text-white/25">
+                      {Math.round((campaign.total_clicks > 0 ? ((campaign.total_clicks - (campaign.echo_count || 0)) / campaign.total_clicks) : 0) * 100)}% {t("common.valid").toLowerCase()}
+                    </div>
+                  )}
+                </td>
                 <td className="py-3 text-xs text-white/40 hidden lg:table-cell">
                   {new Date(campaign.created_at).toLocaleDateString("fr-FR")}
                 </td>
@@ -391,6 +413,27 @@ function CampaignModerationPageContent() {
                 </button>
               </div>
             )}
+
+            {/* Clone Campaign */}
+            <div className="pt-2 border-t border-white/5">
+              <button
+                onClick={() => {
+                  setNewCamp({
+                    batteur_id: "",
+                    title: `${selected.title} (${t("superadmin.campaigns.clone")})`,
+                    description: selected.description || "",
+                    destination_url: selected.destination_url,
+                    cpc: String(selected.cpc),
+                    budget: String(selected.budget),
+                  });
+                  setSelected(null);
+                  setShowCreate(true);
+                }}
+                className="w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/50 font-bold text-sm hover:bg-white/10 transition"
+              >
+                {t("superadmin.campaigns.clone")}
+              </button>
+            </div>
           </div>
         )}
       </Modal>

@@ -596,7 +596,8 @@
       "rejectionReasonPlaceholder": "Raison du rejet (si applicable)...",
       "notifyEchos": "Notifier tous les Échos",
       "notifying": "Envoi des notifications...",
-      "notifySent": "{count} notification(s) envoyée(s) aux Échos"
+      "notifySent": "{count} notification(s) envoyée(s) aux Échos",
+      "clone": "Dupliquer la campagne"
     },
     "finance": {
       "title": "Finance",

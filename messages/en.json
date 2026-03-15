@@ -596,7 +596,8 @@
       "rejectionReasonPlaceholder": "Rejection reason (if applicable)...",
       "notifyEchos": "Notify all Echos",
       "notifying": "Sending notifications...",
-      "notifySent": "{count} notification(s) sent to Echos"
+      "notifySent": "{count} notification(s) sent to Echos",
+      "clone": "Clone campaign"
     },
     "finance": {
       "title": "Finance",
