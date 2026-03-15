@@ -46,15 +46,17 @@ export default function FraudPage() {
   const { t } = useTranslation();
   const [data, setData] = useState<FraudData | null>(null);
   const [filter, setFilter] = useState("all");
+  const [period, setPeriod] = useState<"today" | "week" | "all">("today");
   const [selectedClick, setSelectedClick] = useState<ClickRow | null>(null);
   const [loading, setLoading] = useState(true);
   const { showToast, ToastComponent } = useToast();
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); }, [period]);
 
   async function loadData() {
+    setLoading(true);
     try {
-      const res = await fetch("/api/superadmin/fraud");
+      const res = await fetch(`/api/superadmin/fraud?period=${period}`);
       const json = await res.json();
       setData(json);
     } catch {
@@ -119,7 +121,24 @@ export default function FraudPage() {
     <div className="p-6 max-w-7xl">
       {ToastComponent}
 
-      <h1 className="text-2xl font-bold mb-6">{t("superadmin.fraud.title")}</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">{t("superadmin.fraud.title")}</h1>
+        <div className="flex gap-1 bg-white/5 rounded-xl p-1">
+          {(["today", "week", "all"] as const).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                period === p
+                  ? "bg-primary text-white"
+                  : "text-white/50 hover:text-white/80"
+              }`}
+            >
+              {t(`superadmin.fraud.period_${p}`)}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Alert banner */}
       {data.flaggedClicks > 0 && (

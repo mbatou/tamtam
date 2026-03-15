@@ -639,7 +639,10 @@
       "markFraud": "Mark as fraud",
       "markValid": "Mark as valid",
       "ipBlocked": "IP {ip} blocked",
-      "statusUpdated": "Status updated"
+      "statusUpdated": "Status updated",
+      "period_today": "Today",
+      "period_week": "This week",
+      "period_all": "All time"
     },
     "health": {
       "title": "Platform Health",
