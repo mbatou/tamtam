@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatFCFA, getTrackingUrl } from "@/lib/utils";
+import { formatFCFA, getTrackingUrl, timeAgo } from "@/lib/utils";
 import { useToast } from "@/components/ui/Toast";
 import CampaignDetailModal from "@/components/CampaignDetailModal";
 import { useTranslation } from "@/lib/i18n";
@@ -90,6 +90,8 @@ export default function RythmesPage() {
   }
 
   const acceptedIds = new Set(myLinks.map((l) => l.campaign_id));
+  const activeCampaigns = campaigns.filter((c) => c.status === "active");
+  const finishedLinks = myLinks.filter((l) => l.campaigns?.status !== "active");
 
   return (
     <div className="px-4 py-5 max-w-lg mx-auto">
@@ -108,10 +110,11 @@ export default function RythmesPage() {
       <div className="flex items-center justify-between mb-5">
         <h1 className="text-xl font-bold">{t("echo.rythmes.title")}</h1>
         <span className="text-xs text-white/30 font-semibold">
-          {campaigns.length} {t("echo.rythmes.available")}{campaigns.length !== 1 ? "s" : ""}
+          {activeCampaigns.length} {t("echo.rythmes.available")}{activeCampaigns.length !== 1 ? "s" : ""}
         </span>
       </div>
 
+      {/* Active campaigns */}
       <div className="space-y-3">
         {campaigns.map((campaign) => {
           const myLink = myLinks.find((l) => l.campaign_id === campaign.id);
@@ -207,11 +210,59 @@ export default function RythmesPage() {
           );
         })}
 
+        {/* Empty state — enriched */}
         {campaigns.length === 0 && (
-          <div className="glass-card p-8 text-center">
-            <div className="text-3xl mb-2">🎵</div>
-            <p className="text-sm font-semibold mb-1">{t("echo.rythmes.noAvailable")}</p>
-            <p className="text-xs text-white/30">{t("echo.rythmes.comeBackSoon")}</p>
+          <div className="space-y-4">
+            <div className="glass-card p-6 text-center">
+              <div className="text-3xl mb-2">🔔</div>
+              <p className="text-sm font-semibold mb-1">{t("echo.rythmes.noAvailable")}</p>
+              <p className="text-xs text-white/30 mb-3">{t("echo.rythmes.notifHint")}</p>
+            </div>
+
+            {/* Quick actions when no campaigns */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => window.location.href = "/profil"}
+                className="glass-card p-4 text-center"
+              >
+                <span className="text-xl block mb-1">🤝</span>
+                <span className="text-xs font-bold block">{t("echo.rythmes.inviteFriend")}</span>
+                <span className="text-[10px] text-accent block mt-0.5">+500 FCFA</span>
+              </button>
+              <button
+                onClick={() => window.location.href = "/leaderboard"}
+                className="glass-card p-4 text-center"
+              >
+                <span className="text-xl block mb-1">🏆</span>
+                <span className="text-xs font-bold block">{t("echo.rythmes.seeRanking")}</span>
+                <span className="text-[10px] text-white/30 block mt-0.5">{t("echo.rythmes.seeYourRank")}</span>
+              </button>
+            </div>
+
+            {/* Past campaigns with results */}
+            {finishedLinks.length > 0 && (
+              <div>
+                <h2 className="text-sm font-bold text-white/60 uppercase tracking-wider mb-3">
+                  {t("echo.rythmes.pastRythmes")}
+                </h2>
+                <div className="space-y-2">
+                  {finishedLinks.map((link) => {
+                    const earned = Math.floor(link.click_count * (link.campaigns?.cpc || 0) * 0.75);
+                    return (
+                      <div key={link.id} className="glass-card p-4">
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className="text-sm font-bold truncate flex-1 mr-2">{link.campaigns?.title || "—"}</h3>
+                          <span className="text-[10px] text-white/30">{timeAgo(link.created_at)}</span>
+                        </div>
+                        <p className="text-xs text-white/40">
+                          {t("echo.rythmes.youGenerated", { clicks: link.click_count, amount: formatFCFA(earned) })}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

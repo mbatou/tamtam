@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { checkMilestones } from "@/lib/gamification";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,13 @@ export async function GET() {
 
   const supabase = createServiceClient();
   const echoId = session.user.id;
+
+  // Self-heal: check milestones on load to credit any missing badges
+  try {
+    await checkMilestones(echoId);
+  } catch {
+    // Non-critical — continue loading data
+  }
 
   const [userRes, streakRes, achievementsRes, milestonesRes, streakRewardsRes] =
     await Promise.all([

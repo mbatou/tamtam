@@ -239,7 +239,15 @@
       "copied": "Link copied!",
       "shareText": "Click here 👉",
       "accepting": "Accepting...",
-      "acceptRythme": "Accept Rythme"
+      "acceptRythme": "Accept Rythme",
+      "validClicks": "Valid clicks",
+      "fcfaEarned": "FCFA earned",
+      "rythmesJoined": "Rythmes joined",
+      "balanceZeroEarned": "You've already withdrawn your earnings. Keep sharing to earn more!",
+      "balanceZeroNew": "Accept a rythme and share it to start earning!",
+      "seeRythmes": "See available rythmes",
+      "notifHint": "New campaigns are added regularly. Check back soon!",
+      "inviteFriend": "Invite a friend"
     },
     "earnings": {
       "title": "My Earnings",
@@ -260,7 +268,13 @@
       "multipleOfFiveHint": "Amount must be a multiple of 5 (mobile money requirement)",
       "enterAmount": "Enter an amount",
       "insufficientBalance": "Amount exceeds your balance",
-      "confirmWithdraw": "Withdraw via {provider}"
+      "confirmWithdraw": "Withdraw via {provider}",
+      "withdrawSent": "Withdrawal of {amount} sent!",
+      "withdrawSentHint": "You'll receive the money on your mobile money account shortly.",
+      "shareGain": "Share my earnings",
+      "shareText": "I just earned {amount} on Tamtam by sharing links on my WhatsApp! Join me 👉 https://tamtam.sn",
+      "potentialHint": "The more rythmes you share, the more you earn. Top Echos earn 10,000+ FCFA/month!",
+      "topEchosEarn": "Top Echos earn 10,000+ FCFA/month"
     },
     "profile": {
       "title": "My Profile",
@@ -281,7 +295,19 @@
       "termsRequiredDesc": "Please accept our terms and conditions to continue using Tamtam.",
       "readTerms": "Read the terms",
       "acceptTerms": "I accept the Terms and Conditions",
-      "termsAccepted": "Terms and conditions accepted!"
+      "termsAccepted": "Terms and conditions accepted!",
+      "myBadges": "My badges",
+      "remaining": "remaining",
+      "days": "days",
+      "earlyMember": "Early member",
+      "inviteFriends": "Invite friends",
+      "inviteDesc": "Invite your friends to Tamtam and earn 500 FCFA for each friend who joins!",
+      "shareWhatsApp": "Share on WhatsApp",
+      "copyLink": "Copy link",
+      "friendsInvited": "Friends invited",
+      "bonusEarned": "Bonus earned",
+      "referralCopied": "Referral link copied!",
+      "inviteWhatsappText": "Join me on Tamtam and earn money by sharing links on WhatsApp! Use my code {code} 👉 https://tamtam.sn"
     },
     "rythmes": {
       "title": "Rythmes",
@@ -289,7 +315,16 @@
       "accepted": "Accepted",
       "new": "New",
       "noAvailable": "No rythme available",
-      "comeBackSoon": "Come back soon, new campaigns are coming!"
+      "comeBackSoon": "Come back soon, new campaigns are coming!",
+      "notifHint": "We'll notify you when new campaigns are available.",
+      "inviteFriend": "Invite a friend",
+      "seeRanking": "See ranking",
+      "seeYourRank": "See your position",
+      "pastRythmes": "Past rythmes",
+      "youGenerated": "You generated {clicks} clicks → {amount}"
+    },
+    "leaderboard": {
+      "clicksToPass": "clicks to pass"
     }
   },
   "admin": {
@@ -946,7 +981,7 @@
   },
   "gamification": {
     "streakTitle": "Streak: {count} rythmes in a row",
-    "nextBonus": "Next bonus: {count} rythmes → +{amount} FCFA",
+    "nextBonus": "Next bonus: {count} rythmes → +{amount}",
     "startStreak": "Accept a rythme to start your streak!",
     "startStreakHint": "Share rythmes daily to build your streak and earn bonus rewards.",
     "almost": "Almost!",
@@ -1013,7 +1048,13 @@
     "roiTitle": "Gamification ROI",
     "bonusesPaid": "Bonuses paid",
     "engagedEchos": "Engaged Echos",
-    "costPerEngaged": "Cost per engaged Echo"
+    "costPerEngaged": "Cost per engaged Echo",
+    "streakFrozen": "Your streak is protected! ❄️",
+    "streakFrozenHint": "No campaigns available right now. Your streak won't be broken.",
+    "streakKeepGoing": "Keep going! Share rythmes daily to reach the next bonus.",
+    "maxStreak": "Maximum streak reached! You're on fire! 🔥",
+    "tierRemaining": "{count} clicks remaining",
+    "tierHint": "Every valid click brings you closer to the next tier and higher bonuses!"
   },
   "footer": {
     "echos": "Echos",

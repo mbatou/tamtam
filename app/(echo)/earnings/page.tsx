@@ -15,6 +15,8 @@ export default function EarningsPage() {
   const [showWithdrawForm, setShowWithdrawForm] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawError, setWithdrawError] = useState("");
+  const [withdrawSuccess, setWithdrawSuccess] = useState(false);
+  const [lastWithdrawn, setLastWithdrawn] = useState(0);
   const { showToast, ToastComponent } = useToast();
   const { t } = useTranslation();
 
@@ -73,7 +75,8 @@ export default function EarningsPage() {
     });
 
     if (res.ok) {
-      showToast(t("echo.earnings.requestSent"), "success");
+      setLastWithdrawn(amount);
+      setWithdrawSuccess(true);
       setShowWithdrawForm(false);
       setWithdrawAmount("");
       await loadData();
@@ -82,6 +85,13 @@ export default function EarningsPage() {
       showToast(data.error || t("echo.earnings.requestError"), "error");
     }
     setRequesting(false);
+  }
+
+  function shareWithdrawal() {
+    const text = t("echo.earnings.shareText", {
+      amount: formatFCFA(lastWithdrawn),
+    });
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }
 
   if (loading) {
@@ -97,6 +107,8 @@ export default function EarningsPage() {
 
   const canWithdraw = (user?.balance || 0) >= MIN_PAYOUT_AMOUNT;
   const hasPendingPayout = payouts.some((p) => p.status === "pending");
+  const totalEarned = user?.total_earned || 0;
+  const balance = user?.balance || 0;
 
   return (
     <div className="px-4 py-5 max-w-lg mx-auto">
@@ -104,16 +116,41 @@ export default function EarningsPage() {
 
       <h1 className="text-xl font-bold mb-5">{t("echo.earnings.title")}</h1>
 
+      {/* Withdrawal success card */}
+      {withdrawSuccess && (
+        <div className="glass-card p-5 mb-5 bg-gradient-to-br from-accent/10 to-transparent border border-accent/20">
+          <div className="text-center space-y-3">
+            <p className="text-2xl">✅</p>
+            <p className="text-sm font-bold">
+              {t("echo.earnings.withdrawSent", { amount: formatFCFA(lastWithdrawn) })}
+            </p>
+            <p className="text-xs text-white/40">{t("echo.earnings.withdrawSentHint")}</p>
+            <button
+              onClick={shareWithdrawal}
+              className="py-2.5 px-4 rounded-xl bg-[#25D366]/10 border border-[#25D366]/30 text-[#25D366] text-xs font-bold"
+            >
+              📸 {t("echo.earnings.shareGain")}
+            </button>
+            <button
+              onClick={() => setWithdrawSuccess(false)}
+              className="block mx-auto text-xs text-white/30 mt-1"
+            >
+              {t("common.close")}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Balance card */}
       <div className="glass-card p-5 mb-5 bg-gradient-to-br from-accent/10 to-transparent">
         <div className="flex items-center justify-between mb-4">
           <div>
             <p className="text-[10px] text-white/40 font-semibold uppercase tracking-wider mb-0.5">{t("echo.earnings.availableBalance")}</p>
-            <p className="text-3xl font-black">{formatFCFA(user?.balance || 0)}</p>
+            <p className="text-3xl font-black">{formatFCFA(balance)}</p>
           </div>
           <div className="text-right">
             <p className="text-[10px] text-white/30">{t("echo.earnings.totalEarned")}</p>
-            <p className="text-sm font-bold text-accent">{formatFCFA(user?.total_earned || 0)}</p>
+            <p className="text-sm font-bold text-accent">{formatFCFA(totalEarned)}</p>
           </div>
         </div>
 
@@ -132,9 +169,9 @@ export default function EarningsPage() {
                 type="number"
                 value={withdrawAmount}
                 onChange={(e) => { setWithdrawAmount(e.target.value); setWithdrawError(""); }}
-                placeholder={t("echo.earnings.amountPlaceholder", { max: formatFCFA(roundToFive(user?.balance || 0)) })}
+                placeholder={t("echo.earnings.amountPlaceholder", { max: formatFCFA(roundToFive(balance)) })}
                 min={MIN_PAYOUT_AMOUNT}
-                max={roundToFive(user?.balance || 0)}
+                max={roundToFive(balance)}
                 step={5}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
               />
@@ -146,9 +183,9 @@ export default function EarningsPage() {
             {/* Quick amount buttons */}
             <div className="flex gap-2">
               {[
-                roundToFive(user?.balance || 0),
-                roundToFive((user?.balance || 0) * 0.5),
-                roundToFive((user?.balance || 0) * 0.25),
+                roundToFive(balance),
+                roundToFive(balance * 0.5),
+                roundToFive(balance * 0.25),
               ]
                 .filter((a) => a >= MIN_PAYOUT_AMOUNT)
                 .filter((v, i, arr) => arr.indexOf(v) === i)
@@ -195,7 +232,11 @@ export default function EarningsPage() {
           <button
             onClick={() => setShowWithdrawForm(true)}
             disabled={!canWithdraw}
-            className="btn-primary w-full text-center text-sm !py-3 disabled:opacity-40"
+            className={`w-full text-center text-sm !py-3 rounded-btn font-bold transition ${
+              canWithdraw
+                ? "btn-primary"
+                : "bg-white/5 border border-white/10 text-white/20 cursor-not-allowed"
+            }`}
           >
             {t("echo.earnings.withdraw")}
           </button>
@@ -207,6 +248,19 @@ export default function EarningsPage() {
           </p>
         )}
       </div>
+
+      {/* Earning potential — shown when balance is low */}
+      {totalEarned < 2500 && (
+        <div className="glass-card p-4 mb-5 border border-accent/10">
+          <p className="text-xs text-white/40 flex items-center gap-1.5">
+            <span>💡</span>
+            {t("echo.earnings.potentialHint")}
+          </p>
+          <p className="text-xs text-accent font-bold mt-1">
+            {t("echo.earnings.topEchosEarn")}
+          </p>
+        </div>
+      )}
 
       {/* Payout history */}
       <h2 className="text-sm font-bold text-white/60 uppercase tracking-wider mb-3">{t("echo.earnings.history")}</h2>

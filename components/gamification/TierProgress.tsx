@@ -35,12 +35,14 @@ export default function TierProgress({
     ? 100
     : Math.min(Math.round((progressCurrent / progressTarget) * 100), 100);
 
+  const remaining = nextTier ? nextTier.threshold - totalClicks : 0;
+
   return (
     <div className="glass-card rounded-2xl p-4">
       {/* Current tier */}
       <div className="flex items-center gap-2 mb-3">
         <span className="text-2xl">{currentTier.icon}</span>
-        <div>
+        <div className="flex-1">
           <h3 className="text-lg font-bold text-white">
             {t(`gamification.tierName_${currentTier.key}`)}
           </h3>
@@ -48,6 +50,10 @@ export default function TierProgress({
             {t("gamification.tierBonus", { percent: tierBonusPercent })}
           </p>
         </div>
+        {/* Percentage badge */}
+        {!isMax && (
+          <span className="text-xs font-bold text-white/40">{percentage}%</span>
+        )}
       </div>
 
       {isMax ? (
@@ -75,9 +81,19 @@ export default function TierProgress({
             })}
           </p>
 
-          {/* Next tier bonus */}
-          <p className="text-xs text-gray-400">
-            {t("gamification.nextTierBonus", { percent: nextTier.bonus })}
+          {/* Remaining + next tier bonus */}
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-400">
+              {t("gamification.tierRemaining", { count: remaining })}
+            </p>
+            <p className="text-xs text-gray-400">
+              {nextTier.icon} +{nextTier.bonus}%
+            </p>
+          </div>
+
+          {/* Motivational hint */}
+          <p className="text-[10px] text-white/20 mt-2">
+            {t("gamification.tierHint")}
           </p>
         </>
       )}
