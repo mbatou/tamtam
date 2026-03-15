@@ -30,12 +30,12 @@ export default function LeaderboardPage() {
     if (leaderboardRes.ok) {
       const data = await leaderboardRes.json();
       const raw = data.leaderboard || data;
-      const mapped = (Array.isArray(raw) ? raw : []).map((e: Record<string, unknown>) => ({
-        user_id: e.echo_id || e.user_id,
-        name: e.name,
-        tier: e.tier || "echo",
-        rythmes_joined: e.campaigns_joined ?? e.rythmes_joined ?? 0,
-        resonances: e.total_clicks ?? e.resonances ?? 0,
+      const mapped: LeaderboardEntry[] = (Array.isArray(raw) ? raw : []).map((e: Record<string, unknown>) => ({
+        user_id: String(e.echo_id || e.user_id || ""),
+        name: String(e.name || ""),
+        tier: String(e.tier || "echo"),
+        rythmes_joined: Number(e.campaigns_joined ?? e.rythmes_joined ?? 0),
+        resonances: Number(e.total_clicks ?? e.resonances ?? 0),
       }));
       setEntries(mapped);
     }
