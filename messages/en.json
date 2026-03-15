@@ -705,7 +705,11 @@
       "statusUpdated": "Status updated",
       "period_today": "Today",
       "period_week": "This week",
-      "period_all": "All time"
+      "period_all": "All time",
+      "bulkRecommendation": "{count} IPs have multiple suspicious clicks",
+      "blockAll": "Block all",
+      "bulkBlocked": "{count} IPs blocked",
+      "costSaved": "Fraud cost saved"
     },
     "health": {
       "title": "Platform Health",

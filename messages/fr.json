@@ -705,7 +705,11 @@
       "statusUpdated": "Status mis à jour",
       "period_today": "Aujourd'hui",
       "period_week": "Cette semaine",
-      "period_all": "Tout"
+      "period_all": "Tout",
+      "bulkRecommendation": "{count} IPs ont des clics suspects multiples",
+      "blockAll": "Tout bloquer",
+      "bulkBlocked": "{count} IPs bloquées",
+      "costSaved": "Coût fraude évité"
     },
     "health": {
       "title": "Santé Plateforme",

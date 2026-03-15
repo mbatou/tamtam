@@ -91,7 +91,42 @@ export async function POST(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   const supabase = createServiceClient();
-  const { action, ip, click_id } = await request.json();
+  const body = await request.json();
+  const { action, ip, click_id } = body;
+
+  if (action === "bulk_block_ips") {
+    const threshold = body.threshold || 5;
+    // Get all fraud IPs above threshold
+    const { data: fraudIPsData } = await supabase.from("clicks").select("ip_address").eq("is_valid", false);
+    const ipCounts: Record<string, number> = {};
+    if (fraudIPsData) {
+      for (const c of fraudIPsData) {
+        if (c.ip_address) ipCounts[c.ip_address] = (ipCounts[c.ip_address] || 0) + 1;
+      }
+    }
+    const ipsToBlock = Object.entries(ipCounts).filter(([, count]) => count >= threshold).map(([ipAddr]) => ipAddr);
+
+    // Get already blocked IPs
+    const { data: existingBlocked } = await supabase.from("blocked_ips").select("ip_address");
+    const blockedSet = new Set((existingBlocked || []).map((b) => b.ip_address));
+    const newIps = ipsToBlock.filter((ipAddr) => !blockedSet.has(ipAddr));
+
+    if (newIps.length > 0) {
+      await supabase.from("blocked_ips").insert(
+        newIps.map((ipAddr) => ({ ip_address: ipAddr, blocked_by: session.user.id, reason: `Bulk block (${threshold}+ flagged clicks)` }))
+      );
+      try {
+        await supabase.from("admin_activity_log").insert({
+          admin_id: session.user.id,
+          action: "bulk_block_ips",
+          target_type: "ip",
+          target_id: "bulk",
+          details: { count: newIps.length, threshold },
+        });
+      } catch {}
+    }
+    return NextResponse.json({ success: true, blocked: newIps.length });
+  }
 
   if (action === "block_ip" && ip) {
     await supabase.from("blocked_ips").upsert({ ip_address: ip, blocked_by: session.user.id, reason: "Bloqué par superadmin" });
