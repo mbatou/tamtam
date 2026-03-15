@@ -208,8 +208,8 @@ export default function ProfilPage() {
   }
 
   function copyReferralLink() {
-    const code = user?.name?.split(" ")[0]?.toUpperCase() + "-TT";
-    navigator.clipboard.writeText(`https://tamma.me/?ref=${code}`);
+    const code = user?.referral_code || (user?.name?.split(" ")[0]?.toUpperCase() + "-TT");
+    navigator.clipboard.writeText(`https://tamma.me/register?ref=${code}`);
     setSuccess(t("echo.profile.referralCopied"));
     setTimeout(() => setSuccess(""), 3000);
   }
@@ -490,7 +490,7 @@ export default function ProfilPage() {
                   }`}
                 >
                   <span className={`text-2xl block mb-1 ${isUnlocked ? "" : "grayscale"}`}>{m.icon}</span>
-                  <p className="text-[10px] font-bold leading-tight">{t(`gamification.milestone_${m.key}`, { default: m.title })}</p>
+                  <p className="text-[10px] font-bold leading-tight">{m.title}</p>
                   {isUnlocked ? (
                     <p className="text-[9px] text-accent mt-1">✓ +{formatFCFA(m.reward_fcfa)}</p>
                   ) : (
@@ -517,7 +517,7 @@ export default function ProfilPage() {
         <div className="flex gap-2">
           <button
             onClick={() => {
-              const code = user?.name?.split(" ")[0]?.toUpperCase() + "-TT";
+              const code = user?.referral_code || (user?.name?.split(" ")[0]?.toUpperCase() + "-TT");
               const text = t("echo.profile.inviteWhatsappText", { code });
               window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
             }}
