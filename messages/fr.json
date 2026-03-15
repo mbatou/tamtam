@@ -541,7 +541,9 @@
       "noCampaigns": "Aucune campagne",
       "histClicks": "Clics",
       "histEarned": "Gagné",
-      "histEchos": "Échos"
+      "histEchos": "Échos",
+      "payoutRequests": "Demandes de retrait",
+      "noPayouts": "Aucune demande de retrait"
     },
     "campaigns": {
       "title": "Modération des campagnes",
@@ -600,7 +602,15 @@
       "commission": "Commission ({percent}%)",
       "echo": "Écho",
       "batteur": "Batteur",
-      "budgetExceeded": "Budget dépasse le solde du batteur ({balance})"
+      "budgetExceeded": "Budget dépasse le solde du batteur ({balance})",
+      "confirmActionTitle": "Confirmer l'action",
+      "confirmApproveTitle": "Approuver ce retrait ?",
+      "confirmRejectTitle": "Rejeter ce retrait ?",
+      "confirmActionDesc": "Cette action est irréversible.",
+      "confirmApproveButton": "Oui, approuver le retrait",
+      "confirmRejectButton": "Oui, rejeter le retrait",
+      "rejectionReason": "Raison du refus",
+      "rejectWarning": "Le montant sera remboursé au solde de l'écho."
     },
     "support": {
       "title": "Support",
