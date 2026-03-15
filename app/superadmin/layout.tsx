@@ -6,8 +6,9 @@ import { useState, useRef, useEffect } from "react";
 import SuperadminSearch from "@/components/SuperadminSearch";
 
 const navItems = [
-  { label: "Roadmap", href: "/superadmin/roadmap", emoji: "🎯" },
+  { label: "Briefing", href: "/superadmin/briefing", emoji: "☀️" },
   { label: "Vue d'ensemble", href: "/superadmin", emoji: "🏠", exact: true },
+  { label: "Roadmap", href: "/superadmin/roadmap", emoji: "🎯" },
   { label: "Anti-Fraude", href: "/superadmin/fraud", emoji: "🛡️" },
   { label: "Modération", href: "/superadmin/campaigns", emoji: "🥁" },
   { label: "Leads", href: "/superadmin/leads", emoji: "📩" },
