@@ -83,24 +83,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Update campaigns joined count, streak, and check milestones (async)
+  // Update campaigns joined count, streak, and check milestones
   const echoId = session.user.id;
-  (async () => {
+  try {
+    const { count } = await supabase
+      .from("tracked_links")
+      .select("id", { count: "exact", head: true })
+      .eq("echo_id", echoId);
+
     await supabase
       .from("users")
-      .update({
-        total_campaigns_joined: (
-          await supabase
-            .from("tracked_links")
-            .select("id", { count: "exact", head: true })
-            .eq("echo_id", echoId)
-        ).count || 0,
-      })
+      .update({ total_campaigns_joined: count || 0 })
       .eq("id", echoId);
 
     await updateStreak(echoId);
     await checkMilestones(echoId);
-  })().catch(console.error);
+  } catch (err) {
+    console.error("Gamification update failed:", err);
+  }
 
   return NextResponse.json(data, { status: 201 });
 }

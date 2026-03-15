@@ -49,6 +49,8 @@ function CampaignModerationPageContent() {
   const searchParams = useSearchParams();
   const highlightId = searchParams.get("id");
 
+  const [notifying, setNotifying] = useState(false);
+
   // Create campaign state
   const [showCreate, setShowCreate] = useState(false);
   const [batteurs, setBatteurs] = useState<Batteur[]>([]);
@@ -118,6 +120,26 @@ function CampaignModerationPageContent() {
     } catch {
       showToast(t("common.networkError"), "error");
     }
+  }
+
+  async function notifyEchos(campaignId: string) {
+    setNotifying(true);
+    try {
+      const res = await fetch("/api/superadmin/campaigns/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaign_id: campaignId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(t("superadmin.campaigns.notifySent", { count: data.sent }), "success");
+      } else {
+        showToast(data.error || t("common.error"), "error");
+      }
+    } catch {
+      showToast(t("common.networkError"), "error");
+    }
+    setNotifying(false);
   }
 
   async function createCampaign() {
@@ -333,7 +355,15 @@ function CampaignModerationPageContent() {
             )}
 
             {selected.status === "active" && (
-              <div className="pt-2 border-t border-white/5">
+              <div className="pt-2 border-t border-white/5 space-y-2">
+                <button
+                  onClick={() => notifyEchos(selected.id)}
+                  disabled={notifying}
+                  className="w-full py-2.5 rounded-xl bg-primary/10 border border-primary/30 text-primary font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/></svg>
+                  {notifying ? t("superadmin.campaigns.notifying") : t("superadmin.campaigns.notifyEchos")}
+                </button>
                 <button
                   onClick={() => moderateCampaign(selected.id, "pause")}
                   className="w-full py-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 font-bold text-sm"
