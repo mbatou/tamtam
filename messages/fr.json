@@ -239,7 +239,15 @@
       "copied": "Lien copie !",
       "shareText": "Clique ici 👉",
       "accepting": "Acceptation...",
-      "acceptRythme": "Accepter le Rythme"
+      "acceptRythme": "Accepter le Rythme",
+      "validClicks": "Clics valides",
+      "fcfaEarned": "FCFA gagné",
+      "rythmesJoined": "Rythmes rejoints",
+      "balanceZeroEarned": "Tu as déjà retiré tes gains. Continue à partager pour gagner plus !",
+      "balanceZeroNew": "Accepte un rythme et partage-le pour commencer à gagner !",
+      "seeRythmes": "Voir les rythmes dispo",
+      "notifHint": "De nouvelles campagnes sont ajoutées régulièrement. Reviens bientôt !",
+      "inviteFriend": "Inviter un ami"
     },
     "earnings": {
       "title": "Mes Gains",
@@ -260,7 +268,13 @@
       "multipleOfFiveHint": "Le montant doit être un multiple de 5 (exigence mobile money)",
       "enterAmount": "Saisis un montant",
       "insufficientBalance": "Le montant dépasse ton solde",
-      "confirmWithdraw": "Retirer via {provider}"
+      "confirmWithdraw": "Retirer via {provider}",
+      "withdrawSent": "Retrait de {amount} envoyé !",
+      "withdrawSentHint": "Tu recevras l'argent sur ton compte mobile money sous peu.",
+      "shareGain": "Partager mon gain",
+      "shareText": "Je viens de gagner {amount} sur Tamtam en partageant des liens sur WhatsApp ! Rejoins-moi 👉 https://tamtam.sn",
+      "potentialHint": "Plus tu partages de rythmes, plus tu gagnes. Les meilleurs Échos gagnent 10 000+ FCFA/mois !",
+      "topEchosEarn": "Les meilleurs Échos gagnent 10 000+ FCFA/mois"
     },
     "profile": {
       "title": "Mon Profil",
@@ -281,7 +295,19 @@
       "termsRequiredDesc": "Merci d'accepter nos conditions d'utilisation pour continuer à utiliser Tamtam.",
       "readTerms": "Lire les conditions",
       "acceptTerms": "J'accepte les Conditions d'utilisation",
-      "termsAccepted": "Conditions d'utilisation acceptées !"
+      "termsAccepted": "Conditions d'utilisation acceptées !",
+      "myBadges": "Mes badges",
+      "remaining": "restant(s)",
+      "days": "jours",
+      "earlyMember": "Membre pionnier",
+      "inviteFriends": "Inviter des amis",
+      "inviteDesc": "Invite tes amis sur Tamtam et gagne 500 FCFA pour chaque ami qui rejoint !",
+      "shareWhatsApp": "Partager sur WhatsApp",
+      "copyLink": "Copier le lien",
+      "friendsInvited": "Amis invités",
+      "bonusEarned": "Bonus gagné",
+      "referralCopied": "Lien de parrainage copié !",
+      "inviteWhatsappText": "Rejoins-moi sur Tamtam et gagne de l'argent en partageant des liens sur WhatsApp ! Utilise mon code {code} 👉 https://tamtam.sn"
     },
     "rythmes": {
       "title": "Rythmes",
@@ -289,7 +315,16 @@
       "accepted": "Accepte",
       "new": "Nouveau",
       "noAvailable": "Aucun rythme disponible",
-      "comeBackSoon": "Reviens bientot, de nouvelles campagnes arrivent !"
+      "comeBackSoon": "Reviens bientot, de nouvelles campagnes arrivent !",
+      "notifHint": "On te notifiera quand de nouvelles campagnes seront disponibles.",
+      "inviteFriend": "Inviter un ami",
+      "seeRanking": "Voir le classement",
+      "seeYourRank": "Voir ta position",
+      "pastRythmes": "Rythmes passés",
+      "youGenerated": "Tu as généré {clicks} clics → {amount}"
+    },
+    "leaderboard": {
+      "clicksToPass": "clics de plus pour passer"
     }
   },
   "admin": {
@@ -945,8 +980,8 @@
     }
   },
   "gamification": {
-    "streakTitle": "Streak: {count} rythmes d'affilée",
-    "nextBonus": "Prochain bonus: {count} rythmes → +{amount} FCFA",
+    "streakTitle": "Streak: {count} rythme(s) d'affilée",
+    "nextBonus": "Prochain bonus: {count} rythmes → +{amount}",
     "startStreak": "Accepte un rythme pour démarrer ta série !",
     "startStreakHint": "Partage des rythmes chaque jour pour construire ta série et gagner des bonus.",
     "almost": "Presque !",
@@ -1013,7 +1048,13 @@
     "roiTitle": "ROI Gamification",
     "bonusesPaid": "Bonus payés",
     "engagedEchos": "Échos engagés",
-    "costPerEngaged": "Coût par écho engagé"
+    "costPerEngaged": "Coût par écho engagé",
+    "streakFrozen": "Ta série est protégée ! ❄️",
+    "streakFrozenHint": "Pas de campagne dispo pour le moment. Ta série ne sera pas cassée.",
+    "streakKeepGoing": "Continue ! Partage des rythmes chaque jour pour atteindre le prochain bonus.",
+    "maxStreak": "Série maximale atteinte ! Tu es en feu ! 🔥",
+    "tierRemaining": "{count} clics restants",
+    "tierHint": "Chaque clic valide te rapproche du palier suivant et de bonus plus élevés !"
   },
   "footer": {
     "echos": "Échos",

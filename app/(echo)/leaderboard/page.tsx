@@ -98,6 +98,15 @@ export default function LeaderboardPage() {
     return `${parts[0]} ${parts[parts.length - 1].charAt(0).toUpperCase()}.`;
   };
 
+  // Find user above current user for proximity display
+  const currentUserIndex = entries.findIndex((e) => e.user_id === currentUserId);
+  const userAbove = currentUserIndex > 0 ? entries[currentUserIndex - 1] : null;
+  const clicksToNextRank = userAbove && currentUserIndex >= 0
+    ? userAbove.resonances - entries[currentUserIndex].resonances
+    : 0;
+  const currentUserEntry = currentUserIndex >= 0 ? entries[currentUserIndex] : null;
+  const isInVisibleList = currentUserIndex >= 0 && currentUserIndex < entries.length;
+
   if (loading) {
     return (
       <div className="px-4 py-5 max-w-lg mx-auto space-y-3">
@@ -110,22 +119,22 @@ export default function LeaderboardPage() {
   }
 
   return (
-    <div className="px-4 py-5 max-w-lg mx-auto">
+    <div className="px-4 py-5 max-w-lg mx-auto pb-24">
       {/* Page title */}
       <h1 className="text-xl font-bold mb-4">{t("gamification.leaderboard")}</h1>
 
       {/* Rank banner */}
       {currentRank > 0 && (
         <div className="glass-card p-4 mb-4 border border-primary/20">
-          <p className="text-center text-lg font-black mb-2">
+          <p className="text-center text-lg font-black mb-1">
             #{currentRank}
           </p>
-          <p className="text-center text-sm text-white/60">
-            {t("gamification.yourRankPeriod", {
-              rank: currentRank,
-              period: t(`gamification.${period === "week" ? "thisWeek" : period === "month" ? "thisMonth" : "allTime"}`).toLowerCase(),
-            })}
-          </p>
+          {/* Proximity to next rank */}
+          {clicksToNextRank > 0 && userAbove && (
+            <p className="text-center text-xs text-white/40">
+              ↑ {clicksToNextRank} {t("echo.leaderboard.clicksToPass")} #{currentRank - 1} ({formatName(userAbove.name)})
+            </p>
+          )}
           {/* All period ranks */}
           {ranks && (
             <div className="grid grid-cols-3 gap-2 mt-3">
@@ -180,7 +189,7 @@ export default function LeaderboardPage() {
         {/* Rows */}
         {entries.length === 0 ? (
           <div className="p-8 text-center">
-            <p className="text-sm text-white/30">{t("gamification.leaderboard")}</p>
+            <p className="text-sm text-white/30">{t("gamification.noRanking")}</p>
           </div>
         ) : (
           entries.map((entry, idx) => {
@@ -222,6 +231,29 @@ export default function LeaderboardPage() {
           })
         )}
       </div>
+
+      {/* Sticky own position — shown when user is in list but scrolled past */}
+      {isInVisibleList && currentUserEntry && (
+        <div className="fixed bottom-16 left-0 right-0 px-4 z-30 pointer-events-none">
+          <div className="max-w-lg mx-auto pointer-events-auto">
+            <div className="glass-card p-3 border border-primary/30 flex items-center justify-between rounded-xl shadow-lg backdrop-blur-xl">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-black text-primary">#{currentUserIndex + 1}</span>
+                <span className="text-xs font-semibold">{formatName(currentUserEntry.name)}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-white/40">{currentUserEntry.rythmes_joined} {t("gamification.rythmes").toLowerCase()}</span>
+                <span className="text-xs font-bold text-accent">{currentUserEntry.resonances}</span>
+              </div>
+              {clicksToNextRank > 0 && (
+                <span className="text-[10px] text-white/30 ml-2">
+                  ↑{clicksToNextRank}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

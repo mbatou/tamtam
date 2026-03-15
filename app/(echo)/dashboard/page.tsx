@@ -130,6 +130,9 @@ export default function EchoDashboard() {
   const totalEarnings = activeLinks.reduce(
     (sum, l) => sum + Math.floor(l.click_count * (l.campaigns?.cpc || 0) * 0.75), 0
   );
+  const hasActiveCampaigns = availableCampaigns.length > 0 || activeLinks.some((l) => l.campaigns?.status === "active");
+  const balance = user?.balance || 0;
+  const totalEarned = user?.total_earned || 0;
 
   return (
     <div className="px-4 py-5 max-w-lg mx-auto">
@@ -165,29 +168,53 @@ export default function EchoDashboard() {
         </div>
       </div>
 
-      {/* Earnings card — compact */}
+      {/* Earnings card — with contextual CTAs */}
       <div className="earnings-card-bg rounded-2xl p-5 mb-5 border border-primary/20">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[10px] text-white/40 font-semibold uppercase tracking-wider mb-0.5">{t("echo.dashboard.availableBalance")}</p>
-            <p className="text-3xl font-black tracking-tight">{formatFCFA(user?.balance || 0)}</p>
+            <p className="text-3xl font-black tracking-tight">{formatFCFA(balance)}</p>
             <p className="text-[10px] text-white/30 mt-1">
-              {t("echo.dashboard.totalEarned")} {formatFCFA(user?.total_earned || 0)}
+              {t("echo.dashboard.totalEarned")} {formatFCFA(totalEarned)}
             </p>
           </div>
-          <button
-            onClick={() => window.location.href = "/earnings"}
-            className="btn-primary text-xs !py-2.5 !px-4 shrink-0"
-          >
-            {t("echo.dashboard.withdraw")}
-          </button>
+          {balance > 0 && (
+            <button
+              onClick={() => window.location.href = "/earnings"}
+              className="btn-primary text-xs !py-2.5 !px-4 shrink-0"
+            >
+              {t("echo.dashboard.withdraw")}
+            </button>
+          )}
         </div>
+
+        {/* Contextual message */}
+        {balance === 0 && totalEarned > 0 && (
+          <p className="text-xs text-white/40 mt-3 flex items-center gap-1.5">
+            <span>💡</span>
+            {t("echo.dashboard.balanceZeroEarned")}
+          </p>
+        )}
+        {balance === 0 && totalEarned === 0 && (
+          <div className="mt-3">
+            <p className="text-xs text-white/40 flex items-center gap-1.5">
+              <span>🎯</span>
+              {t("echo.dashboard.balanceZeroNew")}
+            </p>
+            <button
+              onClick={() => setTab("discover")}
+              className="text-xs text-primary font-bold mt-2"
+            >
+              {t("echo.dashboard.seeRythmes")} →
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Streak display */}
       {gamification && (
         <div className="mb-5">
-          <StreakDisplay streak={gamification.streak} />
+          <StreakDisplay streak={gamification.streak} hasActiveCampaigns={hasActiveCampaigns} />
         </div>
       )}
 
@@ -202,22 +229,22 @@ export default function EchoDashboard() {
         </div>
       )}
 
-      {/* Stats row */}
+      {/* Stats row — renamed labels */}
       <div className="grid grid-cols-3 gap-2 mb-5">
         <div className="glass-card p-3 text-center">
           <div className="flex items-center justify-center gap-1 mb-0.5">
             <span className="live-dot !w-[6px] !h-[6px]" />
           </div>
           <span className="text-lg font-black block">{totalClicks}</span>
-          <span className="text-[9px] text-white/40 font-semibold">{t("echo.dashboard.resonances")}</span>
+          <span className="text-[9px] text-white/40 font-semibold">{t("echo.dashboard.validClicks")}</span>
         </div>
         <div className="glass-card p-3 text-center">
           <span className="text-lg font-black block text-accent">{formatFCFA(totalEarnings)}</span>
-          <span className="text-[9px] text-white/40 font-semibold">{t("echo.dashboard.generated")}</span>
+          <span className="text-[9px] text-white/40 font-semibold">{t("echo.dashboard.fcfaEarned")}</span>
         </div>
         <div className="glass-card p-3 text-center">
-          <span className="text-lg font-black block">{activeLinks.filter((l) => l.campaigns?.status === "active").length}</span>
-          <span className="text-[9px] text-white/40 font-semibold">{t("echo.dashboard.rythmes")}</span>
+          <span className="text-lg font-black block">{activeLinks.length}</span>
+          <span className="text-[9px] text-white/40 font-semibold">{t("echo.dashboard.rythmesJoined")}</span>
         </div>
       </div>
 
@@ -323,10 +350,24 @@ export default function EchoDashboard() {
       ) : (
         <div className="space-y-3">
           {availableCampaigns.length === 0 ? (
-            <div className="glass-card p-8 text-center">
-              <div className="text-3xl mb-2">🎵</div>
-              <p className="text-sm font-semibold mb-1">{t("echo.dashboard.noAvailable")}</p>
-              <p className="text-xs text-white/30">{t("echo.dashboard.comeBackSoon")}</p>
+            <div className="glass-card p-6 text-center space-y-4">
+              <div className="text-3xl mb-1">🔔</div>
+              <p className="text-sm font-semibold">{t("echo.dashboard.noAvailable")}</p>
+              <p className="text-xs text-white/30">{t("echo.dashboard.notifHint")}</p>
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <button
+                  onClick={() => window.location.href = "/profil"}
+                  className="py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold"
+                >
+                  🤝 {t("echo.dashboard.inviteFriend")}
+                </button>
+                <button
+                  onClick={() => window.location.href = "/leaderboard"}
+                  className="py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold"
+                >
+                  🏆 {t("gamification.leaderboard")}
+                </button>
+              </div>
             </div>
           ) : (
             availableCampaigns.map((campaign) => (
