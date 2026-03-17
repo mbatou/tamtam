@@ -18,6 +18,8 @@ export interface User {
   referred_by?: string | null;
   referral_count?: number;
   referral_code?: string | null;
+  team_position?: string | null;
+  team_permissions?: string[] | null;
   terms_accepted_at?: string | null;
   created_at: string;
 }

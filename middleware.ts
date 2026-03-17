@@ -68,6 +68,29 @@ export async function middleware(request: NextRequest) {
     return data?.role || null;
   }
 
+  // Helper to get user role + team permissions
+  async function getUserWithTeam(userId: string) {
+    const { data } = await supabaseAdmin
+      .from("users")
+      .select("role, team_position, team_permissions")
+      .eq("id", userId)
+      .single();
+    return data || null;
+  }
+
+  // Map superadmin URL paths to permission keys
+  function getPageKey(path: string): string | null {
+    if (path === "/superadmin" || path === "/superadmin/") return "overview";
+    const segment = path.replace("/superadmin/", "").split("/")[0];
+    const mapping: Record<string, string> = {
+      briefing: "briefing", fraud: "fraud", campaigns: "campaigns",
+      leads: "leads", finance: "finance", users: "users",
+      gamification: "gamification", health: "health", support: "support",
+      roadmap: "roadmap", analytics: "overview",
+    };
+    return mapping[segment] || null;
+  }
+
   // Protect echo routes
   if (pathname.startsWith("/dashboard") || pathname.startsWith("/rythmes") || pathname.startsWith("/earnings") || pathname.startsWith("/profil")) {
     if (!user) {
@@ -90,13 +113,31 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Protect superadmin routes
+  // Protect superadmin routes (pages)
   if (pathname.startsWith("/superadmin")) {
     if (!user) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
-    const role = await getUserRole(user.id);
-    if (role !== "superadmin") {
+    const userData = await getUserWithTeam(user.id);
+    if (!userData) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+
+    if (userData.role === "superadmin") {
+      // Full access
+    } else if (userData.role === "admin" && userData.team_position) {
+      // Team members: check if they have access to this page
+      // Always allow /superadmin/team page — no, only superadmins can manage team
+      // Settings and team pages are superadmin-only
+      if (pathname.startsWith("/superadmin/settings") || pathname.startsWith("/superadmin/team")) {
+        return NextResponse.redirect(new URL("/superadmin", request.url));
+      }
+      const pageKey = getPageKey(pathname);
+      const permissions = (userData.team_permissions as string[]) || [];
+      if (pageKey && !permissions.includes(pageKey)) {
+        return NextResponse.redirect(new URL("/superadmin", request.url));
+      }
+    } else {
       return NextResponse.redirect(new URL("/login", request.url));
     }
   }
@@ -109,12 +150,21 @@ export async function middleware(request: NextRequest) {
         { status: 401 }
       );
     }
-    const role = await getUserRole(user.id);
-    if (role !== "superadmin") {
-      return NextResponse.json(
-        { error: "Forbidden" },
-        { status: 403 }
-      );
+    const userData = await getUserWithTeam(user.id);
+    if (!userData) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    if (userData.role === "superadmin") {
+      // Full access to all APIs
+    } else if (userData.role === "admin" && userData.team_position) {
+      // Team members can access APIs matching their permissions
+      // But team management API is superadmin-only
+      if (pathname.startsWith("/api/superadmin/team") || pathname.startsWith("/api/superadmin/settings")) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    } else {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // Rate limiting for superadmin API routes
