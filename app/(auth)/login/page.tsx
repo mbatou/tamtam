@@ -52,7 +52,29 @@ function LoginContent() {
       return;
     }
 
-    window.location.href = mode === "echo" ? "/dashboard" : "/admin/dashboard";
+    // Fetch user role to determine correct redirect
+    try {
+      const userRes = await fetch("/api/echo/user");
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        if (userData.role === "superadmin") {
+          window.location.href = "/superadmin";
+          return;
+        }
+        if (userData.role === "admin" && userData.team_position) {
+          window.location.href = "/superadmin";
+          return;
+        }
+        if (userData.role === "batteur" || userData.role === "admin") {
+          window.location.href = "/admin/dashboard";
+          return;
+        }
+      }
+    } catch {
+      // Fall through to default redirect
+    }
+
+    window.location.href = "/dashboard";
   }
 
   async function handleLeadSubmit() {
