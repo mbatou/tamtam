@@ -95,71 +95,172 @@ export default function AdminDashboard() {
 
   // ── Onboarding overlay ──
   if (showOnboarding) {
+    const tourSteps = [
+      {
+        emoji: "🥁",
+        title: t("admin.onboarding.welcome"),
+        desc: t("admin.onboarding.howItWorks"),
+        content: (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+            {[t("admin.onboarding.step1"), t("admin.onboarding.step2"), t("admin.onboarding.step3"), t("admin.onboarding.step4")].map((step, i) => (
+              <div key={i} className="p-4 rounded-xl bg-white/[0.03] border border-white/10">
+                <span className="text-lg font-bold text-primary">{i + 1}.</span>
+                <p className="text-sm font-semibold mt-1">{step}</p>
+              </div>
+            ))}
+          </div>
+        ),
+      },
+      {
+        emoji: "📊",
+        title: t("admin.onboarding.tourDashboard"),
+        desc: t("admin.onboarding.tourDashboardDesc"),
+        highlight: "/admin/dashboard",
+      },
+      {
+        emoji: "🎯",
+        title: t("admin.onboarding.tourCampaigns"),
+        desc: t("admin.onboarding.tourCampaignsDesc"),
+        highlight: "/admin/campaigns",
+      },
+      {
+        emoji: "💰",
+        title: t("admin.onboarding.tourWallet"),
+        desc: t("admin.onboarding.tourWalletDesc"),
+        highlight: "/admin/wallet",
+        content: (
+          <div className="flex flex-wrap gap-3 justify-center">
+            {[10000, 25000, 50000].map(amount => (
+              <a
+                key={amount}
+                href="/admin/wallet"
+                className="px-5 py-3 rounded-xl border border-white/10 text-sm font-semibold hover:border-primary/30 hover:bg-primary/5 transition"
+              >
+                {formatFCFA(amount)}
+              </a>
+            ))}
+          </div>
+        ),
+      },
+      {
+        emoji: "📈",
+        title: t("admin.onboarding.tourAnalytics"),
+        desc: t("admin.onboarding.tourAnalyticsDesc"),
+        highlight: "/admin/analytics",
+      },
+      {
+        emoji: "👥",
+        title: t("admin.onboarding.tourEchos"),
+        desc: t("admin.onboarding.tourEchosDesc"),
+        highlight: "/admin/echos",
+      },
+      {
+        emoji: "💬",
+        title: t("admin.onboarding.tourSupport"),
+        desc: t("admin.onboarding.tourSupportDesc"),
+        highlight: "/admin/support",
+      },
+      {
+        emoji: "🚀",
+        title: t("admin.onboarding.tourReady"),
+        desc: t("admin.onboarding.tourReadyDesc"),
+        content: (
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <a href="/admin/wallet" className="btn-primary px-6 py-3 text-sm text-center">
+              {t("admin.onboarding.addFunds")}
+            </a>
+            <a href="/admin/campaigns" className="btn-outline px-6 py-3 text-sm text-center">
+              {t("admin.onboarding.createCampaign")}
+            </a>
+          </div>
+        ),
+      },
+    ];
+
+    const step = tourSteps[onboardingStep - 1];
+    const totalSteps = tourSteps.length;
+
     return (
       <div className="p-6 max-w-2xl mx-auto">
         <div className="glass-card p-8 text-center">
-          {onboardingStep === 1 && (
-            <div className="space-y-6">
-              <div className="w-20 h-20 rounded-full bg-gradient-primary flex items-center justify-center mx-auto text-3xl">🥁</div>
-              <h1 className="text-2xl font-bold">{t("admin.onboarding.welcome")}</h1>
-              <p className="text-white/60 max-w-md mx-auto">{t("admin.onboarding.howItWorks")}</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
-                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10">
-                  <span className="text-lg">1.</span>
-                  <p className="text-sm font-semibold mt-1">{t("admin.onboarding.step1")}</p>
-                </div>
-                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10">
-                  <span className="text-lg">2.</span>
-                  <p className="text-sm font-semibold mt-1">{t("admin.onboarding.step2")}</p>
-                </div>
-                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10">
-                  <span className="text-lg">3.</span>
-                  <p className="text-sm font-semibold mt-1">{t("admin.onboarding.step3")}</p>
-                </div>
-                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10">
-                  <span className="text-lg">4.</span>
-                  <p className="text-sm font-semibold mt-1">{t("admin.onboarding.step4")}</p>
-                </div>
-              </div>
-              <button onClick={() => setOnboardingStep(2)} className="btn-primary">{t("admin.onboarding.next")}</button>
-            </div>
+          {/* Step indicator */}
+          <div className="flex items-center justify-between mb-6">
+            <span className="text-[10px] font-bold text-white/20 uppercase tracking-wider">
+              {onboardingStep}/{totalSteps}
+            </span>
+            <button
+              onClick={() => setShowOnboarding(false)}
+              className="text-xs text-white/30 hover:text-white/50 transition"
+            >
+              {t("admin.onboarding.skipTour")}
+            </button>
+          </div>
+
+          {/* Icon */}
+          <div className="w-16 h-16 rounded-2xl bg-gradient-primary flex items-center justify-center mx-auto mb-5 text-2xl">
+            {step.emoji}
+          </div>
+
+          {/* Title and description */}
+          <h2 className="text-xl font-bold mb-2">{step.title}</h2>
+          <p className="text-sm text-white/50 max-w-md mx-auto mb-6 leading-relaxed">{step.desc}</p>
+
+          {/* Highlighted page link */}
+          {step.highlight && (
+            <a
+              href={step.highlight}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 border border-primary/20 text-sm font-semibold text-primary hover:bg-primary/20 transition mb-6"
+            >
+              <span>Ouvrir</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+            </a>
           )}
 
-          {onboardingStep === 2 && (
-            <div className="space-y-6">
-              <h2 className="text-xl font-bold">{t("admin.onboarding.addFunds")}</h2>
-              <p className="text-white/60">{t("admin.onboarding.addFundsDesc")}</p>
-              <div className="flex flex-wrap gap-3 justify-center">
-                {[10000, 25000, 50000].map(amount => (
-                  <a
-                    key={amount}
-                    href="/admin/wallet"
-                    className="px-5 py-3 rounded-xl border border-white/10 text-sm font-semibold hover:border-primary/30 hover:bg-primary/5 transition"
-                  >
-                    {formatFCFA(amount)}
-                  </a>
-                ))}
-              </div>
-              <div className="flex gap-3 justify-center">
-                <button onClick={() => setOnboardingStep(3)} className="text-sm text-white/40 hover:text-white/60">{t("admin.onboarding.skip")}</button>
-              </div>
-            </div>
-          )}
+          {/* Custom content */}
+          {step.content && <div className="mb-6">{step.content}</div>}
 
-          {onboardingStep === 3 && (
-            <div className="space-y-6">
-              <h2 className="text-xl font-bold">{t("admin.onboarding.launchFirst")}</h2>
-              <a href="/admin/campaigns" className="btn-primary inline-block">{t("admin.onboarding.createCampaign")}</a>
-              <div>
-                <button onClick={() => setShowOnboarding(false)} className="text-sm text-white/40 hover:text-white/60">{t("admin.onboarding.exploreDashboard")}</button>
-              </div>
-            </div>
-          )}
+          {/* Navigation */}
+          <div className="flex items-center justify-between mt-6 pt-6 border-t border-white/5">
+            <button
+              onClick={() => setOnboardingStep(Math.max(1, onboardingStep - 1))}
+              className={`text-sm font-semibold transition ${onboardingStep === 1 ? "text-white/10 cursor-default" : "text-white/40 hover:text-white/60"}`}
+              disabled={onboardingStep === 1}
+            >
+              ← {t("admin.onboarding.prev")}
+            </button>
 
-          <div className="flex justify-center gap-2 mt-6">
-            {[1, 2, 3].map(s => (
-              <div key={s} className={`w-2 h-2 rounded-full ${s === onboardingStep ? "bg-primary" : "bg-white/10"}`} />
-            ))}
+            {/* Progress dots */}
+            <div className="flex gap-1.5">
+              {tourSteps.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setOnboardingStep(i + 1)}
+                  className={`h-1.5 rounded-full transition-all ${
+                    i + 1 === onboardingStep ? "w-6 bg-primary" : "w-1.5 bg-white/10 hover:bg-white/20"
+                  }`}
+                />
+              ))}
+            </div>
+
+            {onboardingStep < totalSteps ? (
+              <button
+                onClick={() => setOnboardingStep(onboardingStep + 1)}
+                className="text-sm font-semibold text-primary hover:text-primary-light transition"
+              >
+                {t("admin.onboarding.next")}
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowOnboarding(false)}
+                className="text-sm font-bold text-accent hover:text-accent/80 transition"
+              >
+                {t("admin.onboarding.letsGo")}
+              </button>
+            )}
           </div>
         </div>
       </div>
