@@ -86,7 +86,7 @@ export async function middleware(request: NextRequest) {
       briefing: "briefing", fraud: "fraud", campaigns: "campaigns",
       leads: "leads", finance: "finance", users: "users",
       gamification: "gamification", health: "health", support: "support",
-      roadmap: "roadmap", analytics: "overview",
+      roadmap: "roadmap", analytics: "overview", crm: "crm",
     };
     return mapping[segment] || null;
   }
