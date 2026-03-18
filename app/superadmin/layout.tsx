@@ -24,6 +24,7 @@ const allNavItems = [
   { label: "Gamification", href: "/superadmin/gamification", emoji: "🎮", permKey: "gamification" },
   { label: "Santé", href: "/superadmin/health", emoji: "🩺", permKey: "health" },
   { label: "Support", href: "/superadmin/support", emoji: "💬", permKey: "support" },
+  { label: "CRM", href: "/superadmin/crm", emoji: "📇", permKey: "crm" },
   { label: "Équipe", href: "/superadmin/team", emoji: "👤", superadminOnly: true },
   { label: "Paramètres", href: "/superadmin/settings", emoji: "⚙️", superadminOnly: true },
 ];
