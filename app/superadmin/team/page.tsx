@@ -36,11 +36,12 @@ const ALL_PAGES = [
   { key: "gamification", label: "Gamification", emoji: "🎮" },
   { key: "health", label: "Santé", emoji: "🩺" },
   { key: "support", label: "Support", emoji: "💬" },
+  { key: "crm", label: "CRM", emoji: "📇" },
 ];
 
 const POSITION_DEFAULTS: Record<string, string[]> = {
-  coo: ["briefing", "overview", "roadmap", "fraud", "campaigns", "leads", "finance", "users", "gamification", "health", "support"],
-  customer_success: ["briefing", "overview", "users", "support", "leads"],
+  coo: ["briefing", "overview", "roadmap", "fraud", "campaigns", "leads", "finance", "users", "gamification", "health", "support", "crm"],
+  customer_success: ["briefing", "overview", "users", "support", "leads", "crm"],
   campaign_manager: ["briefing", "overview", "campaigns", "leads", "users"],
   finance_manager: ["briefing", "overview", "finance", "users"],
   community_manager: ["briefing", "overview", "users", "support", "gamification"],

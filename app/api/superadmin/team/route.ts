@@ -7,9 +7,9 @@ export const dynamic = "force-dynamic";
 const POSITION_DEFAULTS: Record<string, string[]> = {
   coo: [
     "briefing", "overview", "roadmap", "fraud", "campaigns",
-    "leads", "finance", "users", "gamification", "health", "support",
+    "leads", "finance", "users", "gamification", "health", "support", "crm",
   ],
-  customer_success: ["briefing", "overview", "users", "support", "leads"],
+  customer_success: ["briefing", "overview", "users", "support", "leads", "crm"],
   campaign_manager: ["briefing", "overview", "campaigns", "leads", "users"],
   finance_manager: ["briefing", "overview", "finance", "users"],
   community_manager: ["briefing", "overview", "users", "support", "gamification"],

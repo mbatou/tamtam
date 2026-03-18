@@ -20,6 +20,8 @@ export interface User {
   referral_code?: string | null;
   team_position?: string | null;
   team_permissions?: string[] | null;
+  crm_stage?: "onboarding" | "active" | "at_risk" | "churned";
+  crm_tags?: string[];
   terms_accepted_at?: string | null;
   created_at: string;
 }
