@@ -12,19 +12,20 @@ interface PendingCounts {
   highFraud: boolean;
 }
 
-const navItems = [
-  { label: "Briefing", href: "/superadmin/briefing", emoji: "☀️" },
-  { label: "Vue d'ensemble", href: "/superadmin", emoji: "🏠", exact: true },
-  { label: "Roadmap", href: "/superadmin/roadmap", emoji: "🎯" },
-  { label: "Anti-Fraude", href: "/superadmin/fraud", emoji: "🛡️", badgeKey: "fraud" as const },
-  { label: "Modération", href: "/superadmin/campaigns", emoji: "🥁", badgeKey: "campaigns" as const },
-  { label: "Leads", href: "/superadmin/leads", emoji: "📩", badgeKey: "leads" as const },
-  { label: "Finances", href: "/superadmin/finance", emoji: "💰", badgeKey: "payouts" as const },
-  { label: "Utilisateurs", href: "/superadmin/users", emoji: "👥" },
-  { label: "Gamification", href: "/superadmin/gamification", emoji: "🎮" },
-  { label: "Santé", href: "/superadmin/health", emoji: "🩺" },
-  { label: "Support", href: "/superadmin/support", emoji: "💬" },
-  { label: "Paramètres", href: "/superadmin/settings", emoji: "⚙️" },
+const allNavItems = [
+  { label: "Briefing", href: "/superadmin/briefing", emoji: "☀️", permKey: "briefing" },
+  { label: "Vue d'ensemble", href: "/superadmin", emoji: "🏠", exact: true, permKey: "overview" },
+  { label: "Roadmap", href: "/superadmin/roadmap", emoji: "🎯", permKey: "roadmap" },
+  { label: "Anti-Fraude", href: "/superadmin/fraud", emoji: "🛡️", badgeKey: "fraud" as const, permKey: "fraud" },
+  { label: "Modération", href: "/superadmin/campaigns", emoji: "🥁", badgeKey: "campaigns" as const, permKey: "campaigns" },
+  { label: "Leads", href: "/superadmin/leads", emoji: "📩", badgeKey: "leads" as const, permKey: "leads" },
+  { label: "Finances", href: "/superadmin/finance", emoji: "💰", badgeKey: "payouts" as const, permKey: "finance" },
+  { label: "Utilisateurs", href: "/superadmin/users", emoji: "👥", permKey: "users" },
+  { label: "Gamification", href: "/superadmin/gamification", emoji: "🎮", permKey: "gamification" },
+  { label: "Santé", href: "/superadmin/health", emoji: "🩺", permKey: "health" },
+  { label: "Support", href: "/superadmin/support", emoji: "💬", permKey: "support" },
+  { label: "Équipe", href: "/superadmin/team", emoji: "👤", superadminOnly: true },
+  { label: "Paramètres", href: "/superadmin/settings", emoji: "⚙️", superadminOnly: true },
 ];
 
 function getBadgeCount(counts: PendingCounts | null, key?: string): number {
@@ -38,10 +39,18 @@ function getBadgeCount(counts: PendingCounts | null, key?: string): number {
   }
 }
 
+interface UserContext {
+  role: string;
+  team_position: string | null;
+  team_permissions: string[] | null;
+  name: string;
+}
+
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [counts, setCounts] = useState<PendingCounts | null>(null);
+  const [userCtx, setUserCtx] = useState<UserContext | null>(null);
 
   const fetchCounts = useCallback(() => {
     fetch("/api/superadmin/pending-counts")
@@ -54,7 +63,30 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     fetchCounts();
     const interval = setInterval(fetchCounts, 60000);
     return () => clearInterval(interval);
+
   }, [fetchCounts]);
+
+  // Fetch current user context for permission filtering
+  useEffect(() => {
+    fetch("/api/echo/user")
+      .then((r) => r.ok ? r.json() : null)
+      .then((u) => {
+        if (u) setUserCtx({ role: u.role, team_position: u.team_position, team_permissions: u.team_permissions, name: u.name });
+      })
+      .catch(() => {});
+  }, []);
+
+  const isSuperadmin = !userCtx || userCtx.role === "superadmin";
+  const navItems = allNavItems.filter((item) => {
+    if (isSuperadmin) return true;
+    if ((item as { superadminOnly?: boolean }).superadminOnly) return false;
+    if (!userCtx?.team_permissions) return false;
+    return userCtx.team_permissions.includes((item as { permKey?: string }).permKey || "");
+  });
+
+  const positionBadge = userCtx?.team_position
+    ? (userCtx.team_position === "coo" ? "COO" : userCtx.team_position.replace(/_/g, " ").split(" ").map(w => w[0]?.toUpperCase()).join(""))
+    : "SA";
 
   const today = new Date().toLocaleDateString("fr-FR", {
     weekday: "long",
@@ -77,8 +109,8 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
               {collapsed ? "T" : "Tamtam"}
             </span>
             {!collapsed && (
-              <span className="text-[9px] font-bold bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full">
-                SUPER
+              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${isSuperadmin ? "bg-red-500/20 text-red-400" : "bg-primary/20 text-primary"}`}>
+                {isSuperadmin ? "SUPER" : positionBadge}
               </span>
             )}
           </Link>
@@ -144,8 +176,8 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
           <div className="flex items-center gap-3 shrink-0">
             <QuickActions counts={counts} />
             <DashboardSwitcher />
-            <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-xs font-bold text-white">
-              SA
+            <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-[10px] font-bold text-white" title={userCtx?.name || "SuperAdmin"}>
+              {positionBadge}
             </div>
           </div>
         </header>
