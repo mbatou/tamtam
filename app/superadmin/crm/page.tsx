@@ -12,6 +12,7 @@ const PAGE_SIZE = 30;
 type ViewTab = "all" | "leads" | "brands" | "followups";
 type ContactType = "lead" | "brand";
 type Stage = "onboarding" | "active" | "at_risk" | "churned";
+type LeadStatus = "new" | "contacted" | "converted" | "rejected";
 
 interface Contact {
   id: string;
@@ -65,6 +66,13 @@ const STAGES: { key: Stage; label: string; color: string }[] = [
   { key: "churned", label: "Churned", color: "bg-red-400/20 text-red-400 border-red-400/30" },
 ];
 
+const LEAD_STATUSES: { key: LeadStatus; label: string; color: string }[] = [
+  { key: "new", label: "Nouveau", color: "bg-orange-400/20 text-orange-400 border-orange-400/30" },
+  { key: "contacted", label: "Contacté", color: "bg-blue-400/20 text-blue-400 border-blue-400/30" },
+  { key: "converted", label: "Converti", color: "bg-emerald-400/20 text-emerald-400 border-emerald-400/30" },
+  { key: "rejected", label: "Rejeté", color: "bg-red-400/20 text-red-400 border-red-400/30" },
+];
+
 const NOTE_TYPES = [
   { key: "note", label: "Note", emoji: "📝" },
   { key: "call", label: "Appel", emoji: "📞" },
@@ -106,6 +114,12 @@ export default function CRMPage() {
   // Tag input
   const [newTag, setNewTag] = useState("");
 
+  // Lead conversion
+  const [converting, setConverting] = useState(false);
+  const [emailConflict, setEmailConflict] = useState<{ existing_role?: string; can_promote?: boolean } | null>(null);
+  const [alternativeEmail, setAlternativeEmail] = useState("");
+  const [conversionResult, setConversionResult] = useState<{ email: string } | null>(null);
+
   const fetchContacts = useCallback(() => {
     setLoading(true);
     fetch(`/api/superadmin/crm?view=${tab === "followups" ? "followups" : tab}`)
@@ -126,6 +140,9 @@ export default function CRMPage() {
 
   async function openContact(id: string, type: ContactType) {
     setDetailLoading(true);
+    setEmailConflict(null);
+    setAlternativeEmail("");
+    setConversionResult(null);
     try {
       const res = await fetch(`/api/superadmin/crm?id=${id}&type=${type}`);
       const data = await res.json();
@@ -253,6 +270,64 @@ export default function CRMPage() {
     updateTags(currentTags.filter(t => t !== tag));
   }
 
+  async function updateLeadStatus(status: LeadStatus) {
+    if (!selectedContact || selectedContact.contact.type !== "lead") return;
+    try {
+      const res = await fetch("/api/superadmin/crm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "update_lead_status", lead_id: selectedContact.contact.id, status }),
+      });
+      if (res.ok) {
+        showToast("Statut mis à jour", "success");
+        setSelectedContact(prev => prev ? { ...prev, contact: { ...prev.contact, stage: status, status } } : null);
+        fetchContacts();
+      } else {
+        const d = await res.json();
+        showToast(d.error || "Erreur", "error");
+      }
+    } catch {
+      showToast("Erreur réseau", "error");
+    }
+  }
+
+  async function convertLead(opts?: { overrideEmail?: string; promoteEcho?: boolean }) {
+    if (!selectedContact || selectedContact.contact.type !== "lead") return;
+    if (!opts && !confirm("Créer un compte Batteur pour ce lead ?")) return;
+    setConverting(true);
+    setEmailConflict(null);
+
+    const payload: Record<string, unknown> = {
+      action: "convert_lead",
+      lead_id: selectedContact.contact.id,
+    };
+    if (opts?.overrideEmail) payload.email = opts.overrideEmail;
+    if (opts?.promoteEcho) payload.promote_echo = true;
+
+    try {
+      const res = await fetch("/api/superadmin/crm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setConversionResult({ email: data.email_used });
+        setAlternativeEmail("");
+        showToast("Lead converti avec succès !", "success");
+        openContact(selectedContact.contact.id as string, selectedContact.contact.type);
+        fetchContacts();
+      } else if (res.status === 409 && data.email_conflict) {
+        setEmailConflict({ existing_role: data.existing_role, can_promote: data.can_promote });
+      } else {
+        showToast(data.error || "Erreur", "error");
+      }
+    } catch {
+      showToast("Erreur réseau", "error");
+    }
+    setConverting(false);
+  }
+
   // Filter contacts
   const filtered = contacts.filter(c => {
     if (search) {
@@ -336,6 +411,8 @@ export default function CRMPage() {
               ))}
               <option value="new">Nouveau (Lead)</option>
               <option value="contacted">Contacté (Lead)</option>
+              <option value="converted">Converti (Lead)</option>
+              <option value="rejected">Rejeté (Lead)</option>
             </select>
           </div>
         )}
@@ -432,6 +509,13 @@ export default function CRMPage() {
           <ContactDetailView
             detail={selectedContact}
             onUpdateStage={updateStage}
+            onUpdateLeadStatus={updateLeadStatus}
+            onConvertLead={convertLead}
+            converting={converting}
+            emailConflict={emailConflict}
+            alternativeEmail={alternativeEmail}
+            setAlternativeEmail={setAlternativeEmail}
+            conversionResult={conversionResult}
             onAddNote={addNote}
             onDeleteNote={deleteNote}
             noteContent={noteContent}
@@ -463,6 +547,13 @@ export default function CRMPage() {
 function ContactDetailView({
   detail,
   onUpdateStage,
+  onUpdateLeadStatus,
+  onConvertLead,
+  converting,
+  emailConflict,
+  alternativeEmail,
+  setAlternativeEmail,
+  conversionResult,
   onAddNote,
   onDeleteNote,
   noteContent,
@@ -479,6 +570,13 @@ function ContactDetailView({
 }: {
   detail: ContactDetail;
   onUpdateStage: (stage: Stage) => void;
+  onUpdateLeadStatus: (status: LeadStatus) => void;
+  onConvertLead: (opts?: { overrideEmail?: string; promoteEcho?: boolean }) => void;
+  converting: boolean;
+  emailConflict: { existing_role?: string; can_promote?: boolean } | null;
+  alternativeEmail: string;
+  setAlternativeEmail: (v: string) => void;
+  conversionResult: { email: string } | null;
   onAddNote: () => void;
   onDeleteNote: (id: string) => void;
   noteContent: string;
@@ -495,6 +593,7 @@ function ContactDetailView({
 }) {
   const { contact, timeline } = detail;
   const isBrand = contact.type === "brand";
+  const isLead = contact.type === "lead";
   const currentTags = (isBrand ? contact.crm_tags : contact.tags) || [];
 
   return (
@@ -534,6 +633,120 @@ function ContactDetailView({
           <div className="bg-white/5 rounded-xl p-3 text-center">
             <p className="text-lg font-bold">{detail.campaigns?.length || 0}</p>
             <p className="text-[10px] text-white/40">Campagnes</p>
+          </div>
+        </div>
+      )}
+
+      {/* Lead Info */}
+      {isLead && (() => {
+        const c = contact as Record<string, unknown>;
+        return (
+          <div className="space-y-2">
+            {c.business_name ? (
+              <div className="flex justify-between text-sm">
+                <span className="text-white/40">Entreprise</span>
+                <span className="font-medium">{String(c.business_name)}</span>
+              </div>
+            ) : null}
+            {c.message ? (
+              <div>
+                <p className="text-xs text-white/40 mb-1">Message</p>
+                <p className="text-sm bg-white/5 rounded-xl p-3">{String(c.message)}</p>
+              </div>
+            ) : null}
+            {c.notes ? (
+              <div>
+                <p className="text-xs text-white/40 mb-1">Notes internes</p>
+                <p className="text-sm bg-white/5 rounded-xl p-3">{String(c.notes)}</p>
+              </div>
+            ) : null}
+          </div>
+        );
+      })()}
+
+      {/* Lead Pipeline */}
+      {isLead && (
+        <div>
+          <p className="text-xs font-semibold text-white/40 mb-2">Statut du lead</p>
+          <div className="flex gap-2 flex-wrap">
+            {LEAD_STATUSES.map(s => (
+              <button
+                key={s.key}
+                onClick={() => onUpdateLeadStatus(s.key)}
+                className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition ${
+                  contact.stage === s.key
+                    ? s.color + " ring-1 ring-white/20"
+                    : "bg-white/5 text-white/30 border-white/10 hover:bg-white/10"
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Lead Conversion */}
+      {isLead && contact.stage !== "converted" && !conversionResult && (
+        <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-4">
+          <p className="text-xs font-semibold text-emerald-400 mb-2">Convertir en Batteur</p>
+          <button
+            onClick={() => onConvertLead()}
+            disabled={converting}
+            className="px-4 py-2 rounded-lg text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition disabled:opacity-40"
+          >
+            {converting ? "Création..." : "Créer le compte Batteur"}
+          </button>
+        </div>
+      )}
+
+      {/* Conversion Result */}
+      {conversionResult && (
+        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+          <p className="text-sm text-emerald-400 font-semibold">Compte Batteur créé !</p>
+          <p className="text-xs text-white/50 mt-1">Identifiants envoyés à {conversionResult.email}</p>
+        </div>
+      )}
+
+      {/* Email Conflict */}
+      {emailConflict && (
+        <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 space-y-3">
+          <p className="text-sm text-orange-400 font-semibold">
+            Email déjà utilisé par un compte {emailConflict.existing_role === "echo" ? "Echo" : emailConflict.existing_role || ""}
+          </p>
+
+          {emailConflict.can_promote && (
+            <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 space-y-2">
+              <p className="text-xs text-blue-300">Ce compte Echo peut être promu en Batteur.</p>
+              <button
+                onClick={() => onConvertLead({ promoteEcho: true })}
+                disabled={converting}
+                className="w-full px-4 py-2 rounded-lg bg-blue-500/10 text-blue-400 text-xs font-bold hover:bg-blue-500/20 transition disabled:opacity-40"
+              >
+                {converting ? "Promotion..." : "Promouvoir Echo → Batteur"}
+              </button>
+            </div>
+          )}
+
+          <div className="pt-2 border-t border-white/5">
+            <p className="text-xs text-white/40 mb-2">Ou utiliser un email différent :</p>
+            <input
+              type="email"
+              value={alternativeEmail}
+              onChange={e => setAlternativeEmail(e.target.value)}
+              placeholder="email@exemple.com"
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-primary transition"
+            />
+            <button
+              onClick={() => {
+                if (!alternativeEmail || !alternativeEmail.includes("@")) return;
+                onConvertLead({ overrideEmail: alternativeEmail });
+              }}
+              disabled={converting || !alternativeEmail}
+              className="mt-2 w-full px-4 py-2 rounded-lg bg-white/5 text-white/60 text-xs font-bold hover:bg-white/10 transition disabled:opacity-40"
+            >
+              {converting ? "Création..." : "Créer avec cet email"}
+            </button>
           </div>
         </div>
       )}

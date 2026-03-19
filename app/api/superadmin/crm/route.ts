@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { updateLeadSchema } from "@/lib/validations";
+import { sendBatteurWelcomeEmail, sendRoleUpgradeEmail } from "@/lib/email";
+import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +22,6 @@ export async function GET(request: NextRequest) {
     const timeline: { type: string; date: string; data: Record<string, unknown> }[] = [];
 
     if (contactType === "brand") {
-      // Fetch brand user
       const { data: user } = await supabase
         .from("users")
         .select("id, name, phone, role, city, balance, total_earned, crm_stage, crm_tags, created_at, status, total_recharged")
@@ -27,28 +29,24 @@ export async function GET(request: NextRequest) {
         .single();
       if (!user) return NextResponse.json({ error: "Contact introuvable" }, { status: 404 });
 
-      // Campaigns
       const { data: campaigns } = await supabase
         .from("campaigns")
         .select("id, title, budget, spent, status, cpc, created_at")
         .eq("batteur_id", contactId)
         .order("created_at", { ascending: false });
 
-      // Payments
       const { data: payments } = await supabase
         .from("payments")
         .select("id, amount, status, payment_method, created_at, completed_at")
         .eq("user_id", contactId)
         .order("created_at", { ascending: false });
 
-      // Support tickets
       const { data: tickets } = await supabase
         .from("support_tickets")
         .select("id, subject, status, created_at")
         .eq("user_id", contactId)
         .order("created_at", { ascending: false });
 
-      // CRM notes
       const { data: notes } = await supabase
         .from("crm_notes")
         .select("id, content, note_type, followup_date, created_at, author_id")
@@ -56,7 +54,6 @@ export async function GET(request: NextRequest) {
         .eq("contact_type", "brand")
         .order("created_at", { ascending: false });
 
-      // Fetch note authors
       const authorIds = Array.from(new Set((notes || []).map(n => n.author_id)));
       const { data: authors } = authorIds.length > 0
         ? await supabase.from("users").select("id, name").in("id", authorIds)
@@ -64,7 +61,6 @@ export async function GET(request: NextRequest) {
       const authorMap: Record<string, string> = {};
       (authors || []).forEach(a => { authorMap[a.id] = a.name; });
 
-      // Build timeline
       timeline.push({ type: "created", date: user.created_at, data: { name: user.name } });
       for (const c of campaigns || []) {
         timeline.push({ type: "campaign", date: c.created_at, data: c });
@@ -120,7 +116,7 @@ export async function GET(request: NextRequest) {
       timeline.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       return NextResponse.json({
-        contact: { ...lead, type: "lead" },
+        contact: { ...lead, name: lead.contact_name || lead.business_name, type: "lead" },
         notes: (notes || []).map(n => ({ ...n, author_name: authorMap[n.author_id] || "Admin" })),
         timeline,
       });
@@ -138,7 +134,6 @@ export async function GET(request: NextRequest) {
       .eq("role", "batteur")
       .order("created_at", { ascending: false });
 
-    // Get campaign counts per brand
     const { data: campaignCounts } = await supabase
       .from("campaigns")
       .select("batteur_id, id");
@@ -170,12 +165,11 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Leads (not converted)
+  // Leads (ALL statuses now — unified pipeline)
   if (view === "all" || view === "leads") {
     const { data: leads } = await supabase
       .from("brand_leads")
       .select("*")
-      .in("status", ["new", "contacted"])
       .order("created_at", { ascending: false });
 
     for (const l of leads || []) {
@@ -185,10 +179,10 @@ export async function GET(request: NextRequest) {
         email: l.email,
         phone: l.whatsapp,
         type: "lead",
-        stage: l.status,
+        stage: l.status, // new, contacted, converted, rejected
         tags: l.tags || [],
         created_at: l.created_at,
-        stats: { business_name: l.business_name, message: l.message },
+        stats: { business_name: l.business_name, message: l.message, notes: l.notes, contact_name: l.contact_name },
       });
     }
   }
@@ -271,6 +265,185 @@ export async function POST(request: NextRequest) {
     const { error } = await supabase.from(table).update({ [col]: tags || [] }).eq("id", contact_id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });
+  }
+
+  // --- Update lead status ---
+  if (action === "update_lead_status") {
+    const { lead_id, status, notes } = body;
+    if (!lead_id) return NextResponse.json({ error: "lead_id requis" }, { status: 400 });
+
+    const parsed = updateLeadSchema.safeParse({ status, notes });
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Données invalides", details: parsed.error.flatten().fieldErrors }, { status: 400 });
+    }
+
+    const updates: Record<string, unknown> = {};
+    if (parsed.data.status !== undefined) updates.status = parsed.data.status;
+    if (parsed.data.notes !== undefined) updates.notes = parsed.data.notes;
+
+    const { data, error } = await supabase
+      .from("brand_leads")
+      .update(updates)
+      .eq("id", lead_id)
+      .select()
+      .single();
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(data);
+  }
+
+  // --- Convert lead to brand ---
+  if (action === "convert_lead") {
+    const { lead_id, email: overrideEmail, promote_echo } = body;
+    if (!lead_id) return NextResponse.json({ error: "lead_id requis" }, { status: 400 });
+
+    const { data: lead } = await supabase
+      .from("brand_leads")
+      .select("*")
+      .eq("id", lead_id)
+      .single();
+
+    if (!lead) return NextResponse.json({ error: "Lead introuvable" }, { status: 404 });
+    if (lead.status === "converted") {
+      return NextResponse.json({ error: "Ce lead est déjà converti." }, { status: 400 });
+    }
+
+    const accountEmail = overrideEmail || lead.email;
+
+    // Check if email already exists in auth
+    const { data: authList } = await supabase.auth.admin.listUsers();
+    const existingAuthUser = authList?.users?.find(
+      (u) => u.email?.toLowerCase() === accountEmail.toLowerCase()
+    );
+
+    if (existingAuthUser) {
+      const { data: existingProfile } = await supabase
+        .from("users")
+        .select("id, role, name")
+        .eq("id", existingAuthUser.id)
+        .single();
+
+      if (existingProfile) {
+        if (existingProfile.role === "echo" && promote_echo) {
+          const { error: updateError } = await supabase
+            .from("users")
+            .update({ role: "batteur" })
+            .eq("id", existingProfile.id);
+
+          if (updateError) {
+            return NextResponse.json({ error: updateError.message }, { status: 500 });
+          }
+
+          await supabase
+            .from("brand_leads")
+            .update({
+              status: "converted",
+              notes: `Echo promu Batteur le ${new Date().toLocaleDateString("fr-FR")}. ${lead.notes || ""}`.trim(),
+            })
+            .eq("id", lead_id);
+
+          try {
+            await supabase.from("admin_activity_log").insert({
+              admin_id: session.user.id,
+              action: "promote_echo_to_batteur",
+              target_type: "user",
+              target_id: existingProfile.id,
+              details: { lead_id, business_name: lead.business_name, email: accountEmail },
+            });
+          } catch {}
+
+          try {
+            await sendRoleUpgradeEmail({
+              to: accountEmail,
+              name: existingProfile.name || lead.business_name,
+            });
+          } catch (e) {
+            console.error("Upgrade email failed:", e);
+          }
+
+          return NextResponse.json({
+            success: true,
+            user_id: existingProfile.id,
+            promoted: true,
+            email_used: accountEmail,
+          });
+        }
+
+        return NextResponse.json({
+          error: `Cet email est déjà utilisé par un compte ${existingProfile.role === "echo" ? "Echo" : existingProfile.role}.`,
+          email_conflict: true,
+          existing_role: existingProfile.role,
+          can_promote: existingProfile.role === "echo",
+        }, { status: 409 });
+      }
+    }
+
+    // Generate temporary password
+    const tempPassword = crypto.randomBytes(4).toString("hex") + "A1!";
+
+    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+      email: accountEmail,
+      password: tempPassword,
+      email_confirm: true,
+    });
+
+    if (authError || !authUser.user) {
+      if (authError?.message?.includes("already been registered") || authError?.message?.includes("already exists")) {
+        return NextResponse.json({
+          error: "Cet email est déjà enregistré. Veuillez utiliser un email différent.",
+          email_conflict: true,
+        }, { status: 409 });
+      }
+      return NextResponse.json({ error: authError?.message || "Erreur création compte" }, { status: 500 });
+    }
+
+    const { error: profileError } = await supabase.from("users").insert({
+      id: authUser.user.id,
+      name: lead.business_name || lead.contact_name,
+      phone: lead.whatsapp || null,
+      role: "batteur",
+      balance: 0,
+    });
+
+    if (profileError) {
+      await supabase.auth.admin.deleteUser(authUser.user.id);
+      return NextResponse.json({ error: profileError.message }, { status: 500 });
+    }
+
+    await supabase
+      .from("brand_leads")
+      .update({
+        status: "converted",
+        notes: `Compte créé le ${new Date().toLocaleDateString("fr-FR")} (${accountEmail}). ${lead.notes || ""}`.trim(),
+      })
+      .eq("id", lead_id);
+
+    try {
+      await supabase.from("admin_activity_log").insert({
+        admin_id: session.user.id,
+        action: "convert_lead",
+        target_type: "user",
+        target_id: authUser.user.id,
+        details: { lead_id, business_name: lead.business_name, email: accountEmail },
+      });
+    } catch {}
+
+    try {
+      await sendBatteurWelcomeEmail({
+        to: accountEmail,
+        temporaryPassword: tempPassword,
+        business_name: lead.business_name,
+      });
+    } catch (e) {
+      console.error("Welcome email failed:", e);
+    }
+
+    return NextResponse.json({
+      success: true,
+      user_id: authUser.user.id,
+      email_sent: true,
+      email_used: accountEmail,
+    });
   }
 
   return NextResponse.json({ error: "Action invalide" }, { status: 400 });
