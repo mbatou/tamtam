@@ -42,26 +42,30 @@ export async function GET(request: NextRequest) {
         .from("campaigns")
         .select("id, title, budget, spent, status, cpc, created_at")
         .eq("batteur_id", contactId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(500);
 
       const { data: payments } = await supabase
         .from("payments")
         .select("id, amount, status, payment_method, created_at, completed_at")
         .eq("user_id", contactId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(500);
 
       const { data: tickets } = await supabase
         .from("support_tickets")
         .select("id, subject, status, created_at")
         .eq("user_id", contactId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(200);
 
       const { data: notes } = await supabase
         .from("crm_notes")
         .select("id, content, note_type, followup_date, created_at, author_id")
         .eq("contact_id", contactId)
         .eq("contact_type", "brand")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(200);
 
       const authorIds = Array.from(new Set((notes || []).map(n => n.author_id)));
       const { data: authors } = authorIds.length > 0
@@ -145,7 +149,8 @@ export async function GET(request: NextRequest) {
 
     const { data: campaignCounts } = await supabase
       .from("campaigns")
-      .select("batteur_id, id");
+      .select("batteur_id, id")
+      .limit(5000);
 
     const brandCampaigns: Record<string, number> = {};
     (campaignCounts || []).forEach(c => {
@@ -388,7 +393,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate temporary password
-    const tempPassword = crypto.randomBytes(4).toString("hex") + "A1!";
+    const tempPassword = crypto.randomBytes(8).toString("hex") + "A1!";
 
     const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
       email: accountEmail,

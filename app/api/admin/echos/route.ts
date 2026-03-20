@@ -39,7 +39,8 @@ export async function GET() {
   const { data: trackedLinks } = await supabase
     .from("tracked_links")
     .select("id, campaign_id, echo_id, click_count, created_at")
-    .in("campaign_id", campaignIds);
+    .in("campaign_id", campaignIds)
+    .limit(10000);
 
   const links = trackedLinks || [];
   const echoIds = Array.from(new Set(links.map((l) => l.echo_id)));

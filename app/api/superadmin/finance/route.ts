@@ -68,7 +68,8 @@ export async function GET(request: NextRequest) {
     .from("clicks")
     .select("created_at")
     .eq("is_valid", true)
-    .gte("created_at", chartFrom);
+    .gte("created_at", chartFrom)
+    .limit(50000);
   if (toParam) dailyClicksQuery = dailyClicksQuery.lte("created_at", toParam);
 
   const { data: monthlyClicks } = await dailyClicksQuery;
