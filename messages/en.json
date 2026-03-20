@@ -728,7 +728,12 @@
       "activityAll": "All activity",
       "activityActive": "Active",
       "activityInactive": "Inactive",
-      "neverActive": "never"
+      "neverActive": "never",
+      "quality": "Quality",
+      "qualityScore": "Quality Score",
+      "validRatio": "Valid ratio",
+      "campaignsJoinedLabel": "Campaigns",
+      "streakLabel": "Streak"
     },
     "campaigns": {
       "title": "Campaign moderation",
@@ -803,7 +808,12 @@
       "confirmApproveButton": "Yes, approve payout",
       "confirmRejectButton": "Yes, reject payout",
       "rejectionReason": "Rejection reason",
-      "rejectWarning": "The amount will be refunded to the echo's balance."
+      "rejectWarning": "The amount will be refunded to the echo's balance.",
+      "netPosition": "Net position",
+      "commissionEarned": "Commission earned",
+      "fixedCosts": "Estimated fixed costs",
+      "netPositionLabel": "Net position",
+      "dailyRevenue": "Daily revenue"
     },
     "support": {
       "title": "Support",
@@ -1032,7 +1042,9 @@
       "no": "No",
       "weeklyFocus": "This week's focus",
       "pacing": "{needed} more needed to reach goal",
-      "goalReached": "Goal reached!"
+      "goalReached": "Goal reached!",
+      "dayLabel": "Day",
+      "sinceLaunch": "since launch"
     }
   },
   "gamification": {
