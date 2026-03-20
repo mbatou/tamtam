@@ -100,6 +100,9 @@ export async function POST(request: NextRequest) {
 
   if (profileError) {
     console.error("Profile creation error:", profileError);
+    // Clean up auth user if profile creation fails
+    await supabase.auth.admin.deleteUser(authUser.user.id);
+    return NextResponse.json({ error: "Erreur lors de la création du profil." }, { status: 500 });
   }
 
   // --- Welcome bonus (LUP-68) ---

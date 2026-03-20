@@ -67,10 +67,15 @@ function LoginContent() {
         }
       }
     } catch {
-      // Fall through to default redirect
+      // Fall through to mode-based redirect
     }
 
-    window.location.href = "/dashboard";
+    // Fallback: use the selected login mode to determine redirect
+    if (mode === "batteur") {
+      window.location.href = "/admin/dashboard";
+    } else {
+      window.location.href = "/dashboard";
+    }
   }
 
   return (
