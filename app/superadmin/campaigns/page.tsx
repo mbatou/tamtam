@@ -109,15 +109,19 @@ function CampaignModerationPageContent() {
       });
       const data = await res.json();
       if (res.ok) {
-        showToast(
-          action === "approve" ? t("superadmin.campaigns.approvedTab") :
-          action === "reject" ? t("superadmin.campaigns.rejectedTab") :
-          action === "pause" ? t("superadmin.campaigns.pendingTab") : t("superadmin.campaigns.approvedTab"),
-          action === "approve" || action === "resume" ? "success" : "info"
-        );
-        setSelected(null);
+        const toastMsg = action === "approve" ? "Campagne approuvée et en ligne" :
+          action === "reject" ? "Campagne rejetée" :
+          action === "pause" ? "Campagne mise en pause" :
+          action === "resume" ? "Campagne réactivée" : t("common.success");
+        showToast(toastMsg, action === "approve" || action === "resume" ? "success" : "info");
         setRejectReason("");
-        loadData();
+        // Reload data and update the selected campaign in the modal
+        const campRes = await fetch("/api/superadmin/campaigns");
+        const campData = await campRes.json();
+        setCampaigns(campData);
+        // Update the selected campaign with fresh data or close if not found
+        const updated = (campData as Campaign[]).find((c) => c.id === id);
+        setSelected(updated || null);
       } else {
         showToast(data.error || t("common.error"), "error");
       }

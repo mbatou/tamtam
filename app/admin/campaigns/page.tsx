@@ -196,11 +196,12 @@ export default function AdminCampaignsPage() {
     }
   }
 
-  function getStatusLabel(status: string) {
+  function getStatusLabel(campaign: Campaign) {
+    if (campaign.status === "draft" && campaign.moderation_status === "pending") return "En attente de validation";
     const map: Record<string, string> = {
       active: t("common.active"), paused: t("common.paused"), completed: t("common.finished"), draft: t("admin.campaigns.draft"), rejected: t("common.rejected"),
     };
-    return map[status] || status;
+    return map[campaign.status] || campaign.status;
   }
 
   if (loading) {
@@ -222,7 +223,8 @@ export default function AdminCampaignsPage() {
     const budgetConsumed = c.spent >= c.budget;
     const isActive = c.status === "active";
     const isPaused = c.status === "paused";
-    const isDraft = c.status === "draft";
+    const isDraft = c.status === "draft" && c.moderation_status !== "pending";
+    const isPendingReview = c.status === "draft" && c.moderation_status === "pending";
     const isEnded = c.status === "completed" || c.status === "rejected";
 
     return (
@@ -250,7 +252,7 @@ export default function AdminCampaignsPage() {
           <div>
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-2xl font-bold">{c.title}</h1>
-              <span className={`badge-${c.status}`}>{getStatusLabel(c.status)}</span>
+              <span className={`badge-${c.status === "draft" && c.moderation_status === "pending" ? "pending" : c.status}`}>{getStatusLabel(c)}</span>
             </div>
             {c.description && <p className="text-white/40 text-sm max-w-xl">{c.description}</p>}
             <p className="text-white/20 text-xs mt-2">{timeAgo(c.created_at)}</p>
@@ -289,7 +291,7 @@ export default function AdminCampaignsPage() {
         </div>
 
         {/* Pending review banner */}
-        {c.status === "draft" && (c as unknown as { moderation_status?: string }).moderation_status === "pending" && (
+        {isPendingReview && (
           <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4 mb-8">
             <span className="text-orange-400 font-bold">⏳ En cours de validation</span>
             <p className="text-gray-400 text-sm mt-1">
@@ -606,7 +608,7 @@ export default function AdminCampaignsPage() {
                       <h3 className="font-bold text-sm truncate">{campaign.title}</h3>
                       {campaign.description && <p className="text-xs text-white/30 truncate mt-0.5">{campaign.description}</p>}
                     </div>
-                    <span className={`badge-${campaign.status} shrink-0`}>{getStatusLabel(campaign.status)}</span>
+                    <span className={`badge-${campaign.status === "draft" && campaign.moderation_status === "pending" ? "pending" : campaign.status} shrink-0`}>{getStatusLabel(campaign)}</span>
                   </div>
 
                   {/* Budget progress */}

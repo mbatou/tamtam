@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
   // Get current campaign state
   const { data: campaign, error: fetchErr } = await supabase
     .from("campaigns")
-    .select("id, status, budget, spent, batteur_id")
+    .select("id, status, moderation_status, budget, spent, batteur_id")
     .eq("id", campaign_id)
     .single();
 
@@ -195,8 +195,11 @@ export async function POST(request: NextRequest) {
       updates.moderation_status = "approved";
       updates.status = "active";
 
-      // If campaign was a draft, deduct budget from batteur balance
-      if (campaign.status === "draft") {
+      // Only deduct budget if it wasn't already deducted at submission.
+      // Campaigns with moderation_status "pending" had their budget deducted
+      // when the brand submitted them. Pure drafts (moderation_status is null)
+      // need budget deducted now.
+      if (campaign.status === "draft" && campaign.moderation_status !== "pending") {
         const { data: batteur } = await supabase
           .from("users")
           .select("balance")
@@ -225,8 +228,10 @@ export async function POST(request: NextRequest) {
       updates.status = "rejected";
       updates.moderation_reason = reason || "Rejeté par l'admin";
 
-      // Refund budget if it was already deducted (campaign was active, not draft)
-      if (campaign.status === "active") {
+      // Refund budget if it was already deducted:
+      // - Active campaigns: refund unspent portion
+      // - Draft campaigns with moderation_status "pending": budget was deducted at submission
+      if (campaign.status === "active" || (campaign.status === "draft" && campaign.moderation_status === "pending")) {
         const unspent = campaign.budget - (campaign.spent || 0);
         if (unspent > 0) {
           await supabase.rpc("increment_balance", {
