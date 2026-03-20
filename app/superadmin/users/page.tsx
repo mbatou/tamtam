@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { formatFCFA, timeAgo } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
@@ -65,6 +65,7 @@ export default function UsersPageWrapper() {
 
 function UsersPageContent() {
   const { t } = useTranslation();
+  const router = useRouter();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [filter, setFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
@@ -801,6 +802,15 @@ function UsersPageContent() {
                 </button>
               </div>
             )}
+
+            <div className="pt-2 border-t border-white/5">
+              <button
+                onClick={() => router.push(`/superadmin/investigate?user_id=${selected.id}`)}
+                className="w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 font-bold text-sm hover:bg-white/10 transition flex items-center justify-center gap-2"
+              >
+                <span>🔍</span> Investiguer cet utilisateur
+              </button>
+            </div>
 
             <div className="flex flex-wrap gap-2 pt-2 border-t border-white/5">
               <button
