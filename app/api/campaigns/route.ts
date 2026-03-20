@@ -1,33 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { createCampaignSchema, updateCampaignSchema, deleteCampaignSchema } from "@/lib/validations";
-import { sendNewCampaignNotification, sendCampaignCompletedToEcho, sendEmail } from "@/lib/email";
+import { sendCampaignCompletedToEcho, sendEmail } from "@/lib/email";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
-
-async function notifyEchosNewCampaign(campaignTitle: string, cpc: number) {
-  try {
-    const supabase = createServiceClient();
-    // Get all echos with their auth emails
-    const { data: echos } = await supabase
-      .from("users")
-      .select("id, name")
-      .eq("role", "echo")
-      .eq("status", "active");
-    if (!echos?.length) return;
-
-    const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-    const emailMap = new Map(authUsers?.map((u) => [u.id, u.email]) || []);
-
-    for (const echo of echos) {
-      const email = emailMap.get(echo.id);
-      if (email) {
-        sendNewCampaignNotification({ to: email, echoName: echo.name, campaignTitle, cpc }).catch(() => {});
-      }
-    }
-  } catch { /* non-blocking */ }
-}
 
 async function notifyCampaignCompleted(campaignId: string) {
   try {
