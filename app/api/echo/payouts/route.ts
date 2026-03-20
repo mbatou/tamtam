@@ -3,6 +3,7 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { payoutRequestSchema } from "@/lib/validations";
 import { rateLimit } from "@/lib/rate-limit";
 import { sendPayoutRequestNotification } from "@/lib/email";
+import { logWalletTransaction } from "@/lib/wallet-transactions";
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +94,15 @@ export async function POST(request: NextRequest) {
   if (balanceError) {
     return NextResponse.json({ error: balanceError.message }, { status: 500 });
   }
+
+  await logWalletTransaction({
+    supabase,
+    userId: session.user.id,
+    amount: -parsed.data.amount,
+    type: "withdrawal",
+    description: `Demande de retrait — ${parsed.data.provider || "mobile money"}`,
+    sourceType: "payout",
+  });
 
   const { data, error } = await supabase.from("payouts").insert({
     echo_id: session.user.id,

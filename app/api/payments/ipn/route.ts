@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 import { logSecurityEvent } from "@/lib/security-alerts";
+import { logWalletTransaction } from "@/lib/wallet-transactions";
 
 // Use service role client directly to bypass RLS
 const supabase = createSupabaseClient(
@@ -96,6 +97,16 @@ export async function POST(req: NextRequest) {
         await supabase.rpc("increment_balance", {
           p_user_id: user_id,
           p_amount: amount,
+        });
+
+        await logWalletTransaction({
+          supabase,
+          userId: user_id,
+          amount,
+          type: "wallet_recharge",
+          description: `Recharge portefeuille — ${payment_method || "PayTech"}`,
+          sourceId: payment_id || null,
+          sourceType: "payment",
         });
       }
     } else if (type_event === "sale_canceled") {

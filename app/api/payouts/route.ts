@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { MIN_PAYOUT_AMOUNT } from "@/lib/constants";
 import { rateLimit } from "@/lib/rate-limit";
 import { sendPayoutRequestNotification } from "@/lib/email";
+import { logWalletTransaction } from "@/lib/wallet-transactions";
 
 export async function GET() {
   const authClient = createClient();
@@ -84,6 +85,15 @@ export async function POST() {
   if (balanceError) {
     return NextResponse.json({ error: balanceError.message }, { status: 500 });
   }
+
+  await logWalletTransaction({
+    supabase,
+    userId: session.user.id,
+    amount: -withdrawAmount,
+    type: "withdrawal",
+    description: `Retrait total du solde — ${user.mobile_money_provider || "mobile money"}`,
+    sourceType: "payout",
+  });
 
   const { data, error } = await supabase
     .from("payouts")
