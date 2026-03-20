@@ -514,6 +514,9 @@ function UsersPageContent() {
                   ) : null}
                 </div>
                 <p className="text-xs text-white/40">{selected.phone || ""} · {selected.city || ""} · {selected.role}</p>
+                <p className="text-[10px] font-mono text-white/20 mt-0.5 select-all cursor-pointer" title="Cliquer pour copier"
+                  onClick={() => { navigator.clipboard.writeText(selected.id); showToast("UUID copié", "success"); }}
+                >{selected.id}</p>
               </div>
             </div>
 
