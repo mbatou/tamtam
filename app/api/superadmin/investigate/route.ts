@@ -262,7 +262,7 @@ export async function GET(req: NextRequest) {
 
   // Check: welcome bonus given to echo user
   const welcomeBonus = (walletTransactions || []).find(
-    (tx: { type: string; description: string }) => tx.type === "bonus" && tx.description?.includes("bienvenue")
+    (tx: { type: string; description: string }) => (tx.type === "bonus" || tx.type === "welcome_bonus") && tx.description?.includes("bienvenue")
   );
   if (welcomeBonus && user.role === "echo") {
     anomalies.push({

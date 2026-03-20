@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { logWalletTransaction } from "@/lib/wallet-transactions";
 
 export const dynamic = "force-dynamic";
 
@@ -193,6 +194,16 @@ export async function POST(request: NextRequest) {
       completed_at: new Date().toISOString(),
     });
 
+    await logWalletTransaction({
+      supabase,
+      userId: user_id,
+      amount: topupAmount,
+      type: "manual_credit",
+      description: `Recharge manuelle par admin — ${user.name || "utilisateur"}`,
+      sourceType: "admin",
+      createdBy: session.user.id,
+    });
+
     try {
       await supabase.from("admin_activity_log").insert({
         admin_id: session.user.id,
@@ -236,6 +247,39 @@ export async function POST(request: NextRequest) {
       break;
     default:
       return NextResponse.json({ error: "Action invalide" }, { status: 400 });
+  }
+
+  // For reset_balance, get current balance before reset to log it
+  if (action === "reset_balance") {
+    const { data: targetUser } = await supabase.from("users").select("balance, name").eq("id", user_id).single();
+    if (targetUser && (targetUser.balance || 0) > 0) {
+      // Log will be recorded after the update succeeds
+      const oldBalance = targetUser.balance || 0;
+      const { error: resetErr } = await supabase.from("users").update({ balance: 0 }).eq("id", user_id);
+      if (resetErr) return NextResponse.json({ error: resetErr.message }, { status: 500 });
+
+      await logWalletTransaction({
+        supabase,
+        userId: user_id,
+        amount: -oldBalance,
+        type: "balance_reset",
+        description: `Remise à zéro du solde par admin (ancien solde: ${oldBalance} FCFA)`,
+        sourceType: "admin",
+        createdBy: session.user.id,
+      });
+
+      try {
+        await supabase.from("admin_activity_log").insert({
+          admin_id: session.user.id,
+          action: `user_${action}`,
+          target_type: "user",
+          target_id: user_id,
+          details: { reason, old_balance: oldBalance },
+        });
+      } catch { /* admin_activity_log may not exist yet */ }
+
+      return NextResponse.json({ success: true });
+    }
   }
 
   const { error } = await supabase.from("users").update(updates).eq("id", user_id);

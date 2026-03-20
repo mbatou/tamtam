@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { logWalletTransaction } from "@/lib/wallet-transactions";
 
 export const dynamic = "force-dynamic";
 
@@ -152,6 +153,17 @@ export async function POST(request: NextRequest) {
         p_amount: payment.amount,
       });
 
+      await logWalletTransaction({
+        supabase,
+        userId: payment.user_id,
+        amount: payment.amount,
+        type: "wallet_recharge",
+        description: `Recharge validée par admin`,
+        sourceId: payment_id,
+        sourceType: "payment",
+        createdBy: session.user.id,
+      });
+
       try {
         await supabase.from("admin_activity_log").insert({
           admin_id: session.user.id,
@@ -223,6 +235,17 @@ export async function POST(request: NextRequest) {
     await supabase.rpc("increment_echo_balance", {
       p_echo_id: payout.echo_id,
       p_amount: payout.amount,
+    });
+
+    await logWalletTransaction({
+      supabase,
+      userId: payout.echo_id,
+      amount: payout.amount,
+      type: "withdrawal_refund",
+      description: `Remboursement — retrait refusé par l'admin`,
+      sourceId: payout_id,
+      sourceType: "payout",
+      createdBy: session.user.id,
     });
   } else {
     return NextResponse.json({ error: "Action invalide" }, { status: 400 });

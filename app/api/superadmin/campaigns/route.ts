@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { sendNewCampaignNotification, sendCampaignLiveToBrand } from "@/lib/email";
+import { logWalletTransaction } from "@/lib/wallet-transactions";
 
 export const dynamic = "force-dynamic";
 
@@ -115,6 +116,16 @@ export async function POST(request: NextRequest) {
       .eq("id", batteur_id);
     if (balErr) return NextResponse.json({ error: balErr.message }, { status: 500 });
 
+    await logWalletTransaction({
+      supabase,
+      userId: batteur_id,
+      amount: -parseInt(budget),
+      type: "campaign_budget_debit",
+      description: `Création campagne par admin: ${title}`,
+      sourceType: "campaign",
+      createdBy: session.user.id,
+    });
+
     // Create campaign pre-approved
     const { data: campaign, error: campErr } = await supabase
       .from("campaigns")
@@ -220,6 +231,17 @@ export async function POST(request: NextRequest) {
         if (balErr) {
           return NextResponse.json({ error: balErr.message }, { status: 500 });
         }
+
+        await logWalletTransaction({
+          supabase,
+          userId: campaign.batteur_id,
+          amount: -campaign.budget,
+          type: "campaign_budget_debit",
+          description: `Approbation campagne par admin`,
+          sourceId: campaign_id,
+          sourceType: "campaign",
+          createdBy: session.user.id,
+        });
       }
       break;
     }
@@ -237,6 +259,17 @@ export async function POST(request: NextRequest) {
           await supabase.rpc("increment_balance", {
             p_user_id: campaign.batteur_id,
             p_amount: unspent,
+          });
+
+          await logWalletTransaction({
+            supabase,
+            userId: campaign.batteur_id,
+            amount: unspent,
+            type: "campaign_budget_refund",
+            description: `Remboursement campagne rejetée par admin`,
+            sourceId: campaign_id,
+            sourceType: "campaign",
+            createdBy: session.user.id,
           });
         }
       }

@@ -1,5 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { logWalletTransaction } from "@/lib/wallet-transactions";
 
 // ---- STREAK LOGIC ----
 
@@ -78,6 +79,15 @@ export async function updateStreak(echoId: string) {
         p_echo_id: echoId,
         p_amount: reward,
       });
+
+      await logWalletTransaction({
+        supabase: supabaseAdmin,
+        userId: echoId,
+        amount: reward,
+        type: "streak_bonus",
+        description: `Bonus de série: ${newStreak} jours consécutifs`,
+        sourceType: "system",
+      });
     }
   }
 
@@ -139,6 +149,16 @@ export async function checkMilestones(echoId: string) {
       await supabaseAdmin.rpc("increment_echo_balance", {
         p_echo_id: echoId,
         p_amount: m.reward_fcfa,
+      });
+
+      await logWalletTransaction({
+        supabase: supabaseAdmin,
+        userId: echoId,
+        amount: m.reward_fcfa,
+        type: "badge_reward",
+        description: `Milestone atteint: ${m.name}`,
+        sourceId: m.id,
+        sourceType: "achievement",
       });
 
       newlyAchieved.push(m);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { logWalletTransaction } from "@/lib/wallet-transactions";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,17 @@ export async function POST(
   await supabase.rpc("increment_echo_balance", {
     p_echo_id: payout.echo_id,
     p_amount: payout.amount,
+  });
+
+  await logWalletTransaction({
+    supabase,
+    userId: payout.echo_id,
+    amount: payout.amount,
+    type: "withdrawal_refund",
+    description: "Remboursement — retrait refusé par l'admin",
+    sourceId: params.id,
+    sourceType: "payout",
+    createdBy: session.user.id,
   });
 
   return NextResponse.json({ success: true });

@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
         await supabase.from("wallet_transactions").insert({
           user_id: authUser.user.id,
           amount: bonusAmount,
-          type: "bonus",
+          type: "welcome_bonus",
           description: "Bonus de bienvenue — offre limitée",
           status: "completed",
         });
