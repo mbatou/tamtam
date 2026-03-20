@@ -111,6 +111,7 @@ export default function AdminSupportPage() {
               { q: t("admin.support.faq3q"), a: t("admin.support.faq3a") },
               { q: t("admin.support.faq4q"), a: t("admin.support.faq4a") },
               { q: t("admin.support.faq5q"), a: t("admin.support.faq5a") },
+              { q: "Comment mettre en pause ou réactiver un rythme?", a: "Ouvrez votre rythme actif et cliquez \"Pause\". Le budget non dépensé est remboursé sur votre portefeuille. Pour reprendre, cliquez \"Réactiver\" — le budget restant sera de nouveau débité." },
             ].map((faq, i) => (
               <details key={i} className="group">
                 <summary className="flex items-center gap-2 cursor-pointer py-2 text-sm text-white/70 hover:text-white/90 transition">
