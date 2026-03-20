@@ -12,6 +12,12 @@ export async function POST() {
   }
 
   const supabase = createServiceClient();
+
+  // Verify superadmin role
+  const { data: admin } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  if (!admin || admin.role !== "superadmin") {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
   let flagged = 0;
 
   // 1. Find IPs with 5+ clicks on same link in 24h

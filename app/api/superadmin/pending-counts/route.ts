@@ -10,6 +10,12 @@ export async function GET() {
 
   const supabase = createServiceClient();
 
+  // Verify superadmin role
+  const { data: admin } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  if (!admin || admin.role !== "superadmin") {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
+
   const [
     { count: pendingLeads },
     { count: pendingPayouts },

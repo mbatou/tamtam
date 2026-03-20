@@ -6,12 +6,21 @@ import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: NextRequest) {
+async function requireSuperadmin() {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-
+  if (!session) return null;
   const supabase = createServiceClient();
+  const { data: user } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  if (!user || user.role !== "superadmin") return null;
+  return { session, supabase };
+}
+
+export async function GET(request: NextRequest) {
+  const auth = await requireSuperadmin();
+  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+
+  const supabase = auth.supabase;
   const { searchParams } = new URL(request.url);
   const view = searchParams.get("view") || "all"; // all | leads | brands | followups
   const contactId = searchParams.get("id");
@@ -207,11 +216,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const auth = await requireSuperadmin();
+  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
-  const supabase = createServiceClient();
+  const supabase = auth.supabase;
+  const session = auth.session;
   const body = await request.json();
   const { action } = body;
 

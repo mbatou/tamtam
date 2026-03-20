@@ -10,6 +10,12 @@ export async function GET(request: NextRequest) {
 
   const supabase = createServiceClient();
 
+  // Verify superadmin role
+  const { data: admin } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  if (!admin || admin.role !== "superadmin") {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
+
   // Parse date range from query params
   const { searchParams } = new URL(request.url);
   const fromParam = searchParams.get("from");
@@ -22,7 +28,7 @@ export async function GET(request: NextRequest) {
   let echoSignupsQuery = supabase.from("users").select("id, name, phone, city, created_at").eq("role", "echo").order("created_at", { ascending: false }).limit(5);
   let campaignsListQuery = supabase.from("campaigns").select("id, title, status, budget, spent, cpc, created_at").order("created_at", { ascending: false }).limit(5);
   let recentClicksQuery = supabase.from("clicks").select("id, ip_address, is_valid, created_at, link_id").order("created_at", { ascending: false }).limit(20);
-  let sentPayoutsQuery = supabase.from("payouts").select("amount").eq("status", "sent");
+  let sentPayoutsQuery = supabase.from("payouts").select("amount").eq("status", "sent").limit(5000);
 
   if (fromParam) {
     clicksQuery = clicksQuery.gte("created_at", fromParam);
@@ -74,7 +80,7 @@ export async function GET(request: NextRequest) {
     supabase.from("users").select("id, name, total_earned, balance").eq("role", "echo").order("total_earned", { ascending: false }).limit(10),
     recentClicksQuery,
     supabase.from("payouts").select("id, echo_id, amount, provider, status, created_at, users!echo_id(name, phone)").eq("status", "pending").order("created_at", { ascending: false }).limit(10),
-    supabase.from("campaigns").select("spent, budget, status"),
+    supabase.from("campaigns").select("spent, budget, status").limit(5000),
     sentPayoutsQuery,
     supabase.from("platform_settings").select("key, value"),
   ]);
