@@ -12,22 +12,53 @@ interface PendingCounts {
   highFraud: boolean;
 }
 
-const allNavItems = [
-  { label: "Briefing", href: "/superadmin/briefing", emoji: "☀️", permKey: "briefing" },
-  { label: "Vue d'ensemble", href: "/superadmin", emoji: "🏠", exact: true, permKey: "overview" },
-  { label: "Roadmap", href: "/superadmin/roadmap", emoji: "🎯", permKey: "roadmap" },
-  { label: "Anti-Fraude", href: "/superadmin/fraud", emoji: "🛡️", badgeKey: "fraud" as const, permKey: "fraud" },
-  { label: "Modération", href: "/superadmin/campaigns", emoji: "🥁", badgeKey: "campaigns" as const, permKey: "campaigns" },
-  { label: "Leads", href: "/superadmin/leads", emoji: "📩", badgeKey: "leads" as const, permKey: "leads" },
-  { label: "Finances", href: "/superadmin/finance", emoji: "💰", badgeKey: "payouts" as const, permKey: "finance" },
-  { label: "Utilisateurs", href: "/superadmin/users", emoji: "👥", permKey: "users" },
-  { label: "Gamification", href: "/superadmin/gamification", emoji: "🎮", permKey: "gamification" },
-  { label: "Santé", href: "/superadmin/health", emoji: "🩺", permKey: "health" },
-  { label: "Support", href: "/superadmin/support", emoji: "💬", permKey: "support" },
-  { label: "CRM", href: "/superadmin/crm", emoji: "📇", permKey: "crm" },
-  { label: "Investigation", href: "/superadmin/investigate", emoji: "🔍", superadminOnly: true },
-  { label: "Équipe", href: "/superadmin/team", emoji: "👤", superadminOnly: true },
-  { label: "Paramètres", href: "/superadmin/settings", emoji: "⚙️", superadminOnly: true },
+interface NavItem {
+  label: string;
+  href: string;
+  emoji: string;
+  exact?: boolean;
+  permKey?: string;
+  badgeKey?: string;
+  superadminOnly?: boolean;
+}
+
+// Sidebar structure: 5 primary + 2 collapsible groups
+const primaryItems: NavItem[] = [
+  { label: "Briefing", href: "/superadmin/briefing", emoji: "📋", permKey: "briefing" },
+  { label: "Vue d'ensemble", href: "/superadmin", emoji: "📊", exact: true, permKey: "overview" },
+  { label: "Modération", href: "/superadmin/campaigns", emoji: "✅", badgeKey: "campaigns", permKey: "campaigns" },
+  { label: "Pipeline", href: "/superadmin/pipeline", emoji: "👥", badgeKey: "leads", permKey: "leads" },
+  { label: "Finances", href: "/superadmin/finance", emoji: "💰", badgeKey: "payouts", permKey: "finance" },
+];
+
+const toolsGroup = {
+  label: "Outils",
+  storageKey: "sidebar_tools_open",
+  items: [
+    { label: "Utilisateurs", href: "/superadmin/users", emoji: "👤", permKey: "users" },
+    { label: "Gamification", href: "/superadmin/gamification", emoji: "🎮", permKey: "gamification" },
+    { label: "Anti-Fraude", href: "/superadmin/fraud", emoji: "🛡️", badgeKey: "fraud", permKey: "fraud" },
+    { label: "Investigation", href: "/superadmin/investigate", emoji: "🔍", superadminOnly: true },
+    { label: "Roadmap", href: "/superadmin/roadmap", emoji: "🗺️", permKey: "roadmap" },
+  ] as NavItem[],
+};
+
+const systemGroup = {
+  label: "Système",
+  storageKey: "sidebar_system_open",
+  items: [
+    { label: "Santé", href: "/superadmin/health", emoji: "💚", permKey: "health" },
+    { label: "Équipe", href: "/superadmin/team", emoji: "👥", superadminOnly: true },
+    { label: "Support", href: "/superadmin/support", emoji: "💬", permKey: "support" },
+    { label: "Paramètres", href: "/superadmin/settings", emoji: "⚙️", superadminOnly: true },
+  ] as NavItem[],
+};
+
+// Flat list for mobile nav and permission checks
+const allNavItems: NavItem[] = [
+  ...primaryItems,
+  ...toolsGroup.items,
+  ...systemGroup.items,
 ];
 
 function getBadgeCount(counts: PendingCounts | null, key?: string): number {
@@ -48,11 +79,29 @@ interface UserContext {
   name: string;
 }
 
+function usePersistedState(key: string, defaultValue: boolean): [boolean, (v: boolean) => void] {
+  const [value, setValue] = useState(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem(key);
+      if (stored !== null) return stored === "true";
+    }
+    return defaultValue;
+  });
+
+  useEffect(() => {
+    localStorage.setItem(key, String(value));
+  }, [key, value]);
+
+  return [value, setValue];
+}
+
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [counts, setCounts] = useState<PendingCounts | null>(null);
   const [userCtx, setUserCtx] = useState<UserContext | null>(null);
+  const [toolsOpen, setToolsOpen] = usePersistedState(toolsGroup.storageKey, false);
+  const [systemOpen, setSystemOpen] = usePersistedState(systemGroup.storageKey, false);
 
   const fetchCounts = useCallback(() => {
     fetch("/api/superadmin/pending-counts")
@@ -65,7 +114,6 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     fetchCounts();
     const interval = setInterval(fetchCounts, 60000);
     return () => clearInterval(interval);
-
   }, [fetchCounts]);
 
   // Fetch current user context for permission filtering
@@ -79,12 +127,30 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   }, []);
 
   const isSuperadmin = !userCtx || userCtx.role === "superadmin";
-  const navItems = allNavItems.filter((item) => {
+
+  function canSee(item: NavItem): boolean {
     if (isSuperadmin) return true;
-    if ((item as { superadminOnly?: boolean }).superadminOnly) return false;
+    if (item.superadminOnly) return false;
     if (!userCtx?.team_permissions) return false;
-    return userCtx.team_permissions.includes((item as { permKey?: string }).permKey || "");
-  });
+    return userCtx.team_permissions.includes(item.permKey || "");
+  }
+
+  // Filter items per group
+  const visiblePrimary = primaryItems.filter(canSee);
+  const visibleTools = toolsGroup.items.filter(canSee);
+  const visibleSystem = systemGroup.items.filter(canSee);
+
+  // Auto-expand group if active page is inside it
+  const isInTools = visibleTools.some((i) => i.exact ? pathname === i.href : pathname.startsWith(i.href));
+  const isInSystem = visibleSystem.some((i) => i.exact ? pathname === i.href : pathname.startsWith(i.href));
+
+  // Check if a group has active badges
+  function groupHasBadge(items: NavItem[]): boolean {
+    return items.some((i) => getBadgeCount(counts, i.badgeKey) > 0);
+  }
+
+  // Flat list for mobile
+  const mobileItems = allNavItems.filter(canSee);
 
   const positionBadge = userCtx?.team_position
     ? (userCtx.team_position === "coo" ? "COO" : userCtx.team_position.replace(/_/g, " ").split(" ").map(w => w[0]?.toUpperCase()).join(""))
@@ -96,6 +162,92 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     month: "long",
     year: "numeric",
   });
+
+  function isActive(item: NavItem): boolean {
+    return item.exact ? pathname === item.href : pathname.startsWith(item.href);
+  }
+
+  function renderNavItem(item: NavItem) {
+    const active = isActive(item);
+    const badgeCount = getBadgeCount(counts, item.badgeKey);
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all relative ${
+          active
+            ? "bg-gradient-primary text-white shadow-lg"
+            : "text-white/50 hover:text-white/80 hover:bg-white/5"
+        }`}
+        title={collapsed ? item.label : undefined}
+      >
+        <span className="text-base shrink-0 relative">
+          {item.emoji}
+          {badgeCount > 0 && (
+            <span className="absolute -top-1 -right-1.5 w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+          )}
+        </span>
+        {!collapsed && (
+          <>
+            <span className="flex-1">{item.label}</span>
+            {badgeCount > 0 && (
+              <span className="text-[10px] font-bold bg-orange-400/20 text-orange-400 px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                {badgeCount}
+              </span>
+            )}
+          </>
+        )}
+      </Link>
+    );
+  }
+
+  function renderGroup(
+    group: { label: string; items: NavItem[] },
+    visibleItems: NavItem[],
+    isOpen: boolean,
+    setIsOpen: (v: boolean) => void,
+    autoOpen: boolean,
+  ) {
+    if (visibleItems.length === 0) return null;
+    const expanded = isOpen || autoOpen;
+    const hasBadge = groupHasBadge(visibleItems);
+
+    return (
+      <div className="mt-2">
+        <button
+          onClick={() => setIsOpen(!expanded)}
+          className="flex items-center gap-2 px-3 py-2 w-full text-left"
+        >
+          {!collapsed && (
+            <>
+              <span className={`text-[10px] transition-transform duration-200 text-white/30 ${expanded ? "rotate-90" : ""}`}>
+                ▶
+              </span>
+              <span className="text-[10px] uppercase tracking-wider text-white/30 font-semibold flex-1">
+                {group.label}
+              </span>
+              {!expanded && hasBadge && (
+                <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+              )}
+            </>
+          )}
+          {collapsed && (
+            <span className="text-[10px] text-white/20 w-full text-center relative">
+              ···
+              {!expanded && hasBadge && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+              )}
+            </span>
+          )}
+        </button>
+        {expanded && (
+          <div className="space-y-0.5">
+            {visibleItems.map(renderNavItem)}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen sa-surface font-dm flex">
@@ -118,42 +270,18 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
           </Link>
         </div>
 
-        <nav className="flex-1 p-3 space-y-1">
-          {navItems.map((item) => {
-            const active = (item as { exact?: boolean }).exact
-              ? pathname === item.href
-              : pathname.startsWith(item.href);
-            const badgeCount = getBadgeCount(counts, (item as { badgeKey?: string }).badgeKey);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all relative ${
-                  active
-                    ? "bg-gradient-primary text-white shadow-lg"
-                    : "text-white/50 hover:text-white/80 hover:bg-white/5"
-                }`}
-                title={collapsed ? item.label : undefined}
-              >
-                <span className="text-base shrink-0 relative">
-                  {item.emoji}
-                  {badgeCount > 0 && (
-                    <span className="absolute -top-1 -right-1.5 w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
-                  )}
-                </span>
-                {!collapsed && (
-                  <>
-                    <span className="flex-1">{item.label}</span>
-                    {badgeCount > 0 && (
-                      <span className="text-[10px] font-bold bg-orange-400/20 text-orange-400 px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-                        {badgeCount}
-                      </span>
-                    )}
-                  </>
-                )}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+          {/* Primary items — always visible */}
+          {visiblePrimary.map(renderNavItem)}
+
+          {/* Divider */}
+          <div className="border-t border-white/5 my-3" />
+
+          {/* Tools group */}
+          {renderGroup(toolsGroup, visibleTools, toolsOpen, setToolsOpen, isInTools)}
+
+          {/* System group */}
+          {renderGroup(systemGroup, visibleSystem, systemOpen, setSystemOpen, isInSystem)}
         </nav>
 
         <button
@@ -189,13 +317,11 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
           <SuperadminSearch />
         </div>
 
-        {/* Mobile nav */}
+        {/* Mobile nav — flat list of all visible items */}
         <div className="lg:hidden flex overflow-x-auto gap-1 p-2 border-b border-white/5">
-          {navItems.map((item) => {
-            const active = (item as { exact?: boolean }).exact
-              ? pathname === item.href
-              : pathname.startsWith(item.href);
-            const badgeCount = getBadgeCount(counts, (item as { badgeKey?: string }).badgeKey);
+          {mobileItems.map((item) => {
+            const active = isActive(item);
+            const badgeCount = getBadgeCount(counts, item.badgeKey);
             return (
               <Link
                 key={item.href}

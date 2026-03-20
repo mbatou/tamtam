@@ -113,24 +113,42 @@ export default function SuperAdminOverview() {
 
       {/* Row 1 — Critical KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label={t("superadmin.dashboard.totalEchos")} value={formatNumber(stats.totalEchos)} sub={t("superadmin.dashboard.activeEchos7d", { count: String(stats.activeEchos7d || 0) })} accent="orange" />
-        <StatCard label={t("superadmin.dashboard.activeCampaigns")} value={stats.activeCampaigns.toString()} accent="teal" />
+        <StatCard
+          label="Échos actifs (7j)"
+          value={formatNumber(stats.activeEchos7d || 0)}
+          sub={`${formatNumber(stats.totalEchos)} inscrits au total`}
+          accent="orange"
+        />
+        <StatCard
+          label={t("superadmin.dashboard.activeCampaigns")}
+          value={stats.activeCampaigns.toString()}
+          accent="teal"
+        />
         <StatCard label={t("superadmin.dashboard.grossRevenue")} value={formatFCFA(stats.platformRevenue)} accent="purple" />
         <StatCard
-          label={t("superadmin.dashboard.fraudRate")}
-          value={`${stats.fraudRate}%`}
-          accent={stats.fraudRate > 10 ? "red" : "teal"}
+          label="Qualité clics"
+          value={`${stats.totalClicks > 0 ? (100 - stats.fraudRate).toFixed(1) : "—"}%`}
+          sub={`${formatNumber(stats.fraudClicks)} filtrés sur ${formatNumber(stats.totalClicks)}`}
+          accent={stats.totalClicks === 0 ? "teal" : (100 - stats.fraudRate) >= 70 ? "teal" : (100 - stats.fraudRate) >= 50 ? "orange" : "red"}
         />
       </div>
 
       {/* Campaign Health Banner */}
       {stats.activeCampaigns === 0 ? (
-        <Link href="/superadmin/campaigns" className="block p-4 rounded-xl bg-red-500/10 border border-red-500/20 hover:bg-red-500/15 transition">
-          <div className="flex items-center gap-3">
-            <span className="text-red-400 font-bold text-sm">{t("superadmin.dashboard.noActiveCampaign")}</span>
-            <span className="text-white/30">&rarr;</span>
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <span className="text-red-400 font-bold text-sm">⚠️ Aucune campagne active</span>
+            <span className="text-white/40 text-sm ml-2">
+              — {formatNumber(stats.totalEchos)} Échos n&apos;ont rien à partager
+            </span>
           </div>
-        </Link>
+          <Link
+            href="/superadmin/campaigns"
+            className="px-4 py-2 rounded-lg bg-gradient-primary text-white text-sm font-bold hover:opacity-90 transition"
+          >
+            + Créer une campagne
+          </Link>
+        </div>
       ) : (
         <div className={`p-4 rounded-xl border ${stats.budgetRemainingPercent > 50 ? "bg-green-500/10 border-green-500/20" : stats.budgetRemainingPercent > 20 ? "bg-yellow-500/10 border-yellow-500/20" : "bg-red-500/10 border-red-500/20"}`}>
           <div className="flex items-center gap-3">
@@ -180,7 +198,7 @@ export default function SuperAdminOverview() {
         <div className="glass-card p-5">
           <div className="text-xs text-white/40 font-medium mb-1">{t("superadmin.dashboard.totalClicks")}</div>
           <div className="text-xl font-bold">{formatNumber(stats.totalClicks)}</div>
-          <div className="text-xs text-white/30 mt-1">{formatNumber(stats.validClicks)} {t("superadmin.dashboard.validAndFraud", { count: formatNumber(stats.fraudClicks) })}</div>
+          <div className="text-xs text-white/30 mt-1">{formatNumber(stats.validClicks)} valides · {formatNumber(stats.fraudClicks)} filtrés</div>
         </div>
       </div>
 

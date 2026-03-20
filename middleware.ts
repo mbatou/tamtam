@@ -84,7 +84,7 @@ export async function middleware(request: NextRequest) {
     const segment = path.replace("/superadmin/", "").split("/")[0];
     const mapping: Record<string, string> = {
       briefing: "briefing", fraud: "fraud", campaigns: "campaigns",
-      leads: "leads", finance: "finance", users: "users",
+      leads: "leads", pipeline: "leads", finance: "finance", users: "users",
       gamification: "gamification", health: "health", support: "support",
       roadmap: "roadmap", analytics: "overview", crm: "crm",
     };
