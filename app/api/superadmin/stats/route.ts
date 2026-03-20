@@ -1,14 +1,47 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
   if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   const supabase = createServiceClient();
+
+  // Parse date range from query params
+  const { searchParams } = new URL(request.url);
+  const fromParam = searchParams.get("from");
+  const toParam = searchParams.get("to");
+
+  // Build filtered queries for time-sensitive data
+  let clicksQuery = supabase.from("clicks").select("*", { count: "exact", head: true });
+  let validClicksQuery = supabase.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", true);
+  let fraudClicksQuery = supabase.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", false);
+  let echoSignupsQuery = supabase.from("users").select("id, name, phone, city, created_at").eq("role", "echo").order("created_at", { ascending: false }).limit(5);
+  let campaignsListQuery = supabase.from("campaigns").select("id, title, status, budget, spent, cpc, created_at").order("created_at", { ascending: false }).limit(5);
+  let recentClicksQuery = supabase.from("clicks").select("id, ip_address, is_valid, created_at, link_id").order("created_at", { ascending: false }).limit(20);
+  let sentPayoutsQuery = supabase.from("payouts").select("amount").eq("status", "sent");
+
+  if (fromParam) {
+    clicksQuery = clicksQuery.gte("created_at", fromParam);
+    validClicksQuery = validClicksQuery.gte("created_at", fromParam);
+    fraudClicksQuery = fraudClicksQuery.gte("created_at", fromParam);
+    echoSignupsQuery = echoSignupsQuery.gte("created_at", fromParam);
+    campaignsListQuery = campaignsListQuery.gte("created_at", fromParam);
+    recentClicksQuery = recentClicksQuery.gte("created_at", fromParam);
+    sentPayoutsQuery = sentPayoutsQuery.gte("created_at", fromParam);
+  }
+  if (toParam) {
+    clicksQuery = clicksQuery.lte("created_at", toParam);
+    validClicksQuery = validClicksQuery.lte("created_at", toParam);
+    fraudClicksQuery = fraudClicksQuery.lte("created_at", toParam);
+    echoSignupsQuery = echoSignupsQuery.lte("created_at", toParam);
+    campaignsListQuery = campaignsListQuery.lte("created_at", toParam);
+    recentClicksQuery = recentClicksQuery.lte("created_at", toParam);
+    sentPayoutsQuery = sentPayoutsQuery.lte("created_at", toParam);
+  }
 
   const [
     { count: totalEchos },
@@ -32,17 +65,17 @@ export async function GET() {
     supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "batteur"),
     supabase.from("campaigns").select("*", { count: "exact", head: true }),
     supabase.from("campaigns").select("*", { count: "exact", head: true }).eq("status", "active"),
-    supabase.from("clicks").select("*", { count: "exact", head: true }),
-    supabase.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", true),
-    supabase.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", false),
+    clicksQuery,
+    validClicksQuery,
+    fraudClicksQuery,
     supabase.from("payouts").select("*", { count: "exact", head: true }).eq("status", "pending"),
-    supabase.from("users").select("id, name, phone, city, created_at").eq("role", "echo").order("created_at", { ascending: false }).limit(5),
-    supabase.from("campaigns").select("id, title, status, budget, spent, cpc, created_at").order("created_at", { ascending: false }).limit(5),
+    echoSignupsQuery,
+    campaignsListQuery,
     supabase.from("users").select("id, name, total_earned, balance").eq("role", "echo").order("total_earned", { ascending: false }).limit(10),
-    supabase.from("clicks").select("id, ip_address, is_valid, created_at, link_id").order("created_at", { ascending: false }).limit(20),
+    recentClicksQuery,
     supabase.from("payouts").select("id, echo_id, amount, provider, status, created_at, users!echo_id(name, phone)").eq("status", "pending").order("created_at", { ascending: false }).limit(10),
     supabase.from("campaigns").select("spent, budget, status"),
-    supabase.from("payouts").select("amount").eq("status", "sent"),
+    sentPayoutsQuery,
     supabase.from("platform_settings").select("key, value"),
   ]);
 
@@ -53,13 +86,14 @@ export async function GET() {
   const pendingPayoutAmount = (pendingPayoutsList || []).reduce((s: number, p: { amount: number }) => s + p.amount, 0);
   const fraudRate = (totalClicks || 0) > 0 ? ((fraudClicks || 0) / (totalClicks || 1) * 100) : 0;
 
-  // --- Active echos in last 7 days (echos with clicks) ---
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  const { data: activeEchoLinks } = await supabase
+  // --- Active echos (echos with clicks in the selected period, default last 7 days) ---
+  const activeFrom = fromParam || (() => { const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString(); })();
+  let activeEchoQuery = supabase
     .from("tracked_links")
     .select("echo_id, clicks!inner(created_at)")
-    .gte("clicks.created_at", sevenDaysAgo.toISOString());
+    .gte("clicks.created_at", activeFrom);
+  if (toParam) activeEchoQuery = activeEchoQuery.lte("clicks.created_at", toParam);
+  const { data: activeEchoLinks } = await activeEchoQuery;
 
   const activeEchoSet = new Set<string>();
   if (activeEchoLinks) {
@@ -80,20 +114,24 @@ export async function GET() {
     ? Math.round((totalBudgetActive / totalBudgetActiveAll) * 100)
     : 0;
 
-  // --- Chart data: clicks per day (last 14 days) ---
-  const fourteenDaysAgo = new Date();
-  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 13);
-  fourteenDaysAgo.setHours(0, 0, 0, 0);
+  // --- Chart data: clicks per day ---
+  // Use date range if provided, otherwise default to last 14 days
+  const chartFrom = fromParam ? new Date(fromParam) : (() => { const d = new Date(); d.setDate(d.getDate() - 13); d.setHours(0, 0, 0, 0); return d; })();
+  const chartTo = toParam ? new Date(toParam) : new Date();
 
-  const { data: dailyClicks } = await supabase
+  let dailyClicksQuery = supabase
     .from("clicks")
     .select("created_at, is_valid")
-    .gte("created_at", fourteenDaysAgo.toISOString())
+    .gte("created_at", chartFrom.toISOString())
     .order("created_at", { ascending: true });
+  if (toParam) dailyClicksQuery = dailyClicksQuery.lte("created_at", toParam);
 
+  const { data: dailyClicks } = await dailyClicksQuery;
+
+  const dayCount = Math.max(1, Math.ceil((chartTo.getTime() - chartFrom.getTime()) / 86400000) + 1);
   const clicksByDay: Record<string, { date: string; valid: number; fraud: number }> = {};
-  for (let i = 0; i < 14; i++) {
-    const d = new Date(fourteenDaysAgo);
+  for (let i = 0; i < dayCount; i++) {
+    const d = new Date(chartFrom);
     d.setDate(d.getDate() + i);
     const key = d.toISOString().slice(0, 10);
     clicksByDay[key] = { date: key, valid: 0, fraud: 0 };
@@ -114,16 +152,19 @@ export async function GET() {
     campaignsByStatus[s] = (campaignsByStatus[s] || 0) + 1;
   }
 
-  // --- Chart data: echo signups per day (last 14 days) ---
-  const { data: recentSignups } = await supabase
+  // --- Chart data: echo signups per day ---
+  let signupsQuery = supabase
     .from("users")
     .select("created_at")
     .eq("role", "echo")
-    .gte("created_at", fourteenDaysAgo.toISOString());
+    .gte("created_at", chartFrom.toISOString());
+  if (toParam) signupsQuery = signupsQuery.lte("created_at", toParam);
+
+  const { data: recentSignups } = await signupsQuery;
 
   const signupsByDay: Record<string, number> = {};
-  for (let i = 0; i < 14; i++) {
-    const d = new Date(fourteenDaysAgo);
+  for (let i = 0; i < dayCount; i++) {
+    const d = new Date(chartFrom);
     d.setDate(d.getDate() + i);
     signupsByDay[d.toISOString().slice(0, 10)] = 0;
   }
@@ -133,21 +174,28 @@ export async function GET() {
   }
   const signupsChart = Object.entries(signupsByDay).map(([date, count]) => ({ date, count }));
 
-  // --- Chart data: user acquisition (last 30 days, echos + brands cumulative) ---
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
-  thirtyDaysAgo.setHours(0, 0, 0, 0);
+  // --- Chart data: user acquisition (echos + brands cumulative) ---
+  // Use date range if provided, otherwise default to last 30 days
+  const acqFrom = fromParam ? new Date(fromParam) : (() => { const d = new Date(); d.setDate(d.getDate() - 29); d.setHours(0, 0, 0, 0); return d; })();
+  const acqDayCount = fromParam ? dayCount : 30;
+
+  let echoAcqQuery = supabase.from("users").select("created_at").eq("role", "echo").gte("created_at", acqFrom.toISOString());
+  let brandAcqQuery = supabase.from("users").select("created_at").eq("role", "batteur").gte("created_at", acqFrom.toISOString());
+  if (toParam) {
+    echoAcqQuery = echoAcqQuery.lte("created_at", toParam);
+    brandAcqQuery = brandAcqQuery.lte("created_at", toParam);
+  }
 
   const [{ data: echoSignups30 }, { data: brandSignups30 }, { count: echosBefore }, { count: brandsBefore }] = await Promise.all([
-    supabase.from("users").select("created_at").eq("role", "echo").gte("created_at", thirtyDaysAgo.toISOString()),
-    supabase.from("users").select("created_at").eq("role", "batteur").gte("created_at", thirtyDaysAgo.toISOString()),
-    supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "echo").lt("created_at", thirtyDaysAgo.toISOString()),
-    supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "batteur").lt("created_at", thirtyDaysAgo.toISOString()),
+    echoAcqQuery,
+    brandAcqQuery,
+    supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "echo").lt("created_at", acqFrom.toISOString()),
+    supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "batteur").lt("created_at", acqFrom.toISOString()),
   ]);
 
   const acqByDay: Record<string, { date: string; echos: number; brands: number; cumulEchos: number; cumulBrands: number }> = {};
-  for (let i = 0; i < 30; i++) {
-    const d = new Date(thirtyDaysAgo);
+  for (let i = 0; i < acqDayCount; i++) {
+    const d = new Date(acqFrom);
     d.setDate(d.getDate() + i);
     acqByDay[d.toISOString().slice(0, 10)] = { date: d.toISOString().slice(0, 10), echos: 0, brands: 0, cumulEchos: 0, cumulBrands: 0 };
   }
