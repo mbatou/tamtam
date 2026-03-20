@@ -11,6 +11,12 @@ export async function GET() {
 
   const supabase = createServiceClient();
 
+  // Verify superadmin role
+  const { data: currentUser } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  if (!currentUser || currentUser.role !== "superadmin") {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
+
   const { data: users } = await supabase
     .from("users")
     .select("*")
@@ -112,6 +118,13 @@ export async function POST(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   const supabase = createServiceClient();
+
+  // Verify superadmin role
+  const { data: adminCheck } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  if (!adminCheck || adminCheck.role !== "superadmin") {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
+
   const body = await request.json();
   const { user_id, action, reason } = body;
 

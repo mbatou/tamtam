@@ -57,6 +57,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
+  // Verify user has admin/superadmin role before processing payouts
+  const supabaseAdmin = createServiceClient();
+  const { data: adminUser } = await supabaseAdmin.from("users").select("role").eq("id", session.user.id).single();
+  if (!adminUser || !["batteur", "admin", "superadmin"].includes(adminUser.role)) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
+
   const { payout_id, status } = await request.json();
   if (!payout_id || !status) {
     return NextResponse.json({ error: "Paramètres manquants" }, { status: 400 });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -12,7 +12,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Trop de tentatives. Réessaie plus tard." }, { status: 429 });
   }
 
+  // Verify the authenticated user matches the userId being registered
+  const authClient = createClient();
+  const { data: { session } } = await authClient.auth.getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+
   const { userId, name, phone, city, mobile_money_provider, referral_code } = await req.json();
+
+  if (userId !== session.user.id) {
+    return NextResponse.json({ error: "Non autorisé — userId ne correspond pas" }, { status: 403 });
+  }
 
   if (!userId || !name || !mobile_money_provider) {
     return NextResponse.json({ error: "Champs requis manquants" }, { status: 400 });
