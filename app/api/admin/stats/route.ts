@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { countClicks, getLinksForCampaigns, getClicksChart } from "@/lib/click-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -38,31 +39,15 @@ export async function GET() {
   const totalBudget = allCampaigns.reduce((sum, c) => sum + (c.budget || 0), 0);
 
   // Get tracked links for brand's campaigns
-  const { data: trackedLinks } = campaignIds.length > 0
-    ? await supabase
-        .from("tracked_links")
-        .select("id, campaign_id, echo_id, click_count")
-        .in("campaign_id", campaignIds)
-    : { data: [] };
-
-  const links = trackedLinks || [];
+  const links = await getLinksForCampaigns(supabase, campaignIds);
   const echoIds = Array.from(new Set(links.map((l) => l.echo_id)));
-
-  // Get clicks for brand's tracked links — fetch all for per-campaign breakdown
   const linkIds = links.map((l) => l.id);
-  let totalClicks = 0;
-  let validClicks = 0;
-  let allClickRows: { link_id: string; is_valid: boolean }[] = [];
 
-  if (linkIds.length > 0) {
-    const { data: clickRows } = await supabase
-      .from("clicks")
-      .select("link_id, is_valid")
-      .in("link_id", linkIds);
-    allClickRows = clickRows || [];
-    totalClicks = allClickRows.length;
-    validClicks = allClickRows.filter((c) => c.is_valid).length;
-  }
+  // Count clicks using Postgres COUNT(*) — immune to row-limit truncation
+  const [totalClicks, validClicks] = await Promise.all([
+    countClicks(supabase, linkIds),
+    countClicks(supabase, linkIds, true),
+  ]);
 
   // Get top echos for this brand's campaigns
   const echoEarnings: Record<string, { id: string; clicks: number; earned: number }> = {};
@@ -91,36 +76,8 @@ export async function GET() {
       .slice(0, 10);
   }
 
-  // --- Chart data: daily clicks for brand's campaigns (last 14 days) ---
-  // Use UTC dates to ensure bucket keys match click created_at timestamps
-  const now = new Date();
-  const chartStartUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 13));
-
-  let clicksChart: { date: string; valid: number; fraud: number }[] = [];
-  if (linkIds.length > 0) {
-    const { data: dailyClicks } = await supabase
-      .from("clicks")
-      .select("created_at, is_valid")
-      .in("link_id", linkIds)
-      .gte("created_at", chartStartUTC.toISOString())
-      .order("created_at", { ascending: true });
-
-    const clicksByDay: Record<string, { date: string; valid: number; fraud: number }> = {};
-    for (let i = 0; i < 14; i++) {
-      const d = new Date(chartStartUTC);
-      d.setUTCDate(d.getUTCDate() + i);
-      const key = d.toISOString().slice(0, 10);
-      clicksByDay[key] = { date: key, valid: 0, fraud: 0 };
-    }
-    for (const click of dailyClicks || []) {
-      const key = click.created_at.slice(0, 10);
-      if (clicksByDay[key]) {
-        if (click.is_valid) clicksByDay[key].valid++;
-        else clicksByDay[key].fraud++;
-      }
-    }
-    clicksChart = Object.values(clicksByDay);
-  }
+  // Chart data: daily clicks for brand's campaigns (last 14 days)
+  const clicksChart = await getClicksChart(supabase, linkIds, 14);
 
   // --- Chart data: budget per campaign ---
   const campaignBudgets = allCampaigns.map((c) => ({
@@ -129,16 +86,19 @@ export async function GET() {
     spent: c.spent || 0,
   }));
 
-  // Enrich campaigns with real click counts (not estimated from spent/cpc)
-  const enrichedCampaigns = allCampaigns.map((c) => {
-    const campaignLinkIds = new Set(links.filter((l) => l.campaign_id === c.id).map((l) => l.id));
-    const campaignClicks = allClickRows.filter((cl) => campaignLinkIds.has(cl.link_id));
-    return {
-      ...c,
-      realClicks: campaignClicks.length,
-      realValidClicks: campaignClicks.filter((cl) => cl.is_valid).length,
-    };
-  });
+  // Enrich campaigns with real click counts using Postgres COUNT(*)
+  const enrichedCampaigns = await Promise.all(
+    allCampaigns.map(async (c) => {
+      const campaignLinkIds = links
+        .filter((l) => l.campaign_id === c.id)
+        .map((l) => l.id);
+      const [realClicks, realValidClicks] = await Promise.all([
+        countClicks(supabase, campaignLinkIds),
+        countClicks(supabase, campaignLinkIds, true),
+      ]);
+      return { ...c, realClicks, realValidClicks };
+    })
+  );
 
   return NextResponse.json({
     totalClicks,
