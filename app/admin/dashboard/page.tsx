@@ -271,6 +271,16 @@ export default function AdminDashboard() {
     <div className="p-6 max-w-6xl">
       <h1 className="text-2xl font-bold mb-6">{t("admin.dashboard.title")}</h1>
 
+      {/* ── Welcome Bonus Banner (LUP-68) ── */}
+      {stats.walletBalance > 0 && stats.totalCampaigns === 0 && (
+        <div className="bg-gradient-to-r from-orange-500 to-yellow-500 rounded-xl p-4 text-center mb-6">
+          <div className="text-white font-bold text-lg">2,000 FCFA offerts!</div>
+          <div className="text-white/80 text-sm">
+            Votre portefeuille a été crédité. Lancez votre première campagne — c&apos;est offert.
+          </div>
+        </div>
+      )}
+
       {/* ── Campaign Status Banner ── */}
       {activeCampaigns.length === 0 ? (
         <div className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20">

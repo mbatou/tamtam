@@ -408,9 +408,18 @@ export default function LandingPage() {
           <h3 className="text-2xl font-bold text-white mb-2">
             Prêt à toucher des milliers de personnes?
           </h3>
-          <p className="text-gray-400 mb-6">
+          <p className="text-gray-400 mb-4">
             Dès 10,000 FCFA — lancez votre première campagne. Résultats en 24h.
           </p>
+
+          {/* Promo banner */}
+          {new Date() < new Date("2026-04-01") && (
+            <div className="bg-gradient-to-r from-orange-500 to-yellow-500 rounded-xl p-3 mb-6">
+              <div className="text-white font-bold">2,000 FCFA offerts à l&apos;inscription!</div>
+              <div className="text-white/80 text-xs">Offre limitée — jusqu&apos;au 1er avril 2026</div>
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/signup/brand">
               <button className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-xl font-bold text-lg transition">
