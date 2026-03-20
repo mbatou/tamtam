@@ -102,5 +102,58 @@ export async function POST(request: NextRequest) {
     console.error("Profile creation error:", profileError);
   }
 
-  return NextResponse.json({ success: true, userId: authUser.user.id });
+  // --- Welcome bonus (LUP-68) ---
+  let welcomeBonusApplied = false;
+  try {
+    const { data: settings } = await supabase
+      .from("platform_settings")
+      .select("key, value")
+      .in("key", ["welcome_bonus_amount", "welcome_bonus_end_date", "welcome_bonus_enabled"]);
+
+    const bonusEnabled = settings?.find((s) => s.key === "welcome_bonus_enabled")?.value === "true";
+    const bonusAmount = parseInt(settings?.find((s) => s.key === "welcome_bonus_amount")?.value || "0");
+    const bonusEndDate = new Date(settings?.find((s) => s.key === "welcome_bonus_end_date")?.value || "2026-01-01");
+
+    if (bonusEnabled && new Date() < bonusEndDate && bonusAmount > 0) {
+      await supabase
+        .from("users")
+        .update({ balance: bonusAmount })
+        .eq("id", authUser.user.id);
+
+      await supabase.from("wallet_transactions").insert({
+        user_id: authUser.user.id,
+        amount: bonusAmount,
+        type: "bonus",
+        description: "Bonus de bienvenue — offre limitée",
+        status: "completed",
+      }).then(() => {}).catch(() => {});
+
+      welcomeBonusApplied = true;
+    }
+  } catch {
+    // Non-blocking: bonus failure should not prevent account creation
+  }
+
+  // --- Auto-convert matching lead (LUP-67) ---
+  try {
+    const { data: matchingLead } = await supabase
+      .from("brand_leads")
+      .select("id")
+      .eq("email", email.toLowerCase())
+      .neq("status", "converted")
+      .limit(1)
+      .single();
+
+    if (matchingLead) {
+      await supabase.from("brand_leads").update({
+        status: "converted",
+        converted_at: new Date().toISOString(),
+        converted_user_id: authUser.user.id,
+      }).eq("id", matchingLead.id);
+    }
+  } catch {
+    // Non-blocking: lead conversion failure should not prevent account creation
+  }
+
+  return NextResponse.json({ success: true, userId: authUser.user.id, welcomeBonusApplied });
 }

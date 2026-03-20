@@ -93,7 +93,8 @@ function VerifyOTPContent() {
       }
 
       // Account created successfully — redirect to login
-      window.location.href = "/login?tab=batteur&verified=true";
+      const bonusParam = data.welcomeBonusApplied ? "&bonus=true" : "";
+      window.location.href = `/login?tab=batteur&verified=true${bonusParam}`;
     } catch {
       setError("Erreur réseau. Réessayez.");
       setLoading(false);
