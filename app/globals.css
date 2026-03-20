@@ -141,9 +141,17 @@ h1, h2, h3 {
   font-size: 12px;
   font-weight: 600;
 }
-.badge-pending {
+.badge-pending, .badge-pending_review {
   background: rgba(243, 156, 18, 0.15);
   color: #F39C12;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.badge-rejected {
+  background: rgba(231, 76, 60, 0.15);
+  color: #E74C3C;
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 12px;

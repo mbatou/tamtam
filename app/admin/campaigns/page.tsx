@@ -198,7 +198,7 @@ export default function AdminCampaignsPage() {
 
   function getStatusLabel(status: string) {
     const map: Record<string, string> = {
-      active: t("common.active"), paused: t("common.paused"), completed: t("common.finished"), draft: t("admin.campaigns.draft"), rejected: t("common.rejected"),
+      active: t("common.active"), paused: t("common.paused"), completed: t("common.finished"), draft: t("admin.campaigns.draft"), rejected: t("common.rejected"), pending_review: "En attente",
     };
     return map[status] || status;
   }
@@ -287,6 +287,27 @@ export default function AdminCampaignsPage() {
             </button>
           </div>
         </div>
+
+        {/* Pending review banner */}
+        {c.status === "pending_review" && (
+          <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4 mb-8">
+            <span className="text-orange-400 font-bold">⏳ En cours de validation</span>
+            <p className="text-gray-400 text-sm mt-1">
+              Votre rythme est en cours de validation par notre équipe.
+              Vous serez notifié dès qu&apos;il sera approuvé.
+            </p>
+          </div>
+        )}
+
+        {/* Rejected banner */}
+        {c.status === "rejected" && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-8">
+            <span className="text-red-400 font-bold">❌ Modifications requises</span>
+            {c.moderation_reason && (
+              <p className="text-gray-400 text-sm mt-1">{c.moderation_reason}</p>
+            )}
+          </div>
+        )}
 
         {/* Stats cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

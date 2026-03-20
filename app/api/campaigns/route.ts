@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { createCampaignSchema, updateCampaignSchema, deleteCampaignSchema } from "@/lib/validations";
-import { sendNewCampaignNotification, sendCampaignCompletedToEcho } from "@/lib/email";
+import { sendNewCampaignNotification, sendCampaignCompletedToEcho, sendEmail } from "@/lib/email";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -177,7 +177,8 @@ export async function POST(request: NextRequest) {
     creative_urls: creative_urls || [],
     cpc,
     budget,
-    status: "active",
+    status: "pending_review",
+    moderation_status: "pending",
     starts_at: starts_at || null,
     ends_at: ends_at || null,
   }).select().single();
@@ -191,8 +192,30 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Notify echos about the new active campaign
-  notifyEchosNewCampaign(title, cpc);
+  // Get brand name for notification
+  const { data: brand } = await supabase
+    .from("users")
+    .select("name")
+    .eq("id", session.user.id)
+    .single();
+
+  // Notify superadmin about new campaign pending review
+  sendEmail({
+    to: "support@tamma.me",
+    subject: `Nouvelle campagne soumise: ${title}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px;">
+        <h2 style="color: #D35400;">Nouvelle campagne à valider</h2>
+        <p><strong>Marque:</strong> ${brand?.name || "—"}</p>
+        <p><strong>Campagne:</strong> ${title}</p>
+        <p><strong>Budget:</strong> ${budget.toLocaleString()} FCFA</p>
+        <p><strong>CPC:</strong> ${cpc} FCFA</p>
+        <p style="margin-top: 20px;">
+          <a href="https://www.tamma.me/superadmin/campaigns" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Valider maintenant →</a>
+        </p>
+      </div>
+    `,
+  }).catch(() => {});
 
   return NextResponse.json(data, { status: 201 });
 }
