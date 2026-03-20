@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
         status: c?.status || "unknown",
         cpc: c?.cpc || 0,
         clicks: link.click_count || 0,
-        earned: Math.floor((link.click_count || 0) * (c?.cpc || 0) * 0.75),
+        earned: Math.floor((link.click_count || 0) * (c?.cpc || 0) * ECHO_SHARE_PERCENT / 100),
         joined_at: link.created_at,
       });
     }

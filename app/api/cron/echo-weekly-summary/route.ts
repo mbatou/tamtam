@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
+import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
     const stats = echoStats.get(echoId) || { validClicks: 0, earnings: 0, campaigns: new Set<string>() };
     if (click.is_valid) {
       stats.validClicks++;
-      stats.earnings += Math.floor(link.campaigns.cpc * 0.75);
+      stats.earnings += Math.floor(link.campaigns.cpc * ECHO_SHARE_PERCENT / 100);
     }
     stats.campaigns.add(link.campaigns.title);
     echoStats.set(echoId, stats);

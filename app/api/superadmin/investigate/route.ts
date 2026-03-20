@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -274,7 +275,7 @@ export async function GET(req: NextRequest) {
   // Check: total_earned > expected from clicks
   const expectedEarnings = (trackedLinks || []).reduce((sum, l) => {
     const c = l.campaigns as unknown as { cpc: number } | null;
-    return sum + (l.click_count || 0) * (c?.cpc || 0) * 0.75;
+    return sum + (l.click_count || 0) * (c?.cpc || 0) * ECHO_SHARE_PERCENT / 100;
   }, 0);
   if (user.total_earned > expectedEarnings + 500 && user.role === "echo") {
     anomalies.push({

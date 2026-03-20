@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { countClicks } from "@/lib/click-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -248,40 +249,54 @@ export async function GET(request: NextRequest) {
   const activeCampaignsDetails: ActiveCampaignDetail[] = [];
 
   for (const camp of activeCampaignsList || []) {
+    // Fetch tracked links without nested clicks (avoids row-limit truncation)
     const { data: links } = await supabase
       .from("tracked_links")
       .select(`
+        id,
         echo_id,
-        users!tracked_links_echo_id_fkey(id, name, city),
-        clicks(id, is_valid)
+        users!tracked_links_echo_id_fkey(id, name, city)
       `)
       .eq("campaign_id", camp.id);
 
-    const echoMap = new Map<string, { id: string; name: string; city: string | null; totalClicks: number; validClicks: number }>();
+    const allLinkIds = (links || []).map((l) => l.id);
+    const echoLinkMap = new Map<string, { user: { id: string; name: string; city: string | null }; linkIds: string[] }>();
     for (const link of links || []) {
       const echoUser = link.users as unknown as { id: string; name: string; city: string | null } | null;
       if (!echoUser) continue;
-      if (!echoMap.has(link.echo_id)) {
-        echoMap.set(link.echo_id, { id: echoUser.id, name: echoUser.name, city: echoUser.city, totalClicks: 0, validClicks: 0 });
+      if (!echoLinkMap.has(link.echo_id)) {
+        echoLinkMap.set(link.echo_id, { user: echoUser, linkIds: [] });
       }
-      const echo = echoMap.get(link.echo_id)!;
-      const clicks = (link.clicks || []) as unknown as { id: string; is_valid: boolean }[];
-      for (const click of clicks) {
-        echo.totalClicks++;
-        if (click.is_valid) echo.validClicks++;
-      }
+      echoLinkMap.get(link.echo_id)!.linkIds.push(link.id);
     }
 
-    const echoValues = Array.from(echoMap.values());
+    // Use Postgres COUNT(*) for accurate campaign-level totals
+    const [campTotalClicks, campValidClicks] = await Promise.all([
+      countClicks(supabase, allLinkIds),
+      countClicks(supabase, allLinkIds, true),
+    ]);
+
+    // Per-echo valid clicks using Postgres COUNT(*)
+    const echoEntries = Array.from(echoLinkMap.entries());
+    const echoValidCounts = await Promise.all(
+      echoEntries.map(([, { linkIds }]) => countClicks(supabase, linkIds, true))
+    );
+
+    const echoDetails = echoEntries.map(([, { user }], i) => ({
+      id: user.id,
+      name: user.name,
+      city: user.city,
+      validClicks: echoValidCounts[i],
+    }));
+
     activeCampaignsDetails.push({
       ...camp,
-      engagedEchos: echoMap.size,
-      totalClicks: echoValues.reduce((s, e) => s + e.totalClicks, 0),
-      validClicks: echoValues.reduce((s, e) => s + e.validClicks, 0),
-      topEchos: echoValues
+      engagedEchos: echoLinkMap.size,
+      totalClicks: campTotalClicks,
+      validClicks: campValidClicks,
+      topEchos: echoDetails
         .sort((a, b) => b.validClicks - a.validClicks)
-        .slice(0, 5)
-        .map(({ id, name, city, validClicks }) => ({ id, name, city, validClicks })),
+        .slice(0, 5),
     });
   }
 

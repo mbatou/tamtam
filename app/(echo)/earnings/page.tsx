@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { formatFCFA, timeAgo } from "@/lib/utils";
-import { MIN_PAYOUT_AMOUNT } from "@/lib/constants";
+import { MIN_PAYOUT_AMOUNT, ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { useToast } from "@/components/ui/Toast";
 import { useTranslation } from "@/lib/i18n";
 import type { User, Payout } from "@/lib/types";
@@ -364,7 +364,7 @@ export default function EarningsPage() {
           <p className="text-gray-400 text-sm">
             Si tu partages 5 rythmes et génères 50 clics, tu pourrais gagner environ{" "}
             <span className="text-accent font-bold">
-              {(avgCpc * 50 * 0.75).toLocaleString("fr-FR")} FCFA
+              {(avgCpc * 50 * ECHO_SHARE_PERCENT / 100).toLocaleString("fr-FR")} FCFA
             </span>
           </p>
           {topEchoEarnings > 0 && (

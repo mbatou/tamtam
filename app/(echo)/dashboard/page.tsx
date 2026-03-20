@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatFCFA, getTrackingUrl } from "@/lib/utils";
+import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import TabBar from "@/components/ui/TabBar";
 import { useToast } from "@/components/ui/Toast";
 import CampaignDetailModal from "@/components/CampaignDetailModal";
@@ -134,7 +135,7 @@ export default function EchoDashboard() {
 
   const totalClicks = activeLinks.reduce((sum, l) => sum + l.click_count, 0);
   const totalEarnings = activeLinks.reduce(
-    (sum, l) => sum + Math.floor(l.click_count * (l.campaigns?.cpc || 0) * 0.75), 0
+    (sum, l) => sum + Math.floor(l.click_count * (l.campaigns?.cpc || 0) * ECHO_SHARE_PERCENT / 100), 0
   );
   const hasActiveCampaigns = availableCampaigns.length > 0 || activeLinks.some((l) => l.campaigns?.status === "active");
   const balance = user?.balance || 0;
@@ -323,7 +324,7 @@ export default function EchoDashboard() {
                         <span className="font-semibold">{link.click_count}</span>
                       </div>
                       <div className="text-xs font-bold text-accent">
-                        {formatFCFA(Math.floor(link.click_count * (link.campaigns?.cpc || 0) * 0.75))}
+                        {formatFCFA(Math.floor(link.click_count * (link.campaigns?.cpc || 0) * ECHO_SHARE_PERCENT / 100))}
                       </div>
                       <div className="text-[10px] text-white/30">
                         {link.campaigns?.cpc} FCFA/{t("common.clicks")}

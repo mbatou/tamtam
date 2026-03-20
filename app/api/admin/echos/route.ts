@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +66,7 @@ export async function GET() {
     const campaign = campaignMap.get(link.campaign_id);
     const cpc = campaign?.cpc || 0;
     echoStats[link.echo_id].totalClicks += link.click_count;
-    echoStats[link.echo_id].totalEarned += Math.floor(link.click_count * cpc * 0.75);
+    echoStats[link.echo_id].totalEarned += Math.floor(link.click_count * cpc * ECHO_SHARE_PERCENT / 100);
     echoStats[link.echo_id].campaignCount += 1;
     if (campaign) echoStats[link.echo_id].campaigns.push(campaign.title);
   }

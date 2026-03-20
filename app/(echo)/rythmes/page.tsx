@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { formatFCFA, getTrackingUrl, timeAgo } from "@/lib/utils";
+import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { useToast } from "@/components/ui/Toast";
 import CampaignDetailModal from "@/components/CampaignDetailModal";
 import { useTranslation } from "@/lib/i18n";
@@ -177,7 +178,7 @@ export default function RythmesPage() {
                         <span className="font-semibold">{myLink.click_count}</span>
                       </div>
                       <span className="font-bold text-accent">
-                        {formatFCFA(Math.floor(myLink.click_count * campaign.cpc * 0.75))} {t("common.earned")}
+                        {formatFCFA(Math.floor(myLink.click_count * campaign.cpc * ECHO_SHARE_PERCENT / 100))} {t("common.earned")}
                       </span>
                     </div>
                     <div className="flex gap-2">
@@ -275,7 +276,7 @@ export default function RythmesPage() {
                 </h2>
                 <div className="space-y-2">
                   {finishedLinks.map((link) => {
-                    const earned = Math.floor(link.click_count * (link.campaigns?.cpc || 0) * 0.75);
+                    const earned = Math.floor(link.click_count * (link.campaigns?.cpc || 0) * ECHO_SHARE_PERCENT / 100);
                     return (
                       <div key={link.id} className="glass-card p-4">
                         <div className="flex items-center justify-between mb-1">

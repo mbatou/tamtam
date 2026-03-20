@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { countClicks, getLinksForCampaigns, getClicksChart } from "@/lib/click-utils";
+import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +66,7 @@ export async function GET() {
     const campaign = allCampaigns.find((c) => c.id === link.campaign_id);
     const cpc = campaign?.cpc || 0;
     echoEarnings[link.echo_id].clicks += link.click_count;
-    echoEarnings[link.echo_id].earned += Math.floor(link.click_count * cpc * 0.75);
+    echoEarnings[link.echo_id].earned += Math.floor(link.click_count * cpc * ECHO_SHARE_PERCENT / 100);
   }
 
   // Fetch echo names
