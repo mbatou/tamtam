@@ -59,21 +59,42 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Create the user profile
-  const { error } = await supabase.from("users").upsert(
-    {
-      id: userId,
-      role: "echo",
-      name,
-      phone: phone || null,
-      city: city || null,
-      mobile_money_provider,
-      terms_accepted_at: new Date().toISOString(),
-      referral_code: newUserReferralCode,
-      ...(referrerId ? { referred_by: referrerId } : {}),
-    },
-    { onConflict: "id" }
-  );
+  // Check if user already exists with a different role (e.g., batteur who got welcome bonus)
+  const { data: existingUser } = await supabase
+    .from("users")
+    .select("id, role, balance")
+    .eq("id", userId)
+    .single();
+
+  if (existingUser && existingUser.role && existingUser.role !== "echo") {
+    return NextResponse.json(
+      { error: "Ce compte existe déjà avec le rôle " + existingUser.role + ". Veuillez vous connecter." },
+      { status: 409 }
+    );
+  }
+
+  // Create the user profile (insert only, no upsert to prevent role overwrite)
+  const { error } = existingUser
+    ? await supabase.from("users").update({
+        name,
+        phone: phone || null,
+        city: city || null,
+        mobile_money_provider,
+        terms_accepted_at: new Date().toISOString(),
+        referral_code: newUserReferralCode,
+        ...(referrerId ? { referred_by: referrerId } : {}),
+      }).eq("id", userId)
+    : await supabase.from("users").insert({
+        id: userId,
+        role: "echo",
+        name,
+        phone: phone || null,
+        city: city || null,
+        mobile_money_provider,
+        terms_accepted_at: new Date().toISOString(),
+        referral_code: newUserReferralCode,
+        ...(referrerId ? { referred_by: referrerId } : {}),
+      });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

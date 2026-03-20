@@ -129,7 +129,7 @@ export async function middleware(request: NextRequest) {
       // Team members: check if they have access to this page
       // Always allow /superadmin/team page — no, only superadmins can manage team
       // Settings and team pages are superadmin-only
-      if (pathname.startsWith("/superadmin/settings") || pathname.startsWith("/superadmin/team")) {
+      if (pathname.startsWith("/superadmin/settings") || pathname.startsWith("/superadmin/team") || pathname.startsWith("/superadmin/investigate")) {
         return NextResponse.redirect(new URL("/superadmin", request.url));
       }
       const pageKey = getPageKey(pathname);
@@ -160,7 +160,7 @@ export async function middleware(request: NextRequest) {
     } else if (userData.role === "admin" && userData.team_position) {
       // Team members can access APIs matching their permissions
       // But team management API is superadmin-only
-      if (pathname.startsWith("/api/superadmin/team") || pathname.startsWith("/api/superadmin/settings")) {
+      if (pathname.startsWith("/api/superadmin/team") || pathname.startsWith("/api/superadmin/settings") || pathname.startsWith("/api/superadmin/investigate")) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     } else {
