@@ -215,6 +215,65 @@ export async function GET(request: NextRequest) {
     return { ...d, cumulEchos: runEchos, cumulBrands: runBrands };
   });
 
+  // --- Active campaigns with Écho engagement details ---
+  const { data: activeCampaignsList } = await supabase
+    .from("campaigns")
+    .select("id, title, budget, spent, cpc, status")
+    .eq("status", "active");
+
+  interface ActiveCampaignDetail {
+    id: string;
+    title: string;
+    budget: number;
+    spent: number;
+    cpc: number;
+    status: string;
+    engagedEchos: number;
+    totalClicks: number;
+    validClicks: number;
+    topEchos: { id: string; name: string; city: string | null; validClicks: number }[];
+  }
+
+  const activeCampaignsDetails: ActiveCampaignDetail[] = [];
+
+  for (const camp of activeCampaignsList || []) {
+    const { data: links } = await supabase
+      .from("tracked_links")
+      .select(`
+        echo_id,
+        users!tracked_links_echo_id_fkey(id, name, city),
+        clicks(id, is_valid)
+      `)
+      .eq("campaign_id", camp.id);
+
+    const echoMap = new Map<string, { id: string; name: string; city: string | null; totalClicks: number; validClicks: number }>();
+    for (const link of links || []) {
+      const echoUser = link.users as unknown as { id: string; name: string; city: string | null } | null;
+      if (!echoUser) continue;
+      if (!echoMap.has(link.echo_id)) {
+        echoMap.set(link.echo_id, { id: echoUser.id, name: echoUser.name, city: echoUser.city, totalClicks: 0, validClicks: 0 });
+      }
+      const echo = echoMap.get(link.echo_id)!;
+      const clicks = (link.clicks || []) as unknown as { id: string; is_valid: boolean }[];
+      for (const click of clicks) {
+        echo.totalClicks++;
+        if (click.is_valid) echo.validClicks++;
+      }
+    }
+
+    const echoValues = Array.from(echoMap.values());
+    activeCampaignsDetails.push({
+      ...camp,
+      engagedEchos: echoMap.size,
+      totalClicks: echoValues.reduce((s, e) => s + e.totalClicks, 0),
+      validClicks: echoValues.reduce((s, e) => s + e.validClicks, 0),
+      topEchos: echoValues
+        .sort((a, b) => b.validClicks - a.validClicks)
+        .slice(0, 5)
+        .map(({ id, name, city, validClicks }) => ({ id, name, city, validClicks })),
+    });
+  }
+
   return NextResponse.json({
     totalEchos: totalEchos || 0,
     totalBatteurs: totalBatteurs || 0,
@@ -240,5 +299,6 @@ export async function GET(request: NextRequest) {
     acquisitionChart,
     activeEchos7d,
     budgetRemainingPercent,
+    activeCampaignsDetails,
   });
 }

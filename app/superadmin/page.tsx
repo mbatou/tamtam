@@ -36,6 +36,17 @@ interface Stats {
   acquisitionChart: { date: string; echos: number; brands: number; cumulEchos: number; cumulBrands: number }[];
   activeEchos7d: number;
   budgetRemainingPercent: number;
+  activeCampaignsDetails: {
+    id: string;
+    title: string;
+    budget: number;
+    spent: number;
+    cpc: number;
+    engagedEchos: number;
+    totalClicks: number;
+    validClicks: number;
+    topEchos: { id: string; name: string; city: string | null; validClicks: number }[];
+  }[];
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -156,6 +167,59 @@ export default function SuperAdminOverview() {
               {t("superadmin.dashboard.campaignHealth", { active: String(stats.activeCampaigns), budget: String(stats.budgetRemainingPercent) })}
             </span>
           </div>
+        </div>
+      )}
+
+      {/* Active Campaign Widget */}
+      {stats.activeCampaignsDetails && stats.activeCampaignsDetails.length > 0 && (
+        <div className="glass-card p-6">
+          <h3 className="text-sm font-bold mb-4">Campagnes en cours</h3>
+          {stats.activeCampaignsDetails.map((campaign) => (
+            <div key={campaign.id} className="mb-6 last:mb-0">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <span className="text-white font-medium text-sm">{campaign.title}</span>
+                  <span className="text-white/30 text-xs ml-2">{campaign.cpc} FCFA/clic</span>
+                </div>
+                <span className="text-white/40 text-xs">
+                  {campaign.budget > 0 ? Math.round((campaign.spent / campaign.budget) * 100) : 0}% consommé
+                </span>
+              </div>
+              <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden mb-4">
+                <div
+                  className="h-full bg-accent rounded-full transition-all"
+                  style={{ width: `${Math.min(100, campaign.budget > 0 ? (campaign.spent / campaign.budget) * 100 : 0)}%` }}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white/5 rounded-lg p-3">
+                  <div className="text-xs text-white/40 mb-1">Participation</div>
+                  <div className="text-lg font-bold text-white">
+                    {campaign.engagedEchos}
+                    <span className="text-white/30 text-xs font-normal"> / {stats.totalEchos} Échos</span>
+                  </div>
+                  <div className="text-xs text-white/30">
+                    {campaign.validClicks} clics valides · {campaign.totalClicks} total
+                  </div>
+                </div>
+                <div className="bg-white/5 rounded-lg p-3">
+                  <div className="text-xs text-white/40 mb-2">Top Échos</div>
+                  {campaign.topEchos.slice(0, 3).map((echo, i) => (
+                    <div key={echo.id} className="flex items-center justify-between text-sm py-0.5">
+                      <span className="text-white/60 truncate">
+                        {i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"} {echo.name}
+                      </span>
+                      <span className="text-accent font-medium text-xs">{echo.validClicks} clics</span>
+                    </div>
+                  ))}
+                  {campaign.topEchos.length === 0 && (
+                    <span className="text-white/30 text-xs">Aucun Écho engagé</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
