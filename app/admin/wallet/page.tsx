@@ -147,8 +147,6 @@ function AdminWalletPage() {
     }
   }
 
-  const presetAmounts = [5000, 10000, 25000, 50000, 100000];
-
   if (loading) {
     return (
       <div className="p-6 max-w-4xl space-y-4">
