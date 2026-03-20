@@ -10,6 +10,8 @@ interface HealthCheck {
   status: "healthy" | "degraded" | "down";
   latencyMs: number;
   details?: string;
+  uptimePercent?: number;
+  responseTimes?: number[];
 }
 
 interface TableInfo {
@@ -73,6 +75,25 @@ const SEVERITY_CONFIG: Record<string, { color: string; bg: string }> = {
   low: { color: "text-blue-400", bg: "bg-blue-400/10" },
   warning: { color: "text-yellow-400", bg: "bg-yellow-400/10" },
 };
+
+function Sparkline({ data, color = "#1ABC9C" }: { data: number[]; color?: string }) {
+  if (!data || data.length < 2) return null;
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  const width = 80;
+  const height = 24;
+  const points = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * width;
+    const y = height - ((v - min) / range) * (height - 2) - 1;
+    return `${x},${y}`;
+  }).join(" ");
+  return (
+    <svg width={width} height={height} className="inline-block">
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 type Tab = "overview" | "security" | "activity";
 
@@ -242,10 +263,24 @@ export default function HealthPage() {
                         <span className="text-2xl font-black">{check.latencyMs}</span>
                         <span className="text-xs text-white/30 mb-1">ms</span>
                       </div>
-                      <span className={`text-[10px] font-semibold ${check.status === "healthy" ? "text-emerald-400/60" : "text-white/20"}`}>
-                        {check.status === "healthy" ? t("superadmin.health.uptime") : t("superadmin.health.issues")}
+                      <span className={`text-[10px] font-semibold ${
+                        check.uptimePercent && check.uptimePercent >= 99 ? "text-emerald-400/60" :
+                        check.uptimePercent && check.uptimePercent >= 90 ? "text-yellow-400/60" :
+                        "text-red-400/60"
+                      }`}>
+                        {check.uptimePercent != null ? `${check.uptimePercent}% uptime` : check.status === "healthy" ? t("superadmin.health.uptime") : t("superadmin.health.issues")}
                       </span>
                     </div>
+                    {check.responseTimes && check.responseTimes.length > 1 && (
+                      <div className="mt-3 flex items-center gap-2">
+                        <span className="text-[10px] text-white/20">24h</span>
+                        <Sparkline
+                          data={check.responseTimes}
+                          color={check.status === "healthy" ? "#34d399" : check.status === "degraded" ? "#fbbf24" : "#f87171"}
+                        />
+                        <span className="text-[10px] text-white/20">{Math.min(...check.responseTimes)}-{Math.max(...check.responseTimes)}ms</span>
+                      </div>
+                    )}
                     {check.details && (
                       <p className="text-xs text-red-400/70 mt-2">{check.details}</p>
                     )}
