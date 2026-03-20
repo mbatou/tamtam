@@ -19,6 +19,7 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [ranks, setRanks] = useState<{ week: number; month: number; all: number } | null>(null);
   const currentUserRef = useRef<HTMLDivElement>(null);
+  const [myRowVisible, setMyRowVisible] = useState(true);
   const { t } = useTranslation();
 
   // Load ranks once on mount
@@ -68,6 +69,17 @@ export default function LeaderboardPage() {
         currentUserRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       }, 200);
     }
+  }, [loading, entries, currentUserId]);
+
+  // Track if user's row is visible for sticky bar
+  useEffect(() => {
+    if (!currentUserRef.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setMyRowVisible(entry.isIntersecting),
+      { threshold: 0.1 }
+    );
+    observer.observe(currentUserRef.current);
+    return () => observer.disconnect();
   }, [loading, entries, currentUserId]);
 
   const currentRank = ranks ? ranks[period] : 0;
@@ -131,8 +143,14 @@ export default function LeaderboardPage() {
           </p>
           {/* Proximity to next rank */}
           {clicksToNextRank > 0 && userAbove && (
-            <p className="text-center text-xs text-white/40">
-              ↑ {clicksToNextRank} {t("echo.leaderboard.clicksToPass")} #{currentRank - 1} ({formatName(userAbove.name)})
+            <p className="text-center text-xs text-orange-400 font-medium mt-1">
+              ↑ {clicksToNextRank} clic{clicksToNextRank > 1 ? "s" : ""} de plus pour passer #{currentRank - 1}
+              <span className="text-gray-500"> ({formatName(userAbove.name)})</span>
+            </p>
+          )}
+          {currentRank === 1 && (
+            <p className="text-center text-xs text-green-400 font-medium mt-1">
+              🏆 Tu es en tête!
             </p>
           )}
           {/* All period ranks */}
@@ -155,6 +173,30 @@ export default function LeaderboardPage() {
           )}
         </div>
       )}
+
+      {/* Weekly prizes — coming soon */}
+      <div className="bg-gradient-to-r from-orange-500/10 to-yellow-500/10 border border-orange-500/20 rounded-xl p-4 mb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-white font-bold text-sm">🏆 Prix de la semaine</h4>
+            <p className="text-gray-400 text-xs mt-0.5">Bientôt disponible!</p>
+          </div>
+          <div className="flex gap-3 text-xs">
+            <div className="text-center">
+              <div className="text-yellow-400 font-bold">🥇</div>
+              <div className="text-gray-500">1,000 F</div>
+            </div>
+            <div className="text-center">
+              <div className="text-gray-300 font-bold">🥈</div>
+              <div className="text-gray-500">500 F</div>
+            </div>
+            <div className="text-center">
+              <div className="text-orange-700 font-bold">🥉</div>
+              <div className="text-gray-500">250 F</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Period tabs */}
       <TabBar
@@ -232,8 +274,8 @@ export default function LeaderboardPage() {
         )}
       </div>
 
-      {/* Sticky own position — shown when user is in list but scrolled past */}
-      {isInVisibleList && currentUserEntry && (
+      {/* Sticky own position — shown when user is in list but scrolled out of view */}
+      {isInVisibleList && currentUserEntry && !myRowVisible && (
         <div className="fixed bottom-16 left-0 right-0 px-4 z-30 pointer-events-none">
           <div className="max-w-lg mx-auto pointer-events-auto">
             <div className="glass-card p-3 border border-primary/30 flex items-center justify-between rounded-xl shadow-lg backdrop-blur-xl">

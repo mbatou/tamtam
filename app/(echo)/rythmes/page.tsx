@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/Toast";
 import CampaignDetailModal from "@/components/CampaignDetailModal";
 import { useTranslation } from "@/lib/i18n";
 import type { Campaign, TrackedLinkWithCampaign } from "@/lib/types";
+import { requestNotificationPermission, canAskNotification } from "@/lib/notifications";
 
 export default function RythmesPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -218,6 +219,33 @@ export default function RythmesPage() {
               <p className="text-sm font-semibold mb-1">{t("echo.rythmes.noAvailable")}</p>
               <p className="text-xs text-white/30 mb-3">{t("echo.rythmes.notifHint")}</p>
             </div>
+
+            {/* Notification CTA — empty rythmes */}
+            {canAskNotification() && (
+              <div className="bg-card rounded-xl p-6 text-center">
+                <div className="text-3xl mb-3">🔔</div>
+                <h3 className="text-white font-bold mb-1">Nouveaux rythmes bientôt!</h3>
+                <p className="text-gray-400 text-sm mb-4">
+                  Sois le premier à partager — active les notifications pour être prévenu.
+                </p>
+                <button
+                  onClick={async () => {
+                    const granted = await requestNotificationPermission();
+                    if (granted) showToast("Notifications activées!", "success");
+                  }}
+                  className="bg-orange-500 text-white px-6 py-2.5 rounded-lg text-sm font-medium"
+                >
+                  Activer les notifications 🔔
+                </button>
+              </div>
+            )}
+
+            {/* Reassurance when notifications already granted */}
+            {typeof window !== "undefined" && "Notification" in window && !canAskNotification() && Notification.permission === "granted" && (
+              <div className="text-center text-gray-500 text-sm mt-2">
+                ✓ Tu seras notifié dès qu&apos;un nouveau rythme sera disponible.
+              </div>
+            )}
 
             {/* Quick actions when no campaigns */}
             <div className="grid grid-cols-2 gap-3">
