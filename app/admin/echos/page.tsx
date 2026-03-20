@@ -45,11 +45,14 @@ export default function AdminEchosPage() {
   const cities = Array.from(new Set(echos.map(e => e.city).filter(Boolean))).sort();
   const filteredEchos = cityFilter === "all" ? echos : echos.filter(e => e.city === cityFilter);
 
-  // Top performer insight
-  const topEcho = echos[0];
-  const topTotal = echos.slice(0, 5).reduce((sum, e) => sum + e.brand_clicks, 0);
+  // Top performer insight — single best echo
   const totalClicks = echos.reduce((sum, e) => sum + e.brand_clicks, 0);
-  const topPct = totalClicks > 0 ? Math.round((topTotal / totalClicks) * 100) : 0;
+  const topEcho = echos.length > 0
+    ? echos.reduce((best, e) => e.brand_clicks > best.brand_clicks ? e : best, echos[0])
+    : null;
+  const topPct = topEcho && totalClicks > 0
+    ? Math.round((topEcho.brand_clicks / totalClicks) * 100)
+    : 0;
 
   return (
     <div className="p-6 max-w-6xl">
@@ -64,20 +67,28 @@ export default function AdminEchosPage() {
             onChange={(e) => setCityFilter(e.target.value)}
             className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary transition"
           >
-            <option value="all" className="bg-[#1a1a2e]">{t("admin.echos.allCities")}</option>
-            {cities.map(city => (
-              <option key={city} value={city} className="bg-[#1a1a2e]">{city}</option>
-            ))}
+            <option value="all" className="bg-[#1a1a2e]">{t("admin.echos.allCities")} ({echos.length})</option>
+            {cities.map(city => {
+              const count = echos.filter(e => e.city === city).length;
+              return (
+                <option key={city} value={city} className="bg-[#1a1a2e]">{city} ({count})</option>
+              );
+            })}
           </select>
         )}
       </div>
 
       {/* Top performer insight */}
-      {topEcho && echos.length >= 3 && (
-        <div className="glass-card p-4 mb-6 flex items-center gap-3">
-          <span className="text-lg">🏆</span>
-          <p className="text-sm text-white/60">
-            {t("admin.echos.topInsight", { name: topEcho.name, clicks: String(topEcho.brand_clicks), pct: String(topPct) })}
+      {topEcho && topEcho.brand_clicks > 0 && echos.length >= 3 && (
+        <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 mb-6 flex items-start gap-3">
+          <span className="text-lg shrink-0">💡</span>
+          <p className="text-sm text-white/70">
+            {t("admin.echos.topInsightSingle", {
+              name: topEcho.name,
+              city: topEcho.city || "",
+              clicks: String(topEcho.brand_clicks),
+              pct: String(topPct),
+            })}
           </p>
         </div>
       )}

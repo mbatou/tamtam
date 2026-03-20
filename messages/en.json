@@ -531,7 +531,8 @@
       "payment": "Payment",
       "noEchos": "No echo engaged in your campaigns yet.",
       "allCities": "All cities",
-      "topInsight": "Your best Echo {name} generated {clicks} clicks for you. Your top 5 represent {pct}% of your total clicks."
+      "topInsight": "Your best Echo {name} generated {clicks} clicks for you. Your top 5 represent {pct}% of your total clicks.",
+      "topInsightSingle": "Your best Echo, {name}{city}, generated {clicks} clicks ({pct}% of your total clicks). They will be notified first for your next campaign."
     },
     "support": {
       "title": "Support",
