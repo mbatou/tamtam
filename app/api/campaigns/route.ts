@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
     creative_urls: creative_urls || [],
     cpc,
     budget,
-    status: "pending_review",
+    status: "draft",
     moderation_status: "pending",
     starts_at: starts_at || null,
     ends_at: ends_at || null,

@@ -17,7 +17,7 @@ export async function GET() {
   ] = await Promise.all([
     supabase.from("brand_leads").select("*", { count: "exact", head: true }).eq("status", "new"),
     supabase.from("payouts").select("*", { count: "exact", head: true }).eq("status", "pending"),
-    supabase.from("campaigns").select("*", { count: "exact", head: true }).eq("status", "pending"),
+    supabase.from("campaigns").select("*", { count: "exact", head: true }).eq("moderation_status", "pending"),
   ]);
 
   // Calculate fraud rate

@@ -198,7 +198,7 @@ export default function AdminCampaignsPage() {
 
   function getStatusLabel(status: string) {
     const map: Record<string, string> = {
-      active: t("common.active"), paused: t("common.paused"), completed: t("common.finished"), draft: t("admin.campaigns.draft"), rejected: t("common.rejected"), pending_review: "En attente",
+      active: t("common.active"), paused: t("common.paused"), completed: t("common.finished"), draft: t("admin.campaigns.draft"), rejected: t("common.rejected"),
     };
     return map[status] || status;
   }
@@ -289,7 +289,7 @@ export default function AdminCampaignsPage() {
         </div>
 
         {/* Pending review banner */}
-        {c.status === "pending_review" && (
+        {c.status === "draft" && (c as unknown as { moderation_status?: string }).moderation_status === "pending" && (
           <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4 mb-8">
             <span className="text-orange-400 font-bold">⏳ En cours de validation</span>
             <p className="text-gray-400 text-sm mt-1">

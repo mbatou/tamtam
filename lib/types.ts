@@ -36,7 +36,7 @@ export interface Campaign {
   cpc: number;
   budget: number;
   spent: number;
-  status: "draft" | "pending_review" | "active" | "paused" | "completed" | "rejected";
+  status: "draft" | "active" | "paused" | "completed" | "rejected";
   moderation_status?: "pending" | "approved" | "rejected";
   moderation_reason?: string | null;
   moderated_by?: string | null;
