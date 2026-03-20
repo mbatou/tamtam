@@ -44,16 +44,15 @@ function LoginContent() {
       return;
     }
 
-    // Query user role directly using the authenticated client
-    // (avoids cookie sync race condition with server-side API routes)
+    // Fetch user role using the access token directly to avoid cookie sync issues
     try {
-      const { data: userData } = await supabase
-        .from("users")
-        .select("role, team_position")
-        .eq("id", loginData.user!.id)
-        .single();
-
-      if (userData) {
+      const userRes = await fetch("/api/echo/user", {
+        headers: {
+          Authorization: `Bearer ${loginData.session!.access_token}`,
+        },
+      });
+      if (userRes.ok) {
+        const userData = await userRes.json();
         if (userData.role === "superadmin") {
           window.location.href = "/superadmin";
           return;
