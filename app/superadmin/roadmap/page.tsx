@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { formatFCFA, formatNumber, timeAgo } from "@/lib/utils";
+import { formatFCFA, formatNumber } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 
 interface Goal {
