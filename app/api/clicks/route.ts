@@ -11,6 +11,12 @@ export async function GET() {
 
   const supabase = createServiceClient();
 
+  // Verify admin or superadmin role
+  const { data: user } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  if (!user || !["batteur", "admin", "superadmin"].includes(user.role)) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
+
   const { data, error } = await supabase
     .from("clicks")
     .select("*, tracked_links(short_code, campaigns(title), users(name))")

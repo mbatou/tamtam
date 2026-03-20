@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
+import { rateLimit } from "@/lib/rate-limit";
 
 const REFERRAL_BONUS_FCFA = 150;
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
+  const { allowed } = rateLimit(`register:${ip}`, 5, 3600000); // 5 per hour per IP
+  if (!allowed) {
+    return NextResponse.json({ error: "Trop de tentatives. Réessaie plus tard." }, { status: 429 });
+  }
+
   const { userId, name, phone, city, mobile_money_provider, referral_code } = await req.json();
 
   if (!userId || !name || !mobile_money_provider) {
