@@ -4,6 +4,7 @@ import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { rateLimit } from "@/lib/rate-limit";
 import { validateClick } from "@/lib/click-validator";
 import { processGamification } from "@/lib/gamification";
+import { logWalletTransaction } from "@/lib/wallet-transactions";
 
 function getSupabase() {
   return createServerClient(
@@ -110,10 +111,19 @@ export async function GET(
         .order("created_at", { ascending: false })
         .limit(1);
     } else {
-      // Update click counter and run gamification (async, don't block redirect)
-      Promise.resolve(
-        supabase.rpc("increment_echo_clicks", { p_echo_id: link.echo_id })
-      )
+      // Log click earning transaction + update click counter + gamification (async, don't block redirect)
+      Promise.all([
+        logWalletTransaction({
+          supabase,
+          userId: link.echo_id,
+          amount: echoEarnings,
+          type: "click_earning",
+          description: `Clic valide — ${campaign.title}`,
+          sourceId: campaign.id,
+          sourceType: "campaign",
+        }),
+        supabase.rpc("increment_echo_clicks", { p_echo_id: link.echo_id }),
+      ])
         .then(() => processGamification(link.echo_id))
         .catch(console.error);
     }

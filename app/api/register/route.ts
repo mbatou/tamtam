@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { logWalletTransaction } from "@/lib/wallet-transactions";
 
 const REFERRAL_BONUS_FCFA = 150;
 
@@ -109,6 +110,16 @@ export async function POST(req: NextRequest) {
     await supabase.rpc("increment_echo_balance", {
       p_echo_id: referrerId,
       p_amount: REFERRAL_BONUS_FCFA,
+    });
+
+    await logWalletTransaction({
+      supabase,
+      userId: referrerId,
+      amount: REFERRAL_BONUS_FCFA,
+      type: "referral_bonus",
+      description: `Parrainage de ${name} — code ${referral_code}`,
+      sourceId: userId,
+      sourceType: "referral",
     });
 
     // Check milestones for referrer (referral milestones)
