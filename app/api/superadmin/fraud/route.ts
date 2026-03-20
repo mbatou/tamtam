@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
   // Rejection reason breakdown (only works if column exists)
   let rejectionData: { rejection_reason: string }[] | null = null;
   {
-    let rejectionQuery = supabase.from("clicks").select("rejection_reason").eq("is_valid", false).not("rejection_reason", "is", null);
+    let rejectionQuery = supabase.from("clicks").select("rejection_reason").eq("is_valid", false).not("rejection_reason", "is", null).limit(50000);
     if (sinceDate) rejectionQuery = rejectionQuery.gte("created_at", sinceDate);
     if (untilDate) rejectionQuery = rejectionQuery.lte("created_at", untilDate);
     const { data } = await rejectionQuery;

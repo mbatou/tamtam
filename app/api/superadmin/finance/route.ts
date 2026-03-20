@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
   const toParam = searchParams.get("to");
 
   // Build filtered queries
-  let payoutsQuery = supabase.from("payouts").select("*, users!echo_id(name, phone)").order("created_at", { ascending: false });
+  let payoutsQuery = supabase.from("payouts").select("*, users!echo_id(name, phone)").order("created_at", { ascending: false }).limit(5000);
   let paymentsQuery = supabase.from("payments").select("*, users!user_id(name)").order("created_at", { ascending: false }).limit(100);
   let validClicksQuery = supabase.from("clicks").select("id", { count: "exact", head: true }).eq("is_valid", true);
 
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     { data: feeSetting },
     { count: validClicksCount },
   ] = await Promise.all([
-    supabase.from("campaigns").select("id, title, spent, budget"),
+    supabase.from("campaigns").select("id, title, spent, budget").limit(5000),
     payoutsQuery,
     paymentsQuery,
     supabase.from("platform_settings").select("value").eq("key", "platform_fee_percent").single(),

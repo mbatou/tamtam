@@ -42,7 +42,7 @@ export async function GET() {
   // Campaigns joined per echo (count of tracked_links per echo, grouped by campaign)
   const campaignsJoinedMap: Record<string, number> = {};
   try {
-    const { data: echoLinks } = await supabase.from("tracked_links").select("echo_id, campaign_id");
+    const { data: echoLinks } = await supabase.from("tracked_links").select("echo_id, campaign_id").limit(50000);
     if (echoLinks) {
       const echoCampaignSets: Record<string, Set<string>> = {};
       echoLinks.forEach((l) => {
@@ -55,7 +55,7 @@ export async function GET() {
       }
     }
 
-    const { data: batteurCampaigns } = await supabase.from("campaigns").select("batteur_id");
+    const { data: batteurCampaigns } = await supabase.from("campaigns").select("batteur_id").limit(5000);
     if (batteurCampaigns) batteurCampaigns.forEach((c) => batteurUserIds.add(c.batteur_id));
 
     // Get most recent click per echo via tracked_links

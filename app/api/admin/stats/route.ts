@@ -15,6 +15,13 @@ export async function GET() {
   }
 
   const supabase = createServiceClient();
+
+  // Verify the user is a brand (batteur)
+  const { data: currentUser } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  if (!currentUser || currentUser.role !== "batteur") {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
+
   const batteurId = session.user.id;
 
   // Get batteur's wallet balance
