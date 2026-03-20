@@ -11,18 +11,21 @@
   "dependencies": {
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.99.0",
+    "jspdf": "^4.2.1",
     "next": "14.2.35",
     "react": "^18",
     "react-dom": "^18",
     "recharts": "^3.8.0",
     "resend": "^6.9.3",
     "server-only": "^0.0.1",
+    "web-push": "^3.6.7",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@types/web-push": "^3.6.4",
     "eslint": "^8",
     "eslint-config-next": "14.2.35",
     "postcss": "^8",

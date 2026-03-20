@@ -42,6 +42,104 @@ export default function AdminAnalyticsPage() {
     return map[status] || status;
   }
 
+  async function downloadPDF(campaigns: CampaignAnalytics[]) {
+    const { jsPDF } = await import("jspdf");
+    const doc = new jsPDF();
+    const date = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(211, 84, 0);
+    doc.text("Tamtam — Rapport Analytics", 14, 20);
+    doc.setFontSize(10);
+    doc.setTextColor(128, 128, 128);
+    doc.text(`Généré le ${date}`, 14, 28);
+
+    // Summary
+    const totalSpent = campaigns.reduce((s, c) => s + c.spent, 0);
+    const totalValid = campaigns.reduce((s, c) => s + c.validClicks, 0);
+    const totalReach = campaigns.reduce((s, c) => s + c.totalClicks, 0);
+    const avgCPC = totalValid > 0 ? Math.round(totalSpent / totalValid) : 0;
+
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Résumé global", 14, 42);
+
+    doc.setFontSize(10);
+    doc.setTextColor(60, 60, 60);
+    doc.text(`Portée totale: ${totalReach.toLocaleString()}`, 14, 52);
+    doc.text(`Visiteurs réels: ${totalValid.toLocaleString()}`, 14, 58);
+    doc.text(`Total dépensé: ${totalSpent.toLocaleString()} FCFA`, 14, 64);
+    doc.text(`Coût par visiteur: ${avgCPC.toLocaleString()} FCFA`, 14, 70);
+
+    // Campaign table
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Détails par campagne", 14, 86);
+
+    let y = 96;
+    doc.setFontSize(8);
+    doc.setTextColor(128, 128, 128);
+    doc.text("Campagne", 14, y);
+    doc.text("Statut", 80, y);
+    doc.text("Budget", 110, y);
+    doc.text("Dépensé", 135, y);
+    doc.text("Visiteurs", 162, y);
+    doc.text("CPC", 185, y);
+    y += 2;
+    doc.setDrawColor(200, 200, 200);
+    doc.line(14, y, 196, y);
+    y += 6;
+
+    doc.setFontSize(9);
+    doc.setTextColor(40, 40, 40);
+    for (const c of campaigns) {
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
+      const cpc = c.validClicks > 0 ? Math.round(c.spent / c.validClicks) : 0;
+      doc.text(c.title.slice(0, 30), 14, y);
+      doc.text(getStatusLabel(c.status), 80, y);
+      doc.text(`${c.budget.toLocaleString()}`, 110, y);
+      doc.text(`${c.spent.toLocaleString()}`, 135, y);
+      doc.text(`${c.validClicks.toLocaleString()}`, 162, y);
+      doc.text(cpc > 0 ? `${cpc.toLocaleString()}` : "—", 185, y);
+      y += 8;
+    }
+
+    // Footer
+    doc.setFontSize(8);
+    doc.setTextColor(180, 180, 180);
+    doc.text("Généré par Tamtam — www.tamma.me", 14, 285);
+
+    doc.save(`tamtam-rapport-${new Date().toISOString().slice(0, 10)}.pdf`);
+  }
+
+  function shareWhatsApp(campaigns: CampaignAnalytics[]) {
+    const totalSpent = campaigns.reduce((s, c) => s + c.spent, 0);
+    const totalValid = campaigns.reduce((s, c) => s + c.validClicks, 0);
+    const avgCPC = totalValid > 0 ? Math.round(totalSpent / totalValid) : 0;
+
+    const text = [
+      `📊 *Rapport Tamtam*`,
+      ``,
+      `📣 ${campaigns.length} campagne(s)`,
+      `👁 ${totalValid.toLocaleString()} visiteurs réels`,
+      `💰 ${totalSpent.toLocaleString()} FCFA dépensés`,
+      `📉 ${avgCPC.toLocaleString()} FCFA/visiteur`,
+      ``,
+      campaigns.slice(0, 5).map((c) => {
+        const cpc = c.validClicks > 0 ? Math.round(c.spent / c.validClicks) : 0;
+        return `• ${c.title}: ${c.validClicks} visiteurs, ${cpc} FCFA/clic`;
+      }).join("\n"),
+      ``,
+      `Généré sur www.tamma.me`,
+    ].join("\n");
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  }
+
   function downloadCSV(campaigns: CampaignAnalytics[]) {
     const header = "Campagne,Statut,Budget (FCFA),Dépensé (FCFA),CPC (FCFA),Portée totale,Visiteurs réels,Coût par visiteur,Échos\n";
     const rows = campaigns.map((c) => {
@@ -119,15 +217,35 @@ export default function AdminAnalyticsPage() {
     <div className="p-6 max-w-6xl">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold">{t("admin.analytics.title")}</h1>
-        <button
-          onClick={() => downloadCSV(campaigns)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white/80 text-sm font-semibold transition"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-          {t("admin.analytics.exportCsv")}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => downloadPDF(campaigns)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-sm font-semibold transition"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
+            </svg>
+            PDF
+          </button>
+          <button
+            onClick={() => shareWhatsApp(campaigns)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#25D366] text-sm font-semibold transition"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+            </svg>
+            WhatsApp
+          </button>
+          <button
+            onClick={() => downloadCSV(campaigns)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white/80 text-sm font-semibold transition"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            CSV
+          </button>
+        </div>
       </div>
 
       {/* Global KPIs — brand-friendly */}

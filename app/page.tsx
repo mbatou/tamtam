@@ -7,96 +7,6 @@ import Footer from "@/components/Footer";
 import { useTranslation } from "@/lib/i18n";
 import { formatFCFA } from "@/lib/utils";
 
-/* ─── Brand Lead Form ─── */
-function BrandLeadForm() {
-  const [form, setForm] = useState({ business_name: "", contact_name: "", email: "", whatsapp: "" });
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [error, setError] = useState("");
-  const { t } = useTranslation();
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
-    setError("");
-    try {
-      const res = await fetch("/api/leads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Erreur");
-      }
-      setSubmitted(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inattendue");
-    }
-    setSubmitting(false);
-  }
-
-  if (submitted) {
-    return (
-      <div className="text-center py-6">
-        <div className="w-12 h-12 rounded-full bg-teal-500/20 flex items-center justify-center mx-auto mb-3">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1ABC9C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M20 6L9 17l-5-5" />
-          </svg>
-        </div>
-        <p className="text-sm font-semibold text-teal-400">{t("landing.signupReceived")}</p>
-        <p className="text-xs text-white/40 mt-1">{t("landing.signupReceivedDesc")}</p>
-      </div>
-    );
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-3">
-      <input
-        type="text"
-        placeholder={t("landing.companyName")}
-        required
-        value={form.business_name}
-        onChange={(e) => setForm({ ...form, business_name: e.target.value })}
-        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-secondary/50 focus:ring-1 focus:ring-secondary/30 transition"
-      />
-      <input
-        type="tel"
-        placeholder={t("landing.whatsappRequired")}
-        required
-        value={form.whatsapp}
-        onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
-        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-secondary/50 focus:ring-1 focus:ring-secondary/30 transition"
-      />
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <input
-          type="text"
-          placeholder={t("landing.yourName")}
-          required
-          value={form.contact_name}
-          onChange={(e) => setForm({ ...form, contact_name: e.target.value })}
-          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-secondary/50 focus:ring-1 focus:ring-secondary/30 transition"
-        />
-        <input
-          type="email"
-          placeholder={t("landing.proEmailOptional")}
-          value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
-          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-secondary/50 focus:ring-1 focus:ring-secondary/30 transition"
-        />
-      </div>
-      {error && <p className="text-xs text-red-400">{error}</p>}
-      <button
-        type="submit"
-        disabled={submitting}
-        className="btn-primary w-full text-sm py-3 disabled:opacity-50"
-      >
-        {submitting ? t("common.sending") : t("landing.getAccess")}
-      </button>
-    </form>
-  );
-}
-
 /* ─── Animated Counter ─── */
 function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: string }) {
   const [count, setCount] = useState(0);
@@ -297,9 +207,9 @@ export default function LandingPage() {
               <Link href="/register" className="btn-primary text-base sm:text-lg px-8 sm:px-10 py-3.5 sm:py-4 w-full sm:w-auto text-center">
                 {t("landing.heroCTAEcho")}
               </Link>
-              <a href="#pour-les-marques" className="btn-outline text-base sm:text-lg px-8 sm:px-10 py-3.5 sm:py-4 w-full sm:w-auto text-center">
+              <Link href="/signup/brand" className="btn-outline text-base sm:text-lg px-8 sm:px-10 py-3.5 sm:py-4 w-full sm:w-auto text-center">
                 {t("landing.heroCTABrand")}
-              </a>
+              </Link>
             </div>
             <p className="mt-6 sm:mt-8 text-xs sm:text-sm font-semibold text-white/30 tracking-widest uppercase">
               {t("landing.tagline")}
@@ -493,48 +403,33 @@ export default function LandingPage() {
           ))}
         </div>
 
-        {/* Price anchor + Lead form */}
-        <div className="grid md:grid-cols-2 gap-6 sm:gap-8 items-start">
-          <div className="glass-card p-6 sm:p-8 border border-secondary/20" style={{ boxShadow: "0 0 40px rgba(26,188,156,0.06)" }}>
-            <h3 className="text-lg sm:text-xl font-bold mb-2">{t("landing.brandFormTitle")}</h3>
-            <p className="text-xs text-white/40 mb-5">{t("landing.brandFormDesc")}</p>
-            <BrandLeadForm />
-            <p className="text-[10px] text-white/20 mt-3 text-center">
-              {t("landing.alreadyAccount")}{" "}
-              <Link href="/login?tab=batteur" className="text-secondary/60 hover:text-secondary transition">
-                {t("landing.loginLink")}
-              </Link>
-            </p>
+        {/* Signup CTA */}
+        <div className="bg-card rounded-2xl p-8 text-center max-w-2xl mx-auto">
+          <h3 className="text-2xl font-bold text-white mb-2">
+            Prêt à toucher des milliers de personnes?
+          </h3>
+          <p className="text-gray-400 mb-6">
+            Dès 10,000 FCFA — lancez votre première campagne. Résultats en 24h.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/signup/brand">
+              <button className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-xl font-bold text-lg transition">
+                🚀 Créer mon compte
+              </button>
+            </Link>
+            <a
+              href="https://wa.me/221781234567?text=Bonjour%2C%20je%20suis%20int%C3%A9ress%C3%A9%20par%20Tamtam"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <button className="border border-green-500 text-green-400 hover:bg-green-500/10 px-8 py-3 rounded-xl font-bold text-lg transition">
+                💬 WhatsApp
+              </button>
+            </a>
           </div>
-
-          {/* Brand info card */}
-          <div className="glass-card p-6 sm:p-8">
-            <div className="space-y-5">
-              <div>
-                <p className="text-3xl sm:text-4xl font-black gradient-text mb-1">10 000 FCFA</p>
-                <p className="text-sm text-white/40">{t("landing.brandMinBudget")}</p>
-              </div>
-              <div className="space-y-3 pt-4 border-t border-white/5">
-                {[
-                  t("landing.brandBenefit1"),
-                  t("landing.brandBenefit2"),
-                  t("landing.brandBenefit3"),
-                  t("landing.brandBenefit4"),
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-teal-400 shrink-0" />
-                    <span className="text-sm text-white/50">{item}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="pt-4 border-t border-white/5">
-                <p className="text-xs text-white/30 mb-1">{t("landing.brandContact")}</p>
-                <a href="mailto:support@tamma.me" className="text-sm font-semibold text-secondary hover:text-secondary/80 transition">
-                  support@tamma.me
-                </a>
-              </div>
-            </div>
-          </div>
+          <p className="text-gray-500 text-sm mt-4">
+            Déjà inscrit? <Link href="/login" className="text-accent underline">Se connecter →</Link>
+          </p>
         </div>
       </section>
 
@@ -579,9 +474,9 @@ export default function LandingPage() {
             <p className="text-white/40 mb-6 text-sm max-w-sm mx-auto">
               {t("landing.ctaBrandDesc")}
             </p>
-            <a href="#pour-les-marques" className="btn-outline text-sm sm:text-base px-8 py-3 border-secondary/30 text-secondary hover:bg-secondary/10">
+            <Link href="/signup/brand" className="btn-outline text-sm sm:text-base px-8 py-3 border-secondary/30 text-secondary hover:bg-secondary/10">
               {t("landing.getAccess")}
-            </a>
+            </Link>
           </div>
         </div>
       </section>
