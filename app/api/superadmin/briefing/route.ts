@@ -11,6 +11,12 @@ export async function GET() {
 
   const supabase = createServiceClient();
 
+  // Verify superadmin role
+  const { data: admin } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  if (!admin || admin.role !== "superadmin") {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
+
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
   const yesterdayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1).toISOString();
@@ -59,18 +65,18 @@ export async function GET() {
     supabase.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", false),
     supabase.from("campaigns").select("*", { count: "exact", head: true }).eq("status", "active"),
     supabase.from("payouts").select("*", { count: "exact", head: true }).eq("status", "pending"),
-    supabase.from("payouts").select("id, amount").eq("status", "pending"),
+    supabase.from("payouts").select("id, amount").eq("status", "pending").limit(5000),
     supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "echo").gte("created_at", todayStart),
     supabase.from("clicks").select("*", { count: "exact", head: true }).gte("created_at", todayStart),
     supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "echo").gte("created_at", yesterdayStart).lt("created_at", todayStart),
     supabase.from("clicks").select("*", { count: "exact", head: true }).gte("created_at", yesterdayStart).lt("created_at", todayStart),
     supabase.from("brand_leads").select("id, created_at").eq("status", "new"),
-    supabase.from("campaigns").select("spent, budget, status"),
-    supabase.from("payouts").select("amount").eq("status", "sent"),
+    supabase.from("campaigns").select("spent, budget, status").limit(5000),
+    supabase.from("payouts").select("amount").eq("status", "sent").limit(5000),
     supabase.from("platform_settings").select("value").eq("key", "platform_fee_percent").single(),
     supabase.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", false).gte("created_at", todayStart),
     supabase.from("clicks").select("*", { count: "exact", head: true }).gte("created_at", todayStart),
-    supabase.from("clicks").select("ip_address").eq("is_valid", false),
+    supabase.from("clicks").select("ip_address").eq("is_valid", false).limit(50000),
   ]);
 
   // Revenue calculations

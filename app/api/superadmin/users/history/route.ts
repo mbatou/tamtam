@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -7,6 +8,12 @@ export async function GET(req: NextRequest) {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
   if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+
+  const supabaseAuth = createServiceClient();
+  const { data: admin } = await supabaseAuth.from("users").select("role").eq("id", session.user.id).single();
+  if (!admin || admin.role !== "superadmin") {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
 
   const userId = req.nextUrl.searchParams.get("user_id");
   const role = req.nextUrl.searchParams.get("role");
@@ -40,7 +47,7 @@ export async function GET(req: NextRequest) {
         status: c?.status || "unknown",
         cpc: c?.cpc || 0,
         clicks: link.click_count || 0,
-        earned: Math.floor((link.click_count || 0) * (c?.cpc || 0) * 0.75),
+        earned: Math.floor((link.click_count || 0) * (c?.cpc || 0) * ECHO_SHARE_PERCENT / 100),
         joined_at: link.created_at,
       });
     }

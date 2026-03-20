@@ -28,11 +28,11 @@ export async function GET() {
       .from("users")
       .select("id", { count: "exact", head: true })
       .eq("role", "echo"),
-    supabase.from("echo_streaks").select("echo_id, current_streak, longest_streak"),
-    supabase.from("echo_achievements").select("echo_id, milestone_id, reward_fcfa, achieved_at"),
+    supabase.from("echo_streaks").select("echo_id, current_streak, longest_streak").limit(5000),
+    supabase.from("echo_achievements").select("echo_id, milestone_id, reward_fcfa, achieved_at").limit(5000),
     supabase.from("gamification_milestones").select("*").order("sort_order"),
-    supabase.from("streak_rewards").select("echo_id, reward_fcfa, credited_at"),
-    supabase.from("users").select("tier").eq("role", "echo"),
+    supabase.from("streak_rewards").select("echo_id, reward_fcfa, credited_at").limit(5000),
+    supabase.from("users").select("tier").eq("role", "echo").limit(5000),
     supabase
       .from("platform_settings")
       .select("key, value")

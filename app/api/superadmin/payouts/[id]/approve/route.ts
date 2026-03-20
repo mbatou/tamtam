@@ -15,6 +15,12 @@ export async function POST(
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
+  const supabaseAuth = createServiceClient();
+  const { data: admin } = await supabaseAuth.from("users").select("role").eq("id", session.user.id).single();
+  if (!admin || admin.role !== "superadmin") {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
+
   const validation = await validatePayout(params.id);
   if (!validation.valid) {
     return NextResponse.json({ error: validation.error }, { status: 400 });

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,13 @@ export async function GET() {
   }
 
   const supabase = createServiceClient();
+
+  // Verify the user is a brand (batteur)
+  const { data: currentUser } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  if (!currentUser || currentUser.role !== "batteur") {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
+
   const batteurId = session.user.id;
 
   // Get brand's campaigns
@@ -31,7 +39,8 @@ export async function GET() {
   const { data: trackedLinks } = await supabase
     .from("tracked_links")
     .select("id, campaign_id, echo_id, click_count, created_at")
-    .in("campaign_id", campaignIds);
+    .in("campaign_id", campaignIds)
+    .limit(10000);
 
   const links = trackedLinks || [];
   const echoIds = Array.from(new Set(links.map((l) => l.echo_id)));
@@ -58,7 +67,7 @@ export async function GET() {
     const campaign = campaignMap.get(link.campaign_id);
     const cpc = campaign?.cpc || 0;
     echoStats[link.echo_id].totalClicks += link.click_count;
-    echoStats[link.echo_id].totalEarned += Math.floor(link.click_count * cpc * 0.75);
+    echoStats[link.echo_id].totalEarned += Math.floor(link.click_count * cpc * ECHO_SHARE_PERCENT / 100);
     echoStats[link.echo_id].campaignCount += 1;
     if (campaign) echoStats[link.echo_id].campaigns.push(campaign.title);
   }

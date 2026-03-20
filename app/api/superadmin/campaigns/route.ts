@@ -49,7 +49,8 @@ export async function GET() {
   // Get echo counts per campaign
   const { data: links } = await supabase
     .from("tracked_links")
-    .select("campaign_id, echo_id");
+    .select("campaign_id, echo_id")
+    .limit(50000);
 
   const echoCountMap: Record<string, number> = {};
   const clickCountMap: Record<string, number> = {};
@@ -62,7 +63,8 @@ export async function GET() {
   // Get click counts per campaign
   const { data: linkClicks } = await supabase
     .from("tracked_links")
-    .select("campaign_id, click_count");
+    .select("campaign_id, click_count")
+    .limit(50000);
 
   if (linkClicks) {
     for (const link of linkClicks) {

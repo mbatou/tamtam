@@ -11,6 +11,12 @@ export async function GET() {
 
   const supabase = createServiceClient();
 
+  // Verify superadmin role
+  const { data: currentUser } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  if (!currentUser || currentUser.role !== "superadmin") {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
+
   const { data: users } = await supabase
     .from("users")
     .select("*")
@@ -42,7 +48,7 @@ export async function GET() {
   // Campaigns joined per echo (count of tracked_links per echo, grouped by campaign)
   const campaignsJoinedMap: Record<string, number> = {};
   try {
-    const { data: echoLinks } = await supabase.from("tracked_links").select("echo_id, campaign_id");
+    const { data: echoLinks } = await supabase.from("tracked_links").select("echo_id, campaign_id").limit(50000);
     if (echoLinks) {
       const echoCampaignSets: Record<string, Set<string>> = {};
       echoLinks.forEach((l) => {
@@ -55,7 +61,7 @@ export async function GET() {
       }
     }
 
-    const { data: batteurCampaigns } = await supabase.from("campaigns").select("batteur_id");
+    const { data: batteurCampaigns } = await supabase.from("campaigns").select("batteur_id").limit(5000);
     if (batteurCampaigns) batteurCampaigns.forEach((c) => batteurUserIds.add(c.batteur_id));
 
     // Get most recent click per echo via tracked_links
@@ -112,6 +118,13 @@ export async function POST(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   const supabase = createServiceClient();
+
+  // Verify superadmin role
+  const { data: adminCheck } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  if (!adminCheck || adminCheck.role !== "superadmin") {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
+
   const body = await request.json();
   const { user_id, action, reason } = body;
 

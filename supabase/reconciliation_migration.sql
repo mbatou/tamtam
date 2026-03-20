@@ -1,6 +1,9 @@
 -- LUP-76: Reconciliation — insert legacy_reconciliation transactions
 -- for users who have a non-zero balance but no wallet_transactions entries.
 -- This fixes the "ghost credit" anomaly flagged by the Investigation page.
+--
+-- PREREQUISITE: Run wallet_traceability_migration.sql first to add
+-- the source_id, source_type, created_by columns.
 
 INSERT INTO wallet_transactions (user_id, amount, type, description, source_type, status)
 SELECT
@@ -11,7 +14,7 @@ SELECT
   'system',
   'completed'
 FROM users u
-LEFT JOIN wallet_transactions wt ON wt.user_id = u.id
 WHERE u.balance > 0
-  AND wt.id IS NULL
-GROUP BY u.id, u.balance;
+  AND NOT EXISTS (
+    SELECT 1 FROM wallet_transactions wt WHERE wt.user_id = u.id
+  );

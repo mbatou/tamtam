@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Generate temporary password
-  const tempPassword = crypto.randomBytes(4).toString("hex") + "A1!";
+  const tempPassword = crypto.randomBytes(8).toString("hex") + "A1!";
 
   // Create auth user
   const { data: authUser, error: authError } = await auth.supabase.auth.admin.createUser({

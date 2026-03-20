@@ -15,11 +15,12 @@ export async function GET() {
 
   const supabase = createServiceClient();
 
-  // Get active campaigns for echos to discover
+  // Get active, approved campaigns for echos to discover
   const { data, error } = await supabase
     .from("campaigns")
     .select("*")
     .eq("status", "active")
+    .eq("moderation_status", "approved")
     .order("created_at", { ascending: false });
 
   if (error) {

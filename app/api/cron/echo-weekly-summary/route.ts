@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
+import { ECHO_SHARE_PERCENT } from "@/lib/constants";
+import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
+function verifyCronSecret(authHeader: string | null): boolean {
+  const expected = `Bearer ${process.env.CRON_SECRET || ""}`;
+  if (!authHeader || authHeader.length !== expected.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected));
+}
+
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!verifyCronSecret(request.headers.get("authorization"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -32,7 +39,7 @@ export async function GET(request: NextRequest) {
     const stats = echoStats.get(echoId) || { validClicks: 0, earnings: 0, campaigns: new Set<string>() };
     if (click.is_valid) {
       stats.validClicks++;
-      stats.earnings += Math.floor(link.campaigns.cpc * 0.75);
+      stats.earnings += Math.floor(link.campaigns.cpc * ECHO_SHARE_PERCENT / 100);
     }
     stats.campaigns.add(link.campaigns.title);
     echoStats.set(echoId, stats);
@@ -62,58 +69,59 @@ export async function GET(request: NextRequest) {
   const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
   const emailMap = new Map(authUsers?.map((u) => [u.id, u.email]) || []);
 
+  // Build send list then process in parallel batches to avoid timeout
+  const toSend = (echos || [])
+    .filter((echo) => !recentSet.has(echo.id) && emailMap.get(echo.id) && echoStats.get(echo.id)?.validClicks)
+    .map((echo) => ({ echo, email: emailMap.get(echo.id)!, stats: echoStats.get(echo.id)! }));
+
   let sent = 0;
-  for (const echo of echos || []) {
-    if (recentSet.has(echo.id)) continue;
-    const email = emailMap.get(echo.id);
-    if (!email) continue;
-
-    const stats = echoStats.get(echo.id);
-    if (!stats || stats.validClicks === 0) continue;
-
-    const campaignList = Array.from(stats.campaigns).slice(0, 5).join(", ");
-
-    try {
-      await sendEmail({
-        to: email,
-        subject: `💰 Ton résumé hebdo — ${stats.earnings.toLocaleString()} FCFA gagnés`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px;">
-            <h2 style="color: #D35400;">Bravo ${echo.name} !</h2>
-            <p>Voici ton résumé de la semaine sur Tamtam :</p>
-            <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0;">
-              <table style="border-collapse: collapse;">
-                <tr>
-                  <td style="padding: 6px 16px 6px 0; color: #666;">Clics valides</td>
-                  <td style="padding: 6px 0; font-weight: bold; font-size: 18px;">${stats.validClicks}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 6px 16px 6px 0; color: #666;">Gains</td>
-                  <td style="padding: 6px 0; font-weight: bold; font-size: 18px; color: #22c55e;">${stats.earnings.toLocaleString()} FCFA</td>
-                </tr>
-                <tr>
-                  <td style="padding: 6px 16px 6px 0; color: #666;">Rythmes</td>
-                  <td style="padding: 6px 0;">${campaignList}</td>
-                </tr>
-              </table>
+  const BATCH_SIZE = 10;
+  for (let i = 0; i < toSend.length; i += BATCH_SIZE) {
+    const batch = toSend.slice(i, i + BATCH_SIZE);
+    const results = await Promise.allSettled(
+      batch.map(async ({ echo, email, stats }) => {
+        const campaignList = Array.from(stats.campaigns).slice(0, 5).join(", ");
+        await sendEmail({
+          to: email,
+          subject: `💰 Ton résumé hebdo — ${stats.earnings.toLocaleString()} FCFA gagnés`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px;">
+              <h2 style="color: #D35400;">Bravo ${echo.name} !</h2>
+              <p>Voici ton résumé de la semaine sur Tamtam :</p>
+              <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+                <table style="border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 6px 16px 6px 0; color: #666;">Clics valides</td>
+                    <td style="padding: 6px 0; font-weight: bold; font-size: 18px;">${stats.validClicks}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 16px 6px 0; color: #666;">Gains</td>
+                    <td style="padding: 6px 0; font-weight: bold; font-size: 18px; color: #22c55e;">${stats.earnings.toLocaleString()} FCFA</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 16px 6px 0; color: #666;">Rythmes</td>
+                    <td style="padding: 6px 0;">${campaignList}</td>
+                  </tr>
+                </table>
+              </div>
+              <p>Continue à partager pour augmenter tes gains !</p>
+              <p style="margin-top: 20px;">
+                <a href="https://www.tamma.me/dashboard" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Voir mon tableau de bord →</a>
+              </p>
+              <p style="margin-top: 20px; color: #888; font-size: 13px;">
+                Tu reçois cet email car tu es Écho sur Tamtam.
+              </p>
             </div>
-            <p>Continue à partager pour augmenter tes gains !</p>
-            <p style="margin-top: 20px;">
-              <a href="https://www.tamma.me/dashboard" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Voir mon tableau de bord →</a>
-            </p>
-            <p style="margin-top: 20px; color: #888; font-size: 13px;">
-              Tu reçois cet email car tu es Écho sur Tamtam.
-            </p>
-          </div>
-        `,
-      });
-
-      await supabase.from("sent_emails").insert({
-        user_id: echo.id,
-        email_type: "echo_weekly_summary",
-      });
-      sent++;
-    } catch { /* non-blocking */ }
+          `,
+        });
+        await supabase.from("sent_emails").insert({
+          user_id: echo.id,
+          email_type: "echo_weekly_summary",
+        });
+        return echo.id;
+      })
+    );
+    sent += results.filter((r) => r.status === "fulfilled").length;
   }
 
   // Also send push notifications to echos with push subscriptions

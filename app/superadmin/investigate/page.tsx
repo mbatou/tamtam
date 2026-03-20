@@ -3,6 +3,7 @@
 import { Suspense, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { formatFCFA, timeAgo } from "@/lib/utils";
+import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import StatCard from "@/components/StatCard";
 import Badge from "@/components/ui/Badge";
 
@@ -406,7 +407,7 @@ function InvestigatePageContent() {
                           <div className="flex flex-wrap gap-x-4 text-[11px] text-white/40 mt-1">
                             <span>Clics: <strong className="text-white/70">{l.click_count}</strong></span>
                             <span>CPC: <strong className="text-white/70">{formatFCFA(l.campaigns?.cpc || 0)}</strong></span>
-                            <span>Gagné: <strong className="text-accent">{formatFCFA(Math.floor((l.click_count || 0) * (l.campaigns?.cpc || 0) * 0.75))}</strong></span>
+                            <span>Gagné: <strong className="text-accent">{formatFCFA(Math.floor((l.click_count || 0) * (l.campaigns?.cpc || 0) * ECHO_SHARE_PERCENT / 100))}</strong></span>
                             <span>{new Date(l.created_at).toLocaleDateString("fr-FR")}</span>
                           </div>
                         </div>

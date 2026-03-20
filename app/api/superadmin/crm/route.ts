@@ -6,12 +6,21 @@ import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: NextRequest) {
+async function requireSuperadmin() {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-
+  if (!session) return null;
   const supabase = createServiceClient();
+  const { data: user } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  if (!user || user.role !== "superadmin") return null;
+  return { session, supabase };
+}
+
+export async function GET(request: NextRequest) {
+  const auth = await requireSuperadmin();
+  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+
+  const supabase = auth.supabase;
   const { searchParams } = new URL(request.url);
   const view = searchParams.get("view") || "all"; // all | leads | brands | followups
   const contactId = searchParams.get("id");
@@ -33,26 +42,30 @@ export async function GET(request: NextRequest) {
         .from("campaigns")
         .select("id, title, budget, spent, status, cpc, created_at")
         .eq("batteur_id", contactId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(500);
 
       const { data: payments } = await supabase
         .from("payments")
         .select("id, amount, status, payment_method, created_at, completed_at")
         .eq("user_id", contactId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(500);
 
       const { data: tickets } = await supabase
         .from("support_tickets")
         .select("id, subject, status, created_at")
         .eq("user_id", contactId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(200);
 
       const { data: notes } = await supabase
         .from("crm_notes")
         .select("id, content, note_type, followup_date, created_at, author_id")
         .eq("contact_id", contactId)
         .eq("contact_type", "brand")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(200);
 
       const authorIds = Array.from(new Set((notes || []).map(n => n.author_id)));
       const { data: authors } = authorIds.length > 0
@@ -136,7 +149,8 @@ export async function GET(request: NextRequest) {
 
     const { data: campaignCounts } = await supabase
       .from("campaigns")
-      .select("batteur_id, id");
+      .select("batteur_id, id")
+      .limit(5000);
 
     const brandCampaigns: Record<string, number> = {};
     (campaignCounts || []).forEach(c => {
@@ -207,11 +221,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const auth = await requireSuperadmin();
+  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
-  const supabase = createServiceClient();
+  const supabase = auth.supabase;
+  const session = auth.session;
   const body = await request.json();
   const { action } = body;
 
@@ -379,7 +393,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate temporary password
-    const tempPassword = crypto.randomBytes(4).toString("hex") + "A1!";
+    const tempPassword = crypto.randomBytes(8).toString("hex") + "A1!";
 
     const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
       email: accountEmail,

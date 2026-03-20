@@ -17,10 +17,18 @@ export async function GET() {
   }
 
   const supabase = createServiceClient();
+
+  // Verify superadmin role — this endpoint returns ALL payouts
+  const { data: currentUser } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  if (!currentUser || currentUser.role !== "superadmin") {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
+
   const { data, error } = await supabase
     .from("payouts")
     .select("*, users(name, phone)")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(5000);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

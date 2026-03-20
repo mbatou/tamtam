@@ -20,7 +20,8 @@ export async function GET() {
     .from("tracked_links")
     .select("*, campaigns(*)")
     .eq("echo_id", session.user.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(200);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -48,6 +49,20 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createServiceClient();
+
+  // Verify campaign is active before accepting
+  const { data: campaign } = await supabase
+    .from("campaigns")
+    .select("id, status")
+    .eq("id", parsed.data.campaign_id)
+    .single();
+
+  if (!campaign) {
+    return NextResponse.json({ error: "Campagne introuvable" }, { status: 404 });
+  }
+  if (campaign.status !== "active") {
+    return NextResponse.json({ error: "Cette campagne n'est plus active" }, { status: 400 });
+  }
 
   // Check if already accepted
   const { data: existing } = await supabase

@@ -4,12 +4,21 @@ import { settingUpdateSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+async function requireSuperadmin() {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-
+  if (!session) return null;
   const supabase = createServiceClient();
+  const { data: user } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  if (!user || user.role !== "superadmin") return null;
+  return { session, supabase };
+}
+
+export async function GET() {
+  const auth = await requireSuperadmin();
+  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+
+  const supabase = auth.supabase;
 
   const [
     { data: settings },
@@ -33,11 +42,11 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const auth = await requireSuperadmin();
+  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
-  const supabase = createServiceClient();
+  const supabase = auth.supabase;
+  const session = auth.session;
   const body = await request.json();
   const parsed = settingUpdateSchema.safeParse(body);
 

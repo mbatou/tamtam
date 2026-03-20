@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
   const supabase = createServiceClient();
   const batteurId = request.nextUrl.searchParams.get("batteur_id");
 
-  let query = supabase.from("campaigns").select("*").order("created_at", { ascending: false });
+  let query = supabase.from("campaigns").select("*").order("created_at", { ascending: false }).limit(500);
 
   if (batteurId) {
     query = query.eq("batteur_id", batteurId);

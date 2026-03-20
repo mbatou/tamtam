@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { formatFCFA } from "@/lib/utils";
+import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { useTranslation } from "@/lib/i18n";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import type { User } from "@/lib/types";
@@ -97,7 +98,7 @@ export default function ProfilPage() {
       const totalClicks = links.reduce((sum: number, l: { click_count: number }) => sum + l.click_count, 0);
       const totalCampaigns = links.length;
       const totalEarned = links.reduce((sum: number, l: { click_count: number; campaigns?: { cpc: number } }) => {
-        return sum + Math.floor(l.click_count * (l.campaigns?.cpc || 0) * 0.75);
+        return sum + Math.floor(l.click_count * (l.campaigns?.cpc || 0) * ECHO_SHARE_PERCENT / 100);
       }, 0);
       setStats({ totalClicks, activeCampaigns: totalCampaigns, totalEarned });
     }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Modal from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { formatFCFA, getTrackingUrl } from "@/lib/utils";
+import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import type { Campaign, TrackedLinkWithCampaign } from "@/lib/types";
 
 interface CampaignDetailModalProps {
@@ -110,7 +111,7 @@ export default function CampaignDetailModal({ campaign, link, open, onClose }: C
           <div className="w-px h-8 bg-white/10" />
           <div className="text-center flex-1">
             <span className="text-lg font-black block text-accent">
-              {formatFCFA(Math.floor(link.click_count * campaign.cpc * 0.75))}
+              {formatFCFA(Math.floor(link.click_count * campaign.cpc * ECHO_SHARE_PERCENT / 100))}
             </span>
             <span className="text-[9px] text-white/40 font-semibold">Gagne</span>
           </div>
