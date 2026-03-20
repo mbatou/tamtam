@@ -34,7 +34,7 @@ function LoginContent() {
   async function handleLogin() {
     setLoading(true);
     setError("");
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: loginData, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -44,11 +44,16 @@ function LoginContent() {
       return;
     }
 
-    // Fetch user role to determine correct redirect
+    // Query user role directly using the authenticated client
+    // (avoids cookie sync race condition with server-side API routes)
     try {
-      const userRes = await fetch("/api/echo/user");
-      if (userRes.ok) {
-        const userData = await userRes.json();
+      const { data: userData } = await supabase
+        .from("users")
+        .select("role, team_position")
+        .eq("id", loginData.user!.id)
+        .single();
+
+      if (userData) {
         if (userData.role === "superadmin") {
           window.location.href = "/superadmin";
           return;
