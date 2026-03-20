@@ -205,6 +205,10 @@ export default function AdminAnalyticsPage() {
   );
 
   const costPerClick = totals.valid > 0 ? Math.round(totals.spent / totals.valid) : 0;
+  // Average configured CPC across campaigns as fallback when no valid clicks yet
+  const avgConfiguredCPC = campaigns.length > 0
+    ? Math.round(campaigns.reduce((s, c) => s + c.cpc, 0) / campaigns.length)
+    : 0;
   const progress = selected.budget > 0 ? Math.round((selected.spent / selected.budget) * 100) : 0;
   const selectedCPC = selected.validClicks > 0 ? Math.round(selected.spent / selected.validClicks) : 0;
 
@@ -252,7 +256,7 @@ export default function AdminAnalyticsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard label={t("admin.dashboard.totalReach")} value={formatNumber(totals.clicks)} accent="orange" />
         <StatCard label={t("admin.analytics.realVisitors")} value={formatNumber(totals.valid)} accent="teal" />
-        <StatCard label={t("admin.dashboard.costPerClick")} value={costPerClick > 0 ? formatFCFA(costPerClick) : "—"} accent="purple" />
+        <StatCard label={t("admin.dashboard.costPerClick")} value={costPerClick > 0 ? formatFCFA(costPerClick) : totals.spent > 0 ? formatFCFA(avgConfiguredCPC) : "—"} accent="purple" />
         <StatCard label={t("admin.dashboard.budgetSpent")} value={formatFCFA(totals.spent)} accent="orange" />
       </div>
 
@@ -387,6 +391,7 @@ export default function AdminAnalyticsPage() {
             <tbody>
               {campaigns.map((c) => {
                 const cpc = c.validClicks > 0 ? Math.round(c.spent / c.validClicks) : 0;
+                const displayCPC = cpc > 0 ? formatFCFA(cpc) : c.spent > 0 ? formatFCFA(c.cpc) : "—";
                 const isBest = bestCampaign && c.id === bestCampaign.id && campaigns.length > 1;
                 return (
                   <tr
@@ -407,7 +412,7 @@ export default function AdminAnalyticsPage() {
                       </span>
                     </td>
                     <td className="py-3 text-right text-emerald-400">{formatNumber(c.validClicks)}</td>
-                    <td className="py-3 text-right font-semibold">{cpc > 0 ? formatFCFA(cpc) : "—"}</td>
+                    <td className="py-3 text-right font-semibold">{displayCPC}</td>
                     <td className="py-3 text-right">{c.echoCount}</td>
                   </tr>
                 );

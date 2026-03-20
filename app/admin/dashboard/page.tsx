@@ -69,8 +69,14 @@ export default function AdminDashboard() {
   const activeCampaigns = allCampaigns.filter(c => c.status === "active");
   const finishedCampaigns = allCampaigns.filter(c => c.status === "completed");
 
-  // Cost per click calculation
-  const costPerClick = stats.validClicks > 0 ? Math.round(stats.budgetSpent / stats.validClicks) : 0;
+  // Cost per click calculation — fall back to average configured CPC when no valid clicks yet
+  const costPerClick = stats.validClicks > 0
+    ? Math.round(stats.budgetSpent / stats.validClicks)
+    : (() => {
+        const campaignsWithCpc = allCampaigns.filter(c => c.cpc > 0);
+        if (campaignsWithCpc.length === 0) return 0;
+        return Math.round(campaignsWithCpc.reduce((s, c) => s + c.cpc, 0) / campaignsWithCpc.length);
+      })();
 
   // Remaining budget — never show negative
   const remainingBudget = Math.max(0, stats.budgetTotal - stats.budgetSpent);
@@ -342,7 +348,7 @@ export default function AdminDashboard() {
         <StatCard
           label={t("admin.dashboard.costPerClick")}
           value={costPerClick > 0 ? formatFCFA(costPerClick) : "—"}
-          sub={t("admin.dashboard.costPerClickSub")}
+          sub={costPerClick > 0 && stats.validClicks === 0 ? "CPC configuré (aucun clic validé)" : t("admin.dashboard.costPerClickSub")}
           accent="purple"
         />
       </div>
