@@ -5,6 +5,7 @@
     "networkError": "Erreur réseau",
     "save": "Enregistrer",
     "saving": "Enregistrement...",
+    "uploading": "Envoi en cours...",
     "cancel": "Annuler",
     "back": "Retour",
     "delete": "Supprimer",
@@ -530,7 +531,8 @@
       "payment": "Paiement",
       "noEchos": "Aucun écho engagé dans vos campagnes pour le moment.",
       "allCities": "Toutes les villes",
-      "topInsight": "Votre meilleur Écho {name} a généré {clicks} clics pour vous. Vos 5 meilleurs représentent {pct}% de vos clics totaux."
+      "topInsight": "Votre meilleur Écho {name} a généré {clicks} clics pour vous. Vos 5 meilleurs représentent {pct}% de vos clics totaux.",
+      "topInsightSingle": "Votre meilleur Écho, {name}{city}, a généré {clicks} clics ({pct}% de vos clics totaux). Il sera notifié en premier lors de votre prochaine campagne."
     },
     "support": {
       "title": "Support",
@@ -582,7 +584,18 @@
       "changePassword": "Changer le mot de passe",
       "info": "Informations",
       "memberSince": "Membre depuis",
-      "accountType": "Type de compte"
+      "accountType": "Type de compte",
+      "companyLogo": "Logo de votre entreprise",
+      "changeLogo": "Changer le logo",
+      "logoTooLarge": "Le fichier est trop volumineux (max 2 Mo)",
+      "logoUploadError": "Erreur lors de l'upload du logo",
+      "industry": "Secteur d'activité",
+      "selectIndustry": "Choisir",
+      "notifications": "Notifications",
+      "notifCampaignComplete": "Quand une campagne est entièrement consommée",
+      "notifWeeklySummary": "Résumé hebdomadaire des performances",
+      "notifNewEchos": "Quand de nouveaux Échos rejoignent mes campagnes",
+      "notifSavedOnSave": "Les préférences sont enregistrées avec le bouton Enregistrer ci-dessus."
     },
     "analytics": {
       "title": "Analytics",

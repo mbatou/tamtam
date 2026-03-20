@@ -9,7 +9,7 @@ export async function GET() {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("users")
-    .select("id, name, phone, city, mobile_money_provider, created_at")
+    .select("id, name, phone, city, mobile_money_provider, logo_url, industry, notification_prefs, created_at")
     .eq("id", session.user.id)
     .single();
 
@@ -24,13 +24,15 @@ export async function PUT(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   const body = await request.json();
-  const { name, phone, city, mobile_money_provider } = body;
+  const { name, phone, city, mobile_money_provider, industry, notification_prefs } = body;
 
   const updates: Record<string, unknown> = {};
   if (name !== undefined) updates.name = name;
   if (phone !== undefined) updates.phone = phone || null;
   if (city !== undefined) updates.city = city || null;
   if (mobile_money_provider !== undefined) updates.mobile_money_provider = mobile_money_provider || null;
+  if (industry !== undefined) updates.industry = industry || null;
+  if (notification_prefs !== undefined) updates.notification_prefs = notification_prefs;
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "Aucune modification" }, { status: 400 });
@@ -41,7 +43,7 @@ export async function PUT(request: NextRequest) {
     .from("users")
     .update(updates)
     .eq("id", session.user.id)
-    .select("id, name, phone, city, mobile_money_provider, created_at")
+    .select("id, name, phone, city, mobile_money_provider, logo_url, industry, notification_prefs, created_at")
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

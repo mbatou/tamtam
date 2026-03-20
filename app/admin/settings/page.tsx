@@ -3,15 +3,33 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { createClient as createBrowserClient } from "@/lib/supabase/client";
 
 interface Profile {
+  id: string;
   name: string;
   email: string;
   phone: string;
   city: string;
   mobile_money_provider: string;
+  logo_url: string | null;
+  industry: string | null;
+  notification_prefs: Record<string, boolean> | null;
   created_at: string;
 }
+
+const INDUSTRY_OPTIONS = [
+  { value: "restaurant", label: "🍽️ Restaurant / Alimentation" },
+  { value: "boutique", label: "🛍️ Boutique / Mode" },
+  { value: "salon", label: "💇 Salon / Beauté" },
+  { value: "school", label: "🎓 École / Formation" },
+  { value: "driving", label: "🚗 Auto-école" },
+  { value: "agency", label: "📢 Agence / Marketing" },
+  { value: "health", label: "🏥 Santé / Pharmacie" },
+  { value: "tech", label: "💻 Tech / Services numériques" },
+  { value: "events", label: "🎉 Événementiel" },
+  { value: "other", label: "📦 Autre" },
+];
 
 export default function AdminSettingsPage() {
   const { t } = useTranslation();
@@ -20,7 +38,14 @@ export default function AdminSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", phone: "", city: "", mobile_money_provider: "" });
+  const [form, setForm] = useState({ name: "", phone: "", city: "", mobile_money_provider: "", industry: "" });
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>({
+    notify_campaign_complete: true,
+    notify_weekly_summary: true,
+    notify_new_echos: false,
+  });
 
   // Password change
   const [showPassword, setShowPassword] = useState(false);
@@ -39,7 +64,16 @@ export default function AdminSettingsPage() {
         phone: data.phone || "",
         city: data.city || "",
         mobile_money_provider: data.mobile_money_provider || "",
+        industry: data.industry || "",
       });
+      setLogoUrl(data.logo_url || null);
+      if (data.notification_prefs) {
+        setNotifPrefs({
+          notify_campaign_complete: data.notification_prefs.notify_campaign_complete ?? true,
+          notify_weekly_summary: data.notification_prefs.notify_weekly_summary ?? true,
+          notify_new_echos: data.notification_prefs.notify_new_echos ?? false,
+        });
+      }
     }
     setLoading(false);
   }
@@ -53,7 +87,7 @@ export default function AdminSettingsPage() {
       const res = await fetch("/api/admin/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, notification_prefs: notifPrefs }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -104,6 +138,41 @@ export default function AdminSettingsPage() {
     setPwSaving(false);
   }
 
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !profile) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setError(t("admin.settings.logoTooLarge"));
+      return;
+    }
+
+    setUploading(true);
+    setError(null);
+    const supabase = createBrowserClient();
+    const ext = file.name.split(".").pop();
+    const path = `logos/${profile.id}/logo.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("brand-assets")
+      .upload(path, file, { upsert: true });
+
+    if (uploadError) {
+      setError(t("admin.settings.logoUploadError"));
+      setUploading(false);
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("brand-assets")
+      .getPublicUrl(path);
+
+    await supabase.from("users").update({ logo_url: publicUrl }).eq("id", profile.id);
+    setLogoUrl(publicUrl);
+    setUploading(false);
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 3000);
+  }
+
   if (loading) {
     return (
       <div className="p-6 max-w-3xl space-y-4">
@@ -116,6 +185,35 @@ export default function AdminSettingsPage() {
   return (
     <div className="p-6 max-w-3xl">
       <h1 className="text-2xl font-bold mb-8">{t("admin.settings.title")}</h1>
+
+      {/* Logo upload */}
+      <div className="glass-card p-6 mb-6">
+        <h2 className="text-lg font-bold mb-4">{t("admin.settings.companyLogo")}</h2>
+        <div className="flex items-center gap-6">
+          <div className="w-20 h-20 bg-white/5 rounded-xl flex items-center justify-center overflow-hidden border-2 border-white/10">
+            {logoUrl ? (
+              <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-white/30 text-2xl font-bold">{form.name?.charAt(0)?.toUpperCase() || "?"}</span>
+            )}
+          </div>
+          <div>
+            <label className="cursor-pointer inline-block">
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={handleLogoUpload}
+                className="hidden"
+                disabled={uploading}
+              />
+              <span className="bg-primary/10 border border-primary/30 text-primary px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/20 transition inline-block">
+                {uploading ? t("common.uploading") : t("admin.settings.changeLogo")}
+              </span>
+            </label>
+            <p className="text-xs text-white/30 mt-2">PNG, JPG ou WebP. Max 2 Mo.</p>
+          </div>
+        </div>
+      </div>
 
       {/* Profile section */}
       <div className="glass-card p-6 mb-6">
@@ -142,6 +240,20 @@ export default function AdminSettingsPage() {
               placeholder="Wave Sénégal"
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.settings.industry")}</label>
+            <select
+              value={form.industry}
+              onChange={(e) => setForm({ ...form, industry: e.target.value })}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition appearance-none cursor-pointer"
+            >
+              <option value="" className="bg-[#1a1a2e]">— {t("admin.settings.selectIndustry")} —</option>
+              {INDUSTRY_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value} className="bg-[#1a1a2e]">{opt.label}</option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -267,8 +379,35 @@ export default function AdminSettingsPage() {
         )}
       </div>
 
+      {/* Notification preferences */}
+      <div className="glass-card p-6 mb-6">
+        <h2 className="text-lg font-bold mb-4">{t("admin.settings.notifications")}</h2>
+        <div className="space-y-3">
+          {[
+            { key: "notify_campaign_complete", label: t("admin.settings.notifCampaignComplete") },
+            { key: "notify_weekly_summary", label: t("admin.settings.notifWeeklySummary") },
+            { key: "notify_new_echos", label: t("admin.settings.notifNewEchos") },
+          ].map((pref) => (
+            <label key={pref.key} className="flex items-center justify-between cursor-pointer group">
+              <span className="text-sm text-white/70 group-hover:text-white/90 transition">{pref.label}</span>
+              <div
+                onClick={() => setNotifPrefs({ ...notifPrefs, [pref.key]: !notifPrefs[pref.key] })}
+                className={`w-10 h-6 rounded-full transition-colors relative cursor-pointer ${
+                  notifPrefs[pref.key] ? "bg-primary" : "bg-white/10"
+                }`}
+              >
+                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                  notifPrefs[pref.key] ? "translate-x-5" : "translate-x-1"
+                }`} />
+              </div>
+            </label>
+          ))}
+        </div>
+        <p className="text-xs text-white/20 mt-3">{t("admin.settings.notifSavedOnSave")}</p>
+      </div>
+
       {/* Language */}
-      <div className="glass-card p-6">
+      <div className="glass-card p-6 mb-6">
         <LanguageSwitcher />
       </div>
 
