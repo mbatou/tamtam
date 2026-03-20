@@ -97,9 +97,9 @@ export async function GET() {
   }
 
   // --- Chart data: daily clicks for brand's campaigns (last 14 days) ---
-  const fourteenDaysAgo = new Date();
-  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 13);
-  fourteenDaysAgo.setHours(0, 0, 0, 0);
+  // Use UTC dates to ensure bucket keys match click created_at timestamps
+  const now = new Date();
+  const chartStartUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 13));
 
   let clicksChart: { date: string; valid: number; fraud: number }[] = [];
   if (linkIds.length > 0) {
@@ -107,13 +107,13 @@ export async function GET() {
       .from("clicks")
       .select("created_at, is_valid")
       .in("link_id", linkIds)
-      .gte("created_at", fourteenDaysAgo.toISOString())
+      .gte("created_at", chartStartUTC.toISOString())
       .order("created_at", { ascending: true });
 
     const clicksByDay: Record<string, { date: string; valid: number; fraud: number }> = {};
     for (let i = 0; i < 14; i++) {
-      const d = new Date(fourteenDaysAgo);
-      d.setDate(d.getDate() + i);
+      const d = new Date(chartStartUTC);
+      d.setUTCDate(d.getUTCDate() + i);
       const key = d.toISOString().slice(0, 10);
       clicksByDay[key] = { date: key, valid: 0, fraud: 0 };
     }

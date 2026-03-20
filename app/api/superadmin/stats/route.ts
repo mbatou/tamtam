@@ -115,9 +115,10 @@ export async function GET(request: NextRequest) {
     : 0;
 
   // --- Chart data: clicks per day ---
-  // Use date range if provided, otherwise default to last 14 days
-  const chartFrom = fromParam ? new Date(fromParam) : (() => { const d = new Date(); d.setDate(d.getDate() - 13); d.setHours(0, 0, 0, 0); return d; })();
-  const chartTo = toParam ? new Date(toParam) : new Date();
+  // Use UTC dates to ensure bucket keys match click created_at timestamps
+  const nowUTC = new Date();
+  const chartFrom = fromParam ? new Date(fromParam) : new Date(Date.UTC(nowUTC.getUTCFullYear(), nowUTC.getUTCMonth(), nowUTC.getUTCDate() - 13));
+  const chartTo = toParam ? new Date(toParam) : nowUTC;
 
   let dailyClicksQuery = supabase
     .from("clicks")
@@ -132,7 +133,7 @@ export async function GET(request: NextRequest) {
   const clicksByDay: Record<string, { date: string; valid: number; fraud: number }> = {};
   for (let i = 0; i < dayCount; i++) {
     const d = new Date(chartFrom);
-    d.setDate(d.getDate() + i);
+    d.setUTCDate(d.getUTCDate() + i);
     const key = d.toISOString().slice(0, 10);
     clicksByDay[key] = { date: key, valid: 0, fraud: 0 };
   }
@@ -165,7 +166,7 @@ export async function GET(request: NextRequest) {
   const signupsByDay: Record<string, number> = {};
   for (let i = 0; i < dayCount; i++) {
     const d = new Date(chartFrom);
-    d.setDate(d.getDate() + i);
+    d.setUTCDate(d.getUTCDate() + i);
     signupsByDay[d.toISOString().slice(0, 10)] = 0;
   }
   for (const u of recentSignups || []) {
@@ -176,7 +177,7 @@ export async function GET(request: NextRequest) {
 
   // --- Chart data: user acquisition (echos + brands cumulative) ---
   // Use date range if provided, otherwise default to last 30 days
-  const acqFrom = fromParam ? new Date(fromParam) : (() => { const d = new Date(); d.setDate(d.getDate() - 29); d.setHours(0, 0, 0, 0); return d; })();
+  const acqFrom = fromParam ? new Date(fromParam) : new Date(Date.UTC(nowUTC.getUTCFullYear(), nowUTC.getUTCMonth(), nowUTC.getUTCDate() - 29));
   const acqDayCount = fromParam ? dayCount : 30;
 
   let echoAcqQuery = supabase.from("users").select("created_at").eq("role", "echo").gte("created_at", acqFrom.toISOString());
@@ -196,8 +197,9 @@ export async function GET(request: NextRequest) {
   const acqByDay: Record<string, { date: string; echos: number; brands: number; cumulEchos: number; cumulBrands: number }> = {};
   for (let i = 0; i < acqDayCount; i++) {
     const d = new Date(acqFrom);
-    d.setDate(d.getDate() + i);
-    acqByDay[d.toISOString().slice(0, 10)] = { date: d.toISOString().slice(0, 10), echos: 0, brands: 0, cumulEchos: 0, cumulBrands: 0 };
+    d.setUTCDate(d.getUTCDate() + i);
+    const key = d.toISOString().slice(0, 10);
+    acqByDay[key] = { date: key, echos: 0, brands: 0, cumulEchos: 0, cumulBrands: 0 };
   }
   for (const u of echoSignups30 || []) {
     const key = u.created_at.slice(0, 10);

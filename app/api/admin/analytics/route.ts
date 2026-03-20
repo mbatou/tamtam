@@ -39,10 +39,10 @@ export async function GET() {
   const links = trackedLinks || [];
 
   // Get all clicks for these links (last 30 days)
+  // Use UTC dates to ensure chart bucket keys match click created_at timestamps
   const linkIds = links.map((l) => l.id);
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
-  thirtyDaysAgo.setHours(0, 0, 0, 0);
+  const now = new Date();
+  const chartStartUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 29));
 
   let allClicks: { created_at: string; is_valid: boolean; link_id: string }[] = [];
   if (linkIds.length > 0) {
@@ -50,7 +50,7 @@ export async function GET() {
       .from("clicks")
       .select("created_at, is_valid, link_id")
       .in("link_id", linkIds)
-      .gte("created_at", thirtyDaysAgo.toISOString())
+      .gte("created_at", chartStartUTC.toISOString())
       .order("created_at", { ascending: true });
     allClicks = clicks || [];
   }
@@ -63,13 +63,14 @@ export async function GET() {
     const validClicks = campaignClicks.filter((c) => c.is_valid).length;
     const fraudClicks = campaignClicks.filter((c) => !c.is_valid).length;
     const echoCount = new Set(campaignLinks.map((l) => l.echo_id)).size;
-    const totalClickCount = campaignLinks.reduce((sum, l) => sum + l.click_count, 0);
+    // Use real click count from clicks table, not denormalized click_count
+    const totalClickCount = campaignClicks.length;
 
-    // Daily clicks for this campaign (last 30 days)
+    // Daily clicks for this campaign (last 30 days) — using UTC bucket keys
     const dailyData: Record<string, { date: string; valid: number; fraud: number }> = {};
     for (let i = 0; i < 30; i++) {
-      const d = new Date(thirtyDaysAgo);
-      d.setDate(d.getDate() + i);
+      const d = new Date(chartStartUTC);
+      d.setUTCDate(d.getUTCDate() + i);
       const key = d.toISOString().slice(0, 10);
       dailyData[key] = { date: key, valid: 0, fraud: 0 };
     }
