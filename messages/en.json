@@ -5,6 +5,7 @@
     "networkError": "Network error",
     "save": "Save",
     "saving": "Saving...",
+    "uploading": "Uploading...",
     "cancel": "Cancel",
     "back": "Back",
     "delete": "Delete",
@@ -582,7 +583,18 @@
       "changePassword": "Change password",
       "info": "Information",
       "memberSince": "Member since",
-      "accountType": "Account type"
+      "accountType": "Account type",
+      "companyLogo": "Company logo",
+      "changeLogo": "Change logo",
+      "logoTooLarge": "File is too large (max 2 MB)",
+      "logoUploadError": "Error uploading logo",
+      "industry": "Industry",
+      "selectIndustry": "Choose",
+      "notifications": "Notifications",
+      "notifCampaignComplete": "When a campaign is fully consumed",
+      "notifWeeklySummary": "Weekly performance summary",
+      "notifNewEchos": "When new Echos join my campaigns",
+      "notifSavedOnSave": "Preferences are saved with the Save button above."
     },
     "analytics": {
       "title": "Analytics",

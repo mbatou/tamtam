@@ -5,6 +5,7 @@
     "networkError": "Erreur réseau",
     "save": "Enregistrer",
     "saving": "Enregistrement...",
+    "uploading": "Envoi en cours...",
     "cancel": "Annuler",
     "back": "Retour",
     "delete": "Supprimer",
@@ -582,7 +583,18 @@
       "changePassword": "Changer le mot de passe",
       "info": "Informations",
       "memberSince": "Membre depuis",
-      "accountType": "Type de compte"
+      "accountType": "Type de compte",
+      "companyLogo": "Logo de votre entreprise",
+      "changeLogo": "Changer le logo",
+      "logoTooLarge": "Le fichier est trop volumineux (max 2 Mo)",
+      "logoUploadError": "Erreur lors de l'upload du logo",
+      "industry": "Secteur d'activité",
+      "selectIndustry": "Choisir",
+      "notifications": "Notifications",
+      "notifCampaignComplete": "Quand une campagne est entièrement consommée",
+      "notifWeeklySummary": "Résumé hebdomadaire des performances",
+      "notifNewEchos": "Quand de nouveaux Échos rejoignent mes campagnes",
+      "notifSavedOnSave": "Les préférences sont enregistrées avec le bouton Enregistrer ci-dessus."
     },
     "analytics": {
       "title": "Analytics",
