@@ -56,6 +56,7 @@ function CampaignModerationPageContent() {
 
   // Create campaign state
   const [showCreate, setShowCreate] = useState(false);
+  const [showTemplateMenu, setShowTemplateMenu] = useState(false);
   const [batteurs, setBatteurs] = useState<Batteur[]>([]);
   const [creating, setCreating] = useState(false);
   const [newCamp, setNewCamp] = useState({
@@ -203,12 +204,54 @@ function CampaignModerationPageContent() {
 
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">{t("superadmin.campaigns.title")}</h1>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="px-4 py-2.5 rounded-xl bg-gradient-primary text-white text-sm font-bold hover:opacity-90 transition"
-        >
-          {t("superadmin.campaigns.createCampaign")}
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => setShowTemplateMenu(!showTemplateMenu)}
+            className="px-4 py-2.5 rounded-xl bg-gradient-primary text-white text-sm font-bold hover:opacity-90 transition flex items-center gap-2"
+          >
+            {t("superadmin.campaigns.createCampaign")} <span className="text-xs opacity-70">&#9662;</span>
+          </button>
+          {showTemplateMenu && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowTemplateMenu(false)} />
+              <div className="absolute right-0 mt-2 glass-card rounded-xl border border-white/10 w-64 z-50 overflow-hidden">
+                <button
+                  onClick={() => {
+                    setNewCamp({ batteur_id: "", title: "Recrutement Échos", description: "Campagne pour recruter de nouveaux Échos sur Tamtam.", destination_url: "https://tamma.me/register", cpc: "15", budget: "" });
+                    setShowCreate(true);
+                    setShowTemplateMenu(false);
+                  }}
+                  className="w-full text-left px-4 py-3 hover:bg-white/5 transition"
+                >
+                  <div className="text-sm font-bold">🤝 Recrutement Échos</div>
+                  <div className="text-[10px] text-white/40">Campagne pour recruter de nouveaux Échos</div>
+                </button>
+                <button
+                  onClick={() => {
+                    setNewCamp({ batteur_id: "", title: "", description: "", destination_url: "", cpc: "25", budget: "" });
+                    setShowCreate(true);
+                    setShowTemplateMenu(false);
+                  }}
+                  className="w-full text-left px-4 py-3 hover:bg-white/5 transition border-t border-white/5"
+                >
+                  <div className="text-sm font-bold">📢 Promo Marque</div>
+                  <div className="text-[10px] text-white/40">Campagne type pour une marque</div>
+                </button>
+                <button
+                  onClick={() => {
+                    setNewCamp({ batteur_id: "", title: "", description: "", destination_url: "", cpc: "", budget: "" });
+                    setShowCreate(true);
+                    setShowTemplateMenu(false);
+                  }}
+                  className="w-full text-left px-4 py-3 hover:bg-white/5 transition border-t border-white/5"
+                >
+                  <div className="text-sm font-bold">✏️ Campagne libre</div>
+                  <div className="text-[10px] text-white/40">Commencer de zéro</div>
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {pendingCount > 0 && (
