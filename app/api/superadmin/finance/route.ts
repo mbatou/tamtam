@@ -13,11 +13,32 @@ async function requireSuperadmin() {
   return { session, supabase };
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const auth = await requireSuperadmin();
   if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   const supabase = auth.supabase;
+
+  // Parse date range from query params
+  const { searchParams } = new URL(request.url);
+  const fromParam = searchParams.get("from");
+  const toParam = searchParams.get("to");
+
+  // Build filtered queries
+  let payoutsQuery = supabase.from("payouts").select("*, users!echo_id(name, phone)").order("created_at", { ascending: false });
+  let paymentsQuery = supabase.from("payments").select("*, users!user_id(name)").order("created_at", { ascending: false }).limit(100);
+  let validClicksQuery = supabase.from("clicks").select("id", { count: "exact", head: true }).eq("is_valid", true);
+
+  if (fromParam) {
+    payoutsQuery = payoutsQuery.gte("created_at", fromParam);
+    paymentsQuery = paymentsQuery.gte("created_at", fromParam);
+    validClicksQuery = validClicksQuery.gte("created_at", fromParam);
+  }
+  if (toParam) {
+    payoutsQuery = payoutsQuery.lte("created_at", toParam);
+    paymentsQuery = paymentsQuery.lte("created_at", toParam);
+    validClicksQuery = validClicksQuery.lte("created_at", toParam);
+  }
 
   const [
     { data: campaigns },
@@ -27,10 +48,10 @@ export async function GET() {
     { count: validClicksCount },
   ] = await Promise.all([
     supabase.from("campaigns").select("id, title, spent, budget"),
-    supabase.from("payouts").select("*, users!echo_id(name, phone)").order("created_at", { ascending: false }),
-    supabase.from("payments").select("*, users!user_id(name)").order("created_at", { ascending: false }).limit(100),
+    payoutsQuery,
+    paymentsQuery,
     supabase.from("platform_settings").select("value").eq("key", "platform_fee_percent").single(),
-    supabase.from("clicks").select("id", { count: "exact", head: true }).eq("is_valid", true),
+    validClicksQuery,
   ]);
 
   const feePercent = parseInt(feeSetting?.value || "25");
@@ -39,16 +60,17 @@ export async function GET() {
   const sentTotal = (payouts || []).filter((p: { status: string }) => p.status === "sent").reduce((s: number, p: { amount: number }) => s + p.amount, 0);
   const pendingTotal = (payouts || []).filter((p: { status: string }) => p.status === "pending").reduce((s: number, p: { amount: number }) => s + p.amount, 0);
 
-  // Daily revenue for the current month
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1);
-  startOfMonth.setHours(0, 0, 0, 0);
+  // Daily revenue chart — use date range if provided, otherwise current month
+  const chartFrom = fromParam || (() => { const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); return d.toISOString(); })();
 
-  const { data: monthlyClicks } = await supabase
+  let dailyClicksQuery = supabase
     .from("clicks")
     .select("created_at")
     .eq("is_valid", true)
-    .gte("created_at", startOfMonth.toISOString());
+    .gte("created_at", chartFrom);
+  if (toParam) dailyClicksQuery = dailyClicksQuery.lte("created_at", toParam);
+
+  const { data: monthlyClicks } = await dailyClicksQuery;
 
   // Group clicks by day and calculate commission per day
   const dailyMap: Record<string, { clicks: number }> = {};
