@@ -19,7 +19,7 @@ export async function GET() {
 
   // Verify the user is a brand (batteur)
   const { data: currentUser } = await supabase.from("users").select("role").eq("id", session.user.id).single();
-  if (!currentUser || currentUser.role !== "batteur") {
+  if (!currentUser || !["batteur", "admin", "superadmin"].includes(currentUser.role)) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 
