@@ -728,7 +728,12 @@
       "activityAll": "Toute activité",
       "activityActive": "Actifs",
       "activityInactive": "Inactifs",
-      "neverActive": "jamais"
+      "neverActive": "jamais",
+      "quality": "Qualité",
+      "qualityScore": "Score Qualité",
+      "validRatio": "Ratio valide",
+      "campaignsJoinedLabel": "Campagnes",
+      "streakLabel": "Série"
     },
     "campaigns": {
       "title": "Modération des campagnes",
@@ -803,7 +808,12 @@
       "confirmApproveButton": "Oui, approuver le retrait",
       "confirmRejectButton": "Oui, rejeter le retrait",
       "rejectionReason": "Raison du refus",
-      "rejectWarning": "Le montant sera remboursé au solde de l'écho."
+      "rejectWarning": "Le montant sera remboursé au solde de l'écho.",
+      "netPosition": "Position nette",
+      "commissionEarned": "Commission gagnée",
+      "fixedCosts": "Coûts fixes estimés",
+      "netPositionLabel": "Position nette",
+      "dailyRevenue": "Revenus quotidiens"
     },
     "support": {
       "title": "Support",
@@ -1032,7 +1042,9 @@
       "no": "Non",
       "weeklyFocus": "Focus de la semaine",
       "pacing": "Encore {needed} pour atteindre l'objectif",
-      "goalReached": "Objectif atteint !"
+      "goalReached": "Objectif atteint !",
+      "dayLabel": "Jour",
+      "sinceLaunch": "depuis le lancement"
     }
   },
   "gamification": {
