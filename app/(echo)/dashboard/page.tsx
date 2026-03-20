@@ -10,6 +10,7 @@ import { useTranslation } from "@/lib/i18n";
 import type { User, TrackedLinkWithCampaign, Campaign } from "@/lib/types";
 import StreakDisplay from "@/components/gamification/StreakDisplay";
 import TierProgress from "@/components/gamification/TierProgress";
+import { requestNotificationPermission, canAskNotification } from "@/lib/notifications";
 
 export default function EchoDashboard() {
   const [user, setUser] = useState<User | null>(null);
@@ -20,6 +21,7 @@ export default function EchoDashboard() {
   const [accepting, setAccepting] = useState<string | null>(null);
   const [selectedLink, setSelectedLink] = useState<TrackedLinkWithCampaign | null>(null);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   const [gamification, setGamification] = useState<{
     streak: { current_streak: number; longest_streak: number; last_campaign_date: string | null };
     user: { tier: string; tier_bonus_percent: number; total_valid_clicks: number; total_campaigns_joined: number; referral_count: number } | null;
@@ -83,6 +85,10 @@ export default function EchoDashboard() {
     if (res.ok) {
       showToast(t("echo.dashboard.accepted"), "success");
       await loadData();
+      // Show notification prompt after first campaign acceptance
+      if (activeLinks.length === 0 && canAskNotification()) {
+        setShowNotifPrompt(true);
+      }
     } else {
       const data = await res.json();
       showToast(data.error || t("common.error"), "error");
@@ -421,6 +427,42 @@ export default function EchoDashboard() {
               </div>
             ))
           )}
+        </div>
+      )}
+
+      {/* Push notification prompt — after first campaign accepted */}
+      {showNotifPrompt && (
+        <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-gray-800 p-4 z-50 safe-area-bottom">
+          <div className="max-w-md mx-auto">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">🔔</span>
+              <div className="flex-1">
+                <h4 className="text-white font-bold text-sm">
+                  Ne manque jamais un nouveau rythme!
+                </h4>
+                <p className="text-gray-400 text-xs mt-1">
+                  Active les notifications pour être le premier à partager et gagner plus.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={async () => {
+                  await requestNotificationPermission();
+                  setShowNotifPrompt(false);
+                }}
+                className="flex-1 bg-orange-500 text-white py-2.5 rounded-lg text-sm font-medium"
+              >
+                Activer 🔔
+              </button>
+              <button
+                onClick={() => setShowNotifPrompt(false)}
+                className="px-4 text-gray-500 text-sm"
+              >
+                Plus tard
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -6,6 +6,7 @@ import { MIN_PAYOUT_AMOUNT } from "@/lib/constants";
 import { useToast } from "@/components/ui/Toast";
 import { useTranslation } from "@/lib/i18n";
 import type { User, Payout } from "@/lib/types";
+import { requestNotificationPermission, canAskNotification } from "@/lib/notifications";
 
 export default function EarningsPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -18,6 +19,7 @@ export default function EarningsPage() {
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
   const [lastWithdrawn, setLastWithdrawn] = useState(0);
   const [minPayout, setMinPayout] = useState(MIN_PAYOUT_AMOUNT);
+  const [showNotifCTA, setShowNotifCTA] = useState(true);
   const { showToast, ToastComponent } = useToast();
   const { t } = useTranslation();
 
@@ -144,6 +146,32 @@ export default function EarningsPage() {
               {t("common.close")}
             </button>
           </div>
+
+          {/* Notification CTA after withdrawal */}
+          {showNotifCTA && canAskNotification() && (
+            <div className="bg-card rounded-xl p-4 mt-4 border border-gray-800">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">🔔</span>
+                <div className="flex-1">
+                  <p className="text-white text-sm font-medium">
+                    Tu veux savoir quand un nouveau rythme est disponible?
+                  </p>
+                  <p className="text-gray-400 text-xs mt-0.5">
+                    Active les notifications — tu ne rateras plus aucune opportunité de gagner.
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    await requestNotificationPermission();
+                    setShowNotifCTA(false);
+                  }}
+                  className="bg-orange-500 text-white px-4 py-2 rounded-lg text-xs font-medium shrink-0"
+                >
+                  Activer
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
