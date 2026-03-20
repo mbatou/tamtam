@@ -63,7 +63,8 @@ export async function getClicksChart(
     .select("created_at, is_valid")
     .in("link_id", linkIds)
     .gte("created_at", startUTC.toISOString())
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .limit(50000);
 
   for (const click of clicks || []) {
     const key = click.created_at.slice(0, 10);

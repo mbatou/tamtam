@@ -91,7 +91,8 @@ export async function GET(request: NextRequest) {
   let activeEchoQuery = supabase
     .from("tracked_links")
     .select("echo_id, clicks!inner(created_at)")
-    .gte("clicks.created_at", activeFrom);
+    .gte("clicks.created_at", activeFrom)
+    .limit(50000);
   if (toParam) activeEchoQuery = activeEchoQuery.lte("clicks.created_at", toParam);
   const { data: activeEchoLinks } = await activeEchoQuery;
 
@@ -124,7 +125,8 @@ export async function GET(request: NextRequest) {
     .from("clicks")
     .select("created_at, is_valid")
     .gte("created_at", chartFrom.toISOString())
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .limit(50000);
   if (toParam) dailyClicksQuery = dailyClicksQuery.lte("created_at", toParam);
 
   const { data: dailyClicks } = await dailyClicksQuery;
@@ -158,7 +160,8 @@ export async function GET(request: NextRequest) {
     .from("users")
     .select("created_at")
     .eq("role", "echo")
-    .gte("created_at", chartFrom.toISOString());
+    .gte("created_at", chartFrom.toISOString())
+    .limit(50000);
   if (toParam) signupsQuery = signupsQuery.lte("created_at", toParam);
 
   const { data: recentSignups } = await signupsQuery;
@@ -180,8 +183,8 @@ export async function GET(request: NextRequest) {
   const acqFrom = fromParam ? new Date(fromParam) : new Date(Date.UTC(nowUTC.getUTCFullYear(), nowUTC.getUTCMonth(), nowUTC.getUTCDate() - 29));
   const acqDayCount = fromParam ? dayCount : 30;
 
-  let echoAcqQuery = supabase.from("users").select("created_at").eq("role", "echo").gte("created_at", acqFrom.toISOString());
-  let brandAcqQuery = supabase.from("users").select("created_at").eq("role", "batteur").gte("created_at", acqFrom.toISOString());
+  let echoAcqQuery = supabase.from("users").select("created_at").eq("role", "echo").gte("created_at", acqFrom.toISOString()).limit(50000);
+  let brandAcqQuery = supabase.from("users").select("created_at").eq("role", "batteur").gte("created_at", acqFrom.toISOString()).limit(50000);
   if (toParam) {
     echoAcqQuery = echoAcqQuery.lte("created_at", toParam);
     brandAcqQuery = brandAcqQuery.lte("created_at", toParam);
