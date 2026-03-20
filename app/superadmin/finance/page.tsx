@@ -9,6 +9,8 @@ import Badge from "@/components/ui/Badge";
 import Modal from "@/components/ui/Modal";
 import Pagination, { paginate } from "@/components/ui/Pagination";
 import { useToast } from "@/components/ui/Toast";
+import DateRangeSelector, { type DateRange } from "@/components/ui/DateRangeSelector";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 interface PayoutRow {
   id: string;
@@ -31,6 +33,12 @@ interface PaymentRow {
   users: { name: string } | null;
 }
 
+interface DailyRevenue {
+  date: string;
+  revenue: number;
+  clicks: number;
+}
+
 interface FinanceData {
   grossRevenue: number;
   platformCut: number;
@@ -40,6 +48,7 @@ interface FinanceData {
   validClicks: number;
   payouts: PayoutRow[];
   payments: PaymentRow[];
+  dailyRevenue?: DailyRevenue[];
 }
 
 type FinanceTab = "payout_requests" | "payout_history" | "payments" | "pending_recharges";
@@ -63,6 +72,7 @@ function FinancePageContent() {
   const { showToast, ToastComponent } = useToast();
   const searchParams = useSearchParams();
   const highlightId = searchParams.get("id");
+  const [dateRange, setDateRange] = useState<DateRange>({ key: "all", from: null, to: null });
 
   const openPayoutById = useCallback((finData: FinanceData, id: string) => {
     const match = finData.payouts.find((p) => p.id === id);
@@ -73,11 +83,15 @@ function FinancePageContent() {
     }
   }, []);
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); }, [dateRange]);
 
   async function loadData() {
     try {
-      const res = await fetch("/api/superadmin/finance");
+      const params = new URLSearchParams();
+      if (dateRange.from) params.set("from", dateRange.from);
+      if (dateRange.to) params.set("to", dateRange.to);
+      const qs = params.toString();
+      const res = await fetch(`/api/superadmin/finance${qs ? `?${qs}` : ""}`);
       const json = await res.json();
       setData(json);
       if (highlightId) openPayoutById(json, highlightId);
@@ -160,7 +174,10 @@ function FinancePageContent() {
     <div className="p-6 max-w-7xl">
       {ToastComponent}
 
-      <h1 className="text-2xl font-bold mb-6">{t("superadmin.finance.title")}</h1>
+      <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
+        <h1 className="text-2xl font-bold">{t("superadmin.finance.title")}</h1>
+        <DateRangeSelector value={dateRange.key} onChange={setDateRange} />
+      </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard label={t("superadmin.dashboard.grossRevenue")} value={formatFCFA(data.grossRevenue)} accent="orange" />
@@ -195,6 +212,65 @@ function FinancePageContent() {
           {t("superadmin.finance.echoShare")}: {formatFCFA(echoShare)} · {t("superadmin.finance.alreadyPaid")}: {formatFCFA(data.sentTotal)} · {t("common.pending")}: {formatFCFA(data.pendingTotal)}
         </div>
       </div>
+
+      {/* Net Position */}
+      {(() => {
+        const MONTHLY_FIXED_COSTS = 18450;
+        const now = new Date();
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const dayOfMonth = now.getDate();
+        const proRatedCosts = Math.round((MONTHLY_FIXED_COSTS / daysInMonth) * dayOfMonth);
+        const netPosition = data.platformCut - proRatedCosts;
+
+        return (
+          <div className="glass-card p-6 mb-8">
+            <h3 className="text-sm font-bold mb-4">{t("superadmin.finance.netPosition") || "Position nette"}</h3>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <div className="text-xs text-white/40 mb-1">{t("superadmin.finance.commissionEarned") || "Commission gagnée"}</div>
+                <div className="text-xl font-bold text-emerald-400">{formatFCFA(data.platformCut)}</div>
+              </div>
+              <div>
+                <div className="text-xs text-white/40 mb-1">{t("superadmin.finance.fixedCosts") || "Coûts fixes estimés"}</div>
+                <div className="text-xl font-bold text-red-400">{formatFCFA(proRatedCosts)}</div>
+                <div className="text-[10px] text-white/20">~{formatFCFA(MONTHLY_FIXED_COSTS)}/mois</div>
+              </div>
+              <div>
+                <div className="text-xs text-white/40 mb-1">{t("superadmin.finance.netPositionLabel") || "Position nette"}</div>
+                <div className={`text-xl font-bold ${netPosition >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                  {netPosition >= 0 ? "+" : ""}{formatFCFA(netPosition)}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Daily Revenue Trend */}
+      {data.dailyRevenue && data.dailyRevenue.length > 0 && (
+        <div className="glass-card p-6 mb-8">
+          <h3 className="text-sm font-bold mb-4">{t("superadmin.finance.dailyRevenue") || "Revenus quotidiens"}</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={data.dailyRevenue}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis
+                dataKey="date"
+                tickFormatter={(v) => new Date(v).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <Tooltip
+                contentStyle={{ background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
+                labelFormatter={(v) => new Date(String(v)).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}
+                formatter={(value) => [formatFCFA(Number(value)), "Commission"]}
+              />
+              <Bar dataKey="revenue" name="Commission" fill="#D35400" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6 overflow-x-auto">

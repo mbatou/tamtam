@@ -28,6 +28,8 @@ interface UserRow {
   referred_by: string | null;
   referral_code: string | null;
   last_click_at: string | null;
+  campaigns_joined: number;
+  current_streak: number;
   is_dual_role?: boolean;
   has_echo_activity?: boolean;
   has_batteur_activity?: boolean;
@@ -301,6 +303,13 @@ function UsersPageContent() {
 
   const totalPaid = echos.reduce((sum, u) => sum + u.total_earned, 0);
 
+  function qualityScore(user: UserRow): number {
+    const validRatio = user.click_stats.total > 0 ? user.click_stats.valid / user.click_stats.total : 0;
+    const campaignsJoined = Math.min(user.campaigns_joined / 5, 1);
+    const streakBonus = Math.min(user.current_streak / 10, 1);
+    return Math.round((validRatio * 0.5 + campaignsJoined * 0.3 + streakBonus * 0.2) * 100);
+  }
+
   if (loading) {
     return (
       <div className="p-6 space-y-4">
@@ -391,6 +400,7 @@ function UsersPageContent() {
               <th className="pb-3 font-semibold">{t("common.status")}</th>
               <th className="pb-3 font-semibold hidden md:table-cell">{t("superadmin.users.clicks")}</th>
               <th className="pb-3 font-semibold hidden md:table-cell">{t("superadmin.users.gains")}</th>
+              <th className="pb-3 font-semibold hidden md:table-cell">{t("superadmin.users.quality") || "Qualité"}</th>
               <th className="pb-3 font-semibold hidden lg:table-cell">{t("superadmin.users.balance")}</th>
               <th className="pb-3 font-semibold hidden lg:table-cell">{t("superadmin.users.registered")}</th>
             </tr>
@@ -448,6 +458,20 @@ function UsersPageContent() {
                   ) : "—"}
                 </td>
                 <td className="py-3 font-bold hidden md:table-cell">{formatFCFA(user.total_earned)}</td>
+                <td className="py-3 hidden md:table-cell">
+                  {user.role === "echo" || user.has_echo_activity ? (() => {
+                    const score = qualityScore(user);
+                    return (
+                      <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                        score >= 70 ? "bg-emerald-500/15 text-emerald-400" :
+                        score >= 40 ? "bg-orange-500/15 text-orange-400" :
+                        "bg-red-500/15 text-red-400"
+                      }`}>
+                        {score}%
+                      </span>
+                    );
+                  })() : <span className="text-white/20">—</span>}
+                </td>
                 <td className="py-3 hidden lg:table-cell">{formatFCFA(user.balance)}</td>
                 <td className="py-3 hidden lg:table-cell">
                   <div className="text-xs text-white/40">{new Date(user.created_at).toLocaleDateString("fr-FR")}</div>
@@ -515,6 +539,33 @@ function UsersPageContent() {
                 <div className="text-[10px] text-white/40">{t("superadmin.users.fraudRate")}</div>
               </div>
             </div>
+
+            {/* Quality Score (for echos) */}
+            {(selected.role === "echo" || selected.has_echo_activity) && (() => {
+              const score = qualityScore(selected);
+              return (
+                <div className={`p-3 rounded-xl border ${
+                  score >= 70 ? "bg-emerald-500/5 border-emerald-500/20" :
+                  score >= 40 ? "bg-orange-500/5 border-orange-500/20" :
+                  "bg-red-500/5 border-red-500/20"
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">{score >= 70 ? "⭐" : score >= 40 ? "📊" : "⚠️"}</span>
+                      <span className="text-xs font-bold text-white/60">{t("superadmin.users.qualityScore") || "Score Qualité"}</span>
+                    </div>
+                    <span className={`text-lg font-black ${
+                      score >= 70 ? "text-emerald-400" : score >= 40 ? "text-orange-400" : "text-red-400"
+                    }`}>{score}%</span>
+                  </div>
+                  <div className="flex gap-4 mt-2 text-[10px] text-white/30">
+                    <span>{t("superadmin.users.validRatio") || "Ratio valide"}: {selected.click_stats.total > 0 ? Math.round(selected.click_stats.valid / selected.click_stats.total * 100) : 0}%</span>
+                    <span>{t("superadmin.users.campaignsJoinedLabel") || "Campagnes"}: {selected.campaigns_joined}</span>
+                    <span>{t("superadmin.users.streakLabel") || "Série"}: {selected.current_streak}</span>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Referral info */}
             {(selected.referral_count > 0 || selected.referred_by) && (

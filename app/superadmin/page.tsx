@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatFCFA, formatNumber, timeAgo } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
+import DateRangeSelector, { type DateRange } from "@/components/ui/DateRangeSelector";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
@@ -64,13 +65,18 @@ export default function SuperAdminOverview() {
   const { t } = useTranslation();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState<DateRange>({ key: "all", from: null, to: null });
 
   useEffect(() => {
-    fetch("/api/superadmin/stats")
+    const params = new URLSearchParams();
+    if (dateRange.from) params.set("from", dateRange.from);
+    if (dateRange.to) params.set("to", dateRange.to);
+    const qs = params.toString();
+    fetch(`/api/superadmin/stats${qs ? `?${qs}` : ""}`)
       .then((r) => r.json())
       .then((data) => { setStats(data); setLoading(false); })
       .catch(() => setLoading(false));
-  }, []);
+  }, [dateRange]);
 
   if (loading || !stats) {
     return (
@@ -100,7 +106,10 @@ export default function SuperAdminOverview() {
 
   return (
     <div className="p-6 max-w-7xl space-y-6">
-      <h1 className="text-2xl font-bold">{t("superadmin.dashboard.title")}</h1>
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <h1 className="text-2xl font-bold">{t("superadmin.dashboard.title")}</h1>
+        <DateRangeSelector value={dateRange.key} onChange={setDateRange} />
+      </div>
 
       {/* Row 1 — Critical KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

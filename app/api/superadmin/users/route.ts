@@ -38,9 +38,21 @@ export async function GET() {
   const batteurUserIds = new Set<string>();
   // Last click timestamp per echo (via tracked_links → clicks)
   const lastClickMap: Record<string, string> = {};
+  // Campaigns joined per echo (count of tracked_links per echo, grouped by campaign)
+  const campaignsJoinedMap: Record<string, number> = {};
   try {
-    const { data: echoLinks } = await supabase.from("tracked_links").select("echo_id");
-    if (echoLinks) echoLinks.forEach((l) => echoUserIds.add(l.echo_id));
+    const { data: echoLinks } = await supabase.from("tracked_links").select("echo_id, campaign_id");
+    if (echoLinks) {
+      const echoCampaignSets: Record<string, Set<string>> = {};
+      echoLinks.forEach((l) => {
+        echoUserIds.add(l.echo_id);
+        if (!echoCampaignSets[l.echo_id]) echoCampaignSets[l.echo_id] = new Set();
+        echoCampaignSets[l.echo_id].add(l.campaign_id);
+      });
+      for (const [echoId, campaigns] of Object.entries(echoCampaignSets)) {
+        campaignsJoinedMap[echoId] = campaigns.size;
+      }
+    }
 
     const { data: batteurCampaigns } = await supabase.from("campaigns").select("batteur_id");
     if (batteurCampaigns) batteurCampaigns.forEach((c) => batteurUserIds.add(c.batteur_id));
@@ -66,6 +78,19 @@ export async function GET() {
     // tables may not exist yet
   }
 
+  // Get streak data per echo
+  const streakMap: Record<string, number> = {};
+  try {
+    const { data: streaks } = await supabase.from("echo_streaks").select("echo_id, current_streak");
+    if (streaks) {
+      for (const s of streaks) {
+        streakMap[s.echo_id] = s.current_streak || 0;
+      }
+    }
+  } catch {
+    // echo_streaks may not exist yet
+  }
+
   const enriched = (users || []).map((u: Record<string, unknown>) => ({
     ...u,
     click_stats: clickStats[u.id as string] || { total: 0, valid: 0, fraud: 0, rate: 0 },
@@ -73,6 +98,8 @@ export async function GET() {
     has_batteur_activity: batteurUserIds.has(u.id as string),
     is_dual_role: echoUserIds.has(u.id as string) && batteurUserIds.has(u.id as string),
     last_click_at: lastClickMap[u.id as string] || null,
+    campaigns_joined: campaignsJoinedMap[u.id as string] || 0,
+    current_streak: streakMap[u.id as string] || 0,
   }));
 
   return NextResponse.json(enriched);

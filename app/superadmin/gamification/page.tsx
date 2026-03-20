@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatFCFA } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import TabBar from "@/components/ui/TabBar";
+import DateRangeSelector, { type DateRange } from "@/components/ui/DateRangeSelector";
 
 interface Milestone {
   id: string;
@@ -82,17 +83,22 @@ export default function SuperadminGamification() {
   const [gamificationEnabled, setGamificationEnabled] = useState(true);
   const [monthlyBudgetCap, setMonthlyBudgetCap] = useState(100000);
   const [saving, setSaving] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange>({ key: "all", from: null, to: null });
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [dateRange]);
 
   useEffect(() => {
     loadLeaderboard(leaderboardPeriod);
   }, [leaderboardPeriod]);
 
   async function loadData() {
-    const res = await fetch("/api/superadmin/gamification");
+    const params = new URLSearchParams();
+    if (dateRange.from) params.set("from", dateRange.from);
+    if (dateRange.to) params.set("to", dateRange.to);
+    const qs = params.toString();
+    const res = await fetch(`/api/superadmin/gamification${qs ? `?${qs}` : ""}`);
     if (!res.ok) {
       setLoading(false);
       return;
@@ -231,6 +237,7 @@ export default function SuperadminGamification() {
         <h1 className="text-2xl font-black">
           🎮 Gamification
         </h1>
+        <DateRangeSelector value={dateRange.key} onChange={setDateRange} />
       </div>
 
       {/* Section 1: KPI Cards */}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { formatFCFA, formatNumber, timeAgo } from "@/lib/utils";
+import { formatFCFA, formatNumber } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 
 interface Goal {
@@ -184,9 +184,12 @@ export default function RoadmapPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t("superadmin.roadmap.title")}</h1>
-        <span className="text-xs text-white/30">
-          {timeAgo(data.fetchedAt, t)}
-        </span>
+        <div className="text-right">
+          <span className="text-lg font-bold text-primary">
+            {t("superadmin.roadmap.dayLabel") || "Jour"} {Math.floor((Date.now() - new Date("2026-03-10").getTime()) / 86400000)}
+          </span>
+          <span className="text-xs text-white/30 block">{t("superadmin.roadmap.sinceLaunch") || "depuis le lancement"}</span>
+        </div>
       </div>
 
       {/* ===== Section 1: Current Phase Indicator ===== */}
