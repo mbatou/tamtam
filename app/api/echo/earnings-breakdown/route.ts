@@ -27,7 +27,8 @@ export async function GET() {
   const campaignEarnings = (links || [])
     .filter((l) => l.click_count > 0)
     .map((l) => {
-      const campaign = l.campaigns as { id: string; title: string; creative_urls: string[] | null; cpc: number } | null;
+      const rawCampaign = l.campaigns;
+      const campaign = (Array.isArray(rawCampaign) ? rawCampaign[0] : rawCampaign) as { id: string; title: string; creative_urls: string[] | null; cpc: number } | null;
       const imageUrl = campaign?.creative_urls?.find((u) => !u.match(/\.(mp4|webm)/)) || null;
       return {
         id: l.campaign_id,
@@ -73,7 +74,8 @@ export async function GET() {
   if (topLinks && topLinks.length > 0) {
     const earningsByEcho: Record<string, number> = {};
     for (const link of topLinks) {
-      const cpc = (link.campaigns as { cpc: number } | null)?.cpc || 0;
+      const rawCampaign = link.campaigns;
+      const cpc = ((Array.isArray(rawCampaign) ? rawCampaign[0] : rawCampaign) as { cpc: number } | null)?.cpc || 0;
       const earned = Math.floor(link.click_count * cpc * echoShare);
       earningsByEcho[link.echo_id] = (earningsByEcho[link.echo_id] || 0) + earned;
     }
