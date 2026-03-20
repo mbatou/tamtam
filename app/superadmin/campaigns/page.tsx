@@ -35,6 +35,37 @@ interface Batteur {
   balance: number;
 }
 
+interface EchoActivity {
+  id: string;
+  name: string;
+  city: string | null;
+  phone: string | null;
+  joinedAt: string;
+  totalClicks: number;
+  validClicks: number;
+  earnings: number;
+}
+
+interface ClickLog {
+  id: string;
+  created_at: string;
+  is_valid: boolean;
+  ip_address: string | null;
+  user_agent: string | null;
+  tracked_links: {
+    campaign_id: string;
+    users: { name: string; city: string | null } | null;
+  } | null;
+}
+
+interface EchoData {
+  echos: EchoActivity[];
+  engagedCount: number;
+  totalEchos: number;
+  participationRate: number;
+  recentClicks: ClickLog[];
+}
+
 export default function CampaignModerationPageWrapper() {
   return <Suspense><CampaignModerationPageContent /></Suspense>;
 }
@@ -53,6 +84,11 @@ function CampaignModerationPageContent() {
   const [notifying, setNotifying] = useState(false);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 30;
+
+  // Detail modal tab state
+  const [detailTab, setDetailTab] = useState<"info" | "echos" | "clicks">("info");
+  const [echoData, setEchoData] = useState<EchoData | null>(null);
+  const [loadingEchos, setLoadingEchos] = useState(false);
 
   // Create campaign state
   const [showCreate, setShowCreate] = useState(false);
@@ -74,6 +110,17 @@ function CampaignModerationPageContent() {
   }, []);
 
   useEffect(() => { loadData(); }, []);
+
+  // Fetch echo data when detail tab switches to echos or clicks
+  useEffect(() => {
+    if (selected && (detailTab === "echos" || detailTab === "clicks")) {
+      setLoadingEchos(true);
+      fetch(`/api/superadmin/campaigns/${selected.id}/echos`)
+        .then((r) => r.json())
+        .then((data) => { setEchoData(data); setLoadingEchos(false); })
+        .catch(() => setLoadingEchos(false));
+    }
+  }, [selected?.id, detailTab]);
 
   async function loadData() {
     try {
@@ -329,14 +376,14 @@ function CampaignModerationPageContent() {
                   <div className="text-[10px] text-white/25">{formatFCFA(campaign.spent)} {t("superadmin.campaigns.spentBudget").toLowerCase()}</div>
                 </td>
                 <td className="py-3 hidden md:table-cell">{campaign.cpc} FCFA</td>
-                <td className="py-3 hidden lg:table-cell">{campaign.echo_count}</td>
-                <td className="py-3 hidden lg:table-cell">
-                  <div>{campaign.total_clicks}</div>
-                  {campaign.total_clicks > 0 && (
-                    <div className="text-[10px] text-white/25">
-                      {Math.round((campaign.total_clicks > 0 ? ((campaign.total_clicks - (campaign.echo_count || 0)) / campaign.total_clicks) : 0) * 100)}% {t("common.valid").toLowerCase()}
-                    </div>
-                  )}
+                <td
+                  className="py-3 hidden lg:table-cell cursor-pointer text-primary hover:underline"
+                  onClick={(e) => { e.stopPropagation(); setSelected(campaign); setDetailTab("echos"); }}
+                >
+                  {campaign.echo_count}
+                </td>
+                <td className="py-3 hidden lg:table-cell" onClick={(e) => { e.stopPropagation(); setSelected(campaign); setDetailTab("clicks"); }}>
+                  <span className="cursor-pointer hover:underline">{campaign.total_clicks}</span>
                 </td>
                 <td className="py-3 text-xs text-white/40 hidden lg:table-cell">
                   {new Date(campaign.created_at).toLocaleDateString("fr-FR")}
@@ -350,137 +397,286 @@ function CampaignModerationPageContent() {
       <Pagination currentPage={page} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
 
       {/* Campaign Detail Modal */}
-      <Modal open={!!selected} onClose={() => { setSelected(null); setRejectReason(""); }} title={selected?.title || ""}>
+      <Modal open={!!selected} onClose={() => { setSelected(null); setRejectReason(""); setDetailTab("info"); setEchoData(null); }} title={selected?.title || ""}>
         {selected && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <span className="text-xs text-white/40 block">{t("superadmin.finance.batteur")}</span>
-                <span>{selected.users?.name || "—"}</span>
-              </div>
-              <div>
-                <span className="text-xs text-white/40 block">{t("common.status")}</span>
-                <Badge status={selected.moderation_status || "pending"} />
-              </div>
-              <div>
-                <span className="text-xs text-white/40 block">{t("common.budget")}</span>
-                <span>{formatFCFA(selected.budget)}</span>
-              </div>
-              <div>
-                <span className="text-xs text-white/40 block">{t("common.cpc")}</span>
-                <span>{selected.cpc} FCFA</span>
-              </div>
-              <div>
-                <span className="text-xs text-white/40 block">{t("superadmin.campaigns.engagedEchos")}</span>
-                <span>{selected.echo_count}</span>
-              </div>
-              <div>
-                <span className="text-xs text-white/40 block">{t("superadmin.campaigns.totalClicks")}</span>
-                <span>{selected.total_clicks}</span>
-              </div>
-              <div className="col-span-2">
-                <span className="text-xs text-white/40 block mb-1">{t("superadmin.campaigns.spentBudget")}</span>
-                <ProgressBar value={selected.spent} max={selected.budget} />
-                <span className="text-xs text-white/30 mt-1 block">
-                  {formatFCFA(selected.spent)} / {formatFCFA(selected.budget)}
-                </span>
-              </div>
-              <div className="col-span-2">
-                <span className="text-xs text-white/40 block">{t("common.url")}</span>
-                <span className="text-xs font-mono break-all text-primary">{selected.destination_url}</span>
-              </div>
-              {selected.description && (
-                <div className="col-span-2">
-                  <span className="text-xs text-white/40 block">{t("common.description")}</span>
-                  <span className="text-xs">{selected.description}</span>
-                </div>
-              )}
-              {selected.moderation_reason && (
-                <div className="col-span-2">
-                  <span className="text-xs text-white/40 block">{t("superadmin.campaigns.rejectionReason")}</span>
-                  <span className="text-xs text-red-400">{selected.moderation_reason}</span>
-                </div>
-              )}
-            </div>
-
-            {(selected.moderation_status || "pending") === "pending" && (
-              <div className="space-y-3 pt-2 border-t border-white/5">
-                <textarea
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder={t("superadmin.campaigns.rejectionReasonPlaceholder")}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition resize-none h-20"
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => moderateCampaign(selected.id, "approve")}
-                    className="flex-1 py-2.5 rounded-xl bg-accent/10 border border-accent/30 text-accent font-bold text-sm"
-                  >
-                    {t("superadmin.campaigns.approvedTab")}
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (!rejectReason.trim()) { showToast(t("common.error"), "error"); return; }
-                      moderateCampaign(selected.id, "reject", rejectReason);
-                    }}
-                    className="flex-1 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-bold text-sm"
-                  >
-                    {t("superadmin.campaigns.rejectedTab")}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {selected.status === "active" && (
-              <div className="pt-2 border-t border-white/5 space-y-2">
-                <button
-                  onClick={() => notifyEchos(selected.id)}
-                  disabled={notifying}
-                  className="w-full py-2.5 rounded-xl bg-primary/10 border border-primary/30 text-primary font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/></svg>
-                  {notifying ? t("superadmin.campaigns.notifying") : t("superadmin.campaigns.notifyEchos")}
-                </button>
-                <button
-                  onClick={() => moderateCampaign(selected.id, "pause")}
-                  className="w-full py-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 font-bold text-sm"
-                >
-                  {t("superadmin.campaigns.pendingTab")}
-                </button>
-              </div>
-            )}
-
-            {selected.status === "paused" && (
-              <div className="pt-2 border-t border-white/5">
-                <button
-                  onClick={() => moderateCampaign(selected.id, "resume")}
-                  className="w-full py-2.5 rounded-xl bg-accent/10 border border-accent/30 text-accent font-bold text-sm"
-                >
-                  {t("superadmin.campaigns.approvedTab")}
-                </button>
-              </div>
-            )}
-
-            {/* Clone Campaign */}
-            <div className="pt-2 border-t border-white/5">
-              <button
-                onClick={() => {
-                  setNewCamp({
-                    batteur_id: "",
-                    title: `${selected.title} (${t("superadmin.campaigns.clone")})`,
-                    description: selected.description || "",
-                    destination_url: selected.destination_url,
-                    cpc: String(selected.cpc),
-                    budget: String(selected.budget),
-                  });
-                  setSelected(null);
-                  setShowCreate(true);
-                }}
-                className="w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/50 font-bold text-sm hover:bg-white/10 transition"
-              >
-                {t("superadmin.campaigns.clone")}
+            {/* Tab switcher */}
+            <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+              <button onClick={() => setDetailTab("info")}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition ${detailTab === "info" ? "bg-primary text-white" : "text-white/40 hover:text-white/60"}`}>
+                Infos
+              </button>
+              <button onClick={() => setDetailTab("echos")}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition ${detailTab === "echos" ? "bg-primary text-white" : "text-white/40 hover:text-white/60"}`}>
+                Échos ({echoData?.engagedCount ?? selected.echo_count})
+              </button>
+              <button onClick={() => setDetailTab("clicks")}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition ${detailTab === "clicks" ? "bg-primary text-white" : "text-white/40 hover:text-white/60"}`}>
+                Clics récents
               </button>
             </div>
+
+            {/* Tab: Info */}
+            {detailTab === "info" && (
+              <>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-xs text-white/40 block">{t("superadmin.finance.batteur")}</span>
+                    <span>{selected.users?.name || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-white/40 block">{t("common.status")}</span>
+                    <Badge status={selected.moderation_status || "pending"} />
+                  </div>
+                  <div>
+                    <span className="text-xs text-white/40 block">{t("common.budget")}</span>
+                    <span>{formatFCFA(selected.budget)}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-white/40 block">{t("common.cpc")}</span>
+                    <span>{selected.cpc} FCFA</span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-white/40 block">{t("superadmin.campaigns.engagedEchos")}</span>
+                    <span>{selected.echo_count}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-white/40 block">{t("superadmin.campaigns.totalClicks")}</span>
+                    <span>{selected.total_clicks}</span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-xs text-white/40 block mb-1">{t("superadmin.campaigns.spentBudget")}</span>
+                    <ProgressBar value={selected.spent} max={selected.budget} />
+                    <span className="text-xs text-white/30 mt-1 block">
+                      {formatFCFA(selected.spent)} / {formatFCFA(selected.budget)}
+                    </span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-xs text-white/40 block">{t("common.url")}</span>
+                    <span className="text-xs font-mono break-all text-primary">{selected.destination_url}</span>
+                  </div>
+                  {selected.description && (
+                    <div className="col-span-2">
+                      <span className="text-xs text-white/40 block">{t("common.description")}</span>
+                      <span className="text-xs">{selected.description}</span>
+                    </div>
+                  )}
+                  {selected.moderation_reason && (
+                    <div className="col-span-2">
+                      <span className="text-xs text-white/40 block">{t("superadmin.campaigns.rejectionReason")}</span>
+                      <span className="text-xs text-red-400">{selected.moderation_reason}</span>
+                    </div>
+                  )}
+                </div>
+
+                {(selected.moderation_status || "pending") === "pending" && (
+                  <div className="space-y-3 pt-2 border-t border-white/5">
+                    <textarea
+                      value={rejectReason}
+                      onChange={(e) => setRejectReason(e.target.value)}
+                      placeholder={t("superadmin.campaigns.rejectionReasonPlaceholder")}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition resize-none h-20"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => moderateCampaign(selected.id, "approve")}
+                        className="flex-1 py-2.5 rounded-xl bg-accent/10 border border-accent/30 text-accent font-bold text-sm"
+                      >
+                        {t("superadmin.campaigns.approvedTab")}
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (!rejectReason.trim()) { showToast(t("common.error"), "error"); return; }
+                          moderateCampaign(selected.id, "reject", rejectReason);
+                        }}
+                        className="flex-1 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-bold text-sm"
+                      >
+                        {t("superadmin.campaigns.rejectedTab")}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {selected.status === "active" && (
+                  <div className="pt-2 border-t border-white/5 space-y-2">
+                    <button
+                      onClick={() => notifyEchos(selected.id)}
+                      disabled={notifying}
+                      className="w-full py-2.5 rounded-xl bg-primary/10 border border-primary/30 text-primary font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/></svg>
+                      {notifying ? t("superadmin.campaigns.notifying") : t("superadmin.campaigns.notifyEchos")}
+                    </button>
+                    <button
+                      onClick={() => moderateCampaign(selected.id, "pause")}
+                      className="w-full py-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 font-bold text-sm"
+                    >
+                      {t("superadmin.campaigns.pendingTab")}
+                    </button>
+                  </div>
+                )}
+
+                {selected.status === "paused" && (
+                  <div className="pt-2 border-t border-white/5">
+                    <button
+                      onClick={() => moderateCampaign(selected.id, "resume")}
+                      className="w-full py-2.5 rounded-xl bg-accent/10 border border-accent/30 text-accent font-bold text-sm"
+                    >
+                      {t("superadmin.campaigns.approvedTab")}
+                    </button>
+                  </div>
+                )}
+
+                {/* Clone Campaign */}
+                <div className="pt-2 border-t border-white/5">
+                  <button
+                    onClick={() => {
+                      setNewCamp({
+                        batteur_id: "",
+                        title: `${selected.title} (${t("superadmin.campaigns.clone")})`,
+                        description: selected.description || "",
+                        destination_url: selected.destination_url,
+                        cpc: String(selected.cpc),
+                        budget: String(selected.budget),
+                      });
+                      setSelected(null);
+                      setShowCreate(true);
+                    }}
+                    className="w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/50 font-bold text-sm hover:bg-white/10 transition"
+                  >
+                    {t("superadmin.campaigns.clone")}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Tab: Échos */}
+            {detailTab === "echos" && (
+              <div>
+                {loadingEchos ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => <div key={i} className="skeleton h-12 rounded-lg" />)}
+                  </div>
+                ) : echoData ? (
+                  <>
+                    {/* Participation rate */}
+                    <div className="bg-white/5 rounded-lg p-4 mb-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-white/40 text-sm">Participation</span>
+                        <span className="text-white font-bold text-sm">
+                          {echoData.engagedCount} / {echoData.totalEchos} Échos
+                          <span className="text-white/40 text-xs ml-2">
+                            ({echoData.participationRate}%)
+                          </span>
+                        </span>
+                      </div>
+                      <div className="w-full h-2 bg-white/10 rounded-full mt-2 overflow-hidden">
+                        <div
+                          className="h-full bg-primary rounded-full transition-all"
+                          style={{ width: `${echoData.participationRate}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Écho leaderboard */}
+                    <div className="space-y-1">
+                      {echoData.echos.map((echo, i) => (
+                        <div key={echo.id}
+                          className="flex items-center justify-between py-3 px-3 rounded-lg hover:bg-white/5 transition">
+                          <div className="flex items-center gap-3">
+                            <span className={`font-bold text-sm w-6 ${
+                              i < 3 ? "text-primary" : "text-white/30"
+                            }`}>
+                              {i + 1}
+                            </span>
+                            <div>
+                              <div className="text-white text-sm font-medium">{echo.name}</div>
+                              <div className="text-white/30 text-xs">
+                                {echo.city || "—"} · rejoint {new Date(echo.joinedAt).toLocaleDateString("fr-FR")}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-6 text-sm">
+                            <div className="text-right">
+                              <div className="text-white font-medium">{echo.validClicks}</div>
+                              <div className="text-white/30 text-xs">clics valides</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-accent font-bold">
+                                {Math.round(echo.earnings).toLocaleString("fr-FR")} F
+                              </div>
+                              <div className="text-white/30 text-xs">gagné</div>
+                            </div>
+                            {echo.phone && (
+                              <a href={`https://wa.me/${echo.phone.replace(/[^0-9]/g, "")}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-green-400 hover:text-green-300 text-lg"
+                                title="WhatsApp">
+                                💬
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+
+                      {echoData.echos.length === 0 && (
+                        <div className="text-center py-8 text-white/30 text-sm">
+                          Aucun Écho n&apos;a encore rejoint cette campagne
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            )}
+
+            {/* Tab: Clics récents */}
+            {detailTab === "clicks" && (
+              <div>
+                {loadingEchos ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => <div key={i} className="skeleton h-8 rounded-lg" />)}
+                  </div>
+                ) : echoData ? (
+                  <div className="space-y-1">
+                    <div className="grid grid-cols-5 gap-2 text-xs text-white/30 uppercase tracking-wider px-3 py-2">
+                      <span>Heure</span>
+                      <span>Écho</span>
+                      <span>Ville</span>
+                      <span>IP</span>
+                      <span>Statut</span>
+                    </div>
+                    {echoData.recentClicks.map((click) => (
+                      <div key={click.id}
+                        className="grid grid-cols-5 gap-2 text-sm px-3 py-2 rounded-lg hover:bg-white/5 transition">
+                        <span className="text-white/40">
+                          {new Date(click.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        <span className="text-white truncate">
+                          {click.tracked_links?.users?.name || "—"}
+                        </span>
+                        <span className="text-white/40 truncate">
+                          {click.tracked_links?.users?.city || "—"}
+                        </span>
+                        <span className="text-white/30 font-mono text-xs truncate">
+                          {click.ip_address ? `${click.ip_address.substring(0, 12)}...` : "—"}
+                        </span>
+                        <span className={click.is_valid ? "text-green-400" : "text-red-400"}>
+                          {click.is_valid ? "✓ Valide" : "✕ Filtré"}
+                        </span>
+                      </div>
+                    ))}
+
+                    {echoData.recentClicks.length === 0 && (
+                      <div className="text-center py-8 text-white/30 text-sm">
+                        Aucun clic enregistré
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
         )}
       </Modal>
