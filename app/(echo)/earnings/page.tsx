@@ -20,6 +20,10 @@ export default function EarningsPage() {
   const [lastWithdrawn, setLastWithdrawn] = useState(0);
   const [minPayout, setMinPayout] = useState(MIN_PAYOUT_AMOUNT);
   const [showNotifCTA, setShowNotifCTA] = useState(true);
+  const [campaignEarnings, setCampaignEarnings] = useState<{ id: string; name: string; image_url: string | null; myClicks: number; myEarnings: number }[]>([]);
+  const [bonusEarnings, setBonusEarnings] = useState<{ streaks: number; badges: number; referrals: number }>({ streaks: 0, badges: 0, referrals: 0 });
+  const [avgCpc, setAvgCpc] = useState(25);
+  const [topEchoEarnings, setTopEchoEarnings] = useState(0);
   const { showToast, ToastComponent } = useToast();
   const { t } = useTranslation();
 
@@ -28,10 +32,11 @@ export default function EarningsPage() {
   }, []);
 
   async function loadData() {
-    const [userRes, payoutsRes, settingsRes] = await Promise.all([
+    const [userRes, payoutsRes, settingsRes, breakdownRes] = await Promise.all([
       fetch("/api/echo/user"),
       fetch("/api/echo/payouts"),
       fetch("/api/echo/settings"),
+      fetch("/api/echo/earnings-breakdown"),
     ]);
 
     if (userRes.ok) {
@@ -45,6 +50,13 @@ export default function EarningsPage() {
     if (settingsRes.ok) {
       const settingsData = await settingsRes.json();
       if (settingsData.min_payout_fcfa) setMinPayout(settingsData.min_payout_fcfa);
+    }
+    if (breakdownRes.ok) {
+      const breakdownData = await breakdownRes.json();
+      setCampaignEarnings(breakdownData.campaignEarnings || []);
+      setBonusEarnings(breakdownData.bonusEarnings || { streaks: 0, badges: 0, referrals: 0 });
+      setAvgCpc(breakdownData.avgCpc || 25);
+      setTopEchoEarnings(breakdownData.topEchoEarnings || 0);
     }
     setLoading(false);
   }
@@ -283,16 +295,83 @@ export default function EarningsPage() {
         )}
       </div>
 
+      {/* Earning breakdown by source */}
+      {(campaignEarnings.length > 0 || bonusEarnings.streaks > 0 || bonusEarnings.badges > 0 || bonusEarnings.referrals > 0) && (
+        <div className="bg-card rounded-xl p-6 mb-5">
+          <h3 className="text-white font-bold mb-3">Détail de tes gains</h3>
+
+          {/* Campaign earnings */}
+          {campaignEarnings.length > 0 && (
+            <div className="space-y-2 mb-4">
+              <div className="text-xs text-gray-500 uppercase tracking-wider">Campagnes</div>
+              {campaignEarnings.map((c) => (
+                <div key={c.id} className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0">
+                  <div className="flex items-center gap-3">
+                    {c.image_url && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={c.image_url} alt="" className="w-8 h-8 rounded object-cover" />
+                    )}
+                    <div>
+                      <div className="text-white text-sm">{c.name}</div>
+                      <div className="text-gray-500 text-xs">{c.myClicks} clics</div>
+                    </div>
+                  </div>
+                  <span className="text-accent font-bold text-sm">
+                    {c.myEarnings.toLocaleString("fr-FR")} FCFA
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Bonus earnings */}
+          {(bonusEarnings.streaks > 0 || bonusEarnings.badges > 0 || bonusEarnings.referrals > 0) && (
+            <div className="space-y-2">
+              <div className="text-xs text-gray-500 uppercase tracking-wider">Bonus</div>
+              {bonusEarnings.streaks > 0 && (
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-gray-300 text-sm">🔥 Bonus de série</span>
+                  <span className="text-orange-400 font-bold text-sm">
+                    +{bonusEarnings.streaks.toLocaleString("fr-FR")} FCFA
+                  </span>
+                </div>
+              )}
+              {bonusEarnings.badges > 0 && (
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-gray-300 text-sm">🏅 Badges gagnés</span>
+                  <span className="text-orange-400 font-bold text-sm">
+                    +{bonusEarnings.badges.toLocaleString("fr-FR")} FCFA
+                  </span>
+                </div>
+              )}
+              {bonusEarnings.referrals > 0 && (
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-gray-300 text-sm">🤝 Parrainages</span>
+                  <span className="text-orange-400 font-bold text-sm">
+                    +{bonusEarnings.referrals.toLocaleString("fr-FR")} FCFA
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Earning potential — shown when balance is low */}
-      {totalEarned < 2500 && (
-        <div className="glass-card p-4 mb-5 border border-accent/10">
-          <p className="text-xs text-white/40 flex items-center gap-1.5">
-            <span>💡</span>
-            {t("echo.earnings.potentialHint")}
+      {balance < 500 && (
+        <div className="bg-gradient-to-r from-orange-500/10 to-yellow-500/10 border border-orange-500/20 rounded-xl p-4 mb-5">
+          <h4 className="text-white font-bold text-sm mb-2">💡 Ton potentiel ce mois</h4>
+          <p className="text-gray-400 text-sm">
+            Si tu partages 5 rythmes et génères 50 clics, tu pourrais gagner environ{" "}
+            <span className="text-accent font-bold">
+              {(avgCpc * 50 * 0.75).toLocaleString("fr-FR")} FCFA
+            </span>
           </p>
-          <p className="text-xs text-accent font-bold mt-1">
-            {t("echo.earnings.topEchosEarn")}
-          </p>
+          {topEchoEarnings > 0 && (
+            <p className="text-gray-500 text-xs mt-2">
+              Les meilleurs Échos gagnent {topEchoEarnings.toLocaleString("fr-FR")}+ FCFA par semaine!
+            </p>
+          )}
         </div>
       )}
 
