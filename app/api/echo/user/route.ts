@@ -3,13 +3,30 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Try cookie-based session first, then fall back to Authorization header
+  let userId: string | null = null;
+
   const authClient = createClient();
   const {
     data: { session },
   } = await authClient.auth.getSession();
 
-  if (!session) {
+  if (session) {
+    userId = session.user.id;
+  } else {
+    // Fall back to Bearer token (used during login before cookies sync)
+    const authHeader = request.headers.get("authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const { data: { user } } = await authClient.auth.getUser(token);
+      if (user) {
+        userId = user.id;
+      }
+    }
+  }
+
+  if (!userId) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -17,7 +34,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("users")
     .select("*")
-    .eq("id", session.user.id)
+    .eq("id", userId)
     .single();
 
   if (error) {
