@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/brand-nudge",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/brand-weekly-summary",
+      "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/cron/echo-weekly-summary",
+      "schedule": "0 10 * * 1"
+    }
+  ]
+}
