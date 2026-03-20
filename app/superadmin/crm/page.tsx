@@ -12,7 +12,7 @@ const PAGE_SIZE = 30;
 type ViewTab = "all" | "leads" | "brands" | "followups";
 type ContactType = "lead" | "brand";
 type Stage = "onboarding" | "active" | "at_risk" | "churned";
-type LeadStatus = "new" | "contacted" | "converted" | "rejected";
+type LeadStatus = "new" | "contacted" | "invited" | "converted" | "rejected";
 
 interface Contact {
   id: string;
@@ -69,6 +69,7 @@ const STAGES: { key: Stage; label: string; color: string }[] = [
 const LEAD_STATUSES: { key: LeadStatus; label: string; color: string }[] = [
   { key: "new", label: "Nouveau", color: "bg-orange-400/20 text-orange-400 border-orange-400/30" },
   { key: "contacted", label: "Contacté", color: "bg-blue-400/20 text-blue-400 border-blue-400/30" },
+  { key: "invited", label: "Invité", color: "bg-purple-400/20 text-purple-400 border-purple-400/30" },
   { key: "converted", label: "Converti", color: "bg-emerald-400/20 text-emerald-400 border-emerald-400/30" },
   { key: "rejected", label: "Rejeté", color: "bg-red-400/20 text-red-400 border-red-400/30" },
 ];
@@ -119,6 +120,12 @@ export default function CRMPage() {
   const [emailConflict, setEmailConflict] = useState<{ existing_role?: string; can_promote?: boolean } | null>(null);
   const [alternativeEmail, setAlternativeEmail] = useState("");
   const [conversionResult, setConversionResult] = useState<{ email: string } | null>(null);
+
+  // Lead invitation (LUP-67)
+  const [invitingId, setInvitingId] = useState<string | null>(null);
+  const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
+  const [bulkInviting, setBulkInviting] = useState(false);
+  const [inviteProgress, setInviteProgress] = useState(0);
 
   const fetchContacts = useCallback(() => {
     setLoading(true);
@@ -328,6 +335,50 @@ export default function CRMPage() {
     setConverting(false);
   }
 
+  // Lead invitation handlers (LUP-67)
+  async function handleInviteLead(leadId: string) {
+    setInvitingId(leadId);
+    try {
+      const res = await fetch("/api/superadmin/leads/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast("Invitation envoyée !", "success");
+        fetchContacts();
+      } else {
+        showToast(data.error || "Erreur", "error");
+      }
+    } catch {
+      showToast("Erreur réseau", "error");
+    }
+    setInvitingId(null);
+  }
+
+  async function handleBulkInvite() {
+    setBulkInviting(true);
+    let progress = 0;
+    for (const leadId of selectedLeads) {
+      try {
+        await fetch("/api/superadmin/leads/invite", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ leadId }),
+        });
+        progress++;
+        setInviteProgress(progress);
+        await new Promise(r => setTimeout(r, 500));
+      } catch { /* continue */ }
+    }
+    setBulkInviting(false);
+    setSelectedLeads([]);
+    setInviteProgress(0);
+    fetchContacts();
+    showToast(`${progress} invitation${progress > 1 ? "s" : ""} envoyée${progress > 1 ? "s" : ""} !`, "success");
+  }
+
   // Filter contacts
   const filtered = contacts.filter(c => {
     if (search) {
@@ -363,11 +414,12 @@ export default function CRMPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         <StatCard label="Brands" value={totalBrands.toString()} accent="purple" />
         <StatCard label="Leads" value={totalLeads.toString()} accent="teal" />
-        <StatCard label="At Risk" value={atRisk.toString()} accent="orange" />
-        <StatCard label="Suivis à venir" value={upcomingFollowups.toString()} accent="red" />
+        <StatCard label="Invités" value={contacts.filter(c => c.stage === "invited").length.toString()} accent="orange" />
+        <StatCard label="Convertis" value={contacts.filter(c => c.stage === "converted").length.toString()} accent="teal" />
+        <StatCard label="Taux conv." value={totalLeads > 0 ? `${Math.round((contacts.filter(c => c.stage === "converted").length / totalLeads) * 100)}%` : "0%"} accent="orange" />
       </div>
 
       {/* Tabs + Search */}
@@ -392,7 +444,28 @@ export default function CRMPage() {
         </div>
         <div className="flex-1" />
         {tab !== "followups" && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            {(tab === "leads" || tab === "all") && (
+              <label className="flex items-center gap-2 text-xs text-white/40 cursor-pointer">
+                <input
+                  type="checkbox"
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedLeads(
+                        filtered
+                          .filter(l => l.type === "lead" && l.stage !== "converted" && l.stage !== "invited" && l.email)
+                          .map(l => l.id)
+                      );
+                    } else {
+                      setSelectedLeads([]);
+                    }
+                  }}
+                  checked={selectedLeads.length > 0 && selectedLeads.length === filtered.filter(l => l.type === "lead" && l.stage !== "converted" && l.stage !== "invited" && l.email).length}
+                  className="w-4 h-4 rounded bg-gray-700 border-gray-600"
+                />
+                Tout
+              </label>
+            )}
             <input
               type="text"
               value={search}
@@ -411,6 +484,7 @@ export default function CRMPage() {
               ))}
               <option value="new">Nouveau (Lead)</option>
               <option value="contacted">Contacté (Lead)</option>
+              <option value="invited">Invité (Lead)</option>
               <option value="converted">Converti (Lead)</option>
               <option value="rejected">Rejeté (Lead)</option>
             </select>
@@ -450,6 +524,24 @@ export default function CRMPage() {
       ) : (
         /* Contacts List */
         <>
+          {/* Bulk invite bar (LUP-67) */}
+          {selectedLeads.length > 0 && (
+            <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4 mb-4 flex items-center justify-between">
+              <span className="text-orange-400 font-medium text-sm">
+                {selectedLeads.length} lead{selectedLeads.length > 1 ? "s" : ""} sélectionné{selectedLeads.length > 1 ? "s" : ""}
+              </span>
+              <button
+                onClick={handleBulkInvite}
+                disabled={bulkInviting}
+                className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+              >
+                {bulkInviting
+                  ? `Envoi (${inviteProgress}/${selectedLeads.length})...`
+                  : `Inviter ${selectedLeads.length} leads`}
+              </button>
+            </div>
+          )}
+
           {filtered.length === 0 ? (
             <div className="text-center py-12 text-white/30">Aucun contact trouvé</div>
           ) : (
@@ -458,23 +550,42 @@ export default function CRMPage() {
                 <div
                   key={`${c.type}-${c.id}`}
                   className="glass-card p-4 flex items-center gap-4 cursor-pointer hover:bg-white/5 transition"
-                  onClick={() => openContact(c.id, c.type)}
                 >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-                    c.type === "brand" ? "bg-purple-400/20 text-purple-400" : "bg-primary/20 text-primary"
-                  }`}>
-                    {c.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold">{c.name}</span>
-                      {contactTypeBadge(c.type)}
-                      {stageBadge(c.stage)}
+                  {/* Checkbox for leads (LUP-67) */}
+                  {c.type === "lead" && (
+                    <input
+                      type="checkbox"
+                      checked={selectedLeads.includes(c.id)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        if (e.target.checked) setSelectedLeads([...selectedLeads, c.id]);
+                        else setSelectedLeads(selectedLeads.filter(id => id !== c.id));
+                      }}
+                      disabled={c.stage === "converted" || c.stage === "invited" || !c.email}
+                      className="w-4 h-4 rounded bg-gray-700 border-gray-600 shrink-0"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  )}
+                  <div
+                    className="flex items-center gap-4 flex-1 min-w-0"
+                    onClick={() => openContact(c.id, c.type)}
+                  >
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
+                      c.type === "brand" ? "bg-purple-400/20 text-purple-400" : "bg-primary/20 text-primary"
+                    }`}>
+                      {c.name.charAt(0).toUpperCase()}
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-white/40 mt-0.5">
-                      {c.email && <span>{c.email}</span>}
-                      {c.phone && <span>{c.phone}</span>}
-                      <span>{timeAgo(c.created_at)}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold">{c.name}</span>
+                        {contactTypeBadge(c.type)}
+                        {stageBadge(c.stage)}
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-white/40 mt-0.5">
+                        {c.email && <span>{c.email}</span>}
+                        {c.phone && <span>{c.phone}</span>}
+                        <span>{timeAgo(c.created_at)}</span>
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -485,6 +596,22 @@ export default function CRMPage() {
                       <span className="text-[10px] text-white/30">+{c.tags.length - 2}</span>
                     )}
                   </div>
+                  {/* Invite button for leads (LUP-67) */}
+                  {c.type === "lead" && c.stage !== "converted" && c.stage !== "invited" && c.email && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleInviteLead(c.id); }}
+                      disabled={invitingId === c.id}
+                      className="bg-orange-500/10 border border-orange-500/30 text-orange-400 hover:bg-orange-500/20 px-3 py-1.5 rounded-lg text-xs font-medium shrink-0 disabled:opacity-50"
+                    >
+                      {invitingId === c.id ? "Envoi..." : "Inviter"}
+                    </button>
+                  )}
+                  {c.type === "lead" && c.stage === "invited" && (
+                    <span className="text-gray-500 text-xs shrink-0">Invité</span>
+                  )}
+                  {c.type === "lead" && c.stage === "converted" && (
+                    <span className="text-green-400 text-xs shrink-0">Converti</span>
+                  )}
                   {c.type === "brand" && (
                     <div className="hidden lg:flex items-center gap-4 text-xs text-white/40 shrink-0">
                       <span>{formatFCFA((c.stats.total_recharged as number) || 0)} rechargé</span>

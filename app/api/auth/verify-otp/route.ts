@@ -120,13 +120,15 @@ export async function POST(request: NextRequest) {
         .update({ balance: bonusAmount })
         .eq("id", authUser.user.id);
 
-      await supabase.from("wallet_transactions").insert({
-        user_id: authUser.user.id,
-        amount: bonusAmount,
-        type: "bonus",
-        description: "Bonus de bienvenue — offre limitée",
-        status: "completed",
-      }).then(() => {}).catch(() => {});
+      try {
+        await supabase.from("wallet_transactions").insert({
+          user_id: authUser.user.id,
+          amount: bonusAmount,
+          type: "bonus",
+          description: "Bonus de bienvenue — offre limitée",
+          status: "completed",
+        });
+      } catch { /* wallet_transactions table may not exist yet */ }
 
       welcomeBonusApplied = true;
     }
