@@ -38,13 +38,24 @@ export async function GET() {
 
   const links = trackedLinks || [];
 
-  // Get all clicks for these links (last 30 days)
-  // Use UTC dates to ensure chart bucket keys match click created_at timestamps
   const linkIds = links.map((l) => l.id);
+
+  // Query 1: ALL clicks (no date filter) for accurate per-campaign totals
+  let allTimeClicks: { is_valid: boolean; link_id: string }[] = [];
+  if (linkIds.length > 0) {
+    const { data } = await supabase
+      .from("clicks")
+      .select("is_valid, link_id")
+      .in("link_id", linkIds);
+    allTimeClicks = data || [];
+  }
+
+  // Query 2: Recent clicks (last 30 days) for chart data
+  // Use UTC dates to ensure chart bucket keys match click created_at timestamps
   const now = new Date();
   const chartStartUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 29));
 
-  let allClicks: { created_at: string; is_valid: boolean; link_id: string }[] = [];
+  let recentClicks: { created_at: string; is_valid: boolean; link_id: string }[] = [];
   if (linkIds.length > 0) {
     const { data: clicks } = await supabase
       .from("clicks")
@@ -52,21 +63,23 @@ export async function GET() {
       .in("link_id", linkIds)
       .gte("created_at", chartStartUTC.toISOString())
       .order("created_at", { ascending: true });
-    allClicks = clicks || [];
+    recentClicks = clicks || [];
   }
 
   // Build per-campaign analytics
   const campaignAnalytics = allCampaigns.map((campaign) => {
     const campaignLinks = links.filter((l) => l.campaign_id === campaign.id);
     const campaignLinkIds = new Set(campaignLinks.map((l) => l.id));
-    const campaignClicks = allClicks.filter((c) => campaignLinkIds.has(c.link_id));
-    const validClicks = campaignClicks.filter((c) => c.is_valid).length;
-    const fraudClicks = campaignClicks.filter((c) => !c.is_valid).length;
-    const echoCount = new Set(campaignLinks.map((l) => l.echo_id)).size;
-    // Use real click count from clicks table, not denormalized click_count
-    const totalClickCount = campaignClicks.length;
 
-    // Daily clicks for this campaign (last 30 days) — using UTC bucket keys
+    // All-time clicks for accurate totals
+    const campaignAllClicks = allTimeClicks.filter((c) => campaignLinkIds.has(c.link_id));
+    const totalClickCount = campaignAllClicks.length;
+    const validClicks = campaignAllClicks.filter((c) => c.is_valid).length;
+    const fraudClicks = campaignAllClicks.filter((c) => !c.is_valid).length;
+    const echoCount = new Set(campaignLinks.map((l) => l.echo_id)).size;
+
+    // Recent clicks for chart (last 30 days) — using UTC bucket keys
+    const campaignRecentClicks = recentClicks.filter((c) => campaignLinkIds.has(c.link_id));
     const dailyData: Record<string, { date: string; valid: number; fraud: number }> = {};
     for (let i = 0; i < 30; i++) {
       const d = new Date(chartStartUTC);
@@ -74,7 +87,7 @@ export async function GET() {
       const key = d.toISOString().slice(0, 10);
       dailyData[key] = { date: key, valid: 0, fraud: 0 };
     }
-    for (const click of campaignClicks) {
+    for (const click of campaignRecentClicks) {
       const key = click.created_at.slice(0, 10);
       if (dailyData[key]) {
         if (click.is_valid) dailyData[key].valid++;

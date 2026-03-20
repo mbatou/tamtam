@@ -21,7 +21,7 @@ interface Stats {
   topEchos: { id: string; name: string; clicks: number; earned: number }[];
   clicksChart: { date: string; valid: number; fraud: number }[];
   campaignBudgets: { name: string; budget: number; spent: number }[];
-  campaigns: { id: string; title: string; budget: number; spent: number; status: string; cpc: number; created_at: string }[];
+  campaigns: { id: string; title: string; budget: number; spent: number; status: string; cpc: number; created_at: string; realClicks?: number; realValidClicks?: number }[];
 }
 
 function formatShortDate(dateStr: string) {
@@ -316,7 +316,7 @@ export default function AdminDashboard() {
           <div className="space-y-2">
             {activeCampaigns.map(c => {
               const pct = c.budget > 0 ? Math.round((c.spent / c.budget) * 100) : 0;
-              const clicks = c.cpc > 0 ? Math.floor(c.spent / c.cpc) : 0;
+              const clicks = c.realClicks ?? (c.cpc > 0 ? Math.floor(c.spent / c.cpc) : 0);
               return (
                 <div key={c.id} className="flex items-center gap-3 text-sm">
                   <span className="font-semibold flex-1 min-w-0 truncate">{c.title}</span>
@@ -394,7 +394,7 @@ export default function AdminDashboard() {
             <div className="space-y-4">
               {allCampaigns.slice(0, 4).map((c, i) => {
                 const progress = c.budget > 0 ? Math.min((c.spent / c.budget) * 100, 100) : 0;
-                const clicks = c.cpc > 0 ? Math.floor(c.spent / c.cpc) : 0;
+                const clicks = c.realClicks ?? (c.cpc > 0 ? Math.floor(c.spent / c.cpc) : 0);
                 const cpc = clicks > 0 ? Math.round(c.spent / clicks) : c.cpc;
                 return (
                   <div key={c.id} className="space-y-1.5">

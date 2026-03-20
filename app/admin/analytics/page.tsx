@@ -332,7 +332,7 @@ export default function AdminAnalyticsPage() {
           </div>
           <div className="p-3 rounded-xl bg-white/[0.03]">
             <p className="text-[10px] text-white/40 font-semibold mb-0.5">{t("admin.dashboard.costPerClick")}</p>
-            <p className="text-lg font-bold text-purple-400">{selectedCPC > 0 ? formatFCFA(selectedCPC) : "—"}</p>
+            <p className="text-lg font-bold text-purple-400">{selectedCPC > 0 ? formatFCFA(selectedCPC) : selected.spent > 0 ? formatFCFA(selected.cpc) : "—"}</p>
           </div>
           <div className="p-3 rounded-xl bg-white/[0.03]">
             <p className="text-[10px] text-white/40 font-semibold mb-0.5">{t("admin.dashboard.activeEchos")}</p>
