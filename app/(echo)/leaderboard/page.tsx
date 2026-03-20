@@ -17,6 +17,7 @@ export default function LeaderboardPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [period, setPeriod] = useState<"week" | "month" | "all">("week");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [ranks, setRanks] = useState<{ week: number; month: number; all: number } | null>(null);
   const currentUserRef = useRef<HTMLDivElement>(null);
   const [myRowVisible, setMyRowVisible] = useState(true);
@@ -32,27 +33,33 @@ export default function LeaderboardPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
 
-    const [leaderboardRes, userRes] = await Promise.all([
-      fetch(`/api/leaderboard?period=${period}`),
-      fetch("/api/echo/user"),
-    ]);
+    try {
+      const [leaderboardRes, userRes] = await Promise.all([
+        fetch(`/api/leaderboard?period=${period}`),
+        fetch("/api/echo/user"),
+      ]);
 
-    if (leaderboardRes.ok) {
-      const data = await leaderboardRes.json();
-      const raw = data.leaderboard || data;
-      const mapped: LeaderboardEntry[] = (Array.isArray(raw) ? raw : []).map((e: Record<string, unknown>) => ({
-        user_id: String(e.echo_id || e.user_id || ""),
-        name: String(e.name || ""),
-        tier: String(e.tier || "echo"),
-        rythmes_joined: Number(e.campaigns_joined ?? e.rythmes_joined ?? 0),
-        resonances: Number(e.total_clicks ?? e.resonances ?? 0),
-      }));
-      setEntries(mapped);
-    }
+      if (leaderboardRes.ok) {
+        const data = await leaderboardRes.json();
+        const raw = data.leaderboard || data;
+        const mapped: LeaderboardEntry[] = (Array.isArray(raw) ? raw : []).map((e: Record<string, unknown>) => ({
+          user_id: String(e.echo_id || e.user_id || ""),
+          name: String(e.name || ""),
+          tier: String(e.tier || "echo"),
+          rythmes_joined: Number(e.campaigns_joined ?? e.rythmes_joined ?? 0),
+          resonances: Number(e.total_clicks ?? e.resonances ?? 0),
+        }));
+        setEntries(mapped);
+      } else {
+        setError(true);
+      }
 
-    if (userRes.ok) {
-      const userData = await userRes.json();
-      setCurrentUserId(userData?.id || null);
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        setCurrentUserId(userData?.id || null);
+      }
+    } catch {
+      setError(true);
     }
 
     setLoading(false);
@@ -126,6 +133,14 @@ export default function LeaderboardPage() {
         <div className="skeleton h-16 rounded-2xl" />
         <div className="skeleton h-10 rounded-xl" />
         <div className="skeleton h-64 rounded-xl" />
+      </div>
+    );
+  }
+
+  if (error && entries.length === 0) {
+    return (
+      <div className="px-4 py-10 max-w-lg mx-auto text-center">
+        <p className="text-white/60">{t("common.loadError") || "Impossible de charger le classement. Réessaie plus tard."}</p>
       </div>
     );
   }

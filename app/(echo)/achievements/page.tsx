@@ -47,15 +47,22 @@ export default function AchievementsPage() {
   const { t } = useTranslation();
   const [data, setData] = useState<GamificationData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     fetch("/api/echo/gamification")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("fetch failed");
+        return r.json();
+      })
       .then((d) => {
         setData(d);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        setError(true);
+        setLoading(false);
+      });
   }, []);
 
   if (loading) {
@@ -73,7 +80,13 @@ export default function AchievementsPage() {
     );
   }
 
-  if (!data) return null;
+  if (error || !data) {
+    return (
+      <div className="px-4 py-10 max-w-lg mx-auto text-center">
+        <p className="text-white/60">{t("common.loadError") || "Impossible de charger les données. Réessaie plus tard."}</p>
+      </div>
+    );
+  }
 
   const totalRewards =
     data.achievements.reduce((s, a) => s + a.reward_fcfa, 0) +
