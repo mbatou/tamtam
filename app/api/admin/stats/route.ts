@@ -48,25 +48,20 @@ export async function GET() {
   const links = trackedLinks || [];
   const echoIds = Array.from(new Set(links.map((l) => l.echo_id)));
 
-  // Get clicks for brand's tracked links
+  // Get clicks for brand's tracked links — fetch all for per-campaign breakdown
   const linkIds = links.map((l) => l.id);
   let totalClicks = 0;
   let validClicks = 0;
+  let allClickRows: { link_id: string; is_valid: boolean }[] = [];
 
   if (linkIds.length > 0) {
-    const { count: totalCount } = await supabase
+    const { data: clickRows } = await supabase
       .from("clicks")
-      .select("*", { count: "exact", head: true })
+      .select("link_id, is_valid")
       .in("link_id", linkIds);
-
-    const { count: validCount } = await supabase
-      .from("clicks")
-      .select("*", { count: "exact", head: true })
-      .in("link_id", linkIds)
-      .eq("is_valid", true);
-
-    totalClicks = totalCount || 0;
-    validClicks = validCount || 0;
+    allClickRows = clickRows || [];
+    totalClicks = allClickRows.length;
+    validClicks = allClickRows.filter((c) => c.is_valid).length;
   }
 
   // Get top echos for this brand's campaigns
@@ -134,6 +129,17 @@ export async function GET() {
     spent: c.spent || 0,
   }));
 
+  // Enrich campaigns with real click counts (not estimated from spent/cpc)
+  const enrichedCampaigns = allCampaigns.map((c) => {
+    const campaignLinkIds = new Set(links.filter((l) => l.campaign_id === c.id).map((l) => l.id));
+    const campaignClicks = allClickRows.filter((cl) => campaignLinkIds.has(cl.link_id));
+    return {
+      ...c,
+      realClicks: campaignClicks.length,
+      realValidClicks: campaignClicks.filter((cl) => cl.is_valid).length,
+    };
+  });
+
   return NextResponse.json({
     totalClicks,
     validClicks,
@@ -144,7 +150,7 @@ export async function GET() {
     activeRythmes: activeCampaigns.length,
     totalCampaigns: allCampaigns.length,
     topEchos,
-    campaigns: allCampaigns,
+    campaigns: enrichedCampaigns,
     clicksChart,
     campaignBudgets,
   });
