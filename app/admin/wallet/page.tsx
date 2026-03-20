@@ -164,9 +164,6 @@ function AdminWalletPage() {
     <div className="p-6 max-w-4xl">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold">{t("admin.wallet.title")}</h1>
-        <button onClick={() => { setShowRecharge(!showRecharge); setPayError(null); setSuccessMsg(null); }} className="btn-primary text-sm">
-          {showRecharge ? t("common.cancel") : t("admin.wallet.recharge")}
-        </button>
       </div>
 
       {/* Success banner */}
@@ -196,56 +193,64 @@ function AdminWalletPage() {
         </div>
       </div>
 
-      {showRecharge && (
-        <div className="glass-card p-6 mb-8">
-          <h2 className="text-lg font-bold mb-4">{t("admin.wallet.rechargeTitle")}</h2>
-
-          {/* Amount selection */}
-          <p className="text-xs font-semibold text-white/40 mb-2">{t("common.amount")}</p>
-          <div className="flex flex-wrap gap-3 mb-4">
-            {presetAmounts.map((amount) => (
-              <button
-                key={amount}
-                onClick={() => setRechargeAmount(amount.toString())}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold border transition ${
-                  rechargeAmount === amount.toString()
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-white/10 text-white/60 hover:border-white/20"
-                }`}
-              >
-                {formatFCFA(amount)}
-              </button>
-            ))}
-          </div>
-          <input
-            type="number"
-            value={rechargeAmount}
-            onChange={(e) => setRechargeAmount(e.target.value)}
-            placeholder={t("admin.wallet.customAmount")}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition mb-6"
-          />
-
-          {payError && (
-            <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-              {payError}
-            </div>
-          )}
-
-          <button
-            onClick={handlePayment}
-            disabled={paying || !rechargeAmount || parseInt(rechargeAmount) < 100}
-            className="btn-primary w-full text-center disabled:opacity-40"
-          >
-            {paying
-              ? t("admin.wallet.openingWave")
-              : t("admin.wallet.payViaWave", { amount: rechargeAmount ? formatFCFA(parseInt(rechargeAmount)) : "" })}
-          </button>
-
-          <p className="text-xs text-white/30 mt-3 text-center">
-            {t("admin.wallet.waveRedirect")}
-          </p>
+      {/* Quick recharge card — always visible */}
+      <div className="glass-card p-6 mb-8">
+        <h2 className="text-lg font-bold mb-4">{t("admin.wallet.rechargeTitle")}</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+          {[10000, 25000, 50000, 100000].map((amount) => (
+            <button
+              key={amount}
+              onClick={() => { setRechargeAmount(amount.toString()); setShowRecharge(true); }}
+              className={`border rounded-xl p-4 text-center transition-all ${
+                rechargeAmount === amount.toString() && showRecharge
+                  ? "border-primary bg-primary/10"
+                  : "border-white/10 hover:border-primary/50 hover:bg-primary/5"
+              }`}
+            >
+              <div className="text-white font-bold text-lg">{amount.toLocaleString("fr-FR")}</div>
+              <div className="text-white/30 text-xs">FCFA</div>
+            </button>
+          ))}
         </div>
-      )}
+        <button
+          onClick={() => { setShowRecharge(!showRecharge); setPayError(null); }}
+          className="text-white/40 text-sm hover:text-white/60 transition"
+        >
+          {t("admin.wallet.customAmount")} &rarr;
+        </button>
+
+        {showRecharge && (
+          <div className="mt-4 pt-4 border-t border-white/5">
+            <input
+              type="number"
+              value={rechargeAmount}
+              onChange={(e) => setRechargeAmount(e.target.value)}
+              placeholder={t("admin.wallet.customAmount")}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition mb-4"
+            />
+
+            {payError && (
+              <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                {payError}
+              </div>
+            )}
+
+            <button
+              onClick={handlePayment}
+              disabled={paying || !rechargeAmount || parseInt(rechargeAmount) < 100}
+              className="btn-primary w-full text-center disabled:opacity-40"
+            >
+              {paying
+                ? t("admin.wallet.openingWave")
+                : t("admin.wallet.payViaWave", { amount: rechargeAmount ? formatFCFA(parseInt(rechargeAmount)) : "" })}
+            </button>
+
+            <p className="text-xs text-white/30 mt-3 text-center">
+              {t("admin.wallet.waveRedirect")}
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* Payment history */}
       {payments.length > 0 && (
@@ -270,43 +275,49 @@ function AdminWalletPage() {
                     <td className="px-5 py-3 text-white/60">{payment.payment_method || "—"}</td>
                     <td className="px-5 py-3">
                       <div>
-                        <span className={
-                          payment.status === "completed"
-                            ? "text-emerald-400 font-semibold"
-                            : payment.status === "pending"
-                            ? "text-primary-light font-semibold"
-                            : payment.status === "cancelled"
-                            ? "text-white/30"
-                            : "text-red-400 font-semibold"
-                        }>
-                          {payment.status === "completed"
-                            ? `${t("admin.wallet.validated")} ✓`
-                            : payment.status === "pending"
-                            ? t("admin.wallet.pendingValidation")
-                            : payment.status === "cancelled"
-                            ? t("admin.wallet.cancelled")
-                            : t("admin.wallet.refused")}
-                        </span>
-                        {/* Payment status explanation */}
-                        <p className="text-[10px] text-white/25 mt-0.5">
-                          {payment.status === "pending" && t("admin.wallet.pendingExplain")}
-                          {payment.status === "failed" && t("admin.wallet.refusedExplain")}
-                          {payment.status === "cancelled" && t("admin.wallet.cancelledExplain")}
-                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <span className={
+                            payment.status === "completed"
+                              ? "text-emerald-400 font-semibold"
+                              : payment.status === "pending"
+                              ? "text-orange-400 font-semibold"
+                              : payment.status === "cancelled"
+                              ? "text-white/30"
+                              : "text-red-400 font-semibold"
+                          }>
+                            {payment.status === "completed" && "✓ "}
+                            {payment.status === "pending" && "⏳ "}
+                            {payment.status === "failed" && "✕ "}
+                            {payment.status === "completed"
+                              ? t("admin.wallet.validated")
+                              : payment.status === "pending"
+                              ? t("admin.wallet.pendingValidation")
+                              : payment.status === "cancelled"
+                              ? t("admin.wallet.cancelled")
+                              : t("admin.wallet.refused")}
+                          </span>
+                        </div>
+                        {payment.status === "pending" && (
+                          <p className="text-[10px] text-white/25 mt-0.5">{t("admin.wallet.pendingExplain")}</p>
+                        )}
+                        {payment.status === "failed" && (
+                          <div>
+                            <p className="text-[10px] text-white/25 mt-0.5">{t("admin.wallet.refusedExplain")}</p>
+                            <button
+                              onClick={() => { setRechargeAmount(payment.amount.toString()); setShowRecharge(true); }}
+                              className="text-xs text-primary font-semibold mt-1 hover:underline"
+                            >
+                              {t("admin.wallet.retry")} &rarr;
+                            </button>
+                          </div>
+                        )}
+                        {payment.status === "cancelled" && (
+                          <p className="text-[10px] text-white/25 mt-0.5">{t("admin.wallet.cancelledExplain")}</p>
+                        )}
                       </div>
                     </td>
                     <td className="px-5 py-3 text-white/40 text-xs">
-                      <div>
-                        {timeAgo(payment.created_at)}
-                        {payment.status === "failed" && (
-                          <button
-                            onClick={() => { setRechargeAmount(payment.amount.toString()); setShowRecharge(true); }}
-                            className="block text-primary font-semibold mt-1 hover:underline"
-                          >
-                            {t("admin.wallet.retry")}
-                          </button>
-                        )}
-                      </div>
+                      {timeAgo(payment.created_at)}
                     </td>
                   </tr>
                 ))}
