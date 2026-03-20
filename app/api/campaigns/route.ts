@@ -3,6 +3,7 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { createCampaignSchema, updateCampaignSchema, deleteCampaignSchema } from "@/lib/validations";
 import { sendCampaignCompletedToEcho, sendEmail } from "@/lib/email";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
+import { logWalletTransaction } from "@/lib/wallet-transactions";
 
 export const dynamic = "force-dynamic";
 
@@ -146,6 +147,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: debitError.message }, { status: 500 });
   }
 
+  await logWalletTransaction({
+    supabase,
+    userId: session.user.id,
+    amount: -budget,
+    type: "campaign_budget_debit",
+    description: `Création campagne: ${title}`,
+    sourceType: "campaign",
+  });
+
   const { data, error } = await supabase.from("campaigns").insert({
     batteur_id: session.user.id,
     title,
@@ -252,12 +262,32 @@ export async function PUT(request: NextRequest) {
           );
         }
         await supabase.from("users").update({ balance: batteur.balance - diff }).eq("id", session.user.id);
+
+        await logWalletTransaction({
+          supabase,
+          userId: session.user.id,
+          amount: -diff,
+          type: "campaign_budget_debit",
+          description: `Augmentation budget campagne`,
+          sourceId: id,
+          sourceType: "campaign",
+        });
       } else if (diff < 0) {
         // Reducing budget: refund the difference (but can't go below spent)
         if (budget < existing.spent) {
           return NextResponse.json({ error: "Le budget ne peut pas être inférieur au montant déjà dépensé." }, { status: 400 });
         }
         await supabase.rpc("increment_balance", { p_user_id: session.user.id, p_amount: Math.abs(diff) });
+
+        await logWalletTransaction({
+          supabase,
+          userId: session.user.id,
+          amount: Math.abs(diff),
+          type: "campaign_budget_refund",
+          description: `Réduction budget campagne`,
+          sourceId: id,
+          sourceType: "campaign",
+        });
       }
     }
     updates.budget = budget;
@@ -268,6 +298,16 @@ export async function PUT(request: NextRequest) {
     const unspent = existing.budget - existing.spent;
     if (unspent > 0) {
       await supabase.rpc("increment_balance", { p_user_id: session.user.id, p_amount: unspent });
+
+      await logWalletTransaction({
+        supabase,
+        userId: session.user.id,
+        amount: unspent,
+        type: "campaign_budget_refund",
+        description: `Remboursement campagne ${status === "paused" ? "mise en pause" : "terminée"}`,
+        sourceId: id,
+        sourceType: "campaign",
+      });
     }
   }
 
@@ -282,6 +322,16 @@ export async function PUT(request: NextRequest) {
       );
     }
     await supabase.from("users").update({ balance: batteur.balance - campaignBudget }).eq("id", session.user.id);
+
+    await logWalletTransaction({
+      supabase,
+      userId: session.user.id,
+      amount: -campaignBudget,
+      type: "campaign_budget_debit",
+      description: `Publication campagne`,
+      sourceId: id,
+      sourceType: "campaign",
+    });
   }
 
   // Re-debit from balance when reactivating a paused campaign
@@ -296,6 +346,16 @@ export async function PUT(request: NextRequest) {
         );
       }
       await supabase.from("users").update({ balance: batteur.balance - unspent }).eq("id", session.user.id);
+
+      await logWalletTransaction({
+        supabase,
+        userId: session.user.id,
+        amount: -unspent,
+        type: "campaign_budget_debit",
+        description: `Réactivation campagne`,
+        sourceId: id,
+        sourceType: "campaign",
+      });
     }
   }
 
@@ -347,6 +407,16 @@ export async function DELETE(request: NextRequest) {
     const unspent = existing.budget - existing.spent;
     if (unspent > 0) {
       await supabase.rpc("increment_balance", { p_user_id: session.user.id, p_amount: unspent });
+
+      await logWalletTransaction({
+        supabase,
+        userId: session.user.id,
+        amount: unspent,
+        type: "campaign_budget_refund",
+        description: `Remboursement suppression campagne`,
+        sourceId: id,
+        sourceType: "campaign",
+      });
     }
   }
 
