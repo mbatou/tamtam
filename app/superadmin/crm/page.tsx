@@ -394,7 +394,6 @@ export default function CRMPage() {
   // Stats
   const totalBrands = contacts.filter(c => c.type === "brand").length;
   const totalLeads = contacts.filter(c => c.type === "lead").length;
-  const atRisk = contacts.filter(c => c.stage === "at_risk").length;
   const upcomingFollowups = followups.length;
 
   const tabs: { key: ViewTab; label: string; count?: number }[] = [
