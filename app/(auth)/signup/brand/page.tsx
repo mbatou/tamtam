@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import SoundWave from "@/components/ui/SoundWave";
 
 export default function BrandSignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [form, setForm] = useState({
     companyName: "",
     name: "",
@@ -17,6 +18,18 @@ export default function BrandSignupPage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [refCode, setRefCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) {
+      localStorage.setItem("tamtam_ref", ref);
+      setRefCode(ref);
+    } else {
+      const stored = localStorage.getItem("tamtam_ref");
+      if (stored) setRefCode(stored);
+    }
+  }, [searchParams]);
 
   function update(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -45,7 +58,7 @@ export default function BrandSignupPage() {
       const res = await fetch("/api/auth/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, referralCode: refCode }),
       });
 
       const data = await res.json();
