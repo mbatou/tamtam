@@ -6,6 +6,7 @@ import { formatFCFA, timeAgo } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import type { Campaign } from "@/lib/types";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 type View = "list" | "detail" | "form";
 
@@ -27,6 +28,13 @@ export default function AdminCampaignsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [avgCpc, setAvgCpc] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [perf, setPerf] = useState<{
+    totalClicks: number; validClicks: number; activeEchos: number; costPerVisitor: number;
+    chartData: { date: string; valid: number; fraud: number }[];
+    topEchos: { name: string; city: string; clicks: number; earnings: number }[];
+    geoBreakdown: { city: string; clicks: number; percentage: number }[];
+  } | null>(null);
+  const [perfLoading, setPerfLoading] = useState(false);
   const supabase = createClient();
 
   useEffect(() => { loadCampaigns(); }, []);
@@ -35,6 +43,16 @@ export default function AdminCampaignsPage() {
       .then((r) => r.ok ? r.json() : null)
       .then((data) => data && setAvgCpc(data.avgCpc));
   }, []);
+  useEffect(() => {
+    if (view === "detail" && selectedCampaign) {
+      setPerfLoading(true);
+      setPerf(null);
+      fetch(`/api/admin/campaigns/performance?campaignId=${selectedCampaign.id}`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => { setPerf(data); setPerfLoading(false); })
+        .catch(() => setPerfLoading(false));
+    }
+  }, [view, selectedCampaign?.id]);
 
   async function loadCampaigns() {
     const { data: { session } } = await supabase.auth.getSession();
@@ -347,6 +365,160 @@ export default function AdminCampaignsPage() {
             <span>{formatFCFA(c.budget)}</span>
           </div>
         </div>
+
+        {/* Performance Overview */}
+        {perfLoading && (
+          <div className="glass-card p-12 text-center mb-8">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          </div>
+        )}
+        {perf && (
+          <div className="space-y-4 mb-8">
+            {/* Summary metrics */}
+            <div className="glass-card p-5">
+              <h3 className="font-bold text-lg mb-4">Performance</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-sm text-white/40">Total Reach</p>
+                  <p className="text-2xl font-bold">{perf.totalClicks.toLocaleString("fr-FR")}</p>
+                  <p className="text-xs text-white/30">personnes ont vu votre lien</p>
+                </div>
+                <div>
+                  <p className="text-sm text-white/40">Visiteurs réels</p>
+                  <p className="text-2xl font-bold text-accent">{perf.validClicks.toLocaleString("fr-FR")}</p>
+                  <p className="text-xs text-white/30">clics vérifiés</p>
+                </div>
+                <div>
+                  <p className="text-sm text-white/40">Coût par visiteur</p>
+                  <p className="text-2xl font-bold">{perf.costPerVisitor} FCFA</p>
+                  <p className="text-xs text-white/30">par clic vérifié</p>
+                </div>
+                <div>
+                  <p className="text-sm text-white/40">Échos actifs</p>
+                  <p className="text-2xl font-bold">{perf.activeEchos}</p>
+                  <p className="text-xs text-white/30">partagent votre lien</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Performance chart */}
+            <div className="glass-card p-5">
+              <h3 className="font-bold mb-4">Clics par jour</h3>
+              {perf.chartData && perf.chartData.length > 0 ? (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={perf.chartData}>
+                      <defs>
+                        <linearGradient id="validGradientPerf" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#1ABC9C" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#1ABC9C" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fill: "#666", fontSize: 12 }}
+                        tickFormatter={(d: string) => new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                      />
+                      <YAxis tick={{ fill: "#666", fontSize: 12 }} />
+                      <Tooltip
+                        contentStyle={{ background: "#1A1A2E", border: "1px solid #333", borderRadius: 8 }}
+                        labelFormatter={(d) => new Date(String(d)).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}
+                        formatter={(value, name) => [value, name === "valid" ? "Visiteurs réels" : "Total"]}
+                      />
+                      <Area type="monotone" dataKey="valid" stroke="#1ABC9C" fill="url(#validGradientPerf)" strokeWidth={2} />
+                      <Area type="monotone" dataKey="fraud" stroke="#444" fill="none" strokeWidth={1} strokeDasharray="4 4" name="total" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-white/30">
+                  Pas encore de données — les clics apparaîtront ici dès que les Échos partagent.
+                </div>
+              )}
+            </div>
+
+            {/* Two-column: Top Échos + Geographic breakdown */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Top Échos leaderboard */}
+              <div className="glass-card p-5">
+                <h3 className="font-bold mb-4">Top Échos</h3>
+                {perf.topEchos.length > 0 ? (
+                  <div className="space-y-3">
+                    {perf.topEchos.map((echo, i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg">
+                            {i === 0 ? "\u{1F947}" : i === 1 ? "\u{1F948}" : i === 2 ? "\u{1F949}" : `#${i + 1}`}
+                          </span>
+                          <div>
+                            <p className="text-sm font-medium">{echo.name}</p>
+                            <p className="text-xs text-white/30">{echo.city}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-accent font-bold text-sm">{echo.clicks} clics</p>
+                          <p className="text-xs text-white/30">{echo.earnings.toLocaleString("fr-FR")} FCFA</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center py-6 text-white/30 text-sm">
+                    Aucun Écho n&apos;a encore généré de clics
+                  </p>
+                )}
+              </div>
+
+              {/* Geographic breakdown */}
+              <div className="glass-card p-5">
+                <h3 className="font-bold mb-4">Répartition géographique</h3>
+                {perf.geoBreakdown.length > 0 ? (
+                  <div className="space-y-3">
+                    {perf.geoBreakdown.map((geo, i) => (
+                      <div key={i}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm">{geo.city}</span>
+                          <span className="text-sm text-white/40">{geo.percentage}%</span>
+                        </div>
+                        <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                          <div className="h-full bg-accent rounded-full" style={{ width: `${geo.percentage}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center py-6 text-white/30 text-sm">
+                    Données géographiques bientôt disponibles
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* ROI comparison */}
+            <div className="glass-card p-5">
+              <h3 className="font-bold mb-3">Retour sur investissement</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                <div className="bg-white/5 rounded-lg p-3">
+                  <p className="text-white/40 mb-1">Facebook Ads</p>
+                  <p className="font-bold">200-500 FCFA/clic</p>
+                </div>
+                <div className="bg-white/5 rounded-lg p-3">
+                  <p className="text-white/40 mb-1">Instagram Ads</p>
+                  <p className="font-bold">300-800 FCFA/clic</p>
+                </div>
+                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
+                  <p className="text-emerald-400 mb-1">Tamtam</p>
+                  <p className="text-emerald-400 font-bold">{perf.costPerVisitor} FCFA/clic</p>
+                  <p className="text-emerald-400/60 text-xs">
+                    {perf.costPerVisitor < 200
+                      ? `${Math.round((1 - perf.costPerVisitor / 350) * 100)}% moins cher`
+                      : "Compétitif"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Details grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
