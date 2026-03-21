@@ -163,7 +163,7 @@ export async function GET(request: NextRequest) {
   }
 
   // --- Chart data: echo signups per day ---
-  let signupsQuery = supabase
+  const signupsQuery = supabase
     .from("users")
     .select("created_at")
     .eq("role", "echo")
@@ -188,8 +188,8 @@ export async function GET(request: NextRequest) {
   const acqFrom = fromParam ? new Date(fromParam) : new Date(Date.UTC(nowUTC.getUTCFullYear(), nowUTC.getUTCMonth(), nowUTC.getUTCDate() - 29));
   const acqDayCount = fromParam ? dayCount : 30;
 
-  let echoAcqQuery = supabase.from("users").select("created_at").eq("role", "echo").gte("created_at", acqFrom.toISOString()).lte("created_at", chartTo.toISOString()).limit(50000);
-  let brandAcqQuery = supabase.from("users").select("created_at").eq("role", "batteur").gte("created_at", acqFrom.toISOString()).lte("created_at", chartTo.toISOString()).limit(50000);
+  const echoAcqQuery = supabase.from("users").select("created_at").eq("role", "echo").gte("created_at", acqFrom.toISOString()).lte("created_at", chartTo.toISOString()).limit(50000);
+  const brandAcqQuery = supabase.from("users").select("created_at").eq("role", "batteur").gte("created_at", acqFrom.toISOString()).lte("created_at", chartTo.toISOString()).limit(50000);
 
   const [{ data: echoSignups30 }, { data: brandSignups30 }, { count: echosBefore }, { count: brandsBefore }] = await Promise.all([
     echoAcqQuery,
