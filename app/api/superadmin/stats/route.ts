@@ -122,38 +122,38 @@ export async function GET(request: NextRequest) {
     ? Math.round((totalBudgetActive / totalBudgetActiveAll) * 100)
     : 0;
 
-  // --- Chart data: clicks per day ---
-  // Use UTC dates to ensure bucket keys match click created_at timestamps
+  // --- Chart data: clicks per day (using Postgres COUNT — immune to row-limit truncation) ---
   const nowUTC = new Date();
   const chartFrom = fromParam ? new Date(fromParam) : new Date(Date.UTC(nowUTC.getUTCFullYear(), nowUTC.getUTCMonth(), nowUTC.getUTCDate() - 13));
-  const chartTo = toParam ? new Date(toParam) : nowUTC;
+  const chartTo = toParam ? new Date(toParam) : new Date(Date.UTC(nowUTC.getUTCFullYear(), nowUTC.getUTCMonth(), nowUTC.getUTCDate(), 23, 59, 59, 999));
 
-  let dailyClicksQuery = supabase
-    .from("clicks")
-    .select("created_at, is_valid")
-    .gte("created_at", chartFrom.toISOString())
-    .order("created_at", { ascending: true })
-    .limit(50000);
-  if (toParam) dailyClicksQuery = dailyClicksQuery.lte("created_at", toParam);
-
-  const { data: dailyClicks } = await dailyClicksQuery;
-
-  const dayCount = Math.max(1, Math.ceil((chartTo.getTime() - chartFrom.getTime()) / 86400000) + 1);
-  const clicksByDay: Record<string, { date: string; valid: number; fraud: number }> = {};
-  for (let i = 0; i < dayCount; i++) {
-    const d = new Date(chartFrom);
-    d.setUTCDate(d.getUTCDate() + i);
-    const key = d.toISOString().slice(0, 10);
-    clicksByDay[key] = { date: key, valid: 0, fraud: 0 };
+  // Generate day buckets
+  const chartBuckets: string[] = [];
+  const bucketCursor = new Date(chartFrom);
+  bucketCursor.setUTCHours(0, 0, 0, 0);
+  const bucketEnd = new Date(chartTo);
+  bucketEnd.setUTCHours(0, 0, 0, 0);
+  while (bucketCursor <= bucketEnd) {
+    chartBuckets.push(bucketCursor.toISOString().slice(0, 10));
+    bucketCursor.setUTCDate(bucketCursor.getUTCDate() + 1);
   }
-  for (const click of dailyClicks || []) {
-    const key = click.created_at.slice(0, 10);
-    if (clicksByDay[key]) {
-      if (click.is_valid) clicksByDay[key].valid++;
-      else clicksByDay[key].fraud++;
-    }
-  }
-  const clicksChart = Object.values(clicksByDay);
+
+  // Per-day Postgres COUNT(*) — immune to row-limit truncation
+  const clicksChart = await Promise.all(
+    chartBuckets.map(async (date) => {
+      const dayStart = `${date}T00:00:00.000Z`;
+      const dayEnd = `${date}T23:59:59.999Z`;
+      const [{ count: valid }, { count: total }] = await Promise.all([
+        supabase.from("clicks").select("*", { count: "exact", head: true })
+          .gte("created_at", dayStart).lte("created_at", dayEnd).eq("is_valid", true),
+        supabase.from("clicks").select("*", { count: "exact", head: true })
+          .gte("created_at", dayStart).lte("created_at", dayEnd),
+      ]);
+      return { date, valid: valid || 0, fraud: (total || 0) - (valid || 0) };
+    })
+  );
+
+  const dayCount = chartBuckets.length;
 
   // --- Chart data: campaign status distribution ---
   const campaignsByStatus: Record<string, number> = {};
@@ -163,21 +163,19 @@ export async function GET(request: NextRequest) {
   }
 
   // --- Chart data: echo signups per day ---
-  let signupsQuery = supabase
+  const signupsQuery = supabase
     .from("users")
     .select("created_at")
     .eq("role", "echo")
     .gte("created_at", chartFrom.toISOString())
+    .lte("created_at", chartTo.toISOString())
     .limit(50000);
-  if (toParam) signupsQuery = signupsQuery.lte("created_at", toParam);
 
   const { data: recentSignups } = await signupsQuery;
 
   const signupsByDay: Record<string, number> = {};
-  for (let i = 0; i < dayCount; i++) {
-    const d = new Date(chartFrom);
-    d.setUTCDate(d.getUTCDate() + i);
-    signupsByDay[d.toISOString().slice(0, 10)] = 0;
+  for (const key of chartBuckets) {
+    signupsByDay[key] = 0;
   }
   for (const u of recentSignups || []) {
     const key = u.created_at.slice(0, 10);
@@ -190,12 +188,8 @@ export async function GET(request: NextRequest) {
   const acqFrom = fromParam ? new Date(fromParam) : new Date(Date.UTC(nowUTC.getUTCFullYear(), nowUTC.getUTCMonth(), nowUTC.getUTCDate() - 29));
   const acqDayCount = fromParam ? dayCount : 30;
 
-  let echoAcqQuery = supabase.from("users").select("created_at").eq("role", "echo").gte("created_at", acqFrom.toISOString()).limit(50000);
-  let brandAcqQuery = supabase.from("users").select("created_at").eq("role", "batteur").gte("created_at", acqFrom.toISOString()).limit(50000);
-  if (toParam) {
-    echoAcqQuery = echoAcqQuery.lte("created_at", toParam);
-    brandAcqQuery = brandAcqQuery.lte("created_at", toParam);
-  }
+  const echoAcqQuery = supabase.from("users").select("created_at").eq("role", "echo").gte("created_at", acqFrom.toISOString()).lte("created_at", chartTo.toISOString()).limit(50000);
+  const brandAcqQuery = supabase.from("users").select("created_at").eq("role", "batteur").gte("created_at", acqFrom.toISOString()).lte("created_at", chartTo.toISOString()).limit(50000);
 
   const [{ data: echoSignups30 }, { data: brandSignups30 }, { count: echosBefore }, { count: brandsBefore }] = await Promise.all([
     echoAcqQuery,
