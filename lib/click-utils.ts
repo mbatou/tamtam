@@ -36,43 +36,59 @@ export async function countClicks(
   return count || 0;
 }
 
-/** Build a daily clicks chart with pre-filled UTC date buckets */
+/** Build a daily clicks chart using Postgres COUNT per day — immune to row-limit truncation */
 export async function getClicksChart(
   supabase: SupabaseClient,
   linkIds: string[],
-  days: number
+  days: number,
+  from?: Date,
+  to?: Date
 ): Promise<{ date: string; valid: number; fraud: number }[]> {
   const now = new Date();
-  const startUTC = new Date(
+
+  // Use provided dates or fall back to `days` parameter
+  const startDate = from || new Date(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - (days - 1))
   );
+  const endDate = to || new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999)
+  );
 
-  // Pre-fill all day buckets with zeros
-  const buckets: Record<string, { date: string; valid: number; fraud: number }> = {};
-  for (let i = 0; i < days; i++) {
-    const d = new Date(startUTC);
-    d.setUTCDate(d.getUTCDate() + i);
-    const key = d.toISOString().slice(0, 10);
-    buckets[key] = { date: key, valid: 0, fraud: 0 };
+  // Generate day buckets from startDate to endDate
+  const bucketKeys: string[] = [];
+  const cursor = new Date(startDate);
+  cursor.setUTCHours(0, 0, 0, 0);
+  const endDay = new Date(endDate);
+  endDay.setUTCHours(0, 0, 0, 0);
+
+  while (cursor <= endDay) {
+    bucketKeys.push(cursor.toISOString().slice(0, 10));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
 
-  if (linkIds.length === 0) return Object.values(buckets);
-
-  const { data: clicks } = await supabase
-    .from("clicks")
-    .select("created_at, is_valid")
-    .in("link_id", linkIds)
-    .gte("created_at", startUTC.toISOString())
-    .order("created_at", { ascending: true })
-    .limit(50000);
-
-  for (const click of clicks || []) {
-    const key = click.created_at.slice(0, 10);
-    if (buckets[key]) {
-      if (click.is_valid) buckets[key].valid++;
-      else buckets[key].fraud++;
-    }
+  if (linkIds.length === 0) {
+    return bucketKeys.map(date => ({ date, valid: 0, fraud: 0 }));
   }
 
-  return Object.values(buckets);
+  // Per-day Postgres COUNT(*) — immune to row-limit truncation
+  const results = await Promise.all(
+    bucketKeys.map(async (date) => {
+      const dayStart = `${date}T00:00:00.000Z`;
+      const dayEnd = `${date}T23:59:59.999Z`;
+
+      const [{ count: valid }, { count: total }] = await Promise.all([
+        supabase.from("clicks").select("*", { count: "exact", head: true })
+          .in("link_id", linkIds)
+          .gte("created_at", dayStart).lte("created_at", dayEnd)
+          .eq("is_valid", true),
+        supabase.from("clicks").select("*", { count: "exact", head: true })
+          .in("link_id", linkIds)
+          .gte("created_at", dayStart).lte("created_at", dayEnd),
+      ]);
+
+      return { date, valid: valid || 0, fraud: (total || 0) - (valid || 0) };
+    })
+  );
+
+  return results;
 }

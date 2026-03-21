@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { countClicks, getLinksForCampaigns, getClicksChart } from "@/lib/click-utils";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const authClient = createClient();
   const {
     data: { session },
@@ -84,8 +84,13 @@ export async function GET() {
       .slice(0, 10);
   }
 
-  // Chart data: daily clicks for brand's campaigns (last 14 days)
-  const clicksChart = await getClicksChart(supabase, linkIds, 14);
+  // Chart data: daily clicks for brand's campaigns
+  const { searchParams } = new URL(request.url);
+  const fromParam = searchParams.get("from");
+  const toParam = searchParams.get("to");
+  const chartFrom = fromParam ? new Date(fromParam) : undefined;
+  const chartTo = toParam ? new Date(toParam) : undefined;
+  const clicksChart = await getClicksChart(supabase, linkIds, 14, chartFrom, chartTo);
 
   // --- Chart data: budget per campaign ---
   const campaignBudgets = allCampaigns.map((c) => ({

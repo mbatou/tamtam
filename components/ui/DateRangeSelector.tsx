@@ -16,24 +16,28 @@ interface DateRangeSelectorProps {
 
 function getPresetRange(key: string): DateRange {
   const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // ALWAYS set "to" as end of today UTC
+  const to = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
 
   switch (key) {
-    case "today":
-      return { key, from: todayStart.toISOString(), to: now.toISOString() };
+    case "today": {
+      const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+      return { key, from: from.toISOString(), to: to.toISOString() };
+    }
     case "week": {
-      const weekAgo = new Date(todayStart);
-      weekAgo.setDate(weekAgo.getDate() - 6);
-      return { key, from: weekAgo.toISOString(), to: now.toISOString() };
+      const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 6));
+      return { key, from: from.toISOString(), to: to.toISOString() };
     }
     case "month": {
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      return { key, from: monthStart.toISOString(), to: now.toISOString() };
+      const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+      return { key, from: from.toISOString(), to: to.toISOString() };
     }
     case "all":
-      return { key, from: null, to: null };
-    default:
-      return { key, from: null, to: null };
+    default: {
+      const from = new Date("2026-03-10T00:00:00.000Z");
+      return { key, from: from.toISOString(), to: to.toISOString() };
+    }
   }
 }
 
