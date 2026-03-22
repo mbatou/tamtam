@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatFCFA } from "@/lib/utils";
+import { getBrandDisplayName } from "@/lib/display-utils";
 import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
 import Badge from "@/components/ui/Badge";
@@ -354,7 +355,7 @@ function CampaignModerationPageContent() {
               >
                 <td className="py-3">
                   <div className="font-semibold">{campaign.title}</div>
-                  <div className="text-xs text-white/30">{campaign.users?.name || "—"}</div>
+                  <div className="text-xs text-white/30">{campaign.users ? getBrandDisplayName({ ...campaign.users, role: "batteur" }) : "—"}</div>
                   {/* Inline budget bar */}
                   {campaign.budget > 0 && (
                     <div className="mt-1 h-1 w-full max-w-[120px] bg-white/5 rounded-full overflow-hidden">
@@ -422,7 +423,7 @@ function CampaignModerationPageContent() {
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <span className="text-xs text-white/40 block">{t("superadmin.finance.batteur")}</span>
-                    <span>{selected.users?.name || "—"}</span>
+                    <span>{selected.users ? getBrandDisplayName({ ...selected.users, role: "batteur" }) : "—"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-white/40 block">{t("common.status")}</span>

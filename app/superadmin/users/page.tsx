@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { formatFCFA, timeAgo } from "@/lib/utils";
+import { getBrandDisplayName, getBrandSubtitle } from "@/lib/display-utils";
 import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
 import Badge from "@/components/ui/Badge";
@@ -416,11 +417,11 @@ function UsersPageContent() {
                 <td className="py-3">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-xs font-bold text-white">
-                      {user.name.charAt(0).toUpperCase()}
+                      {getBrandDisplayName(user).charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold">{user.name}</span>
+                        <span className="font-semibold">{getBrandDisplayName(user)}</span>
                         {user.is_dual_role ? (
                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 whitespace-nowrap">
                             {t("superadmin.users.dualRole")}
@@ -435,6 +436,7 @@ function UsersPageContent() {
                           </span>
                         ) : null}
                       </div>
+                      {getBrandSubtitle(user) && <div className="text-xs text-white/40">{getBrandSubtitle(user)}</div>}
                       <div className="text-xs text-white/30">{user.city || user.phone || ""}</div>
                     </div>
                   </div>

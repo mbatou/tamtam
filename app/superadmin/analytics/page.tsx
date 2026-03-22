@@ -44,7 +44,7 @@ export default function AnalyticsPage() {
       supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "echo").gte("created_at", weekAgo),
       supabase.from("clicks").select("created_at, is_valid").gte("created_at", weekAgo),
       supabase.from("users").select("name, total_earned").eq("role", "echo").order("total_earned", { ascending: false }).limit(5),
-      supabase.from("campaigns").select("id, title, spent, cpc, batteur_id, users(name)").order("spent", { ascending: false }).limit(5),
+      supabase.from("campaigns").select("id, title, spent, cpc, batteur_id, users(name, company_name)").order("spent", { ascending: false }).limit(5),
       supabase.from("tracked_links").select("campaign_id"),
     ]);
 
@@ -92,7 +92,7 @@ export default function AnalyticsPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (campaignsRes.data || []).map((c: any) => ({
         title: c.title,
-        name: Array.isArray(c.users) ? c.users[0]?.name || "—" : c.users?.name || "—",
+        name: Array.isArray(c.users) ? (c.users[0]?.company_name || c.users[0]?.name || "—") : (c.users?.company_name || c.users?.name || "—"),
         clicks: c.cpc > 0 ? Math.floor(c.spent / c.cpc) : 0,
         echos: echoCountMap.get(c.id) || 0,
       }))

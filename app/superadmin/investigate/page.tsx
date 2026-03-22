@@ -3,6 +3,7 @@
 import { Suspense, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { formatFCFA, timeAgo } from "@/lib/utils";
+import { getBrandDisplayName, getBrandSubtitle } from "@/lib/display-utils";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import StatCard from "@/components/StatCard";
 import Badge from "@/components/ui/Badge";
@@ -170,11 +171,11 @@ function InvestigatePageContent() {
           <div className="glass-card p-5">
             <div className="flex items-start gap-4">
               <div className="w-14 h-14 rounded-full bg-gradient-primary flex items-center justify-center text-xl font-bold text-white shrink-0">
-                {(data.user.name as string)?.charAt(0)?.toUpperCase() || "?"}
+                {getBrandDisplayName({ name: data.user.name as string, company_name: data.user.company_name as string | undefined, role: data.user.role as string }).charAt(0)?.toUpperCase() || "?"}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-bold text-lg">{data.user.name as string}</h3>
+                  <h3 className="font-bold text-lg">{getBrandDisplayName({ name: data.user.name as string, company_name: data.user.company_name as string | undefined, role: data.user.role as string })}</h3>
                   <span className={`text-xs font-bold px-2 py-1 rounded-full ${
                     data.user.role === "echo" ? "bg-primary/10 text-primary" :
                     data.user.role === "batteur" ? "bg-accent/10 text-accent" :
@@ -183,6 +184,7 @@ function InvestigatePageContent() {
                   <Badge status={(data.user.status as string) || "active"} />
                   {data.user.risk_level ? <Badge status={data.user.risk_level as string} /> : null}
                 </div>
+                {getBrandSubtitle({ name: data.user.name as string, company_name: data.user.company_name as string | undefined, role: data.user.role as string }) && <p className="text-sm text-white/40 mt-0.5">{getBrandSubtitle({ name: data.user.name as string, company_name: data.user.company_name as string | undefined, role: data.user.role as string })}</p>}
                 <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-white/40">
                   <span>Tel: <strong className="text-white/70">{(data.user.phone as string) || "—"}</strong></span>
                   <span>Ville: <strong className="text-white/70">{(data.user.city as string) || "—"}</strong></span>
