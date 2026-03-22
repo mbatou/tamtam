@@ -7,6 +7,7 @@ import LandingFooter from "../_components/LandingFooter";
 import AnimatedCounter from "../_components/AnimatedCounter";
 import FAQItem from "../_components/FAQItem";
 import { useLandingStats } from "../_components/useLandingStats";
+import { useTranslation } from "@/lib/i18n";
 
 /* ─── Animated bar for ROI comparison ─── */
 function AnimatedBar({
@@ -62,47 +63,33 @@ function AnimatedBar({
   );
 }
 
-const brandFAQ = [
-  {
-    q: "Comment fonctionne le coût par clic ?",
-    a: "Vous définissez un CPC (coût par clic) pour votre campagne. Vous ne payez que lorsqu'un visiteur clique réellement sur votre lien. Les clics sont vérifiés par notre système anti-fraude.",
-  },
-  {
-    q: "Combien de temps dure une campagne ?",
-    a: "Une campagne dure tant que votre budget est actif. Vous pouvez la mettre en pause ou l'arrêter à tout moment depuis votre tableau de bord.",
-  },
-  {
-    q: "Puis-je mettre en pause une campagne ?",
-    a: "Oui, vous pouvez mettre en pause et reprendre vos campagnes à tout moment. Votre budget restant est conservé.",
-  },
-  {
-    q: "Comment recharger mon portefeuille ?",
-    a: "Vous pouvez recharger via Wave ou Orange Money directement depuis votre tableau de bord. Le crédit est ajouté instantanément.",
-  },
-  {
-    q: "Les clics sont-ils réels ?",
-    a: "Oui. Notre système vérifie chaque clic avec des mécanismes anti-fraude avancés : IP unique, délai minimum, empreinte navigateur. Les clics dupliqués ou suspects sont rejetés automatiquement.",
-  },
-];
-
-const useCases = [
-  { icon: "🍽️", title: "Restaurants", desc: "Remplissez vos tables ce weekend" },
-  { icon: "🚗", title: "Auto-écoles", desc: "Recrutez de nouveaux élèves" },
-  { icon: "🛍️", title: "Boutiques", desc: "Lancez votre collection" },
-  { icon: "🎉", title: "Événements", desc: "Remplissez vos places" },
-  { icon: "🏢", title: "Agences", desc: "Nouveau canal pour vos clients" },
-  { icon: "🏠", title: "Immobilier", desc: "Montrez vos biens" },
-];
-
-const campaignResults = [
-  { name: "Une communauté grandissante", clicks: "1 143", cpc: "9" },
-  { name: "Amenons les!", clicks: "450", cpc: "22" },
-  { name: "500+ Real People", clicks: "160 vérifiés", cpc: "20" },
-];
-
 export default function BrandLanding() {
   const { stats, loaded } = useLandingStats();
+  const { t } = useTranslation();
   const isPromo = new Date() < new Date("2026-04-01");
+
+  const brandFAQ = [
+    { q: t("brandPage.faq1q"), a: t("brandPage.faq1a") },
+    { q: t("brandPage.faq2q"), a: t("brandPage.faq2a") },
+    { q: t("brandPage.faq3q"), a: t("brandPage.faq3a") },
+    { q: t("brandPage.faq4q"), a: t("brandPage.faq4a") },
+    { q: t("brandPage.faq5q"), a: t("brandPage.faq5a") },
+  ];
+
+  const useCases = [
+    { icon: "🍽️", title: t("brandPage.useCase1"), desc: t("brandPage.useCase1Desc") },
+    { icon: "🚗", title: t("brandPage.useCase2"), desc: t("brandPage.useCase2Desc") },
+    { icon: "🛍️", title: t("brandPage.useCase3"), desc: t("brandPage.useCase3Desc") },
+    { icon: "🎉", title: t("brandPage.useCase4"), desc: t("brandPage.useCase4Desc") },
+    { icon: "🏢", title: t("brandPage.useCase5"), desc: t("brandPage.useCase5Desc") },
+    { icon: "🏠", title: t("brandPage.useCase6"), desc: t("brandPage.useCase6Desc") },
+  ];
+
+  const campaignResults = [
+    { name: "Une communauté grandissante", clicks: "1 143", cpc: "9" },
+    { name: "Amenons les!", clicks: "450", cpc: "22" },
+    { name: "500+ Real People", clicks: "160", cpc: "20" },
+  ];
 
   return (
     <div className="min-h-screen bg-[#0F0F1F] text-white">
@@ -110,31 +97,29 @@ export default function BrandLanding() {
 
       {/* Hero */}
       <section className="relative pt-24 pb-20 px-6 overflow-hidden">
-        {/* Orange glow */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="max-w-3xl mx-auto text-center relative">
           <h1 className="text-4xl md:text-6xl font-black leading-tight mb-6">
-            Touchez des{" "}
-            <span className="text-orange-500">milliers de personnes</span>
+            {t("brandPage.heroTitle1")}{" "}
+            <span className="text-orange-500">{t("brandPage.heroTitle2")}</span>
             <br />
-            via le bouche-à-oreille WhatsApp
+            {t("brandPage.heroTitle3")}
           </h1>
           <p className="text-lg md:text-xl text-white/60 mb-8 max-w-2xl mx-auto">
-            {loaded ? stats.echos : "552"} Échos partagent votre lien. Vous ne
-            payez que les clics vérifiés.
+            {t("brandPage.heroSub", { echos: loaded ? String(stats.echos) : "552" })}
           </p>
 
           <Link
             href="/signup/brand"
             className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-bold px-8 py-4 rounded-full text-lg transition-all hover:scale-105"
           >
-            🚀 Créer mon compte gratuitement
+            🚀 {t("brandPage.heroCTA")}
           </Link>
           <p className="mt-4 text-white/40 text-sm">
-            Déjà inscrit ?{" "}
+            {t("brandPage.alreadyAccount")}{" "}
             <Link href="/login" className="text-orange-400 hover:underline">
-              Se connecter →
+              {t("selector.login")} →
             </Link>
           </p>
         </div>
@@ -145,7 +130,7 @@ export default function BrandLanding() {
         <section className="px-6 pb-12">
           <div className="max-w-2xl mx-auto bg-gradient-to-r from-orange-500/20 to-yellow-500/20 border border-orange-500/30 rounded-2xl p-6 text-center">
             <p className="text-lg font-bold">
-              🎁 10 000 FCFA offerts à l&apos;inscription — offre limitée
+              🎁 {t("brandPage.promoBanner")}
             </p>
           </div>
         </section>
@@ -154,30 +139,29 @@ export default function BrandLanding() {
       {/* How it works */}
       <section className="px-6 py-16 max-w-4xl mx-auto">
         <h2 className="text-3xl font-black text-center mb-12">
-          Comment ça marche ?
+          {t("brandPage.howTitle")}
         </h2>
         <div className="grid md:grid-cols-3 gap-8 relative">
-          {/* Connecting line (desktop) */}
           <div className="hidden md:block absolute top-12 left-[20%] right-[20%] h-0.5 bg-gradient-to-r from-orange-500/50 via-orange-500/20 to-orange-500/50" />
 
           {[
             {
               step: "1",
-              title: "Créez votre compte",
-              time: "2 min",
-              desc: "Inscription gratuite avec email",
+              title: t("brandPage.step1"),
+              time: t("brandPage.step1Time"),
+              desc: t("brandPage.step1Desc"),
             },
             {
               step: "2",
-              title: "Lancez une campagne",
-              time: "5 min",
-              desc: "Budget, CPC, visuel — c'est tout",
+              title: t("brandPage.step2"),
+              time: t("brandPage.step2Time"),
+              desc: t("brandPage.step2Desc"),
             },
             {
               step: "3",
-              title: "Les Échos partagent",
-              time: "24h",
-              desc: `${loaded ? stats.echos : "552"} personnes partagent sur WhatsApp Status`,
+              title: t("brandPage.step3"),
+              time: t("brandPage.step3Time"),
+              desc: t("brandPage.step3Desc", { echos: loaded ? String(stats.echos) : "552" }),
             },
           ].map((s) => (
             <div key={s.step} className="text-center relative">
@@ -198,30 +182,24 @@ export default function BrandLanding() {
       <section className="px-6 py-16 bg-white/[0.02]">
         <div className="max-w-4xl mx-auto grid grid-cols-3 gap-8 text-center">
           <div>
-            <p className="text-4xl md:text-5xl font-black text-orange-500">
-              20
-            </p>
-            <p className="text-white/50 text-sm mt-1">FCFA par clic vérifié</p>
+            <p className="text-4xl md:text-5xl font-black text-orange-500">20</p>
+            <p className="text-white/50 text-sm mt-1">{t("brandPage.metricCPC")}</p>
           </div>
           <div>
-            <p className="text-4xl md:text-5xl font-black text-orange-500">
-              {loaded ? (
-                <AnimatedCounter
-                  target={stats.echos}
-                  suffix="+"
-                  className="text-4xl md:text-5xl font-black text-orange-500"
-                />
-              ) : (
-                "552+"
-              )}
-            </p>
-            <p className="text-white/50 text-sm mt-1">Échos actifs</p>
+            {loaded ? (
+              <AnimatedCounter
+                target={stats.echos}
+                suffix="+"
+                className="text-4xl md:text-5xl font-black text-orange-500"
+              />
+            ) : (
+              <p className="text-4xl md:text-5xl font-black text-orange-500">552+</p>
+            )}
+            <p className="text-white/50 text-sm mt-1">{t("brandPage.metricEchos")}</p>
           </div>
           <div>
-            <p className="text-4xl md:text-5xl font-black text-orange-500">
-              24h
-            </p>
-            <p className="text-white/50 text-sm mt-1">Premiers résultats</p>
+            <p className="text-4xl md:text-5xl font-black text-orange-500">24h</p>
+            <p className="text-white/50 text-sm mt-1">{t("brandPage.metricResults")}</p>
           </div>
         </div>
       </section>
@@ -229,26 +207,16 @@ export default function BrandLanding() {
       {/* ROI Comparison */}
       <section className="px-6 py-16 max-w-2xl mx-auto">
         <h2 className="text-3xl font-black text-center mb-10">
-          75% moins cher que les alternatives
+          {t("brandPage.roiTitle")}
         </h2>
-        <AnimatedBar
-          label="Facebook Ads"
-          value={400}
-          max={800}
-          color="#ef4444"
-        />
-        <AnimatedBar
-          label="Instagram"
-          value={550}
-          max={800}
-          color="#ef4444"
-        />
+        <AnimatedBar label="Facebook Ads" value={400} max={800} color="#ef4444" />
+        <AnimatedBar label="Instagram" value={550} max={800} color="#ef4444" />
         <AnimatedBar
           label="Tamtam"
           value={20}
           max={800}
           color="#22c55e"
-          note="← 75% moins cher"
+          note={`← ${t("brandPage.roiNote")}`}
         />
       </section>
 
@@ -256,21 +224,20 @@ export default function BrandLanding() {
       <section className="px-6 py-16 bg-white/[0.02]">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl font-black text-center mb-10">
-            Résultats réels
+            {t("brandPage.caseTitle")}
           </h2>
           <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
             <p className="text-white/80 text-lg leading-relaxed mb-6 italic">
-              &ldquo;Nous avons dépensé 5 000 FCFA pour promouvoir un article.
-              Résultat : 365 vues, 160 visiteurs vérifiés, 21.74% CTR.&rdquo;
+              &ldquo;{t("brandPage.caseQuote")}&rdquo;
             </p>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
                 <p className="text-2xl font-black text-orange-500">365</p>
-                <p className="text-xs text-white/40">vues</p>
+                <p className="text-xs text-white/40">{t("brandPage.caseViews")}</p>
               </div>
               <div>
                 <p className="text-2xl font-black text-orange-500">160</p>
-                <p className="text-xs text-white/40">visiteurs vérifiés</p>
+                <p className="text-xs text-white/40">{t("brandPage.caseVisitors")}</p>
               </div>
               <div>
                 <p className="text-2xl font-black text-orange-500">21.74%</p>
@@ -284,7 +251,7 @@ export default function BrandLanding() {
       {/* Use cases */}
       <section className="px-6 py-16 max-w-4xl mx-auto">
         <h2 className="text-3xl font-black text-center mb-10">
-          Pour tous les secteurs
+          {t("brandPage.useCaseTitle")}
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {useCases.map((u) => (
@@ -304,7 +271,7 @@ export default function BrandLanding() {
       <section className="px-6 py-16 bg-white/[0.02]">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-3xl font-black text-center mb-10">
-            Campagnes récentes
+            {t("brandPage.campaignsTitle")}
           </h2>
           <div className="space-y-4">
             {campaignResults.map((c) => (
@@ -328,7 +295,7 @@ export default function BrandLanding() {
       {/* FAQ */}
       <section className="px-6 py-16 max-w-2xl mx-auto">
         <h2 className="text-3xl font-black text-center mb-10">
-          Questions fréquentes
+          {t("brandPage.faqTitle")}
         </h2>
         {brandFAQ.map((f) => (
           <FAQItem key={f.q} question={f.q} answer={f.a} />
@@ -338,13 +305,13 @@ export default function BrandLanding() {
       {/* Final CTA */}
       <section className="px-6 py-20 text-center">
         <h2 className="text-3xl md:text-4xl font-black mb-6">
-          Prêt à lancer votre campagne ?
+          {t("brandPage.ctaTitle")}
         </h2>
         <Link
           href="/signup/brand"
           className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-bold px-8 py-4 rounded-full text-lg transition-all hover:scale-105"
         >
-          🚀 Créer mon compte gratuitement
+          🚀 {t("brandPage.heroCTA")}
         </Link>
         <p className="mt-4 text-white/30 text-sm">
           <a href="mailto:support@tamma.me" className="hover:underline">
