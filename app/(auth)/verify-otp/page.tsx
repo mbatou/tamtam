@@ -94,7 +94,10 @@ function VerifyOTPContent() {
 
       // Account created successfully — redirect to login
       const bonusParam = data.welcomeBonusApplied ? "&bonus=true" : "";
-      window.location.href = `/login?tab=batteur&verified=true${bonusParam}`;
+      const ambParam = data.ambassadorName ? `&ambassador=${encodeURIComponent(data.ambassadorName)}` : "";
+      window.location.href = `/login?tab=batteur&verified=true${bonusParam}${ambParam}`;
+      // Clean up stored referral code
+      localStorage.removeItem("tamtam_ref");
     } catch {
       setError("Erreur réseau. Réessayez.");
       setLoading(false);

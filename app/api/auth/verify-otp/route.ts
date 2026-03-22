@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
     companyName: string;
     phone: string;
     password: string;
+    referralCode?: string | null;
   };
 
   if (!metadata) {
@@ -105,38 +106,106 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Erreur lors de la création du profil." }, { status: 500 });
   }
 
-  // --- Welcome bonus (LUP-68) ---
-  let welcomeBonusApplied = false;
+  // --- Ambassador referral (LUP-80) ---
+  let ambassadorName: string | null = null;
+  let ambassadorBonusApplied = false;
   try {
-    const { data: settings } = await supabase
-      .from("platform_settings")
-      .select("key, value")
-      .in("key", ["welcome_bonus_amount", "welcome_bonus_end_date", "welcome_bonus_enabled"]);
+    const referralCode = metadata.referralCode;
+    if (referralCode) {
+      const { data: ambassador } = await supabase
+        .from("ambassadors")
+        .select("id, name, commission_rate")
+        .eq("referral_code", referralCode)
+        .eq("status", "active")
+        .single();
 
-    const bonusEnabled = settings?.find((s) => s.key === "welcome_bonus_enabled")?.value === "true";
-    const bonusAmount = parseInt(settings?.find((s) => s.key === "welcome_bonus_amount")?.value || "0");
-    const bonusEndDate = new Date(settings?.find((s) => s.key === "welcome_bonus_end_date")?.value || "2026-01-01");
+      if (ambassador) {
+        ambassadorName = ambassador.name;
 
-    if (bonusEnabled && new Date() < bonusEndDate && bonusAmount > 0) {
-      await supabase
-        .from("users")
-        .update({ balance: bonusAmount })
-        .eq("id", authUser.user.id);
+        // Link brand to ambassador
+        await supabase.from("users").update({
+          referred_by_ambassador: ambassador.id,
+        }).eq("id", authUser.user.id);
 
-      try {
-        await supabase.from("wallet_transactions").insert({
-          user_id: authUser.user.id,
-          amount: bonusAmount,
-          type: "welcome_bonus",
-          description: "Bonus de bienvenue — offre limitée",
-          status: "completed",
+        // Create referral record
+        await supabase.from("ambassador_referrals").insert({
+          ambassador_id: ambassador.id,
+          brand_user_id: authUser.user.id,
+          referral_code: referralCode,
         });
-      } catch { /* wallet_transactions table may not exist yet */ }
 
-      welcomeBonusApplied = true;
+        // Credit 10,000 FCFA ambassador welcome bonus
+        const AMBASSADOR_BONUS = 10000;
+        await supabase.from("users").update({
+          balance: AMBASSADOR_BONUS,
+        }).eq("id", authUser.user.id);
+
+        try {
+          await supabase.from("wallet_transactions").insert({
+            user_id: authUser.user.id,
+            amount: AMBASSADOR_BONUS,
+            type: "welcome_bonus",
+            description: `Bonus de bienvenue — référé par ${ambassador.name}`,
+            source_id: ambassador.id,
+            source_type: "ambassador",
+            status: "completed",
+          });
+        } catch { /* wallet_transactions table may not exist yet */ }
+
+        // Increment ambassador referral count
+        const { data: amb } = await supabase
+          .from("ambassadors")
+          .select("total_referrals")
+          .eq("id", ambassador.id)
+          .single();
+        if (amb) {
+          await supabase.from("ambassadors").update({
+            total_referrals: (amb.total_referrals || 0) + 1,
+            updated_at: new Date().toISOString(),
+          }).eq("id", ambassador.id);
+        }
+
+        ambassadorBonusApplied = true;
+      }
     }
   } catch {
-    // Non-blocking: bonus failure should not prevent account creation
+    // Non-blocking: ambassador referral failure should not prevent account creation
+  }
+
+  // --- Welcome bonus (LUP-68) — skip if ambassador bonus already applied ---
+  let welcomeBonusApplied = false;
+  if (!ambassadorBonusApplied) {
+    try {
+      const { data: settings } = await supabase
+        .from("platform_settings")
+        .select("key, value")
+        .in("key", ["welcome_bonus_amount", "welcome_bonus_end_date", "welcome_bonus_enabled"]);
+
+      const bonusEnabled = settings?.find((s) => s.key === "welcome_bonus_enabled")?.value === "true";
+      const bonusAmount = parseInt(settings?.find((s) => s.key === "welcome_bonus_amount")?.value || "0");
+      const bonusEndDate = new Date(settings?.find((s) => s.key === "welcome_bonus_end_date")?.value || "2026-01-01");
+
+      if (bonusEnabled && new Date() < bonusEndDate && bonusAmount > 0) {
+        await supabase
+          .from("users")
+          .update({ balance: bonusAmount })
+          .eq("id", authUser.user.id);
+
+        try {
+          await supabase.from("wallet_transactions").insert({
+            user_id: authUser.user.id,
+            amount: bonusAmount,
+            type: "welcome_bonus",
+            description: "Bonus de bienvenue — offre limitée",
+            status: "completed",
+          });
+        } catch { /* wallet_transactions table may not exist yet */ }
+
+        welcomeBonusApplied = true;
+      }
+    } catch {
+      // Non-blocking: bonus failure should not prevent account creation
+    }
   }
 
   // --- Auto-convert matching lead (LUP-67) ---
@@ -160,5 +229,11 @@ export async function POST(request: NextRequest) {
     // Non-blocking: lead conversion failure should not prevent account creation
   }
 
-  return NextResponse.json({ success: true, userId: authUser.user.id, welcomeBonusApplied });
+  return NextResponse.json({
+    success: true,
+    userId: authUser.user.id,
+    welcomeBonusApplied: welcomeBonusApplied || ambassadorBonusApplied,
+    ambassadorName,
+    ambassadorBonusApplied,
+  });
 }

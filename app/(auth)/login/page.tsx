@@ -25,6 +25,10 @@ function LoginContent() {
   const [error, setError] = useState("");
   const supabase = createClient();
 
+  const isVerified = searchParams.get("verified") === "true";
+  const hasBonus = searchParams.get("bonus") === "true";
+  const ambassadorNameParam = searchParams.get("ambassador");
+
   // Read tab query param
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -85,6 +89,26 @@ function LoginContent() {
           <span className="text-3xl font-black gradient-text">Tamtam</span>
           <SoundWave bars={5} className="h-5 opacity-60" />
         </Link>
+
+        {/* Success banners */}
+        {isVerified && ambassadorNameParam && (
+          <div className="mb-4 p-4 rounded-xl bg-gradient-to-r from-purple-500/20 to-orange-500/20 border border-purple-500/30 text-center animate-slide-up" style={{ opacity: 0 }}>
+            <p className="font-bold text-lg">10 000 FCFA offerts !</p>
+            <p className="text-sm text-white/60 mt-1">
+              Vous avez été référé par <strong className="text-orange-400">{ambassadorNameParam}</strong>
+            </p>
+          </div>
+        )}
+        {isVerified && !ambassadorNameParam && hasBonus && (
+          <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center text-emerald-400 text-sm animate-slide-up" style={{ opacity: 0 }}>
+            Compte créé avec succès ! Bonus de bienvenue crédité.
+          </div>
+        )}
+        {isVerified && !ambassadorNameParam && !hasBonus && (
+          <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center text-emerald-400 text-sm animate-slide-up" style={{ opacity: 0 }}>
+            Compte créé avec succès ! Connectez-vous.
+          </div>
+        )}
 
         {/* Mode toggle */}
         <div className="flex mb-8 glass-card p-1">
