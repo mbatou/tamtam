@@ -93,7 +93,7 @@ function LoginContent() {
         {/* Success banners */}
         {isVerified && ambassadorNameParam && (
           <div className="mb-4 p-4 rounded-xl bg-gradient-to-r from-purple-500/20 to-orange-500/20 border border-purple-500/30 text-center animate-slide-up" style={{ opacity: 0 }}>
-            <p className="font-bold text-lg">10 000 FCFA offerts !</p>
+            <p className="font-bold text-lg">2 000 FCFA offerts !</p>
             <p className="text-sm text-white/60 mt-1">
               Vous avez été référé par <strong className="text-orange-400">{ambassadorNameParam}</strong>
             </p>

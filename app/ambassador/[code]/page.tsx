@@ -110,7 +110,7 @@ export default function AmbassadorDashboard() {
             </button>
           </div>
           <p className="text-xs text-white/30 mt-2">
-            Chaque marque qui s&apos;inscrit via ce lien reçoit 10 000 FCFA de bonus.
+            Chaque marque qui s&apos;inscrit via ce lien reçoit 2 000 FCFA de bonus.
           </p>
         </div>
 

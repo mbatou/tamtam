@@ -134,8 +134,8 @@ export async function POST(request: NextRequest) {
           referral_code: referralCode,
         });
 
-        // Credit 10,000 FCFA ambassador welcome bonus
-        const AMBASSADOR_BONUS = 10000;
+        // Credit 2,000 FCFA ambassador welcome bonus
+        const AMBASSADOR_BONUS = 2000;
         await supabase.from("users").update({
           balance: AMBASSADOR_BONUS,
         }).eq("id", authUser.user.id);
