@@ -1,11 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import SoundWave from "@/components/ui/SoundWave";
 
 export default function BrandSignupPage() {
+  return (
+    <Suspense>
+      <BrandSignupContent />
+    </Suspense>
+  );
+}
+
+function BrandSignupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [form, setForm] = useState({
