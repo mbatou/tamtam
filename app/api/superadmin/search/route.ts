@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   const { data: users } = await supabase
     .from("users")
     .select("id, name, phone, city, role, status, balance, total_earned, company_name")
-    .or(`name.ilike."${p}",phone.ilike."${p}",city.ilike."${p}"`)
+    .or(`name.ilike."${p}",phone.ilike."${p}",city.ilike."${p}",company_name.ilike."${p}"`)
     .order("total_earned", { ascending: false })
     .limit(10);
 
