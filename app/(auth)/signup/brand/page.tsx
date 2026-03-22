@@ -27,6 +27,7 @@ function BrandSignupContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [refCode, setRefCode] = useState<string | null>(null);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   useEffect(() => {
     const ref = searchParams.get("ref");
@@ -52,6 +53,10 @@ function BrandSignupContent() {
       setError("Tous les champs sont requis.");
       return;
     }
+    if (!acceptedTerms) {
+      setError("Vous devez accepter les conditions d'utilisation.");
+      return;
+    }
     if (form.password.length < 6) {
       setError("Le mot de passe doit contenir au moins 6 caractères.");
       return;
@@ -66,7 +71,7 @@ function BrandSignupContent() {
       const res = await fetch("/api/auth/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, referralCode: refCode }),
+        body: JSON.stringify({ ...form, referralCode: refCode, termsAcceptedAt: new Date().toISOString() }),
       });
 
       const data = await res.json();
@@ -170,9 +175,28 @@ function BrandSignupContent() {
               />
             </div>
 
+            <label className="flex items-start gap-3 cursor-pointer py-1">
+              <input
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-white/20 bg-white/5 accent-secondary shrink-0"
+              />
+              <span className="text-xs text-white/40 leading-relaxed">
+                J&apos;accepte les{" "}
+                <Link href="/terms" target="_blank" className="text-secondary/70 hover:text-secondary underline">
+                  conditions d&apos;utilisation
+                </Link>{" "}
+                et la{" "}
+                <Link href="/privacy" target="_blank" className="text-secondary/70 hover:text-secondary underline">
+                  politique de confidentialité
+                </Link>
+              </span>
+            </label>
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !acceptedTerms}
               className="w-full py-3 rounded-btn font-bold text-white disabled:opacity-50 transition-all hover:opacity-90 hover:-translate-y-0.5 hover:shadow-lg bg-gradient-secondary"
             >
               {loading ? "Envoi du code..." : "Créer mon compte"}

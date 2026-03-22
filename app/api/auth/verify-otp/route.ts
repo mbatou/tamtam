@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
     phone: string;
     password: string;
     referralCode?: string | null;
+    termsAcceptedAt?: string | null;
   };
 
   if (!metadata) {
@@ -97,6 +98,7 @@ export async function POST(request: NextRequest) {
     company_name: metadata.companyName,
     balance: 0,
     total_earned: 0,
+    terms_accepted_at: metadata.termsAcceptedAt || new Date().toISOString(),
   });
 
   if (profileError) {
