@@ -6,47 +6,34 @@ import LandingFooter from "../_components/LandingFooter";
 import AnimatedCounter from "../_components/AnimatedCounter";
 import FAQItem from "../_components/FAQItem";
 import { useLandingStats } from "../_components/useLandingStats";
-
-const echoFAQ = [
-  {
-    q: "Est-ce que c'est une arnaque ?",
-    a: "Non. 56 010 FCFA ont déjà été versés aux Échos via Wave et Orange Money. Tamtam est une plateforme de micro-influence légitime basée au Sénégal.",
-  },
-  {
-    q: "Combien puis-je gagner ?",
-    a: "Entre 150 et 7 500 FCFA par semaine selon ton activité. Les meilleurs Échos gagnent 5 000+ FCFA par semaine.",
-  },
-  {
-    q: "Comment retirer mon argent ?",
-    a: "Via Wave ou Orange Money, dès 1 000 FCFA de solde. Le retrait est traité rapidement.",
-  },
-  {
-    q: "Comment fonctionne le parrainage ?",
-    a: "Invite un ami → il s'inscrit avec ton lien → tu gagnes 150 FCFA. Simple.",
-  },
-  {
-    q: "Est-ce que je dois payer quelque chose ?",
-    a: "Non, jamais. Tamtam est 100% gratuit pour les Échos. Tu gagnes de l'argent, tu n'en dépenses pas.",
-  },
-];
-
-const socialProofs = [
-  {
-    quote: "J'ai gagné 6 438 FCFA en partageant 3 liens",
-    name: "Biggy ndaw",
-    city: "Rufisque",
-    clicks: 102,
-  },
-  {
-    quote: "J'ai retiré mon premier paiement en 2 jours",
-    name: "Cheikh Ahmadou",
-    city: "Dakar",
-    clicks: 88,
-  },
-];
+import { useTranslation } from "@/lib/i18n";
 
 export default function EchoLanding() {
   const { stats, loaded } = useLandingStats();
+  const { t } = useTranslation();
+
+  const echoFAQ = [
+    { q: t("echoPage.faq1q"), a: t("echoPage.faq1a") },
+    { q: t("echoPage.faq2q"), a: t("echoPage.faq2a") },
+    { q: t("echoPage.faq3q"), a: t("echoPage.faq3a") },
+    { q: t("echoPage.faq4q"), a: t("echoPage.faq4a") },
+    { q: t("echoPage.faq5q"), a: t("echoPage.faq5a") },
+  ];
+
+  const socialProofs = [
+    {
+      quote: t("echoPage.proof1Quote"),
+      name: "Biggy ndaw",
+      city: "Rufisque",
+      clicks: 102,
+    },
+    {
+      quote: t("echoPage.proof2Quote"),
+      name: "Cheikh Ahmadou",
+      city: "Dakar",
+      clicks: 88,
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-[#0F0F1F] text-white">
@@ -54,32 +41,31 @@ export default function EchoLanding() {
 
       {/* Hero */}
       <section className="relative pt-24 pb-20 px-6 overflow-hidden">
-        {/* Teal glow */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="max-w-3xl mx-auto text-center relative">
           <h1 className="text-4xl md:text-6xl font-black leading-tight mb-6">
-            Gagne de l&apos;argent
+            {t("echoPage.heroTitle1")}
             <br />
-            <span className="text-teal-400">avec ton statut WhatsApp</span> 💰
+            <span className="text-teal-400">{t("echoPage.heroTitle2")}</span> 💰
           </h1>
           <p className="text-lg md:text-xl text-white/60 mb-2 max-w-2xl mx-auto">
-            Partage des liens. Tes contacts cliquent. Tu gagnes.
+            {t("echoPage.heroSub1")}
           </p>
           <p className="text-white/40 mb-8">
-            Retrait via Wave ou Orange Money.
+            {t("echoPage.heroSub2")}
           </p>
 
           <Link
             href="/register"
             className="inline-flex items-center gap-2 bg-teal-500 hover:bg-teal-600 text-white font-bold px-8 py-4 rounded-full text-lg transition-all hover:scale-105"
           >
-            📱 Devenir un Écho — c&apos;est gratuit
+            📱 {t("echoPage.heroCTA")}
           </Link>
           <p className="mt-4 text-white/40 text-sm">
-            Déjà inscrit ?{" "}
+            {t("brandPage.alreadyAccount")}{" "}
             <Link href="/login" className="text-teal-400 hover:underline">
-              Se connecter →
+              {t("selector.login")} →
             </Link>
           </p>
         </div>
@@ -88,7 +74,7 @@ export default function EchoLanding() {
       {/* Money counter */}
       <section className="px-6 pb-12 text-center">
         <div className="inline-block bg-teal-500/10 border border-teal-500/20 rounded-2xl px-8 py-4">
-          <p className="text-sm text-white/60 mb-1">Déjà versés aux Échos</p>
+          <p className="text-sm text-white/60 mb-1">{t("echoPage.alreadyPaid")}</p>
           {loaded ? (
             <AnimatedCounter
               target={stats.totalPaid}
@@ -106,7 +92,7 @@ export default function EchoLanding() {
       {/* How it works */}
       <section className="px-6 py-16 max-w-4xl mx-auto">
         <h2 className="text-3xl font-black text-center mb-12">
-          Comment ça marche ?
+          {t("brandPage.howTitle")}
         </h2>
         <div className="grid md:grid-cols-3 gap-8 relative">
           <div className="hidden md:block absolute top-12 left-[20%] right-[20%] h-0.5 bg-gradient-to-r from-teal-500/50 via-teal-500/20 to-teal-500/50" />
@@ -114,21 +100,21 @@ export default function EchoLanding() {
           {[
             {
               step: "1",
-              title: "Inscris-toi gratuitement",
-              time: "30 sec",
-              desc: "Crée ton compte avec ton numéro",
+              title: t("echoPage.step1"),
+              time: t("echoPage.step1Time"),
+              desc: t("echoPage.step1Desc"),
             },
             {
               step: "2",
-              title: "Accepte un Rythme",
+              title: t("echoPage.step2"),
               time: "",
-              desc: "Choisis parmi les campagnes disponibles. Tu reçois un lien personnalisé.",
+              desc: t("echoPage.step2Desc"),
             },
             {
               step: "3",
-              title: "Partage sur WhatsApp",
+              title: t("echoPage.step3"),
               time: "",
-              desc: "Tes contacts cliquent → tu gagnes 15–188 FCFA par clic vérifié",
+              desc: t("echoPage.step3Desc"),
             },
           ].map((s) => (
             <div key={s.step} className="text-center relative">
@@ -151,24 +137,24 @@ export default function EchoLanding() {
       <section className="px-6 py-16 bg-white/[0.02]">
         <div className="max-w-md mx-auto">
           <h2 className="text-3xl font-black text-center mb-10">
-            Combien tu peux gagner ?
+            {t("echoPage.earningsTitle")}
           </h2>
           <div className="space-y-4">
             {[
               {
-                label: "1 lien partagé",
-                detail: "10–50 clics",
+                label: t("echoPage.earn1Label"),
+                detail: t("echoPage.earn1Detail"),
                 amount: "150 – 2 500 FCFA",
               },
               {
-                label: "3 liens par semaine",
+                label: t("echoPage.earn2Label"),
                 detail: "",
-                amount: "1 000 – 7 500 FCFA/semaine",
+                amount: "1 000 – 7 500 FCFA/" + t("echoPage.week"),
               },
               {
-                label: "Les meilleurs Échos",
+                label: t("echoPage.earn3Label"),
                 detail: "",
-                amount: "5 000+ FCFA/semaine 🔥",
+                amount: "5 000+ FCFA/" + t("echoPage.week") + " 🔥",
                 highlight: true,
               },
             ].map((e) => (
@@ -202,30 +188,14 @@ export default function EchoLanding() {
       {/* Gamification preview */}
       <section className="px-6 py-16 max-w-2xl mx-auto">
         <h2 className="text-3xl font-black text-center mb-10">
-          Plus tu partages, plus tu gagnes
+          {t("echoPage.gamifTitle")}
         </h2>
         <div className="grid grid-cols-2 gap-4">
           {[
-            {
-              icon: "🔥",
-              title: "Série quotidienne",
-              desc: "Bonus de fidélité",
-            },
-            {
-              icon: "🏅",
-              title: "10 badges à débloquer",
-              desc: "Récompenses exclusives",
-            },
-            {
-              icon: "🏆",
-              title: "Classement",
-              desc: "Les meilleurs gagnent plus",
-            },
-            {
-              icon: "🤝",
-              title: "Parrainage",
-              desc: "150 FCFA par ami invité",
-            },
+            { icon: "🔥", title: t("echoPage.gamif1"), desc: t("echoPage.gamif1Desc") },
+            { icon: "🏅", title: t("echoPage.gamif2"), desc: t("echoPage.gamif2Desc") },
+            { icon: "🏆", title: t("echoPage.gamif3"), desc: t("echoPage.gamif3Desc") },
+            { icon: "🤝", title: t("echoPage.gamif4"), desc: t("echoPage.gamif4Desc") },
           ].map((g) => (
             <div
               key={g.title}
@@ -243,19 +213,19 @@ export default function EchoLanding() {
       <section className="px-6 py-16 bg-white/[0.02]">
         <div className="max-w-md mx-auto">
           <h2 className="text-3xl font-black text-center mb-10">
-            100% fiable
+            {t("echoPage.trustTitle")}
           </h2>
           <div className="space-y-4">
             {[
-              "Paiement via Wave et Orange Money",
-              `${loaded ? stats.totalPaid.toLocaleString("fr-FR") : "56 010"} FCFA déjà versés — c'est réel`,
-              `${loaded ? stats.echos : "552"}+ Échos déjà inscrits`,
-              "100% gratuit — aucun investissement",
-              "Retrait dès 1 000 FCFA",
-            ].map((t) => (
-              <div key={t} className="flex items-start gap-3">
+              t("echoPage.trust1"),
+              t("echoPage.trust2", { amount: loaded ? stats.totalPaid.toLocaleString("fr-FR") : "56 010" }),
+              t("echoPage.trust3", { count: loaded ? String(stats.echos) : "552" }),
+              t("echoPage.trust4"),
+              t("echoPage.trust5"),
+            ].map((txt) => (
+              <div key={txt} className="flex items-start gap-3">
                 <span className="text-green-500 mt-0.5 shrink-0">✓</span>
-                <p className="text-white/70 text-sm">{t}</p>
+                <p className="text-white/70 text-sm">{txt}</p>
               </div>
             ))}
           </div>
@@ -265,7 +235,7 @@ export default function EchoLanding() {
       {/* Social proof */}
       <section className="px-6 py-16 max-w-2xl mx-auto">
         <h2 className="text-3xl font-black text-center mb-10">
-          Ils ont déjà gagné
+          {t("echoPage.proofTitle")}
         </h2>
         <div className="space-y-4">
           {socialProofs.map((s) => (
@@ -293,7 +263,7 @@ export default function EchoLanding() {
       {/* FAQ */}
       <section className="px-6 py-16 max-w-2xl mx-auto">
         <h2 className="text-3xl font-black text-center mb-10">
-          Questions fréquentes
+          {t("brandPage.faqTitle")}
         </h2>
         {echoFAQ.map((f) => (
           <FAQItem key={f.q} question={f.q} answer={f.a} />
@@ -303,20 +273,20 @@ export default function EchoLanding() {
       {/* Final CTA */}
       <section className="px-6 py-20 text-center">
         <h2 className="text-3xl md:text-4xl font-black mb-6">
-          Prêt à gagner avec WhatsApp ?
+          {t("echoPage.ctaTitle")}
         </h2>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
             href="/register"
             className="inline-flex items-center gap-2 bg-teal-500 hover:bg-teal-600 text-white font-bold px-8 py-4 rounded-full text-lg transition-all hover:scale-105"
           >
-            📱 Devenir un Écho — c&apos;est gratuit
+            📱 {t("echoPage.heroCTA")}
           </Link>
           <Link
             href="/register"
             className="inline-flex items-center gap-2 text-teal-400 hover:text-teal-300 font-bold transition-colors"
           >
-            🤝 Parraine un ami → 150 FCFA
+            🤝 {t("echoPage.referralCTA")}
           </Link>
         </div>
         <p className="mt-6 text-white/30 text-sm">
