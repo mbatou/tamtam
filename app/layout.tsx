@@ -5,14 +5,15 @@ import { I18nProvider } from "@/lib/i18n";
 
 export const metadata: Metadata = {
   title: {
-    default: "Tamtam — Partage. Résonne. Gagne.",
+    default: "Tamtam — Marketing WhatsApp au Sénégal | Marques & Échos",
     template: "%s | Tamtam",
   },
   description:
-    "Gagne de l'argent en partageant des liens sur WhatsApp. La plateforme de micro-influence au Sénégal.",
+    "Lancez des campagnes CPC sur WhatsApp (marques) ou gagnez de l'argent en partageant des liens (échos). La plateforme de micro-influence #1 au Sénégal.",
   keywords: [
     "Tamtam", "micro-influence", "WhatsApp", "Sénégal", "gagner argent",
     "partage liens", "CPC", "influence marketing", "Dakar", "Wave", "Orange Money",
+    "campagne WhatsApp", "écho", "marque", "marketing digital Sénégal",
   ],
   authors: [{ name: "Tamtam" }],
   creator: "Tamtam",
@@ -35,23 +36,23 @@ export const metadata: Metadata = {
     locale: "fr_SN",
     url: "https://tamma.me",
     siteName: "Tamtam",
-    title: "Tamtam — Partage. Résonne. Gagne.",
+    title: "Tamtam — Marketing WhatsApp au Sénégal | Marques & Échos",
     description:
-      "Gagne de l'argent en partageant des liens sur WhatsApp. La plateforme de micro-influence au Sénégal.",
+      "Lancez des campagnes CPC sur WhatsApp ou gagnez de l'argent en partageant des liens. La plateforme de micro-influence #1 au Sénégal.",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Tamtam — Partage. Résonne. Gagne.",
+        alt: "Tamtam — Marketing WhatsApp au Sénégal",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Tamtam — Partage. Résonne. Gagne.",
+    title: "Tamtam — Marketing WhatsApp au Sénégal | Marques & Échos",
     description:
-      "Gagne de l'argent en partageant des liens sur WhatsApp. La plateforme de micro-influence au Sénégal.",
+      "Lancez des campagnes CPC sur WhatsApp ou gagnez de l'argent en partageant des liens. La plateforme de micro-influence #1 au Sénégal.",
     images: ["/og-image.png"],
   },
   robots: {
@@ -83,7 +84,7 @@ export default function RootLayout({
               name: "Tamtam",
               url: "https://tamma.me",
               description:
-                "Gagne de l'argent en partageant des liens sur WhatsApp. La plateforme de micro-influence au Sénégal.",
+                "Lancez des campagnes CPC sur WhatsApp ou gagnez de l'argent en partageant des liens. La plateforme de micro-influence #1 au Sénégal.",
               applicationCategory: "BusinessApplication",
               operatingSystem: "All",
               offers: {
