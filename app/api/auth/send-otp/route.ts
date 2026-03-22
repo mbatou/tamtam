@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { email, name, companyName, phone, password, referralCode } = body;
+  const { email, name, companyName, phone, password, referralCode, termsAcceptedAt } = body;
 
   if (!email || !name || !companyName || !phone || !password) {
     return NextResponse.json({ error: "Tous les champs sont requis." }, { status: 400 });
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     code: hashedCode,
     type: "brand_signup",
     expires_at: expiresAt,
-    metadata: { name, companyName, phone, password, referralCode: referralCode || null },
+    metadata: { name, companyName, phone, password, referralCode: referralCode || null, termsAcceptedAt: termsAcceptedAt || null },
   });
 
   // Send OTP email

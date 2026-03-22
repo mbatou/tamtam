@@ -193,6 +193,7 @@ function InvestigatePageContent() {
                     <span>Email: <strong className="text-white/70">{data.authUser.email}</strong></span>
                   )}
                   <span>Créé: <strong className="text-white/70">{new Date(data.user.created_at as string).toLocaleString("fr-FR")}</strong></span>
+                  <span>CGU: <strong className={data.user.terms_accepted_at ? "text-green-400" : "text-red-400"}>{data.user.terms_accepted_at ? `✓ ${new Date(data.user.terms_accepted_at as string).toLocaleDateString("fr-FR")}` : "✗ Non acceptées"}</strong></span>
                   {data.authUser?.last_sign_in_at && (
                     <span>Dernière connexion: <strong className="text-white/70">{timeAgo(data.authUser.last_sign_in_at)}</strong></span>
                   )}
