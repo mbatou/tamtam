@@ -1,6 +1,6 @@
 -- Ambassador Referral Program (LUP-80)
 -- Ambassadors earn 5% commission on every campaign launched by referred brands.
--- Referred brands get 10,000 FCFA welcome bonus.
+-- Referred brands get 2,000 FCFA welcome bonus.
 
 -- Ambassadors table
 CREATE TABLE IF NOT EXISTS ambassadors (
