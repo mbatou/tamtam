@@ -69,10 +69,8 @@ export default function RythmesPage() {
     if (firstImage) {
       setSharing(campaignId);
       const result = await shareCampaignToWhatsApp(firstImage, url, campaignId);
-      if (result === "fallback") {
-        showToast("📷 Image téléchargée ! Sélectionne-la dans tes photos récentes sur WhatsApp.", "success");
-      } else if (result === "shared") {
-        showToast("Partagé avec succès ! 🎉", "success");
+      if (result === "shared" || result === "fallback") {
+        showToast("📷 Image téléchargée ! Ajoute-la à ton statut WhatsApp.", "success");
       }
       try {
         await fetch("/api/echo/track-share", {
@@ -212,10 +210,8 @@ export default function RythmesPage() {
                       >
                         {sharing === campaign.id ? (
                           <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Préparation...</>
-                        ) : campaign.creative_urls?.some(u => !u.match(/\.(mp4|webm)/)) ? (
-                          <>📸 Partager avec l&apos;image</>
                         ) : (
-                          <>📱 Partager sur WhatsApp</>
+                          <>📲 Partager sur mon statut</>
                         )}
                       </button>
                       <button
@@ -225,9 +221,9 @@ export default function RythmesPage() {
                         🔗 Copier le lien
                       </button>
                     </div>
-                    {campaign.creative_urls?.some(u => !u.match(/\.(mp4|webm)/)) && isShareable && (
+                    {isShareable && (
                       <p className="text-white/30 text-[10px] text-center mt-2">
-                        📱 Cette image sera partagée avec ton lien sur WhatsApp
+                        📱 L&apos;image sera téléchargée, ajoute-la à ton statut WhatsApp
                       </p>
                     )}
                   </div>
