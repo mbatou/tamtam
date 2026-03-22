@@ -43,14 +43,16 @@ export default function CampaignDetailModal({ campaign, link, open, onClose }: C
     if (firstImage) {
       setSharing(true);
       const result = await shareCampaignToWhatsApp(firstImage, url, campaign.id);
-      if (result === "shared" || result === "fallback") {
-        showToast("📷 Image téléchargée ! Ajoute-la à ton statut WhatsApp.", "success");
+      if (result === "shared") {
+        showToast("✅ Partage envoyé !", "success");
+      } else if (result === "fallback") {
+        showToast("✅ Partage envoyé !", "success");
       }
       try {
         await fetch("/api/echo/track-share", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ campaignId: campaign.id, shareMethod: result === "shared" ? "image_and_link" : result === "fallback" ? "fallback_download" : "link_only" }),
+          body: JSON.stringify({ campaignId: campaign.id, shareMethod: result === "shared" ? "native_share" : result === "fallback" ? "whatsapp_link" : "cancelled" }),
         });
       } catch {}
       setSharing(false);
@@ -191,7 +193,7 @@ export default function CampaignDetailModal({ campaign, link, open, onClose }: C
           <button
             onClick={handleSmartShare}
             disabled={!isShareable || sharing}
-            className="w-full py-3 rounded-xl bg-[#25D366] hover:bg-[#20BD5A] active:bg-[#1DA851] text-white text-sm font-bold transition flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
+            className="w-full py-3 rounded-xl bg-[#1a8d4a] hover:bg-[#178542] active:bg-[#147a3b] text-white text-sm font-bold transition flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             {sharing ? (
               <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Préparation...</>

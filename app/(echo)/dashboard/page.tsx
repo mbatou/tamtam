@@ -111,15 +111,16 @@ export default function EchoDashboard() {
     if (firstImage) {
       setSharing(campaignId);
       const result = await shareCampaignToWhatsApp(firstImage, url, campaignId);
-      if (result === "shared" || result === "fallback") {
-        showToast("📷 Image téléchargée ! Ajoute-la à ton statut WhatsApp.", "success");
+      if (result === "shared") {
+        showToast("✅ Partage envoyé !", "success");
+      } else if (result === "fallback") {
+        showToast("✅ Partage envoyé !", "success");
       }
-      // Track share method
       try {
         await fetch("/api/echo/track-share", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ campaignId, shareMethod: result === "shared" ? "image_and_link" : result === "fallback" ? "fallback_download" : "link_only" }),
+          body: JSON.stringify({ campaignId, shareMethod: result === "shared" ? "native_share" : result === "fallback" ? "whatsapp_link" : "cancelled" }),
         });
       } catch {}
       setSharing(null);
@@ -376,7 +377,7 @@ export default function EchoDashboard() {
                         disabled={sharing === link.campaign_id}
                         className={`w-full py-3 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 ${
                           isShareable
-                            ? "bg-[#25D366] hover:bg-[#20BD5A] text-white active:bg-[#1DA851]"
+                            ? "bg-[#1a8d4a] hover:bg-[#178542] text-white active:bg-[#147a3b]"
                             : "bg-white/5 border border-white/10 text-white/30 cursor-not-allowed"
                         } disabled:opacity-50`}
                       >
@@ -396,7 +397,7 @@ export default function EchoDashboard() {
                     </div>
                     {isShareable && (
                       <p className="text-white/30 text-[10px] text-center mt-2">
-                        📱 L&apos;image sera téléchargée, ajoute-la à ton statut WhatsApp
+                        📱 Choisis WhatsApp dans le menu de partage pour poster sur ton statut
                       </p>
                     )}
                     <div className="mt-3 bg-yellow-400/10 border border-yellow-400/20 rounded-xl p-3 flex items-center justify-between">
