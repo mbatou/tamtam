@@ -1271,5 +1271,18 @@
     "proof2Quote": "I withdrew my first payment in 2 days",
     "ctaTitle": "Ready to earn with WhatsApp?",
     "referralCTA": "Refer a friend → 150 FCFA"
+  },
+  "snapchat": {
+    "name": "Snapchat",
+    "shareOnSnap": "Share on Snap too!",
+    "comingSoon": "Coming soon",
+    "comingSoonBrand": "Coming soon",
+    "yourPlatforms": "Your sharing platforms",
+    "active": "Active",
+    "morePlatforms": "More platforms = more shares = more earnings 💰",
+    "arrivingNextWeek": "Snapchat is coming next week!",
+    "doubleYourEarnings": "Share your rythmes on Snap and WhatsApp — double your earnings.",
+    "brandAnnounceTitle": "Snapchat is coming soon!",
+    "brandAnnounceDesc": "Your campaigns will be shared on WhatsApp Status and Snapchat Stories. More platforms = more visibility."
   }
 }
