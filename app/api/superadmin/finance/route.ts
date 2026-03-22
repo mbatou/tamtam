@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
   // Build filtered queries
   let payoutsQuery = supabase.from("payouts").select("*, users!echo_id(name, phone)").order("created_at", { ascending: false }).limit(5000);
-  let paymentsQuery = supabase.from("payments").select("*, users!user_id(name)").order("created_at", { ascending: false }).limit(100);
+  let paymentsQuery = supabase.from("payments").select("*, users!user_id(name, company_name, role)").order("created_at", { ascending: false }).limit(100);
   let validClicksQuery = supabase.from("clicks").select("id", { count: "exact", head: true }).eq("is_valid", true);
 
   if (fromParam) {
