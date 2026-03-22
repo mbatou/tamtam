@@ -5,11 +5,11 @@ import { I18nProvider } from "@/lib/i18n";
 
 export const metadata: Metadata = {
   title: {
-    default: "Tamtam — Marketing WhatsApp au Sénégal | Marques & Échos",
+    default: "Tamtam — Le bouche-à-oreille digital au Sénégal",
     template: "%s | Tamtam",
   },
   description:
-    "Lancez des campagnes CPC sur WhatsApp (marques) ou gagnez de l'argent en partageant des liens (échos). La plateforme de micro-influence #1 au Sénégal.",
+    "Lancez des campagnes CPC sur WhatsApp (marques) ou gagnez de l'argent en partageant des liens (échos). La plateforme de micro-influence #1 au Sénégal. 552+ Échos, 27+ Marques.",
   keywords: [
     "Tamtam", "micro-influence", "WhatsApp", "Sénégal", "gagner argent",
     "partage liens", "CPC", "influence marketing", "Dakar", "Wave", "Orange Money",
@@ -36,24 +36,22 @@ export const metadata: Metadata = {
     locale: "fr_SN",
     url: "https://tamma.me",
     siteName: "Tamtam",
-    title: "Tamtam — Marketing WhatsApp au Sénégal | Marques & Échos",
+    title: "Tamtam — Le bouche-à-oreille digital au Sénégal",
     description:
-      "Lancez des campagnes CPC sur WhatsApp ou gagnez de l'argent en partageant des liens. La plateforme de micro-influence #1 au Sénégal.",
-    images: [
+      "Marques: touchez des milliers de personnes via WhatsApp dès 20 FCFA/clic. Échos: gagnez de l'argent en partageant des liens. tamma.me",    images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Tamtam — Marketing WhatsApp au Sénégal",
+        alt: "Tamtam — Le bouche-à-oreille digital au Sénégal",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Tamtam — Marketing WhatsApp au Sénégal | Marques & Échos",
+    title: "Tamtam — Le bouche-à-oreille digital au Sénégal",
     description:
-      "Lancez des campagnes CPC sur WhatsApp ou gagnez de l'argent en partageant des liens. La plateforme de micro-influence #1 au Sénégal.",
-    images: ["/og-image.png"],
+      "Marques: touchez des milliers de personnes via WhatsApp dès 20 FCFA/clic. Échos: gagnez de l'argent en partageant des liens. tamma.me",    images: ["/og-image.png"],
   },
   robots: {
     index: true,
