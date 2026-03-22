@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/ui/Toast";
 import { timeAgo } from "@/lib/utils";
+import { getBrandDisplayName } from "@/lib/display-utils";
 
 interface Ambassador {
   id: string;
@@ -239,7 +240,7 @@ export default function AmbassadorsPage() {
                 <tbody>
                   {detailData.referrals.map(ref => (
                     <tr key={ref.id} className="border-b border-white/5">
-                      <td className="py-3">{ref.users?.company_name || ref.users?.name || "—"}</td>
+                      <td className="py-3">{ref.users ? getBrandDisplayName({ ...ref.users, role: "batteur" }) : "—"}</td>
                       <td className="py-3 text-white/40">{new Date(ref.signed_up_at).toLocaleDateString("fr-FR")}</td>
                       <td className="py-3">{ref.total_campaigns}</td>
                       <td className="py-3 text-right text-emerald-400">{(ref.total_commission_earned || 0).toLocaleString("fr-FR")} F</td>

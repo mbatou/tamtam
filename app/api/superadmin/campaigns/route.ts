@@ -43,7 +43,7 @@ export async function GET() {
 
   const { data: campaigns } = await supabase
     .from("campaigns")
-    .select("*, users!batteur_id(name, phone)")
+    .select("*, users!batteur_id(name, phone, company_name)")
     .order("created_at", { ascending: false });
 
   // Get echo counts per campaign

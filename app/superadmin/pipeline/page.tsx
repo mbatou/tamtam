@@ -6,6 +6,7 @@ import Pagination, { paginate } from "@/components/ui/Pagination";
 import Modal from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { formatFCFA, timeAgo } from "@/lib/utils";
+import { getBrandDisplayName } from "@/lib/display-utils";
 
 const PAGE_SIZE = 30;
 
@@ -17,9 +18,11 @@ type LeadStatus = "new" | "contacted" | "invited" | "converted" | "rejected";
 interface Contact {
   id: string;
   name: string;
+  company_name?: string;
   email: string;
   phone: string | null;
   type: ContactType;
+  role?: string;
   stage: string;
   tags: string[];
   created_at: string;
@@ -383,7 +386,7 @@ export default function CRMPage() {
   const filtered = contacts.filter(c => {
     if (search) {
       const q = search.toLowerCase();
-      if (!c.name.toLowerCase().includes(q) && !c.email.toLowerCase().includes(q) && !(c.phone || "").toLowerCase().includes(q)) return false;
+      if (!c.name.toLowerCase().includes(q) && !(c.company_name || "").toLowerCase().includes(q) && !c.email.toLowerCase().includes(q) && !(c.phone || "").toLowerCase().includes(q)) return false;
     }
     if (stageFilter !== "all" && c.stage !== stageFilter) return false;
     return true;
@@ -572,11 +575,11 @@ export default function CRMPage() {
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
                       c.type === "brand" ? "bg-purple-400/20 text-purple-400" : "bg-primary/20 text-primary"
                     }`}>
-                      {c.name.charAt(0).toUpperCase()}
+                      {getBrandDisplayName({ ...c, role: c.type === "brand" ? "batteur" : c.role }).charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-semibold">{c.name}</span>
+                        <span className="text-sm font-semibold">{getBrandDisplayName({ ...c, role: c.type === "brand" ? "batteur" : c.role })}</span>
                         {contactTypeBadge(c.type)}
                         {stageBadge(c.stage)}
                       </div>
@@ -629,7 +632,7 @@ export default function CRMPage() {
       <Modal
         open={!!selectedContact && !detailLoading}
         onClose={() => setSelectedContact(null)}
-        title={selectedContact?.contact.name as string || "Contact"}
+        title={selectedContact ? getBrandDisplayName({ name: selectedContact.contact.name as string, company_name: selectedContact.contact.company_name as string | undefined, role: selectedContact.contact.type === "brand" ? "batteur" : undefined }) : "Contact"}
       >
         {selectedContact && (
           <ContactDetailView
@@ -729,11 +732,11 @@ function ContactDetailView({
         <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold shrink-0 ${
           isBrand ? "bg-purple-400/20 text-purple-400" : "bg-primary/20 text-primary"
         }`}>
-          {(contact.name as string || "?").charAt(0).toUpperCase()}
+          {getBrandDisplayName({ name: contact.name as string | undefined, company_name: contact.company_name as string | undefined, role: isBrand ? "batteur" : undefined }).charAt(0).toUpperCase()}
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-bold">{contact.name as string}</h3>
+            <h3 className="font-bold">{getBrandDisplayName({ name: contact.name as string | undefined, company_name: contact.company_name as string | undefined, role: isBrand ? "batteur" : undefined })}</h3>
             {contactTypeBadge(contact.type)}
           </div>
           <div className="text-xs text-white/40 mt-1 space-y-0.5">

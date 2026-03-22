@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     if (contactType === "brand") {
       const { data: user } = await supabase
         .from("users")
-        .select("id, name, phone, role, city, balance, total_earned, crm_stage, crm_tags, created_at, status, total_recharged")
+        .select("id, name, phone, role, city, balance, total_earned, crm_stage, crm_tags, created_at, status, total_recharged, company_name")
         .eq("id", contactId)
         .single();
       if (!user) return NextResponse.json({ error: "Contact introuvable" }, { status: 404 });
@@ -137,13 +137,13 @@ export async function GET(request: NextRequest) {
   }
 
   // --- Contacts list ---
-  const results: { id: string; name: string; email: string; phone: string | null; type: "lead" | "brand"; stage: string; tags: string[]; created_at: string; stats: Record<string, unknown> }[] = [];
+  const results: { id: string; name: string; company_name?: string; email: string; phone: string | null; type: "lead" | "brand"; stage: string; tags: string[]; created_at: string; stats: Record<string, unknown> }[] = [];
 
   // Brands (batteur users)
   if (view === "all" || view === "brands") {
     const { data: brands } = await supabase
       .from("users")
-      .select("id, name, phone, city, balance, total_earned, crm_stage, crm_tags, created_at, status, total_recharged")
+      .select("id, name, phone, city, balance, total_earned, crm_stage, crm_tags, created_at, status, total_recharged, company_name")
       .eq("role", "batteur")
       .order("created_at", { ascending: false });
 
@@ -161,6 +161,7 @@ export async function GET(request: NextRequest) {
       results.push({
         id: b.id,
         name: b.name,
+        company_name: b.company_name || undefined,
         email: "",
         phone: b.phone,
         type: "brand",

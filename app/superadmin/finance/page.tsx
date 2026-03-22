@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatFCFA, formatNumber } from "@/lib/utils";
+import { getBrandDisplayName } from "@/lib/display-utils";
 import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
 import Badge from "@/components/ui/Badge";
@@ -450,7 +451,7 @@ function FinancePageContent() {
                       W
                     </div>
                     <div>
-                      <div className="font-bold">{payment.users?.name || "—"}</div>
+                      <div className="font-bold">{payment.users ? getBrandDisplayName(payment.users) : "—"}</div>
                       <div className="text-xs text-white/40">
                         {payment.payment_method || "Wave"} · Ref: {payment.id.slice(0, 8)}
                       </div>
@@ -524,7 +525,7 @@ function FinancePageContent() {
                   <td className="py-3 text-xs text-white/50">
                     {new Date(payment.created_at).toLocaleDateString("fr-FR")}
                   </td>
-                  <td className="py-3 font-semibold text-sm">{payment.users?.name || "—"}</td>
+                  <td className="py-3 font-semibold text-sm">{payment.users ? getBrandDisplayName(payment.users) : "—"}</td>
                   <td className="py-3 font-bold">{formatFCFA(payment.amount)}</td>
                   <td className="py-3 hidden md:table-cell text-xs">
                     {payment.payment_method === "admin_topup" ? (

@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
   // Search users by text columns only (not UUID id)
   const { data: users } = await supabase
     .from("users")
-    .select("id, name, phone, city, role, status, balance, total_earned")
+    .select("id, name, phone, city, role, status, balance, total_earned, company_name")
     .or(`name.ilike."${p}",phone.ilike."${p}",city.ilike."${p}"`)
     .order("total_earned", { ascending: false })
     .limit(10);

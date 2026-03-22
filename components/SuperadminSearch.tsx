@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { formatFCFA, timeAgo } from "@/lib/utils";
+import { getBrandDisplayName } from "@/lib/display-utils";
 import { useTranslation } from "@/lib/i18n";
 
 interface SearchResults {
@@ -142,10 +143,10 @@ export default function SuperadminSearch() {
                   className="w-full px-4 py-3 flex items-center gap-3 hover:bg-white/[0.04] transition text-left border-b border-white/[0.03] last:border-0"
                 >
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/30 to-primary-light/30 flex items-center justify-center text-xs font-bold text-primary shrink-0">
-                    {u.name?.charAt(0)?.toUpperCase() || "?"}
+                    {getBrandDisplayName(u).charAt(0)?.toUpperCase() || "?"}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold truncate">{u.name}</p>
+                    <p className="text-sm font-semibold truncate">{getBrandDisplayName(u)}</p>
                     <p className="text-xs text-white/40 truncate">
                       {u.phone} · {u.city || "—"}
                       {u.total_earned > 0 && <> · {formatFCFA(u.total_earned)}</>}
