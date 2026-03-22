@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import { timeAgo } from "@/lib/utils";
 import { getBrandDisplayName } from "@/lib/display-utils";
@@ -51,6 +52,7 @@ interface Stats {
 }
 
 export default function AmbassadorsPage() {
+  const router = useRouter();
   const { showToast, ToastComponent } = useToast();
   const [ambassadors, setAmbassadors] = useState<Ambassador[]>([]);
   const [stats, setStats] = useState<Stats>({ totalAmbassadors: 0, totalReferrals: 0, totalEarned: 0, totalPending: 0 });
@@ -240,7 +242,14 @@ export default function AmbassadorsPage() {
                 <tbody>
                   {detailData.referrals.map(ref => (
                     <tr key={ref.id} className="border-b border-white/5">
-                      <td className="py-3">{ref.users ? getBrandDisplayName({ ...ref.users, role: "batteur" }) : "—"}</td>
+                      <td className="py-3">
+                        <button
+                          onClick={() => router.push(`/superadmin/users?id=${ref.brand_user_id}`)}
+                          className="text-left hover:text-accent transition-colors font-medium hover:underline"
+                        >
+                          {ref.users ? getBrandDisplayName({ ...ref.users, role: "batteur" }) : "—"}
+                        </button>
+                      </td>
                       <td className="py-3 text-white/40">{new Date(ref.signed_up_at).toLocaleDateString("fr-FR")}</td>
                       <td className="py-3">{ref.total_campaigns}</td>
                       <td className="py-3 text-right text-emerald-400">{(ref.total_commission_earned || 0).toLocaleString("fr-FR")} F</td>
