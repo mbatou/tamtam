@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/Toast";
 import { formatFCFA, getTrackingUrl } from "@/lib/utils";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import type { Campaign, TrackedLinkWithCampaign } from "@/lib/types";
+import { shareCampaignToWhatsApp } from "@/lib/share-utils";
 
 interface CampaignDetailModalProps {
   campaign: Campaign;
@@ -17,6 +18,7 @@ interface CampaignDetailModalProps {
 export default function CampaignDetailModal({ campaign, link, open, onClose }: CampaignDetailModalProps) {
   const { showToast, ToastComponent } = useToast();
   const [downloading, setDownloading] = useState<number | null>(null);
+  const [sharing, setSharing] = useState(false);
 
   const isShareable = campaign.status === "active";
   const statusLabel: Record<string, string> = {
@@ -33,16 +35,37 @@ export default function CampaignDetailModal({ campaign, link, open, onClose }: C
     showToast("Lien copie !", "success");
   }
 
-  function shareWhatsApp() {
+  async function handleSmartShare() {
     if (!link) return;
     const url = getTrackingUrl(link.short_code);
-    let text = `${campaign.title}\n\n`;
-    if (campaign.creative_urls?.length > 0) {
-      const firstImage = campaign.creative_urls.find(u => !u.match(/\.(mp4|webm)/));
-      if (firstImage) text += `${firstImage}\n\n`;
+    const firstImage = campaign.creative_urls?.find(u => !u.match(/\.(mp4|webm)/));
+
+    if (firstImage) {
+      setSharing(true);
+      const result = await shareCampaignToWhatsApp(firstImage, url, campaign.id);
+      if (result === "fallback") {
+        showToast("📷 Image téléchargée ! Sélectionne-la sur WhatsApp.", "success");
+      } else if (result === "shared") {
+        showToast("Partagé avec succès !", "success");
+      }
+      try {
+        await fetch("/api/echo/track-share", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ campaignId: campaign.id, shareMethod: result === "shared" ? "image_and_link" : result === "fallback" ? "fallback_download" : "link_only" }),
+        });
+      } catch {}
+      setSharing(false);
+    } else {
+      window.open(`https://wa.me/?text=${encodeURIComponent(url)}`, "_blank");
+      try {
+        await fetch("/api/echo/track-share", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ campaignId: campaign.id, shareMethod: "link_only" }),
+        });
+      } catch {}
     }
-    text += `Clique ici 👉 ${url}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }
 
   async function downloadAsset(url: string, index: number) {
@@ -166,22 +189,26 @@ export default function CampaignDetailModal({ campaign, link, open, onClose }: C
 
       {/* Share / copy buttons — disabled if not active */}
       {link && (
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={handleSmartShare}
+            disabled={!isShareable || sharing}
+            className="w-full py-3 rounded-xl bg-primary hover:bg-primary/90 text-white text-sm font-bold transition flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            {sharing ? (
+              <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Préparation...</>
+            ) : campaign.creative_urls?.some(u => !u.match(/\.(mp4|webm)/)) ? (
+              <>📸 Partager avec l&apos;image</>
+            ) : (
+              <>📱 Partager sur WhatsApp</>
+            )}
+          </button>
           <button
             onClick={copyLink}
             disabled={!isShareable}
-            className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold transition flex items-center justify-center gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
+            className="w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold transition flex items-center justify-center gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            Copier
-          </button>
-          <button
-            onClick={shareWhatsApp}
-            disabled={!isShareable}
-            className="flex-1 py-2.5 rounded-xl bg-[#25D366]/10 border border-[#25D366]/30 text-[#25D366] text-xs font-bold transition flex items-center justify-center gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-            Partager
+            🔗 Copier le lien
           </button>
         </div>
       )}

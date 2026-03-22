@@ -27,6 +27,7 @@ export default function AdminCampaignsPage() {
   const [showRechargePrompt, setShowRechargePrompt] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [avgCpc, setAvgCpc] = useState<number>(0);
+  const [imageFormatHint, setImageFormatHint] = useState<{ type: "warning" | "success"; message: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [perf, setPerf] = useState<{
     totalClicks: number; validClicks: number; activeEchos: number; costPerVisitor: number;
@@ -108,9 +109,27 @@ export default function AdminCampaignsPage() {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     setUploading(true);
+    setImageFormatHint(null);
     for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      // Check aspect ratio for images
+      if (file.type.startsWith("image/")) {
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        img.onload = () => {
+          const aspectRatio = img.height / img.width;
+          if (aspectRatio < 1.2) {
+            setImageFormatHint({ type: "warning", message: "⚠️ Image en format paysage. Pour de meilleurs résultats sur WhatsApp Status, utilisez un format vertical (9:16)." });
+          } else if (aspectRatio >= 1.7 && aspectRatio <= 1.85) {
+            setImageFormatHint({ type: "success", message: "✓ Format parfait pour WhatsApp Status !" });
+          } else {
+            setImageFormatHint(null);
+          }
+          URL.revokeObjectURL(img.src);
+        };
+      }
       const formData = new FormData();
-      formData.append("file", files[i]);
+      formData.append("file", file);
       const res = await fetch("/api/campaigns/upload", { method: "POST", body: formData });
       const data = await res.json();
       if (res.ok && data.url) {
@@ -618,7 +637,23 @@ export default function AdminCampaignsPage() {
                 </button>
               </div>
               <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" multiple onChange={handleUpload} className="hidden" />
-              <p className="text-xs text-white/20">{t("admin.campaigns.visualFormats")}</p>
+              <div className="bg-white/[0.03] rounded-lg p-3 mb-2">
+                <div className="flex items-center gap-2 text-xs">
+                  <span>📱</span>
+                  <span className="text-white/50">
+                    Format recommandé : <strong className="text-white/80">9:16 vertical</strong> (1080 × 1920 px)
+                  </span>
+                </div>
+                <p className="text-white/30 text-[10px] mt-1">
+                  Optimal pour le partage sur WhatsApp Status par les Échos
+                </p>
+              </div>
+              {imageFormatHint && (
+                <p className={`text-xs mt-1 ${imageFormatHint.type === "warning" ? "text-orange-400" : "text-green-400"}`}>
+                  {imageFormatHint.message}
+                </p>
+              )}
+              <p className="text-xs text-white/20 mt-1">{t("admin.campaigns.visualFormats")}</p>
             </div>
 
             <div>
