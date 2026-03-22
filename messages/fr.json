@@ -1271,5 +1271,18 @@
     "proof2Quote": "J'ai retiré mon premier paiement en 2 jours",
     "ctaTitle": "Prêt à gagner avec WhatsApp ?",
     "referralCTA": "Parraine un ami → 150 FCFA"
+  },
+  "snapchat": {
+    "name": "Snapchat",
+    "shareOnSnap": "Partage aussi sur Snap!",
+    "comingSoon": "Bientôt",
+    "comingSoonBrand": "Prochainement",
+    "yourPlatforms": "Tes plateformes de partage",
+    "active": "Actif",
+    "morePlatforms": "Plus de plateformes = plus de partages = plus de gains 💰",
+    "arrivingNextWeek": "Snapchat arrive la semaine prochaine!",
+    "doubleYourEarnings": "Partage tes rythmes sur Snap et WhatsApp — double tes gains.",
+    "brandAnnounceTitle": "Snapchat arrive bientôt!",
+    "brandAnnounceDesc": "Vos campagnes seront partagées sur WhatsApp Status et Snapchat Stories. Plus de plateformes = plus de visibilité."
   }
 }

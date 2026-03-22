@@ -641,12 +641,14 @@ export default function AdminCampaignsPage() {
                 <div className="flex items-center gap-2 text-xs">
                   <span>📱</span>
                   <span className="text-white/50">
-                    Format recommandé : <strong className="text-white/80">9:16 vertical</strong> (1080 × 1920 px)
+                    Format recommandé : <strong className="text-white/80">9:16 vertical</strong> (1080 × 1920 px) — optimal pour WhatsApp Status et Snapchat Stories
                   </span>
                 </div>
-                <p className="text-white/30 text-[10px] mt-1">
-                  Optimal pour le partage sur WhatsApp Status par les Échos
-                </p>
+                <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                  <span>💬 WhatsApp</span>
+                  <span>·</span>
+                  <span>👻 Snapchat (bientôt)</span>
+                </div>
               </div>
               {imageFormatHint && (
                 <p className={`text-xs mt-1 ${imageFormatHint.type === "warning" ? "text-orange-400" : "text-green-400"}`}>

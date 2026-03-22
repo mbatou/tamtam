@@ -206,6 +206,18 @@ export default function CampaignDetailModal({ campaign, link, open, onClose }: C
           >
             🔗 Copier le lien
           </button>
+          <div className="mt-3 bg-yellow-400/10 border border-yellow-400/20 rounded-xl p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">👻</span>
+              <div>
+                <span className="text-yellow-300 text-sm font-medium">Snapchat</span>
+                <span className="text-gray-500 text-xs block">Partage aussi sur Snap!</span>
+              </div>
+            </div>
+            <span className="bg-yellow-400/20 text-yellow-300 text-xs px-2.5 py-1 rounded-full font-medium">
+              Bientôt
+            </span>
+          </div>
         </div>
       )}
 

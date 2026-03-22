@@ -287,6 +287,20 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* ── Snapchat Announcement (LUP-85) ── */}
+      <div className="bg-gradient-to-r from-yellow-400/10 to-orange-500/10 border border-yellow-400/20 rounded-xl p-4 mb-4 flex items-center gap-4">
+        <span className="text-3xl">👻</span>
+        <div>
+          <h4 className="text-white font-bold text-sm">{t("snapchat.brandAnnounceTitle")}</h4>
+          <p className="text-gray-400 text-sm mt-0.5">
+            {t("snapchat.brandAnnounceDesc")}
+          </p>
+        </div>
+        <span className="bg-yellow-400/20 text-yellow-300 text-xs px-3 py-1.5 rounded-full font-medium shrink-0">
+          {t("snapchat.comingSoonBrand")}
+        </span>
+      </div>
+
       {/* ── Campaign Status Banner ── */}
       {activeCampaigns.length === 0 ? (
         <div className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20">
