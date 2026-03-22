@@ -491,16 +491,16 @@ function UsersPageContent() {
       <Pagination currentPage={page} totalItems={displayUsers.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
 
       {/* User Detail Modal */}
-      <Modal open={!!selected} onClose={() => { setSelected(null); setEchoCampaigns([]); setBatteurCampaigns([]); setPayoutHistory([]); }} title={selected?.name || ""}>
+      <Modal open={!!selected} onClose={() => { setSelected(null); setEchoCampaigns([]); setBatteurCampaigns([]); setPayoutHistory([]); }} title={selected ? getBrandDisplayName(selected) : ""}>
         {selected && (
           <div className="space-y-4">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-full bg-gradient-primary flex items-center justify-center text-xl font-bold text-white">
-                {selected.name.charAt(0).toUpperCase()}
+                {getBrandDisplayName(selected).charAt(0).toUpperCase()}
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-bold text-lg">{selected.name}</h3>
+                  <h3 className="font-bold text-lg">{getBrandDisplayName(selected)}</h3>
                   {selected.is_dual_role ? (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
                       {t("superadmin.users.dualRole")}
@@ -515,6 +515,7 @@ function UsersPageContent() {
                     </span>
                   ) : null}
                 </div>
+                {getBrandSubtitle(selected) && <p className="text-xs text-white/50">{getBrandSubtitle(selected)}</p>}
                 <p className="text-xs text-white/40">{selected.phone || ""} · {selected.city || ""} · {selected.role}</p>
                 <p className="text-[10px] font-mono text-white/20 mt-0.5 select-all cursor-pointer" title="Cliquer pour copier"
                   onClick={() => { navigator.clipboard.writeText(selected.id); showToast("UUID copié", "success"); }}
@@ -601,7 +602,7 @@ function UsersPageContent() {
                         }}
                         className="font-bold text-primary hover:underline"
                       >
-                        {users.find((u) => u.id === selected.referred_by)?.name || selected.referred_by.slice(0, 8)}
+                        {(() => { const ref = users.find((u) => u.id === selected.referred_by); return ref ? getBrandDisplayName(ref) : selected.referred_by.slice(0, 8); })()}
                       </button>
                     </div>
                   )}
@@ -929,17 +930,17 @@ function UsersPageContent() {
       <Modal
         open={showTopup}
         onClose={() => { setShowTopup(false); setTopupUser(null); setTopupAmount(""); }}
-        title={t("superadmin.users.rechargeTitle", { name: topupUser?.name || "" })}
+        title={t("superadmin.users.rechargeTitle", { name: topupUser ? getBrandDisplayName(topupUser) : "" })}
       >
         {topupUser && (
           <div className="space-y-4">
             <div className="p-4 rounded-xl bg-white/5">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center text-sm font-bold text-white">
-                  {topupUser.name.charAt(0).toUpperCase()}
+                  {getBrandDisplayName(topupUser).charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <div className="font-bold">{topupUser.name}</div>
+                  <div className="font-bold">{getBrandDisplayName(topupUser)}</div>
                   <div className="text-xs text-white/40">{topupUser.phone || topupUser.city || "batteur"}</div>
                 </div>
               </div>
