@@ -134,7 +134,7 @@ export default function AdminSupportPage() {
             <p className="text-xs text-white/30 mt-0.5">{t("admin.support.supportHours")}</p>
           </div>
           <a
-            href="https://wa.me/221781234567"
+            href="https://wa.me/221762799393?text=Bonjour%2C%20j%27ai%20besoin%20d%27aide%20avec%20mon%20compte%20Tamtam"
             target="_blank"
             rel="noopener noreferrer"
             className="glass-card p-4 flex-1 flex items-center gap-3 hover:border-emerald-500/30 transition group"

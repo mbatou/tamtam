@@ -307,12 +307,22 @@ export default function BrandLanding() {
         <h2 className="text-3xl md:text-4xl font-black mb-6">
           {t("brandPage.ctaTitle")}
         </h2>
-        <Link
-          href="/signup/brand"
-          className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-bold px-8 py-4 rounded-full text-lg transition-all hover:scale-105"
-        >
-          🚀 {t("brandPage.heroCTA")}
-        </Link>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <Link
+            href="/signup/brand"
+            className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-bold px-8 py-4 rounded-full text-lg transition-all hover:scale-105"
+          >
+            🚀 {t("brandPage.heroCTA")}
+          </Link>
+          <a
+            href="https://wa.me/221762799393?text=Bonjour%2C%20je%20suis%20int%C3%A9ress%C3%A9%20par%20Tamtam%20pour%20ma%20marque"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 border border-green-500/40 text-green-400 hover:bg-green-500/10 px-6 py-3 rounded-full font-bold transition-all"
+          >
+            💬 WhatsApp
+          </a>
+        </div>
         <p className="mt-4 text-white/30 text-sm">
           <a href="mailto:support@tamma.me" className="hover:underline">
             support@tamma.me

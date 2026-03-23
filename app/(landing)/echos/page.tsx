@@ -289,9 +289,18 @@ export default function EchoLanding() {
             🤝 {t("echoPage.referralCTA")}
           </Link>
         </div>
-        <p className="mt-6 text-white/30 text-sm">
+        <p className="mt-6 text-white/30 text-sm flex items-center justify-center gap-3">
           <a href="mailto:support@tamma.me" className="hover:underline">
             support@tamma.me
+          </a>
+          <span className="text-white/20">·</span>
+          <a
+            href="https://wa.me/221762799393?text=Bonjour%2C%20j%27ai%20une%20question%20sur%20Tamtam"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-green-400 hover:text-green-300 flex items-center gap-1"
+          >
+            💬 WhatsApp
           </a>
         </p>
       </section>
