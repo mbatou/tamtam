@@ -4,7 +4,6 @@ import { createCampaignSchema, updateCampaignSchema, deleteCampaignSchema } from
 import { sendCampaignCompletedToEcho, sendEmail } from "@/lib/email";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
-import { sendWhatsApp, formatSenegalPhone } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +13,7 @@ async function notifyCampaignCompleted(campaignId: string) {
     // Get campaign info
     const { data: campaign } = await supabase
       .from("campaigns")
-      .select("title, cpc, budget, spent, batteur_id")
+      .select("title, cpc")
       .eq("id", campaignId)
       .single();
     if (!campaign) return;
@@ -30,7 +29,7 @@ async function notifyCampaignCompleted(campaignId: string) {
     const echoIds = links.map((l) => l.echo_id);
     const { data: echos } = await supabase
       .from("users")
-      .select("id, name, phone")
+      .select("id, name")
       .in("id", echoIds);
     if (!echos) return;
 
@@ -38,7 +37,6 @@ async function notifyCampaignCompleted(campaignId: string) {
     const emailMap = new Map(authUsers?.map((u) => [u.id, u.email]) || []);
 
     const clickMap = new Map(links.map((l) => [l.echo_id, l.click_count]));
-    const totalValidClicks = links.reduce((sum, l) => sum + (l.click_count || 0), 0);
 
     for (const echo of echos) {
       const email = emailMap.get(echo.id);
@@ -53,25 +51,7 @@ async function notifyCampaignCompleted(campaignId: string) {
           earnings,
         }).catch(() => {});
       }
-      // WhatsApp to participating échos
-      if (echo.phone && clicks > 0) {
-        sendWhatsApp({
-          to: formatSenegalPhone(echo.phone),
-          body: `🏁 Rythme terminé: *${campaign.title}*\n\n📊 ${clicks} clics valides\n💰 ${earnings.toLocaleString()} FCFA gagnés\n\nDécouvre d'autres Rythmes:\n👉 tamma.me/rythmes`,
-        }).catch(() => {});
-      }
     }
-
-    // WhatsApp to brand
-    try {
-      const { data: brand } = await supabase.from("users").select("phone").eq("id", campaign.batteur_id).single();
-      if (brand?.phone) {
-        sendWhatsApp({
-          to: formatSenegalPhone(brand.phone),
-          body: `✅ Votre campagne *"${campaign.title}"* est terminée!\n\n📊 ${totalValidClicks} visiteurs réels\n💰 ${campaign.cpc} FCFA par clic\n📈 Budget: ${(campaign.spent || 0).toLocaleString()} FCFA consommé\n\nVoir les résultats détaillés:\n👉 tamma.me/admin/analytics`,
-        }).catch(() => {});
-      }
-    } catch { /* non-blocking */ }
   } catch { /* non-blocking */ }
 }
 
