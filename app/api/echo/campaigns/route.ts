@@ -15,6 +15,15 @@ export async function GET() {
 
   const supabase = createServiceClient();
 
+  // Get the echo's city for targeting filter
+  const { data: user } = await supabase
+    .from("users")
+    .select("city")
+    .eq("id", session.user.id)
+    .single();
+
+  const echoCity = user?.city || null;
+
   // Get active, approved campaigns for echos to discover
   const { data, error } = await supabase
     .from("campaigns")
@@ -26,5 +35,14 @@ export async function GET() {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-  return NextResponse.json(data);
+
+  // Filter by city targeting: show campaigns with no targeting (all Senegal)
+  // or campaigns that target the echo's city
+  const filtered = data?.filter((campaign) => {
+    if (!campaign.target_cities || campaign.target_cities.length === 0) return true;
+    if (!echoCity) return true; // If echo has no city set, show all campaigns
+    return campaign.target_cities.includes(echoCity);
+  }) || [];
+
+  return NextResponse.json(filtered);
 }

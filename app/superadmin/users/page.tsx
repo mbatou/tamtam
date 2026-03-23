@@ -11,6 +11,7 @@ import TabBar from "@/components/ui/TabBar";
 import Modal from "@/components/ui/Modal";
 import Pagination, { paginate } from "@/components/ui/Pagination";
 import { useToast } from "@/components/ui/Toast";
+import CitySelect from "@/components/ui/CitySelect";
 
 interface UserRow {
   id: string;
@@ -906,12 +907,9 @@ function UsersPageContent() {
             </div>
             <div>
               <label className="text-xs text-white/40 block mb-1">{t("superadmin.users.cityLabel")}</label>
-              <input
-                type="text"
+              <CitySelect
                 value={newBrand.city}
-                onChange={(e) => setNewBrand({ ...newBrand, city: e.target.value })}
-                placeholder="Dakar"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+                onChange={(city) => setNewBrand({ ...newBrand, city })}
               />
             </div>
           </div>

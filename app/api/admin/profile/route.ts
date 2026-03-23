@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { normalizeCity } from "@/lib/cities";
 
 export async function GET() {
   const authClient = createClient();
@@ -29,7 +30,7 @@ export async function PUT(request: NextRequest) {
   const updates: Record<string, unknown> = {};
   if (name !== undefined) updates.name = name;
   if (phone !== undefined) updates.phone = phone || null;
-  if (city !== undefined) updates.city = city || null;
+  if (city !== undefined) updates.city = normalizeCity(city);
   if (mobile_money_provider !== undefined) updates.mobile_money_provider = mobile_money_provider || null;
   if (industry !== undefined) updates.industry = industry || null;
   if (notification_prefs !== undefined) updates.notification_prefs = notification_prefs;

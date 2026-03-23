@@ -43,6 +43,7 @@ export interface Campaign {
   moderated_at?: string | null;
   starts_at: string | null;
   ends_at: string | null;
+  target_cities: string[] | null;
   created_at: string;
 }
 

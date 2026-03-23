@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls, save_as_draft } = parsed.data;
+  const { title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls, target_cities, save_as_draft } = parsed.data;
 
   const supabase = createServiceClient();
 
@@ -118,6 +118,7 @@ export async function POST(request: NextRequest) {
       status: "draft",
       starts_at: starts_at || null,
       ends_at: ends_at || null,
+      target_cities: target_cities && target_cities.length > 0 ? target_cities : null,
     }).select().single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -168,6 +169,7 @@ export async function POST(request: NextRequest) {
     moderation_status: "pending",
     starts_at: starts_at || null,
     ends_at: ends_at || null,
+    target_cities: target_cities && target_cities.length > 0 ? target_cities : null,
   }).select().single();
 
   if (error) {
@@ -226,7 +228,7 @@ export async function PUT(request: NextRequest) {
     );
   }
 
-  const { id, title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls, status } = parsed.data;
+  const { id, title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls, target_cities, status } = parsed.data;
 
   const supabase = createServiceClient();
 
@@ -244,6 +246,7 @@ export async function PUT(request: NextRequest) {
   if (starts_at !== undefined) updates.starts_at = starts_at || null;
   if (ends_at !== undefined) updates.ends_at = ends_at || null;
   if (creative_urls !== undefined) updates.creative_urls = creative_urls;
+  if (target_cities !== undefined) updates.target_cities = target_cities.length > 0 ? target_cities : null;
   if (status !== undefined) updates.status = status;
 
   // Handle budget change: charge or refund the difference (skip for drafts - no balance was deducted)

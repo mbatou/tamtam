@@ -8,6 +8,7 @@ import { formatFCFA } from "@/lib/utils";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { useTranslation } from "@/lib/i18n";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import CitySelect from "@/components/ui/CitySelect";
 import type { User } from "@/lib/types";
 
 const TIER_INFO: Record<string, { icon: string; label: string }> = {
@@ -363,12 +364,9 @@ export default function ProfilPage() {
           </div>
           <div>
             <label className="block text-xs font-semibold text-white/40 mb-1">{t("common.city")}</label>
-            <input
-              type="text"
+            <CitySelect
               value={form.city}
-              onChange={(e) => setForm({ ...form, city: e.target.value })}
-              placeholder="Dakar"
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+              onChange={(city) => setForm({ ...form, city })}
             />
           </div>
           <div>

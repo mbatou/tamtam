@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { formatFCFA } from "@/lib/utils";
+import { SENEGAL_CITIES } from "@/lib/cities";
 import { useTranslation } from "@/lib/i18n";
 
 interface EchoWithStats {
@@ -41,8 +42,10 @@ export default function AdminEchosPage() {
     return <div className="flex items-center justify-center py-20"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
   }
 
-  // Extract unique cities for filter
-  const cities = Array.from(new Set(echos.map(e => e.city).filter(Boolean))).sort();
+  // Use official city list for filter, only show cities that have echos
+  const echoCityCounts = new Map<string, number>();
+  echos.forEach(e => { if (e.city) echoCityCounts.set(e.city, (echoCityCounts.get(e.city) || 0) + 1); });
+  const cities = SENEGAL_CITIES.filter(c => echoCityCounts.has(c));
   const filteredEchos = cityFilter === "all" ? echos : echos.filter(e => e.city === cityFilter);
 
   // Top performer insight — single best echo
@@ -69,7 +72,7 @@ export default function AdminEchosPage() {
           >
             <option value="all" className="bg-[#1a1a2e]">{t("admin.echos.allCities")} ({echos.length})</option>
             {cities.map(city => {
-              const count = echos.filter(e => e.city === city).length;
+              const count = echoCityCounts.get(city) || 0;
               return (
                 <option key={city} value={city} className="bg-[#1a1a2e]">{city} ({count})</option>
               );

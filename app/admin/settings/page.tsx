@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
+import CitySelect from "@/components/ui/CitySelect";
 
 interface Profile {
   id: string;
@@ -269,12 +270,9 @@ export default function AdminSettingsPage() {
 
           <div>
             <label className="block text-xs font-semibold text-white/40 mb-2">{t("common.city")}</label>
-            <input
-              type="text"
+            <CitySelect
               value={form.city}
-              onChange={(e) => setForm({ ...form, city: e.target.value })}
-              placeholder="Dakar"
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+              onChange={(city) => setForm({ ...form, city })}
             />
           </div>
 
