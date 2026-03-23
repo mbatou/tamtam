@@ -318,6 +318,9 @@ export default function BriefingPage() {
 
       {/* WhatsApp Broadcast */}
       <WhatsAppBroadcast echoCount={data.totals.echos} />
+
+      {/* WhatsApp Test */}
+      <WhatsAppTest />
     </div>
   );
 }
@@ -401,6 +404,70 @@ function WhatsAppBroadcast({ echoCount }: { echoCount: number }) {
             {broadcasting ? "Envoi..." : "💬 Envoyer"}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function WhatsAppTest() {
+  const [testPhone, setTestPhone] = useState("");
+  const [testResult, setTestResult] = useState<{ success: boolean; sid?: string | null; error?: string | null } | null>(null);
+  const [testing, setTesting] = useState(false);
+
+  const handleTest = useCallback(async () => {
+    if (!testPhone.trim() || testing) return;
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const res = await fetch("/api/superadmin/whatsapp-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: testPhone }),
+      });
+      const data = await res.json();
+      setTestResult(data);
+    } catch {
+      setTestResult({ success: false, error: "Erreur réseau" });
+    } finally {
+      setTesting(false);
+    }
+  }, [testPhone, testing]);
+
+  return (
+    <div className="mt-4">
+      <h2 className="text-sm font-bold text-white/50 uppercase tracking-wider mb-3">
+        Test WhatsApp
+      </h2>
+      <div className="glass-card rounded-xl p-6 border border-white/5">
+        <div className="flex gap-3">
+          <input
+            type="text"
+            value={testPhone}
+            onChange={(e) => setTestPhone(e.target.value)}
+            placeholder="Numéro (ex: 762799393)"
+            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm placeholder:text-white/20"
+          />
+          <button
+            onClick={handleTest}
+            disabled={testing || !testPhone.trim()}
+            className="bg-green-600 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium text-sm transition"
+          >
+            {testing ? "Envoi..." : "🧪 Tester"}
+          </button>
+        </div>
+        {testResult && (
+          <div
+            className={`mt-3 p-3 rounded-lg text-sm ${
+              testResult.success
+                ? "bg-green-500/10 text-green-400"
+                : "bg-red-500/10 text-red-400"
+            }`}
+          >
+            {testResult.success
+              ? "Message envoyé avec succès!"
+              : `Erreur: ${testResult.error}`}
+          </div>
+        )}
       </div>
     </div>
   );
