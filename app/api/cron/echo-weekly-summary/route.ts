@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
-import { sendWhatsApp, formatSenegalPhone } from "@/lib/whatsapp";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -61,10 +60,10 @@ export async function GET(request: NextRequest) {
 
   const recentSet = new Set(recentSent?.map((s) => s.user_id) || []);
 
-  // Get echo names and phones
+  // Get echo names
   const { data: echos } = await supabase
     .from("users")
-    .select("id, name, phone")
+    .select("id, name")
     .in("id", echoIds);
 
   const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
@@ -119,13 +118,6 @@ export async function GET(request: NextRequest) {
           user_id: echo.id,
           email_type: "echo_weekly_summary",
         });
-        // WhatsApp summary
-        if (echo.phone) {
-          sendWhatsApp({
-            to: formatSenegalPhone(echo.phone),
-            body: `🥁 Ta semaine Tamtam:\n\n💰 ${stats.earnings.toLocaleString()} FCFA gagnés\n📊 ${stats.validClicks} clics valides\n\nContinue à partager!\n👉 tamma.me/dashboard`,
-          }).catch(() => {});
-        }
         return echo.id;
       })
     );
