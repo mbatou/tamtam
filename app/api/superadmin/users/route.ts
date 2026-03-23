@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
+import { normalizeCity } from "@/lib/cities";
 
 export const dynamic = "force-dynamic";
 
@@ -134,7 +135,8 @@ export async function POST(request: NextRequest) {
 
   // --- Create a brand user ---
   if (action === "create_batteur") {
-    const { name, phone, city, email, password } = body;
+    const { name, phone, email, password } = body;
+    const city = normalizeCity(body.city);
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Nom, email et mot de passe requis" }, { status: 400 });
     }

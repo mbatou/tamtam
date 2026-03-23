@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { rateLimit } from "@/lib/rate-limit";
+import { normalizeCity } from "@/lib/cities";
 
 const REFERRAL_BONUS_FCFA = 150;
 
@@ -19,7 +20,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
-  const { userId, name, phone, city, mobile_money_provider, referral_code } = await req.json();
+  const body = await req.json();
+  const { userId, name, phone, mobile_money_provider, referral_code } = body;
+  const city = normalizeCity(body.city);
 
   if (userId !== session.user.id) {
     return NextResponse.json({ error: "Non autorisé — userId ne correspond pas" }, { status: 403 });

@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import SoundWave from "@/components/ui/SoundWave";
 import ProgressBar from "@/components/ui/ProgressBar";
+import CitySelect from "@/components/ui/CitySelect";
 import { useTranslation } from "@/lib/i18n";
 
 export default function RegisterPage() {
@@ -195,12 +196,10 @@ function RegisterPageContent() {
                 <label className="block text-xs font-semibold text-white/40 mb-2">
                   {t("auth.registerCity")}
                 </label>
-                <input
-                  type="text"
+                <CitySelect
                   value={city}
-                  onChange={(e) => setCity(e.target.value)}
+                  onChange={setCity}
                   placeholder={t("auth.registerCityPlaceholder")}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
                 />
               </div>
               <button onClick={handleStep1} className="btn-primary w-full text-center">

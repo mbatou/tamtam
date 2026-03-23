@@ -6,6 +6,7 @@ import { formatFCFA, timeAgo } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import type { Campaign } from "@/lib/types";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
+import { SENEGAL_CITIES } from "@/lib/cities";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 type View = "list" | "detail" | "form";
@@ -21,6 +22,8 @@ export default function AdminCampaignsPage() {
     title: "", description: "", destination_url: "", cpc: "", budget: "", starts_at: "", ends_at: "",
   });
   const [creativeUrls, setCreativeUrls] = useState<string[]>([]);
+  const [targetCities, setTargetCities] = useState<string[]>([]);
+  const [citySearch, setCitySearch] = useState("");
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +76,8 @@ export default function AdminCampaignsPage() {
   function resetForm() {
     setForm({ title: "", description: "", destination_url: "", cpc: "", budget: "", starts_at: "", ends_at: "" });
     setCreativeUrls([]);
+    setTargetCities([]);
+    setCitySearch("");
     setEditingId(null);
     setError(null);
     setShowRechargePrompt(false);
@@ -99,6 +104,7 @@ export default function AdminCampaignsPage() {
       ends_at: campaign.ends_at ? campaign.ends_at.slice(0, 16) : "",
     });
     setCreativeUrls(campaign.creative_urls || []);
+    setTargetCities(campaign.target_cities || []);
     setEditingId(campaign.id);
     setError(null);
     setShowRechargePrompt(false);
@@ -161,6 +167,7 @@ export default function AdminCampaignsPage() {
         starts_at: form.starts_at || null,
         ends_at: form.ends_at || null,
         creative_urls: creativeUrls,
+        target_cities: targetCities,
         ...(!editingId && asDraft ? { save_as_draft: true } : {}),
       };
       const res = await fetch("/api/campaigns", {
@@ -292,6 +299,14 @@ export default function AdminCampaignsPage() {
               <span className={`badge-${c.status === "draft" && c.moderation_status === "pending" ? "pending" : c.status}`}>{getStatusLabel(c)}</span>
             </div>
             {c.description && <p className="text-white/40 text-sm max-w-xl">{c.description}</p>}
+            {c.target_cities && c.target_cities.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                <span className="text-xs text-white/30">📍</span>
+                {c.target_cities.map((city) => (
+                  <span key={city} className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary/80">{city}</span>
+                ))}
+              </div>
+            )}
             <p className="text-white/20 text-xs mt-2">{timeAgo(c.created_at)}</p>
           </div>
 
@@ -690,6 +705,44 @@ export default function AdminCampaignsPage() {
             <div>
               <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.campaigns.endDate")}</label>
               <input type="datetime-local" value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
+            </div>
+
+            {/* City Targeting */}
+            <div className="md:col-span-2">
+              <label className="block text-xs font-semibold text-white/40 mb-2">Ciblage géographique</label>
+              <p className="text-xs text-white/30 mb-2">Laissez vide pour cibler tout le Sénégal</p>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={citySearch}
+                  onChange={(e) => setCitySearch(e.target.value)}
+                  placeholder="Rechercher une ville..."
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+                />
+                {citySearch && (
+                  <ul className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto rounded-xl bg-[#1a1a2e] border border-white/10 shadow-xl">
+                    {SENEGAL_CITIES.filter((c) => c.toLowerCase().includes(citySearch.toLowerCase()) && !targetCities.includes(c)).map((city) => (
+                      <li
+                        key={city}
+                        onClick={() => { setTargetCities([...targetCities, city]); setCitySearch(""); }}
+                        className="px-4 py-2 text-sm cursor-pointer hover:bg-white/10 transition text-white/70"
+                      >
+                        {city}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              {targetCities.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {targetCities.map((city) => (
+                    <span key={city} className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-semibold">
+                      {city}
+                      <button onClick={() => setTargetCities(targetCities.filter((c) => c !== city))} className="hover:text-white transition">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

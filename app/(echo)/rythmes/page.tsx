@@ -181,7 +181,14 @@ export default function RythmesPage() {
                     <span className="badge-pending text-[10px] shrink-0">{t("echo.rythmes.new")}</span>
                   )}
                 </div>
-                <p className="text-xs text-white/30 mb-3 line-clamp-2">{campaign.description}</p>
+                <p className="text-xs text-white/30 mb-2 line-clamp-2">{campaign.description}</p>
+                {campaign.target_cities && campaign.target_cities.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {campaign.target_cities.map((city: string) => (
+                      <span key={city} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary/70">📍 {city}</span>
+                    ))}
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-bold text-primary">{campaign.cpc} FCFA / {t("common.clicks")}</span>

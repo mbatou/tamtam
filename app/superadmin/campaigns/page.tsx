@@ -27,6 +27,7 @@ interface Campaign {
   created_at: string;
   echo_count: number;
   total_clicks: number;
+  target_cities: string[] | null;
   users: { name: string; phone: string } | null;
 }
 
@@ -356,6 +357,16 @@ function CampaignModerationPageContent() {
                 <td className="py-3">
                   <div className="font-semibold">{campaign.title}</div>
                   <div className="text-xs text-white/30">{campaign.users ? getBrandDisplayName({ ...campaign.users, role: "batteur" }) : "—"}</div>
+                  {campaign.target_cities && campaign.target_cities.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {campaign.target_cities.slice(0, 3).map((city: string) => (
+                        <span key={city} className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary/70">{city}</span>
+                      ))}
+                      {campaign.target_cities.length > 3 && (
+                        <span className="text-[10px] text-white/30">+{campaign.target_cities.length - 3}</span>
+                      )}
+                    </div>
+                  )}
                   {/* Inline budget bar */}
                   {campaign.budget > 0 && (
                     <div className="mt-1 h-1 w-full max-w-[120px] bg-white/5 rounded-full overflow-hidden">

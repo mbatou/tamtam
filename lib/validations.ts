@@ -9,6 +9,7 @@ export const createCampaignSchema = z.object({
   creative_urls: z.array(z.string().url()).optional(),
   starts_at: z.string().optional().nullable(),
   ends_at: z.string().optional().nullable(),
+  target_cities: z.array(z.string()).optional(),
   save_as_draft: z.boolean().optional(),
 });
 
@@ -22,6 +23,7 @@ export const updateCampaignSchema = z.object({
   creative_urls: z.array(z.string().url()).optional(),
   starts_at: z.string().optional().nullable(),
   ends_at: z.string().optional().nullable(),
+  target_cities: z.array(z.string()).optional(),
   status: z.enum(["draft", "active", "paused", "completed"]).optional(),
 });
 
