@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { rateLimit } from "@/lib/rate-limit";
+import { sendWhatsApp, formatSenegalPhone } from "@/lib/whatsapp";
 
 const REFERRAL_BONUS_FCFA = 150;
 
@@ -147,6 +148,14 @@ export async function POST(req: NextRequest) {
     } catch {
       // Non-critical, continue
     }
+  }
+
+  // WhatsApp welcome message
+  if (phone) {
+    sendWhatsApp({
+      to: formatSenegalPhone(phone),
+      body: `Bienvenue sur Tamtam! 🥁\n\n${name}, tu peux maintenant gagner de l'argent en partageant des liens sur ton statut WhatsApp.\n\n1️⃣ Accepte un Rythme\n2️⃣ Partage le lien\n3️⃣ Gagne des FCFA\n\nCommence ici:\n👉 tamma.me/rythmes\n\nQuestions? Réponds à ce message!`,
+    }).catch(() => {});
   }
 
   return NextResponse.json({ success: true });

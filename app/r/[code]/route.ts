@@ -5,6 +5,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { validateClick } from "@/lib/click-validator";
 import { processGamification } from "@/lib/gamification";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
+import { sendWhatsApp, formatSenegalPhone } from "@/lib/whatsapp";
 
 function getSupabase() {
   return createServerClient(
@@ -126,6 +127,40 @@ export async function GET(
       ])
         .then(() => processGamification(link.echo_id))
         .catch(console.error);
+
+      // Budget low alert (80%) — WhatsApp the brand (fire-and-forget)
+      const spent = (campaign.spent || 0) + campaign.cpc;
+      const consumedPercent = (spent / campaign.budget) * 100;
+      if (consumedPercent >= 80 && consumedPercent < 85) {
+        (async () => {
+          try {
+            const { data: alreadySent } = await supabase
+              .from("sent_emails")
+              .select("id")
+              .eq("campaign_id", campaign.id)
+              .eq("email_type", "budget_low_whatsapp")
+              .limit(1);
+            if (alreadySent?.length) return;
+
+            const { data: brand } = await supabase
+              .from("users")
+              .select("phone")
+              .eq("id", campaign.batteur_id)
+              .single();
+            if (brand?.phone) {
+              await sendWhatsApp({
+                to: formatSenegalPhone(brand.phone),
+                body: `⚡ Budget bientôt épuisé!\n\nVotre campagne *"${campaign.title}"* est à ${Math.round(consumedPercent)}%.\n\nRechargez pour continuer à recevoir des visiteurs:\n👉 tamma.me/admin/wallet\n\nOu laissez la campagne se terminer naturellement.`,
+              });
+            }
+            await supabase.from("sent_emails").insert({
+              user_id: campaign.batteur_id,
+              email_type: "budget_low_whatsapp",
+              campaign_id: campaign.id,
+            });
+          } catch { /* non-blocking */ }
+        })();
+      }
     }
   }
 

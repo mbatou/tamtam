@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { sendNewCampaignNotification, sendCampaignLiveToBrand } from "@/lib/email";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
+import { broadcastWhatsApp, sendWhatsApp, formatSenegalPhone } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
 
@@ -456,6 +457,58 @@ export async function POST(request: NextRequest) {
         }
         // Notify echos about new campaign
         notifyEchosNewCampaign(supabase, campaignFull.title, campaignFull.cpc);
+
+        // WhatsApp broadcast to all Échos
+        try {
+          const { data: echoPhones } = await supabase
+            .from("users")
+            .select("phone")
+            .eq("role", "echo")
+            .not("phone", "is", null);
+
+          if (echoPhones?.length) {
+            const recipients = echoPhones
+              .filter((e) => e.phone)
+              .map((e) => ({
+                phone: formatSenegalPhone(e.phone),
+                body: `🥁 Nouveau rythme disponible!\n\n*${campaignFull.title}*\n💰 ${campaignFull.cpc} FCFA par clic\n\nPartage maintenant et gagne!\n👉 tamma.me/rythmes`,
+              }));
+            broadcastWhatsApp(recipients, 500).then((result) => {
+              console.log(`Campaign broadcast: ${result.sent} sent, ${result.failed} failed`);
+            });
+          }
+        } catch { /* non-blocking */ }
+
+        // WhatsApp to brand
+        try {
+          const { data: brandProfile } = await supabase.from("users").select("phone").eq("id", campaignFull.batteur_id).single();
+          if (brandProfile?.phone) {
+            sendWhatsApp({
+              to: formatSenegalPhone(brandProfile.phone),
+              body: `✅ Votre campagne *"${campaignFull.title}"* est approuvée et en ligne!\n\nVos Échos commencent à partager votre lien.\nSuivez les résultats en temps réel:\n👉 tamma.me/admin/dashboard`,
+            }).catch(() => {});
+          }
+        } catch { /* non-blocking */ }
+      }
+    } catch { /* non-blocking */ }
+  }
+
+  // WhatsApp to brand on rejection
+  if (action === "reject") {
+    try {
+      const { data: campaignFull } = await supabase
+        .from("campaigns")
+        .select("title, batteur_id")
+        .eq("id", campaign_id)
+        .single();
+      if (campaignFull) {
+        const { data: brandProfile } = await supabase.from("users").select("phone").eq("id", campaignFull.batteur_id).single();
+        if (brandProfile?.phone) {
+          sendWhatsApp({
+            to: formatSenegalPhone(brandProfile.phone),
+            body: `⚠️ Votre campagne *"${campaignFull.title}"* nécessite des modifications.\n\nRaison: ${reason || "Non spécifiée"}\n\nModifiez et resoumettez:\n👉 tamma.me/admin/campaigns\n\nQuestions? Répondez à ce message.`,
+          }).catch(() => {});
+        }
       }
     } catch { /* non-blocking */ }
   }
