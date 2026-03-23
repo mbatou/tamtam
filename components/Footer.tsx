@@ -38,6 +38,9 @@ export default function Footer() {
             <a href="mailto:support@tamma.me" className="text-xs text-secondary/70 hover:text-secondary transition font-semibold block">
               support@tamma.me
             </a>
+            <a href="https://wa.me/221762799393" target="_blank" rel="noopener noreferrer" className="text-xs text-green-400/70 hover:text-green-400 transition font-semibold flex items-center gap-1 mt-1">
+              💬 WhatsApp
+            </a>
           </div>
 
           {/* Échos */}
@@ -105,6 +108,10 @@ export default function Footer() {
           <div className="flex items-center gap-4">
             <a href="mailto:support@tamma.me" className="text-xs text-white/20 hover:text-white/40 transition">
               support@tamma.me
+            </a>
+            <span className="text-white/10">·</span>
+            <a href="https://wa.me/221762799393" target="_blank" rel="noopener noreferrer" className="text-xs text-green-400/40 hover:text-green-400/70 transition flex items-center gap-1">
+              💬 WhatsApp
             </a>
             <span className="text-xs text-white/15">Built by Lupandu</span>
           </div>

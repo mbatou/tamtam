@@ -108,8 +108,8 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-bold text-white/80 mb-3">9. Contact</h2>
             <p>
-              Pour toute question concernant cette politique, contactez-nous à :{" "}
-              <a href="mailto:contact@tamma.me" className="text-primary hover:underline">contact@tamma.me</a>
+              Pour toute question concernant cette politique : <a href="mailto:contact@tamma.me" className="text-primary hover:underline">contact@tamma.me</a> ou{" "}
+              <a href="https://wa.me/221762799393" target="_blank" rel="noopener noreferrer" className="text-green-400 hover:underline">WhatsApp +221 76 279 93 93</a>
             </p>
           </section>
         </div>

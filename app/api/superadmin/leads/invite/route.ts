@@ -54,7 +54,8 @@ function generateInvitationEmail({ firstName, companyName, signupUrl }: { firstN
       <p style="color:#666666;font-size:12px;line-height:1.6;">
         Tamtam \u2014 Le bouche-\u00e0-oreille digital au S\u00e9n\u00e9gal<br>
         <a href="https://www.tamma.me" style="color:#D35400;text-decoration:none;">tamma.me</a> &middot;
-        <a href="mailto:support@tamma.me" style="color:#888888;text-decoration:none;">support@tamma.me</a>
+        <a href="mailto:support@tamma.me" style="color:#888888;text-decoration:none;">support@tamma.me</a> &middot;
+        <a href="https://wa.me/221762799393" style="color:#25D366;text-decoration:none;">WhatsApp</a>
       </p>
       <p style="color:#444444;font-size:11px;">Built by Lupandu</p>
     </div>

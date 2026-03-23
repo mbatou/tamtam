@@ -121,7 +121,7 @@ export async function sendRoleUpgradeEmail({
           <a href="https://www.tamma.me/login" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Se connecter</a>
         </p>
         <p style="margin-top: 20px; color: #888; font-size: 13px;">
-          Besoin d'aide ? Contactez-nous à support@tamma.me
+          Besoin d'aide ? <a href="mailto:support@tamma.me" style="color:#888888;text-decoration:none;">support@tamma.me</a> · <a href="https://wa.me/221762799393" style="color:#25D366;text-decoration:none;">WhatsApp</a>
         </p>
       </div>
     `,
@@ -159,7 +159,7 @@ export async function sendBatteurWelcomeEmail({
           <a href="https://www.tamma.me/login" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Se connecter</a>
         </p>
         <p style="margin-top: 20px; color: #888; font-size: 13px;">
-          Besoin d'aide ? Contactez-nous à support@tamma.me
+          Besoin d'aide ? <a href="mailto:support@tamma.me" style="color:#888888;text-decoration:none;">support@tamma.me</a> · <a href="https://wa.me/221762799393" style="color:#25D366;text-decoration:none;">WhatsApp</a>
         </p>
       </div>
     `,
@@ -295,7 +295,7 @@ export async function sendNewCampaignNotification({
           <a href="https://www.tamma.me/rythmes" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Voir les Rythmes</a>
         </p>
         <p style="margin-top: 20px; color: #888; font-size: 13px;">
-          Tu reçois cet email car tu es Echo sur Tamtam. Besoin d'aide ? support@tamma.me
+          Tu reçois cet email car tu es Echo sur Tamtam. Besoin d'aide ? <a href="mailto:support@tamma.me" style="color:#888888;text-decoration:none;">support@tamma.me</a> · <a href="https://wa.me/221762799393" style="color:#25D366;text-decoration:none;">WhatsApp</a>
         </p>
       </div>
     `,
@@ -340,7 +340,7 @@ export async function sendCampaignCompletedToEcho({
           <a href="https://www.tamma.me/rythmes" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Voir les Rythmes</a>
         </p>
         <p style="margin-top: 20px; color: #888; font-size: 13px;">
-          Tu reçois cet email car tu as participé à ce Rythme sur Tamtam.
+          Tu reçois cet email car tu as participé à ce Rythme sur Tamtam. <a href="mailto:support@tamma.me" style="color:#888888;text-decoration:none;">support@tamma.me</a> · <a href="https://wa.me/221762799393" style="color:#25D366;text-decoration:none;">WhatsApp</a>
         </p>
       </div>
     `,
@@ -385,7 +385,7 @@ export async function sendCampaignLiveToBrand({
           <a href="https://www.tamma.me/admin/campaigns" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Voir mes campagnes</a>
         </p>
         <p style="margin-top: 20px; color: #888; font-size: 13px;">
-          Besoin d'aide ? Contactez-nous à support@tamma.me
+          Besoin d'aide ? <a href="mailto:support@tamma.me" style="color:#888888;text-decoration:none;">support@tamma.me</a> · <a href="https://wa.me/221762799393" style="color:#25D366;text-decoration:none;">WhatsApp</a>
         </p>
       </div>
     `,
