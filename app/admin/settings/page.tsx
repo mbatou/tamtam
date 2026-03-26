@@ -48,12 +48,18 @@ export default function AdminSettingsPage() {
     notify_new_echos: false,
   });
 
+  // Team management
+  const [team, setTeam] = useState<{ isOwner: boolean; ownerId: string; members: Array<{ id: string; email: string; status: string; user: { id: string; name: string; email: string } | null }> }>({ isOwner: false, ownerId: "", members: [] });
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviting, setInviting] = useState(false);
+  const [teamError, setTeamError] = useState<string | null>(null);
+
   // Password change
   const [showPassword, setShowPassword] = useState(false);
   const [passwords, setPasswords] = useState({ new_password: "", confirm: "" });
   const [pwSaving, setPwSaving] = useState(false);
 
-  useEffect(() => { loadProfile(); }, []);
+  useEffect(() => { loadProfile(); loadTeam(); }, []);
 
   async function loadProfile() {
     const res = await fetch("/api/admin/profile");
@@ -77,6 +83,51 @@ export default function AdminSettingsPage() {
       }
     }
     setLoading(false);
+  }
+
+  async function loadTeam() {
+    try {
+      const res = await fetch("/api/admin/team");
+      if (res.ok) {
+        const data = await res.json();
+        setTeam(data);
+      }
+    } catch { /* team feature may not be available yet */ }
+  }
+
+  async function handleInvite() {
+    if (!inviteEmail) return;
+    setInviting(true);
+    setTeamError(null);
+    try {
+      const res = await fetch("/api/admin/team/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: inviteEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setTeamError(data.error || "Erreur lors de l'invitation");
+      } else {
+        setInviteEmail("");
+        loadTeam();
+      }
+    } catch {
+      setTeamError("Erreur réseau");
+    }
+    setInviting(false);
+  }
+
+  async function handleRemoveMember(memberId: string, memberEmail: string) {
+    if (!confirm(`Retirer ${memberEmail} de l'équipe?`)) return;
+    try {
+      await fetch("/api/admin/team/remove", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId }),
+      });
+      loadTeam();
+    } catch { /* ignore */ }
   }
 
   async function handleSave() {
@@ -402,6 +453,78 @@ export default function AdminSettingsPage() {
           ))}
         </div>
         <p className="text-xs text-white/20 mt-3">{t("admin.settings.notifSavedOnSave")}</p>
+      </div>
+
+      {/* Team management */}
+      <div className="glass-card p-6 mb-6">
+        <h2 className="text-lg font-bold mb-4">Mon Équipe</h2>
+
+        {team.isOwner && (
+          <div className="flex gap-3 mb-6">
+            <input
+              type="email"
+              value={inviteEmail}
+              onChange={(e) => { setInviteEmail(e.target.value); setTeamError(null); }}
+              placeholder="Email du membre à inviter"
+              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition"
+              onKeyDown={(e) => e.key === "Enter" && !inviting && inviteEmail && handleInvite()}
+            />
+            <button
+              onClick={handleInvite}
+              disabled={inviting || !inviteEmail}
+              className="btn-primary px-6 py-2.5 disabled:opacity-40"
+            >
+              {inviting ? "Envoi..." : "Inviter"}
+            </button>
+          </div>
+        )}
+
+        {teamError && (
+          <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+            {teamError}
+          </div>
+        )}
+
+        {team.members.length > 0 ? (
+          <div className="space-y-3">
+            {team.members.map((member) => (
+              <div key={member.id} className="flex items-center justify-between bg-white/5 rounded-xl px-4 py-3">
+                <div>
+                  <div className="text-sm font-medium">
+                    {member.user?.name || member.email}
+                  </div>
+                  <div className="text-white/30 text-xs">
+                    {member.email}
+                    {member.status === "invited" && (
+                      <span className="ml-2 text-orange-400">Invitation envoyée</span>
+                    )}
+                    {member.status === "active" && (
+                      <span className="ml-2 text-emerald-400">Actif</span>
+                    )}
+                  </div>
+                </div>
+                {team.isOwner && (
+                  <button
+                    onClick={() => handleRemoveMember(member.id, member.email)}
+                    className="text-red-400 hover:text-red-300 text-sm"
+                  >
+                    Retirer
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-6 text-white/30 text-sm">
+            Aucun membre dans l&apos;équipe. {team.isOwner ? "Invitez quelqu'un!" : ""}
+          </div>
+        )}
+
+        {!team.isOwner && (
+          <div className="mt-4 p-3 bg-white/5 rounded-xl text-white/40 text-sm">
+            Seul le propriétaire du compte peut gérer l&apos;équipe.
+          </div>
+        )}
       </div>
 
       {/* Language */}

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
+import { getEffectiveBrandId } from "@/lib/brand-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export async function GET() {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 
-  const batteurId = session.user.id;
+  const batteurId = await getEffectiveBrandId(supabase, session.user.id);
 
   // Get brand's campaigns
   const { data: campaigns } = await supabase

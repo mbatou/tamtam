@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { getEffectiveBrandId } from "@/lib/brand-utils";
 
 export async function GET() {
   const authClient = createClient();
@@ -7,10 +8,11 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   const supabase = createServiceClient();
+  const brandId = await getEffectiveBrandId(supabase, session.user.id);
   const { data, error } = await supabase
     .from("support_tickets")
     .select("*")
-    .eq("user_id", session.user.id)
+    .eq("user_id", brandId)
     .order("created_at", { ascending: false })
     .limit(200);
 
@@ -39,10 +41,11 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createServiceClient();
+  const brandId = await getEffectiveBrandId(supabase, session.user.id);
   const { data, error } = await supabase
     .from("support_tickets")
     .insert({
-      user_id: session.user.id,
+      user_id: brandId,
       subject,
       message,
       status: "open",

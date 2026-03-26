@@ -4,6 +4,7 @@ import { createCampaignSchema, updateCampaignSchema, deleteCampaignSchema } from
 import { sendCampaignCompletedToEcho, sendEmail } from "@/lib/email";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
+import { getEffectiveBrandId } from "@/lib/brand-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -104,11 +105,12 @@ export async function POST(request: NextRequest) {
   const { title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls, target_cities, save_as_draft } = parsed.data;
 
   const supabase = createServiceClient();
+  const brandId = await getEffectiveBrandId(supabase, session.user.id);
 
   // Draft: save without balance check or deduction
   if (save_as_draft) {
     const { data, error } = await supabase.from("campaigns").insert({
-      batteur_id: session.user.id,
+      batteur_id: brandId,
       title,
       description: description || null,
       destination_url,
@@ -129,7 +131,7 @@ export async function POST(request: NextRequest) {
   const { data: batteur } = await supabase
     .from("users")
     .select("balance")
-    .eq("id", session.user.id)
+    .eq("id", brandId)
     .single();
 
   if (!batteur || (batteur.balance || 0) < budget) {
@@ -142,7 +144,7 @@ export async function POST(request: NextRequest) {
   const { error: debitError } = await supabase
     .from("users")
     .update({ balance: batteur.balance - budget })
-    .eq("id", session.user.id);
+    .eq("id", brandId);
 
   if (debitError) {
     return NextResponse.json({ error: debitError.message }, { status: 500 });
@@ -150,7 +152,7 @@ export async function POST(request: NextRequest) {
 
   await logWalletTransaction({
     supabase,
-    userId: session.user.id,
+    userId: brandId,
     amount: -budget,
     type: "campaign_budget_debit",
     description: `Création campagne: ${title}`,
@@ -158,7 +160,7 @@ export async function POST(request: NextRequest) {
   });
 
   const { data, error } = await supabase.from("campaigns").insert({
-    batteur_id: session.user.id,
+    batteur_id: brandId,
     title,
     description: description || null,
     destination_url,
@@ -177,7 +179,7 @@ export async function POST(request: NextRequest) {
     await supabase
       .from("users")
       .update({ balance: batteur.balance })
-      .eq("id", session.user.id);
+      .eq("id", brandId);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
@@ -185,7 +187,7 @@ export async function POST(request: NextRequest) {
   const { data: brand } = await supabase
     .from("users")
     .select("name")
-    .eq("id", session.user.id)
+    .eq("id", brandId)
     .single();
 
   // Notify superadmin about new campaign pending review
@@ -231,10 +233,11 @@ export async function PUT(request: NextRequest) {
   const { id, title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls, target_cities, status } = parsed.data;
 
   const supabase = createServiceClient();
+  const brandId = await getEffectiveBrandId(supabase, session.user.id);
 
   // Verify ownership and get current campaign data
   const { data: existing } = await supabase.from("campaigns").select("batteur_id, budget, spent, status").eq("id", id).single();
-  if (!existing || existing.batteur_id !== session.user.id) {
+  if (!existing || existing.batteur_id !== brandId) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 
@@ -257,18 +260,18 @@ export async function PUT(request: NextRequest) {
 
       if (diff > 0) {
         // Need more budget: check balance
-        const { data: batteur } = await supabase.from("users").select("balance").eq("id", session.user.id).single();
+        const { data: batteur } = await supabase.from("users").select("balance").eq("id", brandId).single();
         if (!batteur || (batteur.balance || 0) < diff) {
           return NextResponse.json(
             { error: "Solde insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
             { status: 400 }
           );
         }
-        await supabase.from("users").update({ balance: batteur.balance - diff }).eq("id", session.user.id);
+        await supabase.from("users").update({ balance: batteur.balance - diff }).eq("id", brandId);
 
         await logWalletTransaction({
           supabase,
-          userId: session.user.id,
+          userId: brandId,
           amount: -diff,
           type: "campaign_budget_debit",
           description: `Augmentation budget campagne`,
@@ -280,11 +283,11 @@ export async function PUT(request: NextRequest) {
         if (budget < existing.spent) {
           return NextResponse.json({ error: "Le budget ne peut pas être inférieur au montant déjà dépensé." }, { status: 400 });
         }
-        await supabase.rpc("increment_balance", { p_user_id: session.user.id, p_amount: Math.abs(diff) });
+        await supabase.rpc("increment_balance", { p_user_id: brandId, p_amount: Math.abs(diff) });
 
         await logWalletTransaction({
           supabase,
-          userId: session.user.id,
+          userId: brandId,
           amount: Math.abs(diff),
           type: "campaign_budget_refund",
           description: `Réduction budget campagne`,
@@ -300,11 +303,11 @@ export async function PUT(request: NextRequest) {
   if (status !== undefined && (status === "paused" || status === "completed") && existing.status === "active") {
     const unspent = existing.budget - existing.spent;
     if (unspent > 0) {
-      await supabase.rpc("increment_balance", { p_user_id: session.user.id, p_amount: unspent });
+      await supabase.rpc("increment_balance", { p_user_id: brandId, p_amount: unspent });
 
       await logWalletTransaction({
         supabase,
-        userId: session.user.id,
+        userId: brandId,
         amount: unspent,
         type: "campaign_budget_refund",
         description: `Remboursement campagne ${status === "paused" ? "mise en pause" : "terminée"}`,
@@ -317,18 +320,18 @@ export async function PUT(request: NextRequest) {
   // Debit balance when publishing a draft campaign
   if (status === "active" && existing.status === "draft") {
     const campaignBudget = budget !== undefined ? budget : existing.budget;
-    const { data: batteur } = await supabase.from("users").select("balance").eq("id", session.user.id).single();
+    const { data: batteur } = await supabase.from("users").select("balance").eq("id", brandId).single();
     if (!batteur || (batteur.balance || 0) < campaignBudget) {
       return NextResponse.json(
         { error: "Solde insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
         { status: 400 }
       );
     }
-    await supabase.from("users").update({ balance: batteur.balance - campaignBudget }).eq("id", session.user.id);
+    await supabase.from("users").update({ balance: batteur.balance - campaignBudget }).eq("id", brandId);
 
     await logWalletTransaction({
       supabase,
-      userId: session.user.id,
+      userId: brandId,
       amount: -campaignBudget,
       type: "campaign_budget_debit",
       description: `Publication campagne`,
@@ -341,18 +344,18 @@ export async function PUT(request: NextRequest) {
   if (status === "active" && existing.status === "paused") {
     const unspent = existing.budget - existing.spent;
     if (unspent > 0) {
-      const { data: batteur } = await supabase.from("users").select("balance").eq("id", session.user.id).single();
+      const { data: batteur } = await supabase.from("users").select("balance").eq("id", brandId).single();
       if (!batteur || (batteur.balance || 0) < unspent) {
         return NextResponse.json(
           { error: "Solde insuffisant pour réactiver cette campagne.", code: "INSUFFICIENT_BALANCE" },
           { status: 400 }
         );
       }
-      await supabase.from("users").update({ balance: batteur.balance - unspent }).eq("id", session.user.id);
+      await supabase.from("users").update({ balance: batteur.balance - unspent }).eq("id", brandId);
 
       await logWalletTransaction({
         supabase,
-        userId: session.user.id,
+        userId: brandId,
         amount: -unspent,
         type: "campaign_budget_debit",
         description: `Réactivation campagne`,
@@ -398,10 +401,11 @@ export async function DELETE(request: NextRequest) {
   const { id } = parsed.data;
 
   const supabase = createServiceClient();
+  const brandId = await getEffectiveBrandId(supabase, session.user.id);
 
   // Verify ownership and get campaign data for refund
   const { data: existing } = await supabase.from("campaigns").select("batteur_id, budget, spent, status").eq("id", id).single();
-  if (!existing || existing.batteur_id !== session.user.id) {
+  if (!existing || existing.batteur_id !== brandId) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 
@@ -409,11 +413,11 @@ export async function DELETE(request: NextRequest) {
   if (existing.status === "active" || existing.status === "paused") {
     const unspent = existing.budget - existing.spent;
     if (unspent > 0) {
-      await supabase.rpc("increment_balance", { p_user_id: session.user.id, p_amount: unspent });
+      await supabase.rpc("increment_balance", { p_user_id: brandId, p_amount: unspent });
 
       await logWalletTransaction({
         supabase,
-        userId: session.user.id,
+        userId: brandId,
         amount: unspent,
         type: "campaign_budget_refund",
         description: `Remboursement suppression campagne`,

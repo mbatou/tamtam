@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { normalizeCity } from "@/lib/cities";
+import { getEffectiveBrandId } from "@/lib/brand-utils";
 
 export async function GET() {
   const authClient = createClient();
@@ -8,15 +9,25 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   const supabase = createServiceClient();
+  const brandId = await getEffectiveBrandId(supabase, session.user.id);
   const { data, error } = await supabase
     .from("users")
     .select("id, name, phone, city, mobile_money_provider, logo_url, industry, notification_prefs, created_at")
-    .eq("id", session.user.id)
+    .eq("id", brandId)
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ ...data, email: session.user.email });
+  // Get the owner's email for the profile display
+  let ownerEmail = session.user.email;
+  if (brandId !== session.user.id) {
+    try {
+      const { data: authData } = await supabase.auth.admin.getUserById(brandId);
+      ownerEmail = authData?.user?.email || session.user.email;
+    } catch { /* fallback to current user email */ }
+  }
+
+  return NextResponse.json({ ...data, email: ownerEmail });
 }
 
 export async function PUT(request: NextRequest) {
@@ -40,10 +51,11 @@ export async function PUT(request: NextRequest) {
   }
 
   const supabase = createServiceClient();
+  const brandId = await getEffectiveBrandId(supabase, session.user.id);
   const { data, error } = await supabase
     .from("users")
     .update(updates)
-    .eq("id", session.user.id)
+    .eq("id", brandId)
     .select("id, name, phone, city, mobile_money_provider, logo_url, industry, notification_prefs, created_at")
     .single();
 

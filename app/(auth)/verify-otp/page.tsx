@@ -16,6 +16,7 @@ export default function VerifyOTPPage() {
 function VerifyOTPContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
+  const teamInviteId = searchParams.get("team_invite") || localStorage.getItem("tamtam_team_invite") || null;
 
   const [digits, setDigits] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
@@ -82,7 +83,7 @@ function VerifyOTPContent() {
       const res = await fetch("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code }),
+        body: JSON.stringify({ email, code, teamInviteId }),
       });
 
       const data = await res.json();
@@ -96,8 +97,9 @@ function VerifyOTPContent() {
       const bonusParam = data.welcomeBonusApplied ? "&bonus=true" : "";
       const ambParam = data.ambassadorName ? `&ambassador=${encodeURIComponent(data.ambassadorName)}` : "";
       window.location.href = `/login?tab=batteur&verified=true${bonusParam}${ambParam}`;
-      // Clean up stored referral code
+      // Clean up stored referral code and team invite
       localStorage.removeItem("tamtam_ref");
+      localStorage.removeItem("tamtam_team_invite");
     } catch {
       setError("Erreur réseau. Réessayez.");
       setLoading(false);

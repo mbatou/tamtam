@@ -108,6 +108,45 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Erreur lors de la création du profil." }, { status: 500 });
   }
 
+  // --- Team invite (LUP-89) ---
+  const teamInviteId = body.teamInviteId || null;
+  let isTeamMember = false;
+  if (teamInviteId) {
+    try {
+      const { data: invite } = await supabase
+        .from("brand_team_members")
+        .select("id, brand_owner_id, email")
+        .eq("id", teamInviteId)
+        .eq("status", "invited")
+        .single();
+
+      if (invite && invite.email === email.toLowerCase()) {
+        // Link this new user to the brand owner
+        await supabase
+          .from("users")
+          .update({
+            brand_owner_id: invite.brand_owner_id,
+            role: "batteur",
+          })
+          .eq("id", authUser.user.id);
+
+        // Update the invitation
+        await supabase
+          .from("brand_team_members")
+          .update({
+            member_user_id: authUser.user.id,
+            status: "active",
+            accepted_at: new Date().toISOString(),
+          })
+          .eq("id", teamInviteId);
+
+        isTeamMember = true;
+      }
+    } catch {
+      // Non-blocking: team invite failure should not prevent account creation
+    }
+  }
+
   // --- Ambassador referral (LUP-80) ---
   let ambassadorName: string | null = null;
   let ambassadorBonusApplied = false;
@@ -174,9 +213,9 @@ export async function POST(request: NextRequest) {
     // Non-blocking: ambassador referral failure should not prevent account creation
   }
 
-  // --- Welcome bonus (LUP-68) — skip if ambassador bonus already applied ---
+  // --- Welcome bonus (LUP-68) — skip if ambassador bonus already applied or team member ---
   let welcomeBonusApplied = false;
-  if (!ambassadorBonusApplied) {
+  if (!ambassadorBonusApplied && !isTeamMember) {
     try {
       const { data: settings } = await supabase
         .from("platform_settings")
