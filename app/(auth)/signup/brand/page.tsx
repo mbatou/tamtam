@@ -28,6 +28,7 @@ function BrandSignupContent() {
   const [error, setError] = useState("");
   const [refCode, setRefCode] = useState<string | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [teamInviteId, setTeamInviteId] = useState<string | null>(null);
 
   useEffect(() => {
     const ref = searchParams.get("ref");
@@ -37,6 +38,15 @@ function BrandSignupContent() {
     } else {
       const stored = localStorage.getItem("tamtam_ref");
       if (stored) setRefCode(stored);
+    }
+
+    const teamInvite = searchParams.get("team_invite");
+    if (teamInvite) {
+      localStorage.setItem("tamtam_team_invite", teamInvite);
+      setTeamInviteId(teamInvite);
+    } else {
+      const stored = localStorage.getItem("tamtam_team_invite");
+      if (stored) setTeamInviteId(stored);
     }
   }, [searchParams]);
 
@@ -81,7 +91,8 @@ function BrandSignupContent() {
         return;
       }
 
-      router.push(`/verify-otp?email=${encodeURIComponent(form.email)}`);
+      const inviteParam = teamInviteId ? `&team_invite=${teamInviteId}` : "";
+      router.push(`/verify-otp?email=${encodeURIComponent(form.email)}${inviteParam}`);
     } catch {
       setError("Erreur réseau. Réessayez.");
       setLoading(false);
@@ -101,6 +112,15 @@ function BrandSignupContent() {
           <p className="text-xs text-white/30 mb-6">
             Lancez votre première campagne en quelques minutes.
           </p>
+
+          {teamInviteId && (
+            <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4 mb-4 text-center">
+              <span className="text-orange-400 font-bold">Vous avez été invité à rejoindre une équipe!</span>
+              <span className="text-gray-400 text-sm block mt-1">
+                Créez votre compte pour accéder au tableau de bord de l&apos;équipe.
+              </span>
+            </div>
+          )}
 
           {error && (
             <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
