@@ -207,6 +207,17 @@ function InvestigatePageContent() {
                     <span className="font-bold text-purple-300">{data.user.referral_code as string}</span>
                   </div>
                 ) : null}
+                {data.user.brand_owner_id ? (
+                  <div className="mt-1 text-xs">
+                    <span className="text-white/40">Membre de l&apos;équipe de: </span>
+                    <button
+                      onClick={() => { setSearchInput(data.user.brand_owner_id as string); investigate(data.user.brand_owner_id as string); }}
+                      className="font-bold text-blue-300 hover:underline"
+                    >
+                      {data.user.brand_owner_id as string}
+                    </button>
+                  </div>
+                ) : null}
               </div>
               <button
                 onClick={() => router.push(`/superadmin/users?id=${data.user.id}`)}
