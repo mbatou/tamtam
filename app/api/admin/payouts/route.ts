@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { getEffectiveBrandId } from "@/lib/brand-utils";
 
 export async function GET() {
   const authClient = createClient();
@@ -14,10 +15,11 @@ export async function GET() {
   const supabase = createServiceClient();
 
   // Get payouts for echos working on this brand's campaigns
+  const brandId = await getEffectiveBrandId(supabase, session.user.id);
   const { data: campaigns } = await supabase
     .from("campaigns")
     .select("id")
-    .eq("batteur_id", session.user.id);
+    .eq("batteur_id", brandId);
 
   const campaignIds = (campaigns || []).map((c) => c.id);
 

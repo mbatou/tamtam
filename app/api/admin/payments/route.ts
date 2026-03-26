@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { getEffectiveBrandId } from "@/lib/brand-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -15,10 +16,12 @@ export async function GET() {
 
   const supabase = createServiceClient();
 
+  const brandId = await getEffectiveBrandId(supabase, session.user.id);
+
   const { data, error } = await supabase
     .from("payments")
     .select("*")
-    .eq("user_id", session.user.id)
+    .eq("user_id", brandId)
     .order("created_at", { ascending: false });
 
   if (error) {

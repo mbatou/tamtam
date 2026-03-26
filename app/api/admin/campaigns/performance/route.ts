@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getClicksChart } from "@/lib/click-utils";
+import { getEffectiveBrandId } from "@/lib/brand-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -24,13 +25,14 @@ export async function GET(request: NextRequest) {
   }
 
   // Verify ownership
+  const brandId = await getEffectiveBrandId(supabase, session.user.id);
   const { data: campaign } = await supabase
     .from("campaigns")
     .select("id, created_at, cpc, budget, spent, batteur_id")
     .eq("id", campaignId)
     .single();
 
-  if (!campaign || campaign.batteur_id !== session.user.id) {
+  if (!campaign || campaign.batteur_id !== brandId) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 
