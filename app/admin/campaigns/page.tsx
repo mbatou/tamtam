@@ -28,6 +28,7 @@ export default function AdminCampaignsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showRechargePrompt, setShowRechargePrompt] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [avgCpc, setAvgCpc] = useState<number>(0);
   const [imageFormatHint, setImageFormatHint] = useState<{ type: "warning" | "success"; message: string } | null>(null);
@@ -81,6 +82,7 @@ export default function AdminCampaignsPage() {
     setEditingId(null);
     setError(null);
     setShowRechargePrompt(false);
+    setShowCancelConfirm(false);
   }
 
   function openDetail(campaign: Campaign) {
@@ -190,8 +192,12 @@ export default function AdminCampaignsPage() {
       resetForm();
       setSubmitting(false);
       await loadCampaigns();
-      setSelectedCampaign(data);
-      setView("detail");
+      if (asDraft) {
+        setView("list");
+      } else {
+        setSelectedCampaign(data);
+        setView("detail");
+      }
     } catch {
       setError(t("common.networkRetry"));
       setSubmitting(false);
@@ -232,6 +238,28 @@ export default function AdminCampaignsPage() {
           } else {
             alert(data.error || t("common.error"));
           }
+        }
+      }
+      await loadCampaigns();
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleSubmitDraft(campaignId: string) {
+    setActionLoading("submitDraft");
+    try {
+      const res = await fetch("/api/campaigns", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: campaignId, moderation_status: "pending" }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        if (data.code === "INSUFFICIENT_BALANCE") {
+          alert(t("admin.campaigns.insufficientBalance"));
+        } else {
+          alert(data.error || t("common.error"));
         }
       }
       await loadCampaigns();
@@ -285,8 +313,8 @@ export default function AdminCampaignsPage() {
               <p className="text-sm font-semibold text-yellow-400">{t("admin.campaigns.draft")}</p>
               <p className="text-xs text-white/40">{t("admin.campaigns.draftNotice")}</p>
             </div>
-            <button onClick={() => handleAction(c.id, "activate")} disabled={actionLoading !== null} className="px-5 py-2.5 rounded-xl bg-accent text-dark text-sm font-bold hover:bg-accent/90 transition disabled:opacity-40">
-              {actionLoading === "activate" ? "..." : t("admin.campaigns.publishNow")}
+            <button onClick={() => handleSubmitDraft(c.id)} disabled={actionLoading !== null} className="px-5 py-2.5 rounded-xl bg-accent text-dark text-sm font-bold hover:bg-accent/90 transition disabled:opacity-40">
+              {actionLoading === "submitDraft" ? "..." : t("admin.campaigns.launchDraft")}
             </button>
           </div>
         )}
@@ -312,8 +340,8 @@ export default function AdminCampaignsPage() {
 
           <div className="flex flex-wrap gap-2">
             {isDraft && (
-              <button onClick={() => handleAction(c.id, "activate")} disabled={actionLoading !== null} className="px-4 py-2 rounded-xl bg-accent/10 text-accent text-sm font-semibold hover:bg-accent/20 transition disabled:opacity-40">
-                {actionLoading === "activate" ? "..." : t("admin.campaigns.publish")}
+              <button onClick={() => handleSubmitDraft(c.id)} disabled={actionLoading !== null} className="px-4 py-2 rounded-xl bg-accent/10 text-accent text-sm font-semibold hover:bg-accent/20 transition disabled:opacity-40">
+                {actionLoading === "submitDraft" ? "..." : t("admin.campaigns.launchDraft")}
               </button>
             )}
             {isActive && (
@@ -793,16 +821,66 @@ export default function AdminCampaignsPage() {
             </div>
           )}
 
-          <div className="flex gap-3 mt-6">
-            <button onClick={() => handleSubmit(false)} disabled={submitting || !form.title || !form.destination_url || !form.cpc || !form.budget} className="btn-primary flex-1 disabled:opacity-40">
-              {submitting ? t("common.saving") : editingId ? t("common.save") : t("admin.campaigns.launchRythme")}
+          <div className="flex items-center justify-between mt-6">
+            <button
+              type="button"
+              onClick={() => setShowCancelConfirm(true)}
+              className="text-white/30 hover:text-white/60 text-sm transition"
+            >
+              {t("admin.campaigns.cancel")}
             </button>
-            {!editingId && (
-              <button onClick={() => handleSubmit(true)} disabled={submitting || !form.title || !form.destination_url || !form.cpc || !form.budget} className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 font-semibold text-sm hover:bg-white/10 transition disabled:opacity-40">
-                {submitting ? "..." : t("admin.campaigns.saveDraft")}
+            <div className="flex gap-3">
+              {!editingId && (
+                <button
+                  type="button"
+                  onClick={() => handleSubmit(true)}
+                  disabled={submitting || !form.title || !form.destination_url || !form.cpc || !form.budget}
+                  className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 font-semibold text-sm hover:bg-white/10 transition disabled:opacity-40"
+                >
+                  {submitting ? "..." : t("admin.campaigns.saveDraft")}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => handleSubmit(false)}
+                disabled={submitting || !form.title || !form.destination_url || !form.cpc || !form.budget}
+                className="btn-primary px-8 py-3 disabled:opacity-40"
+              >
+                {submitting ? t("common.saving") : editingId ? t("common.save") : t("admin.campaigns.launchRythme")}
               </button>
-            )}
+            </div>
           </div>
+
+          {showCancelConfirm && (
+            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+              <div className="bg-gray-900 border border-white/10 rounded-xl p-6 max-w-md w-full">
+                <h3 className="text-white font-bold text-lg mb-2">{t("admin.campaigns.cancelConfirm")}</h3>
+                <p className="text-white/40 text-sm mb-6">
+                  {t("admin.campaigns.cancelMessage")}
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowCancelConfirm(false)}
+                    className="flex-1 py-2.5 rounded-lg bg-white/5 text-white/60 text-sm hover:bg-white/10 transition"
+                  >
+                    {t("admin.campaigns.continueEditing")}
+                  </button>
+                  <button
+                    onClick={() => { setShowCancelConfirm(false); handleSubmit(true); }}
+                    className="flex-1 py-2.5 rounded-lg bg-white/10 text-white text-sm hover:bg-white/15 transition"
+                  >
+                    {t("admin.campaigns.saveDraft")}
+                  </button>
+                  <button
+                    onClick={() => { setShowCancelConfirm(false); resetForm(); setView("list"); }}
+                    className="flex-1 py-2.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30 transition"
+                  >
+                    {t("admin.campaigns.quitWithout")}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -899,6 +977,25 @@ export default function AdminCampaignsPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Draft actions */}
+                {campaign.status === "draft" && campaign.moderation_status !== "pending" && (
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openEditForm(campaign); }}
+                      className="flex-1 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-bold hover:bg-primary/20 transition"
+                    >
+                      {t("common.edit")}
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleSubmitDraft(campaign.id); }}
+                      disabled={actionLoading !== null}
+                      className="flex-1 py-2 rounded-xl bg-accent/10 border border-accent/20 text-accent text-xs font-bold hover:bg-accent/20 transition disabled:opacity-40"
+                    >
+                      {actionLoading === "submitDraft" ? "..." : t("admin.campaigns.launchDraft")}
+                    </button>
+                  </div>
+                )}
 
                 {/* Relaunch button for finished campaigns */}
                 {isFinished && (

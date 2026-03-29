@@ -230,13 +230,13 @@ export async function PUT(request: NextRequest) {
     );
   }
 
-  const { id, title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls, target_cities, status } = parsed.data;
+  const { id, title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls, target_cities, status, moderation_status } = parsed.data;
 
   const supabase = createServiceClient();
   const brandId = await getEffectiveBrandId(supabase, session.user.id);
 
   // Verify ownership and get current campaign data
-  const { data: existing } = await supabase.from("campaigns").select("batteur_id, budget, spent, status").eq("id", id).single();
+  const { data: existing } = await supabase.from("campaigns").select("batteur_id, budget, spent, status, moderation_status").eq("id", id).single();
   if (!existing || existing.batteur_id !== brandId) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
@@ -251,6 +251,30 @@ export async function PUT(request: NextRequest) {
   if (creative_urls !== undefined) updates.creative_urls = creative_urls;
   if (target_cities !== undefined) updates.target_cities = target_cities.length > 0 ? target_cities : null;
   if (status !== undefined) updates.status = status;
+  if (moderation_status !== undefined) updates.moderation_status = moderation_status;
+
+  // Debit balance when submitting a draft for moderation review
+  if (moderation_status === "pending" && existing.status === "draft" && existing.moderation_status !== "pending") {
+    const campaignBudget = budget !== undefined ? budget : existing.budget;
+    const { data: batteur } = await supabase.from("users").select("balance").eq("id", brandId).single();
+    if (!batteur || (batteur.balance || 0) < campaignBudget) {
+      return NextResponse.json(
+        { error: "Solde insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
+        { status: 400 }
+      );
+    }
+    await supabase.from("users").update({ balance: batteur.balance - campaignBudget }).eq("id", brandId);
+
+    await logWalletTransaction({
+      supabase,
+      userId: brandId,
+      amount: -campaignBudget,
+      type: "campaign_budget_debit",
+      description: `Soumission campagne pour validation`,
+      sourceId: id,
+      sourceType: "campaign",
+    });
+  }
 
   // Handle budget change: charge or refund the difference (skip for drafts - no balance was deducted)
   if (budget !== undefined) {
@@ -404,7 +428,7 @@ export async function DELETE(request: NextRequest) {
   const brandId = await getEffectiveBrandId(supabase, session.user.id);
 
   // Verify ownership and get campaign data for refund
-  const { data: existing } = await supabase.from("campaigns").select("batteur_id, budget, spent, status").eq("id", id).single();
+  const { data: existing } = await supabase.from("campaigns").select("batteur_id, budget, spent, status, moderation_status").eq("id", id).single();
   if (!existing || existing.batteur_id !== brandId) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
