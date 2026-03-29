@@ -33,12 +33,22 @@ export async function GET() {
     .limit(50000);
   const echosWithClicks = new Set((echoClicks || []).map((c: Record<string, unknown>) => (c.tracked_links as { echo_id: string } | null)?.echo_id)).size;
 
-  const { data: echoWithdrawals } = await supabaseAdmin
-    .from("wallet_transactions")
-    .select("user_id")
-    .eq("type", "withdrawal")
-    .limit(50000);
-  const echosWithWithdrawals = new Set((echoWithdrawals || []).map((w: { user_id: string }) => w.user_id)).size;
+  // Check both wallet_transactions (withdrawal type) AND payouts table
+  const [{ data: echoWithdrawals }, { data: echoPayout }] = await Promise.all([
+    supabaseAdmin
+      .from("wallet_transactions")
+      .select("user_id")
+      .in("type", ["withdrawal", "withdrawal_refund"])
+      .limit(50000),
+    supabaseAdmin
+      .from("payouts")
+      .select("echo_id")
+      .limit(50000),
+  ]);
+  const echosWithWithdrawals = new Set([
+    ...(echoWithdrawals || []).map((w: { user_id: string }) => w.user_id),
+    ...(echoPayout || []).map((p: { echo_id: string }) => p.echo_id),
+  ].filter(Boolean)).size;
 
   const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000).toISOString();
   const { data: recentClicks } = await supabaseAdmin
@@ -92,22 +102,33 @@ export async function GET() {
   const { count: totalBrands } = await supabaseAdmin
     .from("users").select("*", { count: "exact", head: true }).in("role", ["batteur", "brand"]);
 
+  // Include ALL money-in transaction types for brands
   const { data: brandRecharges } = await supabaseAdmin
     .from("wallet_transactions")
     .select("user_id")
-    .in("type", ["wallet_recharge", "payment"])
+    .in("type", [
+      "wallet_recharge",
+      "welcome_bonus",
+      "manual_credit",
+      "campaign_budget_refund",
+      "legacy_reconciliation",
+    ])
+    .gt("amount", 0)
     .limit(50000);
   const brandsRecharged = new Set((brandRecharges || []).map((r: { user_id: string }) => r.user_id)).size;
 
+  // campaigns table uses batteur_id, NOT user_id
   const { data: brandCampaigns } = await supabaseAdmin
     .from("campaigns")
-    .select("user_id")
+    .select("batteur_id")
     .limit(50000);
-  const brandsWithCampaigns = new Set((brandCampaigns || []).map((c: { user_id: string }) => c.user_id)).size;
+  const brandsWithCampaigns = new Set((brandCampaigns || []).map((c: { batteur_id: string }) => c.batteur_id).filter(Boolean)).size;
 
   const brandCampaignCounts: Record<string, number> = {};
   for (const c of brandCampaigns || []) {
-    brandCampaignCounts[c.user_id] = (brandCampaignCounts[c.user_id] || 0) + 1;
+    if (c.batteur_id) {
+      brandCampaignCounts[c.batteur_id] = (brandCampaignCounts[c.batteur_id] || 0) + 1;
+    }
   }
   const brandsRepeat = Object.values(brandCampaignCounts).filter((c: number) => c >= 2).length;
 
@@ -265,6 +286,40 @@ export async function GET() {
     });
   }
 
+  // ===== DEBUG DIAGNOSTICS =====
+  const [
+    { count: dbTotalUsers },
+    { count: dbTotalEchos },
+    { count: dbTotalBrands },
+    { count: dbTotalCampaigns },
+    { count: dbTotalClicks },
+    { count: dbTotalValidClicks },
+    { data: dbTransactionTypes },
+    { data: dbCampaignSample },
+  ] = await Promise.all([
+    supabaseAdmin.from("users").select("*", { count: "exact", head: true }),
+    supabaseAdmin.from("users").select("*", { count: "exact", head: true }).eq("role", "echo"),
+    supabaseAdmin.from("users").select("*", { count: "exact", head: true }).in("role", ["batteur", "brand"]),
+    supabaseAdmin.from("campaigns").select("*", { count: "exact", head: true }),
+    supabaseAdmin.from("clicks").select("*", { count: "exact", head: true }),
+    supabaseAdmin.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", true),
+    supabaseAdmin.from("wallet_transactions").select("type").limit(50000),
+    supabaseAdmin.from("campaigns").select("id, title, batteur_id, status, moderation_status").limit(50),
+  ]);
+
+  const distinctTransactionTypes = Array.from(new Set((dbTransactionTypes || []).map((t: { type: string }) => t.type)));
+
+  const debug = {
+    totalUsersInDB: dbTotalUsers,
+    totalEchosInDB: dbTotalEchos,
+    totalBrandsInDB: dbTotalBrands,
+    totalCampaignsInDB: dbTotalCampaigns,
+    totalClicksInDB: dbTotalClicks,
+    totalValidClicksInDB: dbTotalValidClicks,
+    distinctTransactionTypes,
+    campaignSample: dbCampaignSample,
+  };
+
   return NextResponse.json({
     echoFunnel,
     echoLifecycle,
@@ -274,5 +329,6 @@ export async function GET() {
     campaignStats: { avgBudget, avgCPC, totalCampaigns: (allCampaigns || []).length, completedCampaigns: completedCampaigns.length },
     cohorts,
     suggestions,
+    debug,
   });
 }
