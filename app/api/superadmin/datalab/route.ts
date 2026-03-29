@@ -155,7 +155,7 @@ export async function GET() {
     .limit(50000);
 
   for (const click of cityClicks || []) {
-    const trackedLinks = click.tracked_links as { echo_id: string; users: { city: string } | null } | null;
+    const trackedLinks = click.tracked_links as unknown as { echo_id: string; users: { city: string } | null } | null;
     const city = trackedLinks?.users?.city;
     if (city && cityPerformance[city]) {
       cityPerformance[city].totalClicks++;
