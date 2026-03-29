@@ -14,7 +14,7 @@ import TierProgress from "@/components/gamification/TierProgress";
 import { requestNotificationPermission, canAskNotification } from "@/lib/notifications";
 import { shareCampaignToWhatsApp } from "@/lib/share-utils";
 import ChallengeBanner from "@/components/ChallengeBanner";
-import { getActiveTheme, THEME_COLORS } from "@/lib/theme";
+import { getActiveTheme } from "@/lib/theme";
 
 export default function EchoDashboard() {
   const [user, setUser] = useState<User | null>(null);

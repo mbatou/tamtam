@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatFCFA } from "@/lib/utils";
+
 
 interface RewardTier {
   id?: string;

@@ -10,7 +10,7 @@ import type { Campaign, TrackedLinkWithCampaign } from "@/lib/types";
 import { requestNotificationPermission, canAskNotification } from "@/lib/notifications";
 import { shareCampaignToWhatsApp } from "@/lib/share-utils";
 import ChallengeBanner from "@/components/ChallengeBanner";
-import { getActiveTheme } from "@/lib/theme";
+
 
 export default function RythmesPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
