@@ -39,6 +39,7 @@ const toolsGroup = {
     { label: "Gamification", href: "/superadmin/gamification", emoji: "🎮", permKey: "gamification" },
     { label: "Anti-Fraude", href: "/superadmin/fraud", emoji: "🛡️", badgeKey: "fraud", permKey: "fraud" },
     { label: "Investigation", href: "/superadmin/investigate", emoji: "🔍", superadminOnly: true },
+    { label: "Challenges", href: "/superadmin/challenges", emoji: "🥚", permKey: "challenges" },
     { label: "Ambassadeurs", href: "/superadmin/ambassadors", emoji: "🤝", permKey: "ambassadors" },
     { label: "Roadmap", href: "/superadmin/roadmap", emoji: "🗺️", permKey: "roadmap" },
   ] as NavItem[],
