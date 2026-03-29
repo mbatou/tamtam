@@ -25,6 +25,7 @@ export const updateCampaignSchema = z.object({
   ends_at: z.string().optional().nullable(),
   target_cities: z.array(z.string()).optional(),
   status: z.enum(["draft", "active", "paused", "completed"]).optional(),
+  moderation_status: z.enum(["pending", "approved", "rejected"]).optional(),
 });
 
 export const deleteCampaignSchema = z.object({
