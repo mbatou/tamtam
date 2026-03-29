@@ -125,9 +125,9 @@ export default function AdminCampaignsPage() {
         img.onload = () => {
           const aspectRatio = img.height / img.width;
           if (aspectRatio < 1.2) {
-            setImageFormatHint({ type: "warning", message: "⚠️ Image en format paysage. Pour de meilleurs résultats sur WhatsApp Status, utilisez un format vertical (9:16)." });
+            setImageFormatHint({ type: "warning", message: "imageFormatWarning" });
           } else if (aspectRatio >= 1.7 && aspectRatio <= 1.85) {
-            setImageFormatHint({ type: "success", message: "✓ Format parfait pour WhatsApp Status !" });
+            setImageFormatHint({ type: "success", message: "imageFormatSuccess" });
           } else {
             setImageFormatHint(null);
           }
@@ -241,7 +241,7 @@ export default function AdminCampaignsPage() {
   }
 
   function getStatusLabel(campaign: Campaign) {
-    if (campaign.status === "draft" && campaign.moderation_status === "pending") return "En attente de validation";
+    if (campaign.status === "draft" && campaign.moderation_status === "pending") return t("admin.campaigns.pendingValidation");
     const map: Record<string, string> = {
       active: t("common.active"), paused: t("common.paused"), completed: t("common.finished"), draft: t("admin.campaigns.draft"), rejected: t("common.rejected"),
     };
@@ -345,10 +345,9 @@ export default function AdminCampaignsPage() {
         {/* Pending review banner */}
         {isPendingReview && (
           <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4 mb-8">
-            <span className="text-orange-400 font-bold">⏳ En cours de validation</span>
+            <span className="text-orange-400 font-bold">⏳ {t("admin.campaigns.pendingReview")}</span>
             <p className="text-gray-400 text-sm mt-1">
-              Votre rythme est en cours de validation par notre équipe.
-              Vous serez notifié dès qu&apos;il sera approuvé.
+              {t("admin.campaigns.pendingReviewDesc")}
             </p>
           </div>
         )}
@@ -356,7 +355,7 @@ export default function AdminCampaignsPage() {
         {/* Rejected banner */}
         {c.status === "rejected" && (
           <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-8">
-            <span className="text-red-400 font-bold">❌ Modifications requises</span>
+            <span className="text-red-400 font-bold">❌ {t("admin.campaigns.modificationsRequired")}</span>
             {c.moderation_reason && (
               <p className="text-gray-400 text-sm mt-1">{c.moderation_reason}</p>
             )}
@@ -410,34 +409,34 @@ export default function AdminCampaignsPage() {
           <div className="space-y-4 mb-8">
             {/* Summary metrics */}
             <div className="glass-card p-5">
-              <h3 className="font-bold text-lg mb-4">Performance</h3>
+              <h3 className="font-bold text-lg mb-4">{t("admin.campaigns.performance")}</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div>
-                  <p className="text-sm text-white/40">Total Reach</p>
-                  <p className="text-2xl font-bold">{perf.totalClicks.toLocaleString("fr-FR")}</p>
-                  <p className="text-xs text-white/30">personnes ont vu votre lien</p>
+                  <p className="text-sm text-white/40">{t("admin.campaigns.totalReach")}</p>
+                  <p className="text-2xl font-bold">{perf.totalClicks.toLocaleString()}</p>
+                  <p className="text-xs text-white/30">{t("admin.campaigns.totalReachSub")}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-white/40">Visiteurs réels</p>
-                  <p className="text-2xl font-bold text-accent">{perf.validClicks.toLocaleString("fr-FR")}</p>
-                  <p className="text-xs text-white/30">clics vérifiés</p>
+                  <p className="text-sm text-white/40">{t("admin.campaigns.realVisitors")}</p>
+                  <p className="text-2xl font-bold text-accent">{perf.validClicks.toLocaleString()}</p>
+                  <p className="text-xs text-white/30">{t("admin.campaigns.verifiedClicks")}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-white/40">Coût par visiteur</p>
+                  <p className="text-sm text-white/40">{t("admin.campaigns.costPerVisitor")}</p>
                   <p className="text-2xl font-bold">{perf.costPerVisitor} FCFA</p>
-                  <p className="text-xs text-white/30">par clic vérifié</p>
+                  <p className="text-xs text-white/30">{t("admin.campaigns.perVerifiedClick")}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-white/40">Échos actifs</p>
+                  <p className="text-sm text-white/40">{t("admin.campaigns.activeEchos")}</p>
                   <p className="text-2xl font-bold">{perf.activeEchos}</p>
-                  <p className="text-xs text-white/30">partagent votre lien</p>
+                  <p className="text-xs text-white/30">{t("admin.campaigns.sharingYourLink")}</p>
                 </div>
               </div>
             </div>
 
             {/* Performance chart */}
             <div className="glass-card p-5">
-              <h3 className="font-bold mb-4">Clics par jour</h3>
+              <h3 className="font-bold mb-4">{t("admin.campaigns.clicksPerDay")}</h3>
               {perf.chartData && perf.chartData.length > 0 ? (
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
@@ -451,13 +450,13 @@ export default function AdminCampaignsPage() {
                       <XAxis
                         dataKey="date"
                         tick={{ fill: "#666", fontSize: 12 }}
-                        tickFormatter={(d: string) => new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                        tickFormatter={(d: string) => new Date(d).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
                       />
                       <YAxis tick={{ fill: "#666", fontSize: 12 }} />
                       <Tooltip
                         contentStyle={{ background: "#1A1A2E", border: "1px solid #333", borderRadius: 8 }}
-                        labelFormatter={(d) => new Date(String(d)).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}
-                        formatter={(value, name) => [value, name === "valid" ? "Visiteurs réels" : "Total"]}
+                        labelFormatter={(d) => new Date(String(d)).toLocaleDateString(undefined, { day: "numeric", month: "long" })}
+                        formatter={(value, name) => [value, name === "valid" ? t("admin.campaigns.realVisitorsLabel") : t("admin.campaigns.total")]}
                       />
                       <Area type="monotone" dataKey="valid" stroke="#1ABC9C" fill="url(#validGradientPerf)" strokeWidth={2} />
                       <Area type="monotone" dataKey="fraud" stroke="#444" fill="none" strokeWidth={1} strokeDasharray="4 4" name="total" />
@@ -466,7 +465,7 @@ export default function AdminCampaignsPage() {
                 </div>
               ) : (
                 <div className="text-center py-12 text-white/30">
-                  Pas encore de données — les clics apparaîtront ici dès que les Échos partagent.
+                  {t("admin.campaigns.noDataYet")}
                 </div>
               )}
             </div>
@@ -475,7 +474,7 @@ export default function AdminCampaignsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Top Échos leaderboard */}
               <div className="glass-card p-5">
-                <h3 className="font-bold mb-4">Top Échos</h3>
+                <h3 className="font-bold mb-4">{t("admin.campaigns.topEchos")}</h3>
                 {perf.topEchos.length > 0 ? (
                   <div className="space-y-3">
                     {perf.topEchos.map((echo, i) => (
@@ -490,22 +489,22 @@ export default function AdminCampaignsPage() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-accent font-bold text-sm">{echo.clicks} clics</p>
-                          <p className="text-xs text-white/30">{echo.earnings.toLocaleString("fr-FR")} FCFA</p>
+                          <p className="text-accent font-bold text-sm">{echo.clicks} {t("common.clicks")}</p>
+                          <p className="text-xs text-white/30">{echo.earnings.toLocaleString()} FCFA</p>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <p className="text-center py-6 text-white/30 text-sm">
-                    Aucun Écho n&apos;a encore généré de clics
+                    {t("admin.campaigns.noEchoClicks")}
                   </p>
                 )}
               </div>
 
               {/* Geographic breakdown */}
               <div className="glass-card p-5">
-                <h3 className="font-bold mb-4">Répartition géographique</h3>
+                <h3 className="font-bold mb-4">{t("admin.campaigns.geoBreakdown")}</h3>
                 {perf.geoBreakdown.length > 0 ? (
                   <div className="space-y-3">
                     {perf.geoBreakdown.map((geo, i) => (
@@ -522,7 +521,7 @@ export default function AdminCampaignsPage() {
                   </div>
                 ) : (
                   <p className="text-center py-6 text-white/30 text-sm">
-                    Données géographiques bientôt disponibles
+                    {t("admin.campaigns.geoComingSoon")}
                   </p>
                 )}
               </div>
@@ -530,7 +529,7 @@ export default function AdminCampaignsPage() {
 
             {/* ROI comparison */}
             <div className="glass-card p-5">
-              <h3 className="font-bold mb-3">Retour sur investissement</h3>
+              <h3 className="font-bold mb-3">{t("admin.campaigns.roi")}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                 <div className="bg-white/5 rounded-lg p-3">
                   <p className="text-white/40 mb-1">Facebook Ads</p>
@@ -545,8 +544,8 @@ export default function AdminCampaignsPage() {
                   <p className="text-emerald-400 font-bold">{perf.costPerVisitor} FCFA/clic</p>
                   <p className="text-emerald-400/60 text-xs">
                     {perf.costPerVisitor < 200
-                      ? `${Math.round((1 - perf.costPerVisitor / 350) * 100)}% moins cher`
-                      : "Compétitif"}
+                      ? t("admin.campaigns.percentCheaper", { pct: String(Math.round((1 - perf.costPerVisitor / 350) * 100)) })
+                      : t("admin.campaigns.competitive")}
                   </p>
                 </div>
               </div>
@@ -656,18 +655,18 @@ export default function AdminCampaignsPage() {
                 <div className="flex items-center gap-2 text-xs">
                   <span>📱</span>
                   <span className="text-white/50">
-                    Format recommandé : <strong className="text-white/80">9:16 vertical</strong> (1080 × 1920 px) — optimal pour WhatsApp Status et Snapchat Stories
+                    {t("admin.campaigns.formatRecommended")} <strong className="text-white/80">{t("admin.campaigns.formatVertical")}</strong> {t("admin.campaigns.formatDimensions")} — {t("admin.campaigns.formatOptimal")}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
                   <span>💬 WhatsApp</span>
                   <span>·</span>
-                  <span>👻 Snapchat (bientôt)</span>
+                  <span>👻 {t("admin.campaigns.snapchatComingSoon")}</span>
                 </div>
               </div>
               {imageFormatHint && (
                 <p className={`text-xs mt-1 ${imageFormatHint.type === "warning" ? "text-orange-400" : "text-green-400"}`}>
-                  {imageFormatHint.message}
+                  {imageFormatHint.type === "warning" ? `⚠️ ${t("admin.campaigns.imageFormatWarning")}` : `✓ ${t("admin.campaigns.imageFormatSuccess")}`}
                 </p>
               )}
               <p className="text-xs text-white/20 mt-1">{t("admin.campaigns.visualFormats")}</p>
@@ -709,14 +708,14 @@ export default function AdminCampaignsPage() {
 
             {/* City Targeting */}
             <div className="md:col-span-2">
-              <label className="block text-xs font-semibold text-white/40 mb-2">Ciblage géographique</label>
-              <p className="text-xs text-white/30 mb-2">Laissez vide pour cibler tout le Sénégal</p>
+              <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.campaigns.targeting")}</label>
+              <p className="text-xs text-white/30 mb-2">{t("admin.campaigns.targetingHint")}</p>
               <div className="relative">
                 <input
                   type="text"
                   value={citySearch}
                   onChange={(e) => setCitySearch(e.target.value)}
-                  placeholder="Rechercher une ville..."
+                  placeholder={t("admin.campaigns.searchCity")}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
                 />
                 {citySearch && (

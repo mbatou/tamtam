@@ -26,7 +26,7 @@ interface CampaignAnalytics {
 
 function formatShortDate(dateStr: string) {
   const d = new Date(dateStr);
-  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
 }
 
 export default function AdminAnalyticsPage() {
@@ -45,15 +45,15 @@ export default function AdminAnalyticsPage() {
   async function downloadPDF(campaigns: CampaignAnalytics[]) {
     const { jsPDF } = await import("jspdf");
     const doc = new jsPDF();
-    const date = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+    const date = new Date().toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
 
     // Header
     doc.setFontSize(20);
     doc.setTextColor(211, 84, 0);
-    doc.text("Tamtam — Rapport Analytics", 14, 20);
+    doc.text("Tamtam — Analytics Report", 14, 20);
     doc.setFontSize(10);
     doc.setTextColor(128, 128, 128);
-    doc.text(`Généré le ${date}`, 14, 28);
+    doc.text(t("admin.analytics.generatedOn", { date }), 14, 28);
 
     // Summary
     const totalSpent = campaigns.reduce((s, c) => s + c.spent, 0);
@@ -63,29 +63,29 @@ export default function AdminAnalyticsPage() {
 
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
-    doc.text("Résumé global", 14, 42);
+    doc.text(t("admin.analytics.globalSummary"), 14, 42);
 
     doc.setFontSize(10);
     doc.setTextColor(60, 60, 60);
-    doc.text(`Portée totale: ${totalReach.toLocaleString()}`, 14, 52);
-    doc.text(`Visiteurs réels: ${totalValid.toLocaleString()}`, 14, 58);
-    doc.text(`Total dépensé: ${totalSpent.toLocaleString()} FCFA`, 14, 64);
-    doc.text(`Coût par visiteur: ${avgCPC.toLocaleString()} FCFA`, 14, 70);
+    doc.text(`${t("admin.analytics.totalReach")}: ${totalReach.toLocaleString()}`, 14, 52);
+    doc.text(`${t("admin.analytics.realVisitors")}: ${totalValid.toLocaleString()}`, 14, 58);
+    doc.text(`${t("admin.analytics.totalSpent")}: ${totalSpent.toLocaleString()} FCFA`, 14, 64);
+    doc.text(`${t("admin.analytics.costPerVisitor")}: ${avgCPC.toLocaleString()} FCFA`, 14, 70);
 
     // Campaign table
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
-    doc.text("Détails par campagne", 14, 86);
+    doc.text(t("admin.analytics.detailsByCampaign"), 14, 86);
 
     let y = 96;
     doc.setFontSize(8);
     doc.setTextColor(128, 128, 128);
-    doc.text("Campagne", 14, y);
-    doc.text("Statut", 80, y);
-    doc.text("Budget", 110, y);
-    doc.text("Dépensé", 135, y);
-    doc.text("Visiteurs", 162, y);
-    doc.text("CPC", 185, y);
+    doc.text(t("admin.analytics.headerCampaign"), 14, y);
+    doc.text(t("admin.analytics.headerStatus"), 80, y);
+    doc.text(t("admin.analytics.headerBudget"), 110, y);
+    doc.text(t("admin.analytics.headerSpent"), 135, y);
+    doc.text(t("admin.analytics.headerVisitors"), 162, y);
+    doc.text(t("admin.analytics.headerCPC"), 185, y);
     y += 2;
     doc.setDrawColor(200, 200, 200);
     doc.line(14, y, 196, y);
@@ -111,7 +111,7 @@ export default function AdminAnalyticsPage() {
     // Footer
     doc.setFontSize(8);
     doc.setTextColor(180, 180, 180);
-    doc.text("Généré par Tamtam — www.tamma.me", 14, 285);
+    doc.text(t("admin.analytics.generatedBy"), 14, 285);
 
     doc.save(`tamtam-rapport-${new Date().toISOString().slice(0, 10)}.pdf`);
   }
@@ -122,26 +122,26 @@ export default function AdminAnalyticsPage() {
     const avgCPC = totalValid > 0 ? Math.round(totalSpent / totalValid) : 0;
 
     const text = [
-      `📊 *Rapport Tamtam*`,
+      `📊 *${t("admin.analytics.whatsappReport")}*`,
       ``,
-      `📣 ${campaigns.length} campagne(s)`,
-      `👁 ${totalValid.toLocaleString()} visiteurs réels`,
-      `💰 ${totalSpent.toLocaleString()} FCFA dépensés`,
-      `📉 ${avgCPC.toLocaleString()} FCFA/visiteur`,
+      `📣 ${campaigns.length} ${t("admin.analytics.whatsappCampaigns")}`,
+      `👁 ${totalValid.toLocaleString()} ${t("admin.analytics.whatsappVisitors")}`,
+      `💰 ${totalSpent.toLocaleString()} ${t("admin.analytics.whatsappSpent")}`,
+      `📉 ${avgCPC.toLocaleString()} ${t("admin.analytics.whatsappCPV")}`,
       ``,
       campaigns.slice(0, 5).map((c) => {
         const cpc = c.validClicks > 0 ? Math.round(c.spent / c.validClicks) : 0;
-        return `• ${c.title}: ${c.validClicks} visiteurs, ${cpc} FCFA/clic`;
+        return `• ${c.title}: ${c.validClicks} ${t("admin.analytics.whatsappVisitors")}, ${cpc} FCFA/${t("common.clicks")}`;
       }).join("\n"),
       ``,
-      `Généré sur www.tamma.me`,
+      t("admin.analytics.whatsappGenerated"),
     ].join("\n");
 
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }
 
   function downloadCSV(campaigns: CampaignAnalytics[]) {
-    const header = "Campagne,Statut,Budget (FCFA),Dépensé (FCFA),CPC (FCFA),Portée totale,Visiteurs réels,Coût par visiteur,Échos\n";
+    const header = t("admin.analytics.csvHeader") + "\n";
     const rows = campaigns.map((c) => {
       const cpc = c.validClicks > 0 ? Math.round(c.spent / c.validClicks) : 0;
       return `"${c.title}",${getStatusLabel(c.status)},${c.budget},${c.spent},${cpc},${c.totalClicks},${c.validClicks},${cpc},${c.echoCount}`;
@@ -401,7 +401,7 @@ export default function AdminAnalyticsPage() {
                   >
                     <td className="py-3 font-semibold">
                       {c.title}
-                      {isBest && <span className="ml-2 text-[10px] text-accent font-bold">MEILLEUR CPC</span>}
+                      {isBest && <span className="ml-2 text-[10px] text-accent font-bold">{t("admin.analytics.bestCPC")}</span>}
                     </td>
                     <td className="py-3"><span className={`badge-${c.status}`}>{getStatusLabel(c.status)}</span></td>
                     <td className="py-3 text-right text-white/50">{formatFCFA(c.budget)}</td>

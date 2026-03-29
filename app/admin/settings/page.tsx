@@ -19,17 +19,17 @@ interface Profile {
   created_at: string;
 }
 
-const INDUSTRY_OPTIONS = [
-  { value: "restaurant", label: "🍽️ Restaurant / Alimentation" },
-  { value: "boutique", label: "🛍️ Boutique / Mode" },
-  { value: "salon", label: "💇 Salon / Beauté" },
-  { value: "school", label: "🎓 École / Formation" },
-  { value: "driving", label: "🚗 Auto-école" },
-  { value: "agency", label: "📢 Agence / Marketing" },
-  { value: "health", label: "🏥 Santé / Pharmacie" },
-  { value: "tech", label: "💻 Tech / Services numériques" },
-  { value: "events", label: "🎉 Événementiel" },
-  { value: "other", label: "📦 Autre" },
+const INDUSTRY_KEYS = [
+  { value: "restaurant", key: "admin.settings.industryRestaurant" },
+  { value: "boutique", key: "admin.settings.industryBoutique" },
+  { value: "salon", key: "admin.settings.industrySalon" },
+  { value: "school", key: "admin.settings.industrySchool" },
+  { value: "driving", key: "admin.settings.industryDriving" },
+  { value: "agency", key: "admin.settings.industryAgency" },
+  { value: "health", key: "admin.settings.industryHealth" },
+  { value: "tech", key: "admin.settings.industryTech" },
+  { value: "events", key: "admin.settings.industryEvents" },
+  { value: "other", key: "admin.settings.industryOther" },
 ];
 
 export default function AdminSettingsPage() {
@@ -107,19 +107,19 @@ export default function AdminSettingsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setTeamError(data.error || "Erreur lors de l'invitation");
+        setTeamError(data.error || t("admin.settings.inviteError"));
       } else {
         setInviteEmail("");
         loadTeam();
       }
     } catch {
-      setTeamError("Erreur réseau");
+      setTeamError(t("common.networkError"));
     }
     setInviting(false);
   }
 
   async function handleRemoveMember(memberId: string, memberEmail: string) {
-    if (!confirm(`Retirer ${memberEmail} de l'équipe?`)) return;
+    if (!confirm(t("admin.settings.removeConfirm", { email: memberEmail }))) return;
     try {
       await fetch("/api/admin/team/remove", {
         method: "POST",
@@ -262,7 +262,7 @@ export default function AdminSettingsPage() {
                 {uploading ? t("common.uploading") : t("admin.settings.changeLogo")}
               </span>
             </label>
-            <p className="text-xs text-white/30 mt-2">PNG, JPG ou WebP. Max 2 Mo.</p>
+            <p className="text-xs text-white/30 mt-2">{t("admin.settings.logoFormats")}</p>
           </div>
         </div>
       </div>
@@ -302,8 +302,8 @@ export default function AdminSettingsPage() {
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition appearance-none cursor-pointer"
             >
               <option value="" className="bg-[#1a1a2e]">— {t("admin.settings.selectIndustry")} —</option>
-              {INDUSTRY_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value} className="bg-[#1a1a2e]">{opt.label}</option>
+              {INDUSTRY_KEYS.map((opt) => (
+                <option key={opt.value} value={opt.value} className="bg-[#1a1a2e]">{t(opt.key)}</option>
               ))}
             </select>
           </div>
@@ -457,7 +457,7 @@ export default function AdminSettingsPage() {
 
       {/* Team management */}
       <div className="glass-card p-6 mb-6">
-        <h2 className="text-lg font-bold mb-4">Mon Équipe</h2>
+        <h2 className="text-lg font-bold mb-4">{t("admin.settings.myTeam")}</h2>
 
         {team.isOwner && (
           <div className="flex gap-3 mb-6">
@@ -465,7 +465,7 @@ export default function AdminSettingsPage() {
               type="email"
               value={inviteEmail}
               onChange={(e) => { setInviteEmail(e.target.value); setTeamError(null); }}
-              placeholder="Email du membre à inviter"
+              placeholder={t("admin.settings.memberEmail")}
               className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition"
               onKeyDown={(e) => e.key === "Enter" && !inviting && inviteEmail && handleInvite()}
             />
@@ -474,7 +474,7 @@ export default function AdminSettingsPage() {
               disabled={inviting || !inviteEmail}
               className="btn-primary px-6 py-2.5 disabled:opacity-40"
             >
-              {inviting ? "Envoi..." : "Inviter"}
+              {inviting ? t("admin.settings.inviting") : t("admin.settings.inviteMember")}
             </button>
           </div>
         )}
@@ -496,10 +496,10 @@ export default function AdminSettingsPage() {
                   <div className="text-white/30 text-xs">
                     {member.email}
                     {member.status === "invited" && (
-                      <span className="ml-2 text-orange-400">Invitation envoyée</span>
+                      <span className="ml-2 text-orange-400">{t("admin.settings.inviteSent")}</span>
                     )}
                     {member.status === "active" && (
-                      <span className="ml-2 text-emerald-400">Actif</span>
+                      <span className="ml-2 text-emerald-400">{t("common.active")}</span>
                     )}
                   </div>
                 </div>
@@ -508,7 +508,7 @@ export default function AdminSettingsPage() {
                     onClick={() => handleRemoveMember(member.id, member.email)}
                     className="text-red-400 hover:text-red-300 text-sm"
                   >
-                    Retirer
+                    {t("admin.settings.remove")}
                   </button>
                 )}
               </div>
@@ -516,13 +516,13 @@ export default function AdminSettingsPage() {
           </div>
         ) : (
           <div className="text-center py-6 text-white/30 text-sm">
-            Aucun membre dans l&apos;équipe. {team.isOwner ? "Invitez quelqu'un!" : ""}
+            {t("admin.settings.noMembers")}
           </div>
         )}
 
         {!team.isOwner && (
           <div className="mt-4 p-3 bg-white/5 rounded-xl text-white/40 text-sm">
-            Seul le propriétaire du compte peut gérer l&apos;équipe.
+            {t("admin.settings.ownerOnly")}
           </div>
         )}
       </div>
@@ -538,11 +538,11 @@ export default function AdminSettingsPage() {
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-white/40">{t("admin.settings.memberSince")}</span>
-            <span>{profile?.created_at ? new Date(profile.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "—"}</span>
+            <span>{profile?.created_at ? new Date(profile.created_at).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }) : "—"}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-white/40">{t("admin.settings.accountType")}</span>
-            <span className="badge-active">Batteur</span>
+            <span className="badge-active">{t("admin.settings.batteur")}</span>
           </div>
         </div>
       </div>
