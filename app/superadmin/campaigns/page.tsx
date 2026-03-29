@@ -83,6 +83,7 @@ function CampaignModerationPageContent() {
   const searchParams = useSearchParams();
   const highlightId = searchParams.get("id");
 
+  const [moderating, setModerating] = useState(false);
   const [notifying, setNotifying] = useState(false);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 30;
@@ -150,6 +151,7 @@ function CampaignModerationPageContent() {
   }
 
   async function moderateCampaign(id: string, action: string, reason?: string) {
+    setModerating(true);
     try {
       const res = await fetch("/api/superadmin/campaigns", {
         method: "POST",
@@ -176,6 +178,8 @@ function CampaignModerationPageContent() {
       }
     } catch {
       showToast(t("common.networkError"), "error");
+    } finally {
+      setModerating(false);
     }
   }
 
@@ -492,18 +496,20 @@ function CampaignModerationPageContent() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => moderateCampaign(selected.id, "approve")}
-                        className="flex-1 py-2.5 rounded-xl bg-accent/10 border border-accent/30 text-accent font-bold text-sm"
+                        disabled={moderating}
+                        className={`flex-1 py-2.5 rounded-xl bg-accent/10 border border-accent/30 text-accent font-bold text-sm ${moderating ? "opacity-50 cursor-not-allowed" : ""}`}
                       >
-                        {t("superadmin.campaigns.approvedTab")}
+                        {moderating ? "Validation..." : t("superadmin.campaigns.approvedTab")}
                       </button>
                       <button
                         onClick={() => {
                           if (!rejectReason.trim()) { showToast(t("common.error"), "error"); return; }
                           moderateCampaign(selected.id, "reject", rejectReason);
                         }}
-                        className="flex-1 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-bold text-sm"
+                        disabled={moderating}
+                        className={`flex-1 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-bold text-sm ${moderating ? "opacity-50 cursor-not-allowed" : ""}`}
                       >
-                        {t("superadmin.campaigns.rejectedTab")}
+                        {moderating ? "Rejet en cours..." : t("superadmin.campaigns.rejectedTab")}
                       </button>
                     </div>
                   </div>

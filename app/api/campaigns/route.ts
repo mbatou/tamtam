@@ -150,15 +150,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: debitError.message }, { status: 500 });
   }
 
-  await logWalletTransaction({
-    supabase,
-    userId: brandId,
-    amount: -budget,
-    type: "campaign_budget_debit",
-    description: `Création campagne: ${title}`,
-    sourceType: "campaign",
-  });
-
   const { data, error } = await supabase.from("campaigns").insert({
     batteur_id: brandId,
     title,
@@ -182,6 +173,16 @@ export async function POST(request: NextRequest) {
       .eq("id", brandId);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await logWalletTransaction({
+    supabase,
+    userId: brandId,
+    amount: -budget,
+    type: "campaign_budget_debit",
+    description: `Création campagne: ${title}`,
+    sourceId: data.id,
+    sourceType: "campaign",
+  });
 
   // Get brand name for notification
   const { data: brand } = await supabase
@@ -255,25 +256,35 @@ export async function PUT(request: NextRequest) {
 
   // Debit balance when submitting a draft for moderation review
   if (moderation_status === "pending" && existing.status === "draft" && existing.moderation_status !== "pending") {
-    const campaignBudget = budget !== undefined ? budget : existing.budget;
-    const { data: batteur } = await supabase.from("users").select("balance").eq("id", brandId).single();
-    if (!batteur || (batteur.balance || 0) < campaignBudget) {
-      return NextResponse.json(
-        { error: "Solde insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
-        { status: 400 }
-      );
-    }
-    await supabase.from("users").update({ balance: batteur.balance - campaignBudget }).eq("id", brandId);
+    // Idempotency: check if budget was already deducted for this campaign
+    const { data: existingDebit } = await supabase
+      .from("wallet_transactions")
+      .select("id")
+      .eq("source_id", id)
+      .eq("type", "campaign_budget_debit")
+      .limit(1);
 
-    await logWalletTransaction({
-      supabase,
-      userId: brandId,
-      amount: -campaignBudget,
-      type: "campaign_budget_debit",
-      description: `Soumission campagne pour validation`,
-      sourceId: id,
-      sourceType: "campaign",
-    });
+    if (!existingDebit || existingDebit.length === 0) {
+      const campaignBudget = budget !== undefined ? budget : existing.budget;
+      const { data: batteur } = await supabase.from("users").select("balance").eq("id", brandId).single();
+      if (!batteur || (batteur.balance || 0) < campaignBudget) {
+        return NextResponse.json(
+          { error: "Solde insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
+          { status: 400 }
+        );
+      }
+      await supabase.from("users").update({ balance: batteur.balance - campaignBudget }).eq("id", brandId);
+
+      await logWalletTransaction({
+        supabase,
+        userId: brandId,
+        amount: -campaignBudget,
+        type: "campaign_budget_debit",
+        description: `Soumission campagne pour validation`,
+        sourceId: id,
+        sourceType: "campaign",
+      });
+    }
   }
 
   // Handle budget change: charge or refund the difference (skip for drafts - no balance was deducted)
