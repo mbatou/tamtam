@@ -114,7 +114,7 @@ export default function DataLabPage() {
             <Fragment key={i}>
               <div className="flex-1 text-center">
                 <div className={`${step.color} h-2 rounded-full mb-2`}
-                  style={{ width: `${(step.value / Math.max(arr[0].value, 1)) * 100}%`, margin: "0 auto" }} />
+                  style={{ width: `${(step.value / Math.max(...arr.map(s => s.value), 1)) * 100}%`, margin: "0 auto" }} />
                 <div className="text-white font-bold text-xl">{step.value}</div>
                 <div className="text-gray-500 text-xs">{step.label}</div>
                 {i > 0 && (
@@ -161,7 +161,7 @@ export default function DataLabPage() {
             <Fragment key={i}>
               <div className="flex-1 text-center">
                 <div className={`${step.color} h-2 rounded-full mb-2`}
-                  style={{ width: `${(step.value / Math.max(arr[0].value, 1)) * 100}%`, margin: "0 auto" }} />
+                  style={{ width: `${(step.value / Math.max(...arr.map(s => s.value), 1)) * 100}%`, margin: "0 auto" }} />
                 <div className="text-white font-bold text-xl">{step.value}</div>
                 <div className="text-gray-500 text-xs">{step.label}</div>
               </div>
