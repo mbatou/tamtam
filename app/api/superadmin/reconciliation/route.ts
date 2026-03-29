@@ -128,11 +128,12 @@ export async function GET() {
     const isDuplicate = seenCampaigns.has(refund.source_id);
     seenCampaigns.add(refund.source_id);
 
+    // Look for any negative transaction with same source_id (debit may have different type)
     const { count: matchingDebit } = await supabaseAdmin
       .from("wallet_transactions")
       .select("*", { count: "exact", head: true })
       .eq("source_id", refund.source_id)
-      .eq("type", "campaign_budget_debit");
+      .lt("amount", 0);
 
     refundAudit.push({
       ...refund,
@@ -159,15 +160,18 @@ export async function GET() {
 
   const { data: allBalances } = await supabaseAdmin
     .from("users")
-    .select("wallet_balance, role");
+    .select("wallet_balance, role")
+    .not("wallet_balance", "is", null);
 
+  // Use Number() casting to handle potential text/string wallet_balance values
+  // Filter as: everything NOT echo = brand-side, echo = echo-side
   const totalBrandBalances = (allBalances || [])
-    .filter((u: { role: string }) => u.role === "batteur" || u.role === "brand")
-    .reduce((sum: number, u: { wallet_balance: number | null }) => sum + (u.wallet_balance || 0), 0);
+    .filter((u: { role: string }) => u.role !== "echo")
+    .reduce((sum: number, u: { wallet_balance: number | string | null }) => sum + (Number(u.wallet_balance) || 0), 0);
 
   const totalEchoBalances = (allBalances || [])
     .filter((u: { role: string }) => u.role === "echo")
-    .reduce((sum: number, u: { wallet_balance: number | null }) => sum + (u.wallet_balance || 0), 0);
+    .reduce((sum: number, u: { wallet_balance: number | string | null }) => sum + (Number(u.wallet_balance) || 0), 0);
 
   // 5. ADVICE CARDS
   const advice = [];
