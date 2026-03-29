@@ -43,11 +43,19 @@ export async function GET() {
     .order("cracked_at", { ascending: false })
     .limit(10);
 
+  // Get echo's name for share card
+  const { data: echoUser } = await supabase
+    .from("users")
+    .select("name")
+    .eq("id", session.user.id)
+    .single();
+
   return NextResponse.json({
     challenge,
     participation: participation || { valid_clicks: 0, eggs_earned: 0, total_won: 0 },
     eggsRemaining: totalRemaining,
     recentCracks: recentCracks || [],
     clicksNeeded: challenge.clicks_per_reward,
+    echoName: echoUser?.name || "Echo",
   });
 }

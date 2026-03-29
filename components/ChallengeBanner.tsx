@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { generateEggShareCard, TIER_COLORS, TIER_EMOJIS } from "@/lib/share-card";
 
 interface ChallengeReward {
   id: string;
@@ -33,11 +34,13 @@ interface ChallengeData {
     users?: { name: string } | null;
   }[];
   clicksNeeded: number;
+  echoName: string;
 }
 
 export default function ChallengeBanner() {
   const [data, setData] = useState<ChallengeData | null>(null);
   const [cracking, setCracking] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [reward, setReward] = useState<{
     tier: string;
     amount: number;
@@ -60,7 +63,7 @@ export default function ChallengeBanner() {
 
   if (!data?.challenge) return null;
 
-  const { challenge, participation, eggsRemaining, clicksNeeded, recentCracks } = data;
+  const { challenge, participation, eggsRemaining, clicksNeeded, recentCracks, echoName } = data;
   const clicksInProgress = participation.valid_clicks % clicksNeeded;
   const clicksToNext = clicksNeeded - clicksInProgress;
   const canCrackEgg = participation.valid_clicks >= (participation.eggs_earned + 1) * clicksNeeded && eggsRemaining > 0;
@@ -92,6 +95,39 @@ export default function ChallengeBanner() {
   function closeReward() {
     setReward(null);
     loadChallenge();
+  }
+
+  async function handleShareVictory() {
+    if (!reward || !data) return;
+    setSharing(true);
+    try {
+      const file = await generateEggShareCard({
+        echoName: echoName || "Echo",
+        tier: reward.tier,
+        amount: reward.amount,
+        eggsRemaining: data.eggsRemaining,
+        tierColor: reward.color || TIER_COLORS[reward.tier] || "#FFD700",
+        tierEmoji: reward.emoji || TIER_EMOJIS[reward.tier] || "🥚",
+      });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          text: `J'ai gagné ${reward.amount} FCFA en craquant un œuf ${reward.tier} sur Tamtam! 🥚 Toi aussi gagne avec ton WhatsApp → tamma.me/echos`,
+        });
+      } else {
+        // Fallback: download the image
+        const url = URL.createObjectURL(file);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "tamtam-oeuf.png";
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error("Share failed:", err);
+    }
+    setSharing(false);
   }
 
   return (
@@ -187,10 +223,18 @@ export default function ChallengeBanner() {
                 Oeuf {reward.tier}!
               </div>
               <button
-                onClick={closeReward}
-                className="mt-6 bg-white text-black px-8 py-3 rounded-xl font-bold"
+                onClick={handleShareVictory}
+                disabled={sharing}
+                className="mt-6 px-8 py-3 rounded-xl font-bold text-white border-none cursor-pointer flex items-center gap-2 mx-auto"
+                style={{ background: "#00853F" }}
               >
-                Continue a partager!
+                {sharing ? "Préparation..." : "📸 Partager ta victoire!"}
+              </button>
+              <button
+                onClick={closeReward}
+                className="mt-3 bg-white text-black px-8 py-3 rounded-xl font-bold"
+              >
+                Fermer
               </button>
             </div>
           )}
