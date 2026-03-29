@@ -304,33 +304,57 @@ export async function POST(request: NextRequest) {
       break;
     }
     case "reject": {
+      // Guard: only reject if campaign is actually pending review
+      if (campaign.moderation_status === "rejected") {
+        return NextResponse.json({
+          error: "Cette campagne est déjà rejetée",
+        }, { status: 400 });
+      }
+
       updates.moderation_status = "rejected";
       updates.status = "rejected";
       updates.moderation_reason = reason || "Rejeté par l'admin";
 
-      // Refund budget if it was already deducted:
-      // - Active campaigns: refund unspent portion
-      // - Draft campaigns with moderation_status "pending": budget was deducted at submission
-      if (campaign.status === "active" || (campaign.status === "draft" && campaign.moderation_status === "pending")) {
-        const unspent = campaign.budget - (campaign.spent || 0);
-        if (unspent > 0) {
-          await supabase.rpc("increment_balance", {
-            p_user_id: campaign.batteur_id,
-            p_amount: unspent,
-          });
+      // Idempotent refund: check if a refund was already issued for this campaign
+      const { data: existingRefund } = await supabase
+        .from("wallet_transactions")
+        .select("id")
+        .eq("source_id", campaign_id)
+        .eq("type", "campaign_budget_refund")
+        .limit(1);
 
-          await logWalletTransaction({
-            supabase,
-            userId: campaign.batteur_id,
-            amount: unspent,
-            type: "campaign_budget_refund",
-            description: `Remboursement campagne rejetée par admin`,
-            sourceId: campaign_id,
-            sourceType: "campaign",
-            createdBy: session.user.id,
-          });
+      if (!existingRefund || existingRefund.length === 0) {
+        // Only refund if budget was actually deducted (check for existing debit)
+        const { data: existingDebit } = await supabase
+          .from("wallet_transactions")
+          .select("id, amount")
+          .eq("source_id", campaign_id)
+          .eq("type", "campaign_budget_debit")
+          .limit(1);
+
+        if (existingDebit && existingDebit.length > 0) {
+          const unspent = campaign.budget - (campaign.spent || 0);
+          if (unspent > 0) {
+            await supabase.rpc("increment_balance", {
+              p_user_id: campaign.batteur_id,
+              p_amount: unspent,
+            });
+
+            await logWalletTransaction({
+              supabase,
+              userId: campaign.batteur_id,
+              amount: unspent,
+              type: "campaign_budget_refund",
+              description: `Remboursement campagne rejetée par admin`,
+              sourceId: campaign_id,
+              sourceType: "campaign",
+              createdBy: session.user.id,
+            });
+          }
         }
+        // else: no debit found = draft never submitted = no refund needed
       }
+      // else: refund already issued, skip (idempotent)
       break;
     }
     case "pause":
