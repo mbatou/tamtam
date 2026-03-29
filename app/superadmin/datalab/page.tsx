@@ -63,37 +63,102 @@ interface AIInsight {
   psychology: string;
   law: string;
   action: string;
+  effort?: "facile" | "moyen" | "difficile";
   impact: string;
+  claudePrompt?: string;
 }
 
 interface AIAnalysis {
   insights: AIInsight[];
   summary: string;
   topPriority: string;
+  topPriorityPrompt?: string;
 }
 
 const LAW_ICONS: Record<string, string> = {
-  "Peak-End Rule": "\u{1F3D4}\uFE0F",
-  "Idleness Aversion": "\u23F3",
-  "Goal-Gradient": "\u{1F3AF}",
-  "Glass Box": "\u{1F50D}",
-  "Uncertainty Reduction": "\u{1F6E1}\uFE0F",
-  "Uber: Activation": "\u{1F680}",
-  "Uber: Retention": "\u{1F504}",
-  "Uber: Power Users": "\u26A1",
-  "Uber: Churn": "\u{1F4C9}",
+  // Bartlett Pillar I
+  "Bartlett Law 1: Five Buckets": "🪣",
+  "Bartlett Law 7: Self Story": "📖",
+  "Bartlett Law 8: Habits": "🔄",
+  "Bartlett Law 9: Health First": "❤️",
+  // Bartlett Pillar II
+  "Bartlett Law 10: Useless Absurdity": "🤪",
+  "Bartlett Law 11: Avoid Wallpaper": "👁️",
+  "Bartlett Law 12: Piss People Off": "⚡",
+  "Bartlett Law 13: Psychological Moonshots": "🏔️",
+  "Bartlett Law 14: Friction Creates Value": "🔧",
+  "Bartlett Law 15: Frame > Picture": "🖼️",
+  "Bartlett Law 16: Goldilocks": "🐻",
+  "Bartlett Law 17: Try = Buy": "🎁",
+  "Bartlett Law 18: First 5 Seconds": "⏱️",
+  // Bartlett Pillar III
+  "Bartlett Law 19: Sweat Small Stuff": "🔍",
+  "Bartlett Law 20: Small Miss Big Miss": "📉",
+  "Bartlett Law 21: Out-Fail": "💪",
+  "Bartlett Law 24: Pressure = Privilege": "💎",
+  "Bartlett Law 25: Negative Manifestation": "⚠️",
+  "Bartlett Law 26: Context > Skills": "🌍",
+  // Bartlett Pillar IV
+  "Bartlett Law 29: Cult Mentality": "🙌",
+  "Bartlett Law 31: Power of Progress": "📊",
+  // Neuroscience
+  "Neuroscience: Dopamine": "🧠",
+  "Neuroscience: Loss Aversion": "😰",
+  "Neuroscience: Social Proof": "👥",
+  "Neuroscience: Variable Reward": "🎰",
+  "Neuroscience: Endowment Effect": "💰",
+  "Neuroscience: Cognitive Load": "🤯",
+  "Neuroscience: Habit Loop": "🔁",
+  "Neuroscience: Recency Bias": "⏳",
+  // Uber
+  "Uber: Activation": "🚀",
+  "Uber: Retention": "🔄",
+  "Uber: Power Users": "⚡",
+  "Uber: Churn": "📉",
+  "Uber: Aha Moment": "💡",
 };
 
 const LAW_COLORS: Record<string, string> = {
-  "Peak-End Rule": "border-purple-500/30 bg-purple-500/5",
-  "Idleness Aversion": "border-blue-500/30 bg-blue-500/5",
-  "Goal-Gradient": "border-teal-500/30 bg-teal-500/5",
-  "Glass Box": "border-cyan-500/30 bg-cyan-500/5",
-  "Uncertainty Reduction": "border-indigo-500/30 bg-indigo-500/5",
+  // Bartlett Pillar I — purple
+  "Bartlett Law 1: Five Buckets": "border-purple-500/30 bg-purple-500/5",
+  "Bartlett Law 7: Self Story": "border-purple-500/30 bg-purple-500/5",
+  "Bartlett Law 8: Habits": "border-purple-500/30 bg-purple-500/5",
+  "Bartlett Law 9: Health First": "border-purple-500/30 bg-purple-500/5",
+  // Bartlett Pillar II — blue
+  "Bartlett Law 10: Useless Absurdity": "border-blue-500/30 bg-blue-500/5",
+  "Bartlett Law 11: Avoid Wallpaper": "border-blue-500/30 bg-blue-500/5",
+  "Bartlett Law 12: Piss People Off": "border-blue-500/30 bg-blue-500/5",
+  "Bartlett Law 13: Psychological Moonshots": "border-blue-500/30 bg-blue-500/5",
+  "Bartlett Law 14: Friction Creates Value": "border-blue-500/30 bg-blue-500/5",
+  "Bartlett Law 15: Frame > Picture": "border-blue-500/30 bg-blue-500/5",
+  "Bartlett Law 16: Goldilocks": "border-blue-500/30 bg-blue-500/5",
+  "Bartlett Law 17: Try = Buy": "border-blue-500/30 bg-blue-500/5",
+  "Bartlett Law 18: First 5 Seconds": "border-blue-500/30 bg-blue-500/5",
+  // Bartlett Pillar III — teal
+  "Bartlett Law 19: Sweat Small Stuff": "border-teal-500/30 bg-teal-500/5",
+  "Bartlett Law 20: Small Miss Big Miss": "border-teal-500/30 bg-teal-500/5",
+  "Bartlett Law 21: Out-Fail": "border-teal-500/30 bg-teal-500/5",
+  "Bartlett Law 24: Pressure = Privilege": "border-teal-500/30 bg-teal-500/5",
+  "Bartlett Law 25: Negative Manifestation": "border-teal-500/30 bg-teal-500/5",
+  "Bartlett Law 26: Context > Skills": "border-teal-500/30 bg-teal-500/5",
+  // Bartlett Pillar IV — indigo
+  "Bartlett Law 29: Cult Mentality": "border-indigo-500/30 bg-indigo-500/5",
+  "Bartlett Law 31: Power of Progress": "border-indigo-500/30 bg-indigo-500/5",
+  // Neuroscience — cyan
+  "Neuroscience: Dopamine": "border-cyan-500/30 bg-cyan-500/5",
+  "Neuroscience: Loss Aversion": "border-cyan-500/30 bg-cyan-500/5",
+  "Neuroscience: Social Proof": "border-cyan-500/30 bg-cyan-500/5",
+  "Neuroscience: Variable Reward": "border-cyan-500/30 bg-cyan-500/5",
+  "Neuroscience: Endowment Effect": "border-cyan-500/30 bg-cyan-500/5",
+  "Neuroscience: Cognitive Load": "border-cyan-500/30 bg-cyan-500/5",
+  "Neuroscience: Habit Loop": "border-cyan-500/30 bg-cyan-500/5",
+  "Neuroscience: Recency Bias": "border-cyan-500/30 bg-cyan-500/5",
+  // Uber — orange
   "Uber: Activation": "border-orange-500/30 bg-orange-500/5",
   "Uber: Retention": "border-green-500/30 bg-green-500/5",
   "Uber: Power Users": "border-yellow-500/30 bg-yellow-500/5",
   "Uber: Churn": "border-red-500/30 bg-red-500/5",
+  "Uber: Aha Moment": "border-orange-500/30 bg-orange-500/5",
 };
 
 export default function DataLabPage() {
