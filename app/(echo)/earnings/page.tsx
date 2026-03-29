@@ -166,10 +166,10 @@ export default function EarningsPage() {
                 <span className="text-xl">🔔</span>
                 <div className="flex-1">
                   <p className="text-white text-sm font-medium">
-                    Tu veux savoir quand un nouveau rythme est disponible?
+                    {t("echo.dashboard.notifNewRythme")}
                   </p>
                   <p className="text-gray-400 text-xs mt-0.5">
-                    Active les notifications — tu ne rateras plus aucune opportunité de gagner.
+                    {t("echo.dashboard.enableNotifEarnings")}
                   </p>
                 </div>
                 <button
@@ -179,7 +179,7 @@ export default function EarningsPage() {
                   }}
                   className="bg-orange-500 text-white px-4 py-2 rounded-lg text-xs font-medium shrink-0"
                 >
-                  Activer
+                  {t("echo.dashboard.enableNotif")}
                 </button>
               </div>
             </div>
@@ -298,7 +298,7 @@ export default function EarningsPage() {
       {/* Earning breakdown by source */}
       {(campaignEarnings.length > 0 || bonusEarnings.streaks > 0 || bonusEarnings.badges > 0 || bonusEarnings.referrals > 0) && (
         <div className="bg-card rounded-xl p-6 mb-5">
-          <h3 className="text-white font-bold mb-3">Détail de tes gains</h3>
+          <h3 className="text-white font-bold mb-3">{t("echo.earnings.earningsDetail")}</h3>
 
           {/* Campaign earnings */}
           {campaignEarnings.length > 0 && (

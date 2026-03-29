@@ -26,7 +26,7 @@ interface Stats {
 
 function formatShortDate(dateStr: string) {
   const d = new Date(dateStr);
-  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
 }
 
 export default function AdminDashboard() {
@@ -217,7 +217,7 @@ export default function AdminDashboard() {
               href={step.highlight}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 border border-primary/20 text-sm font-semibold text-primary hover:bg-primary/20 transition mb-6"
             >
-              <span>Ouvrir</span>
+              <span>{t("admin.dashboard.open")}</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
                 <polyline points="15 3 21 3 21 9" />
@@ -280,9 +280,9 @@ export default function AdminDashboard() {
       {/* ── Welcome Bonus Banner (LUP-68) ── */}
       {stats.walletBalance > 0 && stats.totalCampaigns === 0 && (
         <div className="bg-gradient-to-r from-orange-500 to-yellow-500 rounded-xl p-4 text-center mb-6">
-          <div className="text-white font-bold text-lg">2,000 FCFA offerts!</div>
+          <div className="text-white font-bold text-lg">{t("admin.dashboard.welcomeBonus")}</div>
           <div className="text-white/80 text-sm">
-            Votre portefeuille a été crédité. Lancez votre première campagne — c&apos;est offert.
+            {t("admin.dashboard.welcomeBonusDesc")}
           </div>
         </div>
       )}
@@ -334,7 +334,7 @@ export default function AdminDashboard() {
               return (
                 <div key={c.id} className="flex items-center gap-3 text-sm">
                   <span className="font-semibold flex-1 min-w-0 truncate">{c.title}</span>
-                  <span className="text-white/40 shrink-0">{pct}% — {clicks} clics</span>
+                  <span className="text-white/40 shrink-0">{pct}% — {clicks} {t("common.clicks")}</span>
                 </div>
               );
             })}
@@ -362,7 +362,7 @@ export default function AdminDashboard() {
         <StatCard
           label={t("admin.dashboard.costPerClick")}
           value={costPerClick > 0 ? formatFCFA(costPerClick) : "—"}
-          sub={costPerClick > 0 && stats.validClicks === 0 ? "CPC configuré (aucun clic validé)" : t("admin.dashboard.costPerClickSub")}
+          sub={costPerClick > 0 && stats.validClicks === 0 ? t("admin.dashboard.configuredCpcHint") : t("admin.dashboard.costPerClickSub")}
           accent="purple"
         />
       </div>
@@ -418,7 +418,7 @@ export default function AdminDashboard() {
                       <span className="text-xs text-white/40">{formatFCFA(c.budget)}</span>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-white/50">
-                      <span>{clicks} clics</span>
+                      <span>{clicks} {t("common.clicks")}</span>
                       <span>·</span>
                       <span>{formatFCFA(cpc)}/clic</span>
                     </div>
