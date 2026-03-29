@@ -6,6 +6,41 @@ import { validateClick } from "@/lib/click-validator";
 import { processGamification } from "@/lib/gamification";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 
+async function updateChallengeParticipation(supabase: ReturnType<typeof getSupabase>, echoId: string) {
+  const now = new Date().toISOString();
+  const { data: activeChallenge } = await supabase
+    .from("challenges")
+    .select("id, clicks_per_reward")
+    .eq("status", "active")
+    .lte("start_date", now)
+    .gte("end_date", now)
+    .single();
+
+  if (!activeChallenge) return;
+
+  const { data: existing } = await supabase
+    .from("challenge_participants")
+    .select("id, valid_clicks")
+    .eq("challenge_id", activeChallenge.id)
+    .eq("echo_id", echoId)
+    .single();
+
+  if (existing) {
+    await supabase
+      .from("challenge_participants")
+      .update({ valid_clicks: existing.valid_clicks + 1 })
+      .eq("id", existing.id);
+  } else {
+    await supabase
+      .from("challenge_participants")
+      .insert({
+        challenge_id: activeChallenge.id,
+        echo_id: echoId,
+        valid_clicks: 1,
+      });
+  }
+}
+
 function getSupabase() {
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -126,6 +161,9 @@ export async function GET(
       ])
         .then(() => processGamification(link.echo_id))
         .catch(console.error);
+
+      // Update challenge participation if there's an active challenge
+      updateChallengeParticipation(supabase, link.echo_id).catch(console.error);
     }
   }
 
