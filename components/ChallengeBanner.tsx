@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { generateEggShareCard, TIER_COLORS, TIER_EMOJIS } from "@/lib/share-card";
+import { trackEvent } from "@/lib/analytics";
 
 interface ChallengeReward {
   id: string;
@@ -84,6 +85,7 @@ export default function ChallengeBanner() {
       await new Promise((r) => setTimeout(r, 2000));
 
       if (result.success) {
+        trackEvent.echoCrackEgg(result.reward.tier, result.reward.amount);
         setReward(result.reward);
       }
     } catch {

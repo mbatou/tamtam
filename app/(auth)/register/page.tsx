@@ -8,6 +8,7 @@ import SoundWave from "@/components/ui/SoundWave";
 import ProgressBar from "@/components/ui/ProgressBar";
 import CitySelect from "@/components/ui/CitySelect";
 import { useTranslation } from "@/lib/i18n";
+import { trackEvent } from "@/lib/analytics";
 
 export default function RegisterPage() {
   return <Suspense><RegisterPageContent /></Suspense>;
@@ -94,6 +95,7 @@ function RegisterPageContent() {
         const data = await res.json();
         setError(data.error || t("auth.registerProfileError"));
       } else {
+        trackEvent.echoSignup(city || undefined);
         window.location.href = "/dashboard";
       }
     }

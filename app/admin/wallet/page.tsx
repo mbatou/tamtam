@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatFCFA, timeAgo } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
+import { trackEvent } from "@/lib/analytics";
 
 export default function AdminWalletWrapper() {
   return (
@@ -130,6 +131,7 @@ function AdminWalletPage() {
       const data = await res.json();
 
       if (data.success && data.redirect_url) {
+        trackEvent.brandRecharge(amount, paymentMethod);
         // Open Wave payment link in new tab
         window.open(data.redirect_url, "_blank");
         setSuccessMsg(t("admin.wallet.finalizeWave"));
