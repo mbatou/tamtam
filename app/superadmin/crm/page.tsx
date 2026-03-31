@@ -41,7 +41,7 @@ interface BrandCampaign {
   cpc: number;
   created_at: string;
   moderation_status: string;
-  target_city: string | null;
+  target_cities: string[] | null;
   echoCount: number;
 }
 
@@ -741,8 +741,8 @@ export default function CRMPage() {
                             <div className="text-white font-medium text-sm truncate">{campaign.title}</div>
                             <div className="flex items-center gap-2 mt-1">
                               <CampaignStatusBadge status={campaign.status} moderation={campaign.moderation_status} />
-                              {campaign.target_city && (
-                                <span className="text-xs text-white/20">{campaign.target_city}</span>
+                              {campaign.target_cities && campaign.target_cities.length > 0 && (
+                                <span className="text-xs text-white/20">{campaign.target_cities.join(", ")}</span>
                               )}
                             </div>
                           </div>
