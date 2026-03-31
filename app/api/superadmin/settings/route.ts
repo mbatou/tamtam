@@ -25,7 +25,7 @@ export async function GET() {
     { data: admins },
   ] = await Promise.all([
     supabase.from("platform_settings").select("*"),
-    supabase.from("users").select("id, name, phone, role, created_at").in("role", ["admin", "superadmin"]),
+    supabase.from("users").select("id, name, phone, role, created_at").in("role", ["admin", "superadmin"]).is("deleted_at", null),
   ]);
 
   let recentLogs: unknown[] = [];

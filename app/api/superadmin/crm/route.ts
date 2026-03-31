@@ -145,6 +145,7 @@ export async function GET(request: NextRequest) {
       .from("users")
       .select("id, name, phone, city, balance, total_earned, crm_stage, crm_tags, created_at, status, total_recharged, company_name")
       .eq("role", "batteur")
+      .is("deleted_at", null)
       .order("created_at", { ascending: false });
 
     const { data: campaignCounts } = await supabase

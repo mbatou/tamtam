@@ -35,6 +35,7 @@ export async function GET() {
     supabaseAdmin.from("users")
       .select("id, name, company_name, role, wallet_balance")
       .gt("wallet_balance", 0)
+      .is("deleted_at", null)
       .order("wallet_balance", { ascending: false }),
     // 2. All wallet transactions (for balance check — single query replaces N per-user queries)
     supabaseAdmin.from("wallet_transactions")
@@ -72,7 +73,8 @@ export async function GET() {
       .in("type", ["withdrawal", "payout"]),
     supabaseAdmin.from("users")
       .select("wallet_balance, role")
-      .not("wallet_balance", "is", null),
+      .not("wallet_balance", "is", null)
+      .is("deleted_at", null),
   ]);
 
   // =====================================================================
