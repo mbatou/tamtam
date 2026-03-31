@@ -397,7 +397,16 @@
       "bonusEarned": "Bonus gagné",
       "referralCopied": "Lien de parrainage copié !",
       "referralPaused": "Le programme de parrainage est actuellement en pause. Il sera de retour bientôt !",
-      "inviteWhatsappText": "Rejoins-moi sur Tamtam et gagne de l'argent en partageant des liens sur WhatsApp ! 👉 https://tamma.me/register?ref={code}"
+      "inviteWhatsappText": "Rejoins-moi sur Tamtam et gagne de l'argent en partageant des liens sur WhatsApp ! 👉 https://tamma.me/register?ref={code}",
+      "dangerZone": "Zone de danger",
+      "deleteAccount": "Supprimer mon compte",
+      "deleteDescription": "La suppression de votre compte est irréversible. Toutes vos données personnelles seront effacées.",
+      "deleteConfirm": "Supprimer votre compte",
+      "deleteIrreversible": "Cette action est irréversible. Votre compte, vos données personnelles et votre historique seront supprimés définitivement.",
+      "typeToConfirm": "Tapez SUPPRIMER pour confirmer",
+      "deleteButton": "Supprimer définitivement",
+      "deleting": "Suppression...",
+      "balanceWarning": "Vous avez un solde positif. Demandez un retrait avant de supprimer votre compte."
     },
     "rythmes": {
       "title": "Rythmes",
@@ -732,7 +741,16 @@
       "industryHealth": "🏥 Santé / Pharmacie",
       "industryTech": "💻 Tech / Services numériques",
       "industryEvents": "🎉 Événementiel",
-      "industryOther": "📦 Autre"
+      "industryOther": "📦 Autre",
+      "dangerZone": "Zone de danger",
+      "deleteAccount": "Supprimer mon compte",
+      "deleteDescription": "La suppression de votre compte est irréversible. Toutes vos données personnelles seront effacées.",
+      "deleteConfirm": "Supprimer votre compte",
+      "deleteIrreversible": "Cette action est irréversible. Votre compte, vos données personnelles et votre historique seront supprimés définitivement.",
+      "typeToConfirm": "Tapez SUPPRIMER pour confirmer",
+      "deleteButton": "Supprimer définitivement",
+      "deleting": "Suppression...",
+      "balanceWarning": "Vous avez un solde positif. Demandez un retrait avant de supprimer votre compte."
     },
     "analytics": {
       "title": "Analytics",

@@ -36,6 +36,7 @@ export async function GET() {
     .from("users")
     .select("id, name, phone, role, team_position, team_permissions, created_at")
     .not("team_position", "is", null)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   return NextResponse.json({

@@ -21,6 +21,7 @@ export async function GET() {
   const { data: users } = await supabase
     .from("users")
     .select("*")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   // Get echo click stats

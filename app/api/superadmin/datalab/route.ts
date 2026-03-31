@@ -49,8 +49,8 @@ export async function GET() {
     dbCampaignSampleResult,
   ] = await Promise.all([
     // Echo funnel
-    supabaseAdmin.from("users").select("*", { count: "exact", head: true }).eq("role", "echo"),
-    supabaseAdmin.from("users").select("*", { count: "exact", head: true }).in("role", ["batteur", "brand"]),
+    supabaseAdmin.from("users").select("*", { count: "exact", head: true }).eq("role", "echo").is("deleted_at", null),
+    supabaseAdmin.from("users").select("*", { count: "exact", head: true }).in("role", ["batteur", "brand"]).is("deleted_at", null),
     supabaseAdmin.from("tracked_links").select("echo_id").limit(50000),
     supabaseAdmin.from("clicks").select("tracked_links!inner(echo_id)").eq("is_valid", true).limit(50000),
     supabaseAdmin.from("wallet_transactions").select("user_id").in("type", ["withdrawal", "withdrawal_refund"]).limit(50000),
@@ -58,7 +58,7 @@ export async function GET() {
     supabaseAdmin.from("clicks").select("tracked_links!inner(echo_id)").eq("is_valid", true).gte("created_at", sevenDaysAgo).limit(50000),
     supabaseAdmin.from("clicks").select("tracked_links!inner(echo_id)").eq("is_valid", true).gte("created_at", thirtyDaysAgo).limit(50000),
     // All echos for lifecycle + cohorts
-    supabaseAdmin.from("users").select("id, created_at, city").eq("role", "echo"),
+    supabaseAdmin.from("users").select("id, created_at, city").eq("role", "echo").is("deleted_at", null),
     // Brand funnel
     supabaseAdmin.from("wallet_transactions").select("user_id")
       .in("type", ["wallet_recharge", "welcome_bonus", "manual_credit", "campaign_budget_refund", "legacy_reconciliation"])
@@ -67,14 +67,14 @@ export async function GET() {
     // Heatmap
     supabaseAdmin.from("clicks").select("created_at").eq("is_valid", true).limit(50000),
     // City performance
-    supabaseAdmin.from("users").select("id, city").eq("role", "echo").not("city", "is", null),
+    supabaseAdmin.from("users").select("id, city").eq("role", "echo").not("city", "is", null).is("deleted_at", null),
     supabaseAdmin.from("clicks").select("is_valid, tracked_links!inner(echo_id, users!inner(city))").limit(50000),
     // Campaign stats
     supabaseAdmin.from("campaigns").select("id, budget, cpc, spent, created_at, status, moderation_status").in("status", ["active", "completed", "finished"]),
     // Debug diagnostics
-    supabaseAdmin.from("users").select("*", { count: "exact", head: true }),
-    supabaseAdmin.from("users").select("*", { count: "exact", head: true }).eq("role", "echo"),
-    supabaseAdmin.from("users").select("*", { count: "exact", head: true }).in("role", ["batteur", "brand"]),
+    supabaseAdmin.from("users").select("*", { count: "exact", head: true }).is("deleted_at", null),
+    supabaseAdmin.from("users").select("*", { count: "exact", head: true }).eq("role", "echo").is("deleted_at", null),
+    supabaseAdmin.from("users").select("*", { count: "exact", head: true }).in("role", ["batteur", "brand"]).is("deleted_at", null),
     supabaseAdmin.from("campaigns").select("*", { count: "exact", head: true }),
     supabaseAdmin.from("clicks").select("*", { count: "exact", head: true }),
     supabaseAdmin.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", true),

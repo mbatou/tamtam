@@ -43,6 +43,7 @@ export async function GET() {
     const { data: signupsData } = await supabaseAdmin
       .from("users")
       .select("created_at, role")
+      .is("deleted_at", null)
       .gte("created_at", thirtyDaysAgo);
 
     const dailySignups: Record<string, { echos: number; brands: number }> = {};

@@ -397,7 +397,16 @@
       "bonusEarned": "Bonus earned",
       "referralCopied": "Referral link copied!",
       "referralPaused": "The referral program is currently on pause. It will be back soon!",
-      "inviteWhatsappText": "Join me on Tamtam and earn money by sharing links on WhatsApp! 👉 https://tamma.me/register?ref={code}"
+      "inviteWhatsappText": "Join me on Tamtam and earn money by sharing links on WhatsApp! 👉 https://tamma.me/register?ref={code}",
+      "dangerZone": "Danger zone",
+      "deleteAccount": "Delete my account",
+      "deleteDescription": "Deleting your account is irreversible. All your personal data will be erased.",
+      "deleteConfirm": "Delete your account",
+      "deleteIrreversible": "This action is irreversible. Your account, personal data and history will be permanently deleted.",
+      "typeToConfirm": "Type SUPPRIMER to confirm",
+      "deleteButton": "Delete permanently",
+      "deleting": "Deleting...",
+      "balanceWarning": "You have a positive balance. Request a withdrawal before deleting your account."
     },
     "rythmes": {
       "title": "Rythmes",
@@ -732,7 +741,16 @@
       "industryHealth": "🏥 Health / Pharmacy",
       "industryTech": "💻 Tech / Digital services",
       "industryEvents": "🎉 Events",
-      "industryOther": "📦 Other"
+      "industryOther": "📦 Other",
+      "dangerZone": "Danger zone",
+      "deleteAccount": "Delete my account",
+      "deleteDescription": "Deleting your account is irreversible. All your personal data will be erased.",
+      "deleteConfirm": "Delete your account",
+      "deleteIrreversible": "This action is irreversible. Your account, personal data and history will be permanently deleted.",
+      "typeToConfirm": "Type SUPPRIMER to confirm",
+      "deleteButton": "Delete permanently",
+      "deleting": "Deleting...",
+      "balanceWarning": "You have a positive balance. Request a withdrawal before deleting your account."
     },
     "analytics": {
       "title": "Analytics",

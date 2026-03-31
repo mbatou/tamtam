@@ -23,6 +23,10 @@ export interface User {
   crm_stage?: "onboarding" | "active" | "at_risk" | "churned";
   crm_tags?: string[];
   terms_accepted_at?: string | null;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
+  deletion_reason?: string | null;
+  original_email?: string | null;
   created_at: string;
 }
 

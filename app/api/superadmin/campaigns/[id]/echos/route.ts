@@ -93,7 +93,8 @@ export async function GET(
   const { count: totalEchos } = await supabase
     .from("users")
     .select("*", { count: "exact", head: true })
-    .eq("role", "echo");
+    .eq("role", "echo")
+    .is("deleted_at", null);
 
   const engagedCount = echos.length;
 

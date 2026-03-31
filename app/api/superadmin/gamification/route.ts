@@ -27,12 +27,13 @@ export async function GET() {
     supabase
       .from("users")
       .select("id", { count: "exact", head: true })
-      .eq("role", "echo"),
+      .eq("role", "echo")
+      .is("deleted_at", null),
     supabase.from("echo_streaks").select("echo_id, current_streak, longest_streak").limit(5000),
     supabase.from("echo_achievements").select("echo_id, milestone_id, reward_fcfa, achieved_at, users!echo_id(name)").limit(5000),
     supabase.from("gamification_milestones").select("*").order("sort_order"),
     supabase.from("streak_rewards").select("echo_id, reward_fcfa, credited_at, users!echo_id(name)").limit(5000),
-    supabase.from("users").select("tier").eq("role", "echo").limit(5000),
+    supabase.from("users").select("tier").eq("role", "echo").is("deleted_at", null).limit(5000),
     supabase
       .from("platform_settings")
       .select("key, value")

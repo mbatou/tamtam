@@ -42,6 +42,11 @@ function InvestigatePageContent() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"timeline" | "wallet" | "payouts" | "campaigns" | "gamification" | "admin">("timeline");
 
+  // Account deletion
+  const [showAdminDelete, setShowAdminDelete] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [adminDeleting, setAdminDeleting] = useState(false);
+
   const investigate = useCallback(async (userId?: string) => {
     const id = (userId || searchInput).trim();
     if (!id) return;
@@ -219,12 +224,29 @@ function InvestigatePageContent() {
                   </div>
                 ) : null}
               </div>
-              <button
-                onClick={() => router.push(`/superadmin/users?id=${data.user.id}`)}
-                className="shrink-0 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition text-xs font-semibold text-white/50"
-              >
-                Voir profil
-              </button>
+              <div className="flex flex-col gap-2 shrink-0">
+                <button
+                  onClick={() => router.push(`/superadmin/users?id=${data.user.id}`)}
+                  className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition text-xs font-semibold text-white/50"
+                >
+                  Voir profil
+                </button>
+                {!data.user.deleted_at ? (
+                  <button
+                    onClick={() => setShowAdminDelete(true)}
+                    className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold hover:bg-red-500/20 transition"
+                  >
+                    Supprimer ce compte
+                  </button>
+                ) : (
+                  <div className="px-3 py-1.5 rounded-lg bg-white/5">
+                    <span className="text-red-400 text-xs">Supprimé le {new Date(data.user.deleted_at as string).toLocaleDateString("fr-FR")}</span>
+                    {data.user.deletion_reason ? (
+                      <span className="text-white/30 text-[10px] block mt-0.5">Raison: {String(data.user.deletion_reason)}</span>
+                    ) : null}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -532,6 +554,73 @@ function InvestigatePageContent() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Admin delete modal */}
+      {showAdminDelete && data && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-900 border border-red-500/30 rounded-xl p-6 max-w-md w-full">
+            <h3 className="text-red-400 font-bold text-lg mb-2">Supprimer {getBrandDisplayName({ name: data.user.name as string, company_name: data.user.company_name as string | undefined, role: data.user.role as string })}</h3>
+            <p className="text-white/40 text-sm mb-4">
+              Le compte sera désactivé et les données anonymisées. L&apos;historique financier sera conservé.
+            </p>
+
+            {(data.user.balance as number) > 0 && (
+              <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3 mb-4">
+                <div className="text-orange-400 text-sm">
+                  Ce compte a un solde de {Number(data.user.balance).toLocaleString("fr-FR")} FCFA. Il sera perdu.
+                </div>
+              </div>
+            )}
+
+            <div className="mb-4">
+              <label className="text-white/30 text-xs mb-1 block">Raison de la suppression *</label>
+              <input
+                type="text"
+                value={deleteReason}
+                onChange={e => setDeleteReason(e.target.value)}
+                placeholder="Ex: Demande de l'utilisateur, compte frauduleux..."
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-red-500 transition"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowAdminDelete(false); setDeleteReason(""); }}
+                className="flex-1 bg-white/5 text-white/60 py-2.5 rounded-lg text-sm hover:bg-white/10 transition"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={async () => {
+                  setAdminDeleting(true);
+                  try {
+                    await fetch("/api/superadmin/users/delete", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ userId: data.user.id, reason: deleteReason }),
+                    });
+                    setShowAdminDelete(false);
+                    setDeleteReason("");
+                    // Reload investigation data
+                    investigate(data.user.id as string);
+                  } catch {
+                    // ignore
+                  }
+                  setAdminDeleting(false);
+                }}
+                disabled={adminDeleting || !deleteReason}
+                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition ${
+                  deleteReason && !adminDeleting
+                    ? "bg-red-500 text-white hover:bg-red-600"
+                    : "bg-white/5 text-white/20 cursor-not-allowed"
+                }`}
+              >
+                {adminDeleting ? "Suppression..." : "Confirmer la suppression"}
+              </button>
+            </div>
           </div>
         </div>
       )}
