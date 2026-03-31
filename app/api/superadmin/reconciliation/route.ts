@@ -16,22 +16,82 @@ export async function GET() {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 
-  // 1. BALANCE INTEGRITY — compare wallet_balance vs sum of transactions
-  const { data: users } = await supabaseAdmin
-    .from("users")
-    .select("id, name, company_name, role, wallet_balance")
-    .gt("wallet_balance", 0)
-    .order("wallet_balance", { ascending: false });
+  // =====================================================================
+  // SINGLE BATCH: Fetch all needed data in parallel (was N+1 per user/campaign)
+  // =====================================================================
+  const [
+    usersResult,
+    allTransactionsResult,
+    allCampaignsResult,
+    allCampaignTransactionsResult,
+    allCampaignClicksResult,
+    allRefundsResult,
+    allDebitTransactionsResult,
+    moneyInResult,
+    moneyOutResult,
+    allBalancesResult,
+  ] = await Promise.all([
+    // 1. Users with positive balance
+    supabaseAdmin.from("users")
+      .select("id, name, company_name, role, wallet_balance")
+      .gt("wallet_balance", 0)
+      .order("wallet_balance", { ascending: false }),
+    // 2. All wallet transactions (for balance check — single query replaces N per-user queries)
+    supabaseAdmin.from("wallet_transactions")
+      .select("user_id, amount")
+      .limit(100000),
+    // 3. All campaigns
+    supabaseAdmin.from("campaigns")
+      .select("id, name, budget, spent, cpc, status, moderation_status, user_id"),
+    // 4. Campaign budget transactions (replaces N per-campaign queries)
+    supabaseAdmin.from("wallet_transactions")
+      .select("source_id, type, amount")
+      .in("type", ["campaign_budget_debit", "campaign_budget_refund"])
+      .limit(100000),
+    // 5. Valid clicks with campaign link (replaces N per-campaign click queries)
+    supabaseAdmin.from("clicks")
+      .select("link_id, is_valid, tracked_links!inner(campaign_id)")
+      .eq("is_valid", true)
+      .limit(100000),
+    // 6. Refund audit
+    supabaseAdmin.from("wallet_transactions")
+      .select("id, user_id, amount, source_id, type, description, created_at")
+      .eq("type", "campaign_budget_refund")
+      .order("created_at", { ascending: false }),
+    // 7. All negative transactions (for refund matching — replaces N per-refund queries)
+    supabaseAdmin.from("wallet_transactions")
+      .select("source_id, amount")
+      .lt("amount", 0)
+      .limit(100000),
+    // 8. Platform P&L
+    supabaseAdmin.from("wallet_transactions")
+      .select("amount, type")
+      .in("type", ["wallet_recharge", "welcome_bonus", "payment"]),
+    supabaseAdmin.from("wallet_transactions")
+      .select("amount, type")
+      .in("type", ["withdrawal", "payout"]),
+    supabaseAdmin.from("users")
+      .select("wallet_balance, role")
+      .not("wallet_balance", "is", null),
+  ]);
+
+  // =====================================================================
+  // 1. BALANCE INTEGRITY — computed in memory (was N+1 per user)
+  // =====================================================================
+  const transactionsByUser: Record<string, number> = {};
+  const transactionCountByUser: Record<string, number> = {};
+  for (const t of allTransactionsResult.data || []) {
+    if (!transactionsByUser[t.user_id]) {
+      transactionsByUser[t.user_id] = 0;
+      transactionCountByUser[t.user_id] = 0;
+    }
+    transactionsByUser[t.user_id] += Number(t.amount) || 0;
+    transactionCountByUser[t.user_id]++;
+  }
 
   const balanceMismatches = [];
-
-  for (const user of users || []) {
-    const { data: transactions } = await supabaseAdmin
-      .from("wallet_transactions")
-      .select("amount")
-      .eq("user_id", user.id);
-
-    const expectedBalance = (transactions || []).reduce((sum: number, t: { amount: number | null }) => sum + (t.amount || 0), 0);
+  for (const user of usersResult.data || []) {
+    const expectedBalance = transactionsByUser[user.id] || 0;
     const actualBalance = user.wallet_balance || 0;
     const diff = Math.round(actualBalance - expectedBalance);
 
@@ -43,54 +103,48 @@ export async function GET() {
         expectedBalance: Math.round(expectedBalance),
         actualBalance: Math.round(actualBalance),
         difference: diff,
-        transactionCount: (transactions || []).length,
+        transactionCount: transactionCountByUser[user.id] || 0,
       });
     }
   }
 
-  // 2. CAMPAIGN BUDGET RECONCILIATION
-  const { data: campaigns } = await supabaseAdmin
-    .from("campaigns")
-    .select("id, name, budget, spent, cpc, status, moderation_status, user_id");
+  // =====================================================================
+  // 2. CAMPAIGN BUDGET RECONCILIATION — computed in memory (was N+1 per campaign)
+  // =====================================================================
+
+  // Group campaign transactions by source_id (campaign_id)
+  const txByCampaign: Record<string, { debitCount: number; refundCount: number }> = {};
+  for (const tx of allCampaignTransactionsResult.data || []) {
+    if (!tx.source_id) continue;
+    if (!txByCampaign[tx.source_id]) {
+      txByCampaign[tx.source_id] = { debitCount: 0, refundCount: 0 };
+    }
+    if (tx.type === "campaign_budget_debit") {
+      txByCampaign[tx.source_id].debitCount++;
+    }
+    if (tx.type === "campaign_budget_refund") {
+      txByCampaign[tx.source_id].refundCount++;
+    }
+  }
+
+  // Group valid clicks by campaign
+  const clicksByCampaign: Record<string, number> = {};
+  for (const click of allCampaignClicksResult.data || []) {
+    const cid = (click.tracked_links as unknown as { campaign_id: string } | null)?.campaign_id;
+    if (cid) clicksByCampaign[cid] = (clicksByCampaign[cid] || 0) + 1;
+  }
 
   const campaignIssues = [];
-
-  for (const campaign of campaigns || []) {
-    const { data: links } = await supabaseAdmin
-      .from("tracked_links")
-      .select("id")
-      .eq("campaign_id", campaign.id);
-
-    const linkIds = (links || []).map((l: { id: string }) => l.id);
-
-    let validClicks = 0;
-    if (linkIds.length > 0) {
-      const { count } = await supabaseAdmin
-        .from("clicks")
-        .select("*", { count: "exact", head: true })
-        .eq("is_valid", true)
-        .in("link_id", linkIds);
-      validClicks = count || 0;
-    }
-
+  for (const campaign of allCampaignsResult.data || []) {
+    const validClicks = clicksByCampaign[campaign.id] || 0;
     const expectedSpent = validClicks * campaign.cpc;
     const actualSpent = campaign.spent || 0;
     const diff = Math.round(actualSpent - expectedSpent);
 
-    const { count: debitCount } = await supabaseAdmin
-      .from("wallet_transactions")
-      .select("*", { count: "exact", head: true })
-      .eq("source_id", campaign.id)
-      .eq("type", "campaign_budget_debit");
+    const tx = txByCampaign[campaign.id] || { debitCount: 0, refundCount: 0 };
 
-    const { count: refundCount } = await supabaseAdmin
-      .from("wallet_transactions")
-      .select("*", { count: "exact", head: true })
-      .eq("source_id", campaign.id)
-      .eq("type", "campaign_budget_refund");
-
-    const hasIssue = Math.abs(diff) > 1 || (debitCount || 0) > 1 || (refundCount || 0) > 1 ||
-      (campaign.status === "draft" && (debitCount || 0) > 0);
+    const hasIssue = Math.abs(diff) > 1 || tx.debitCount > 1 || tx.refundCount > 1 ||
+      (campaign.status === "draft" && tx.debitCount > 0);
 
     if (hasIssue) {
       campaignIssues.push({
@@ -104,72 +158,54 @@ export async function GET() {
         cpc: campaign.cpc,
         status: campaign.status,
         moderationStatus: campaign.moderation_status,
-        debitCount: debitCount || 0,
-        refundCount: refundCount || 0,
-        issue: (debitCount || 0) > 1 ? "DUPLICATE_DEBIT" :
-               (refundCount || 0) > 1 ? "DUPLICATE_REFUND" :
-               campaign.status === "draft" && (debitCount || 0) > 0 ? "DRAFT_DEBITED" :
+        debitCount: tx.debitCount,
+        refundCount: tx.refundCount,
+        issue: tx.debitCount > 1 ? "DUPLICATE_DEBIT" :
+               tx.refundCount > 1 ? "DUPLICATE_REFUND" :
+               campaign.status === "draft" && tx.debitCount > 0 ? "DRAFT_DEBITED" :
                Math.abs(diff) > 1 ? "SPEND_MISMATCH" : "UNKNOWN",
       });
     }
   }
 
-  // 3. REFUND AUDIT
-  const { data: allRefunds } = await supabaseAdmin
-    .from("wallet_transactions")
-    .select("id, user_id, amount, source_id, type, description, created_at")
-    .eq("type", "campaign_budget_refund")
-    .order("created_at", { ascending: false });
+  // =====================================================================
+  // 3. REFUND AUDIT — computed in memory (was N+1 per refund)
+  // =====================================================================
+
+  // Build set of source_ids that have negative transactions (debits)
+  const sourceIdsWithDebit = new Set<string>();
+  for (const t of allDebitTransactionsResult.data || []) {
+    if (t.source_id) sourceIdsWithDebit.add(t.source_id);
+  }
 
   const refundAudit = [];
   const seenCampaigns = new Set();
 
-  for (const refund of allRefunds || []) {
+  for (const refund of allRefundsResult.data || []) {
     const isDuplicate = seenCampaigns.has(refund.source_id);
     seenCampaigns.add(refund.source_id);
 
-    // Look for any negative transaction with same source_id (debit may have different type)
-    const { count: matchingDebit } = await supabaseAdmin
-      .from("wallet_transactions")
-      .select("*", { count: "exact", head: true })
-      .eq("source_id", refund.source_id)
-      .lt("amount", 0);
+    const hasMatchingDebit = sourceIdsWithDebit.has(refund.source_id);
 
     refundAudit.push({
       ...refund,
       isDuplicate,
-      hasMatchingDebit: (matchingDebit || 0) > 0,
-      issue: isDuplicate ? "DUPLICATE" : (matchingDebit || 0) === 0 ? "ORPHAN" : null,
+      hasMatchingDebit,
+      issue: isDuplicate ? "DUPLICATE" : !hasMatchingDebit ? "ORPHAN" : null,
     });
   }
 
-  // 4. PLATFORM P&L
-  const { data: moneyIn } = await supabaseAdmin
-    .from("wallet_transactions")
-    .select("amount, type")
-    .in("type", ["wallet_recharge", "welcome_bonus", "payment"]);
+  // =====================================================================
+  // 4. PLATFORM P&L — computed from parallel queries
+  // =====================================================================
+  const totalMoneyIn = (moneyInResult.data || []).reduce((sum: number, t: { amount: number | null }) => sum + Math.abs(t.amount || 0), 0);
+  const totalMoneyOut = (moneyOutResult.data || []).reduce((sum: number, t: { amount: number | null }) => sum + Math.abs(t.amount || 0), 0);
 
-  const totalMoneyIn = (moneyIn || []).reduce((sum: number, t: { amount: number | null }) => sum + Math.abs(t.amount || 0), 0);
-
-  const { data: moneyOut } = await supabaseAdmin
-    .from("wallet_transactions")
-    .select("amount, type")
-    .in("type", ["withdrawal", "payout"]);
-
-  const totalMoneyOut = (moneyOut || []).reduce((sum: number, t: { amount: number | null }) => sum + Math.abs(t.amount || 0), 0);
-
-  const { data: allBalances } = await supabaseAdmin
-    .from("users")
-    .select("wallet_balance, role")
-    .not("wallet_balance", "is", null);
-
-  // Use Number() casting to handle potential text/string wallet_balance values
-  // Filter as: everything NOT echo = brand-side, echo = echo-side
-  const totalBrandBalances = (allBalances || [])
+  const totalBrandBalances = (allBalancesResult.data || [])
     .filter((u: { role: string }) => u.role !== "echo")
     .reduce((sum: number, u: { wallet_balance: number | string | null }) => sum + (Number(u.wallet_balance) || 0), 0);
 
-  const totalEchoBalances = (allBalances || [])
+  const totalEchoBalances = (allBalancesResult.data || [])
     .filter((u: { role: string }) => u.role === "echo")
     .reduce((sum: number, u: { wallet_balance: number | string | null }) => sum + (Number(u.wallet_balance) || 0), 0);
 
