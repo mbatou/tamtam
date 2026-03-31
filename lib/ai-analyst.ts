@@ -100,6 +100,13 @@ export async function analyzeWithAI(metrics: {
   campaignStats: { totalCampaigns: number; completedCampaigns: number; avgBudget: number; avgCPC: number };
   cohorts: { week: string; registered: number; activeNow: number; retentionRate: number }[];
   suggestions: { severity: string; text: string }[];
+  webAnalytics?: {
+    pageViews?: { key: string; total: number }[];
+    referrers?: { key: string; total: number }[];
+    devices?: { key: string; total: number }[];
+    countries?: { key: string; total: number }[];
+    customEvents?: { key: string; total: number }[];
+  } | null;
 }) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -157,6 +164,15 @@ ${(() => {
 
 === ALERTES EXISTANTES ===
 ${metrics.suggestions.map(s => `${s.severity}: ${s.text}`).join("\n")}
+
+${metrics.webAnalytics ? `
+=== WEB ANALYTICS (30 jours) ===
+Top pages: ${(metrics.webAnalytics.pageViews || []).slice(0, 5).map(p => `${p.key}: ${p.total} vues`).join(", ")}
+Sources: ${(metrics.webAnalytics.referrers || []).slice(0, 5).map(r => `${r.key || "Direct"}: ${r.total}`).join(", ")}
+Appareils: ${(metrics.webAnalytics.devices || []).map(d => `${d.key}: ${d.total}`).join(", ")}
+Pays: ${(metrics.webAnalytics.countries || []).slice(0, 5).map(c => `${c.key}: ${c.total}`).join(", ")}
+Events: ${(metrics.webAnalytics.customEvents || []).slice(0, 10).map(e => `${e.key}: ${e.total}`).join(", ")}
+` : "Web analytics: non configuré"}
 `;
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {

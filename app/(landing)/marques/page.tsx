@@ -8,6 +8,7 @@ import AnimatedCounter from "../_components/AnimatedCounter";
 import FAQItem from "../_components/FAQItem";
 import { useLandingStats } from "../_components/useLandingStats";
 import { useTranslation } from "@/lib/i18n";
+import { trackEvent } from "@/lib/analytics";
 
 /* ─── Animated bar for ROI comparison ─── */
 function AnimatedBar({
@@ -112,6 +113,7 @@ export default function BrandLanding() {
 
           <Link
             href="/signup/brand"
+            onClick={() => trackEvent.landingCTA("marques", "hero_signup")}
             className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-bold px-8 py-4 rounded-full text-lg transition-all hover:scale-105"
           >
             🚀 {t("brandPage.heroCTA")}
@@ -310,6 +312,7 @@ export default function BrandLanding() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
             href="/signup/brand"
+            onClick={() => trackEvent.landingCTA("marques", "bottom_signup")}
             className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-bold px-8 py-4 rounded-full text-lg transition-all hover:scale-105"
           >
             🚀 {t("brandPage.heroCTA")}

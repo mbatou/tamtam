@@ -7,6 +7,7 @@ import AnimatedCounter from "../_components/AnimatedCounter";
 import FAQItem from "../_components/FAQItem";
 import { useLandingStats } from "../_components/useLandingStats";
 import { useTranslation } from "@/lib/i18n";
+import { trackEvent } from "@/lib/analytics";
 
 export default function EchoLanding() {
   const { stats, loaded } = useLandingStats();
@@ -58,6 +59,7 @@ export default function EchoLanding() {
 
           <Link
             href="/register"
+            onClick={() => trackEvent.landingCTA("echos", "hero_signup")}
             className="inline-flex items-center gap-2 bg-teal-500 hover:bg-teal-600 text-white font-bold px-8 py-4 rounded-full text-lg transition-all hover:scale-105"
           >
             📱 {t("echoPage.heroCTA")}
@@ -278,12 +280,14 @@ export default function EchoLanding() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
             href="/register"
+            onClick={() => trackEvent.landingCTA("echos", "bottom_signup")}
             className="inline-flex items-center gap-2 bg-teal-500 hover:bg-teal-600 text-white font-bold px-8 py-4 rounded-full text-lg transition-all hover:scale-105"
           >
             📱 {t("echoPage.heroCTA")}
           </Link>
           <Link
             href="/register"
+            onClick={() => trackEvent.landingCTA("echos", "referral_cta")}
             className="inline-flex items-center gap-2 text-teal-400 hover:text-teal-300 font-bold transition-colors"
           >
             🤝 {t("echoPage.referralCTA")}

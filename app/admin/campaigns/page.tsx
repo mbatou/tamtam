@@ -7,6 +7,7 @@ import { useTranslation } from "@/lib/i18n";
 import type { Campaign } from "@/lib/types";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { SENEGAL_CITIES } from "@/lib/cities";
+import { trackEvent } from "@/lib/analytics";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 type View = "list" | "detail" | "form";
@@ -195,6 +196,7 @@ export default function AdminCampaignsPage() {
       if (asDraft) {
         setView("list");
       } else {
+        trackEvent.brandCreateCampaign(Number(form.budget), Number(form.cpc));
         setSelectedCampaign(data);
         setView("detail");
       }
@@ -261,6 +263,8 @@ export default function AdminCampaignsPage() {
         } else {
           alert(data.error || t("common.error"));
         }
+      } else {
+        trackEvent.brandLaunchCampaign(campaignId);
       }
       await loadCampaigns();
     } finally {

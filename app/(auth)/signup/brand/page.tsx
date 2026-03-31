@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import SoundWave from "@/components/ui/SoundWave";
+import { trackEvent } from "@/lib/analytics";
 
 export default function BrandSignupPage() {
   return (
@@ -91,6 +92,7 @@ function BrandSignupContent() {
         return;
       }
 
+      trackEvent.brandSignup(refCode || undefined);
       const inviteParam = teamInviteId ? `&team_invite=${teamInviteId}` : "";
       router.push(`/verify-otp?email=${encodeURIComponent(form.email)}${inviteParam}`);
     } catch {

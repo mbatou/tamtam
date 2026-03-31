@@ -9,6 +9,7 @@ import { useTranslation } from "@/lib/i18n";
 import type { Campaign, TrackedLinkWithCampaign } from "@/lib/types";
 import { requestNotificationPermission, canAskNotification } from "@/lib/notifications";
 import { shareCampaignToWhatsApp } from "@/lib/share-utils";
+import { trackEvent } from "@/lib/analytics";
 import ChallengeBanner from "@/components/ChallengeBanner";
 
 
@@ -50,6 +51,7 @@ export default function RythmesPage() {
     });
 
     if (res.ok) {
+      trackEvent.echoAcceptCampaign(campaignId);
       showToast(t("echo.dashboard.accepted"), "success");
       await loadData();
     } else {
@@ -61,6 +63,7 @@ export default function RythmesPage() {
 
   function copyLink(shortCode: string) {
     navigator.clipboard.writeText(getTrackingUrl(shortCode));
+    trackEvent.echoShareLink("copy");
     showToast(t("echo.dashboard.copied"), "success");
   }
 
@@ -72,8 +75,10 @@ export default function RythmesPage() {
       setSharing(campaignId);
       const result = await shareCampaignToWhatsApp(firstImage, url, campaignId);
       if (result === "shared") {
+        trackEvent.echoShareLink("native");
         showToast(`✅ ${t("common.shareSent")}`, "success");
       } else if (result === "fallback") {
+        trackEvent.echoShareLink("whatsapp");
         showToast(`✅ ${t("common.shareSent")}`, "success");
       }
       try {

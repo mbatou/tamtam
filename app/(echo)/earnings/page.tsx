@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useTranslation } from "@/lib/i18n";
 import type { User, Payout } from "@/lib/types";
 import { requestNotificationPermission, canAskNotification } from "@/lib/notifications";
+import { trackEvent } from "@/lib/analytics";
 
 export default function EarningsPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -95,6 +96,7 @@ export default function EarningsPage() {
     });
 
     if (res.ok) {
+      trackEvent.echoWithdraw(amount);
       setLastWithdrawn(amount);
       setWithdrawSuccess(true);
       setShowWithdrawForm(false);

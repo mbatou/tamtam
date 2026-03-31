@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslation, Locale } from "@/lib/i18n";
+import { trackEvent } from "@/lib/analytics";
 
 export default function LanguageSwitcher() {
   const { locale, setLocale, t } = useTranslation();
@@ -15,7 +16,7 @@ export default function LanguageSwitcher() {
         ]).map((lang) => (
           <button
             key={lang.key}
-            onClick={() => setLocale(lang.key)}
+            onClick={() => { trackEvent.languageSwitch(lang.key); setLocale(lang.key); }}
             className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition ${
               locale === lang.key
                 ? "bg-gradient-primary text-white"
