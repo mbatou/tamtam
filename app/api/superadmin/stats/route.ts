@@ -50,6 +50,39 @@ export async function GET(request: NextRequest) {
     sentPayoutsQuery = sentPayoutsQuery.lte("created_at", toParam);
   }
 
+  // --- Active echos date range ---
+  const activeFrom = fromParam || (() => { const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString(); })();
+  let activeEchoQuery = supabase
+    .from("tracked_links")
+    .select("echo_id, clicks!inner(created_at)")
+    .gte("clicks.created_at", activeFrom)
+    .limit(50000);
+  if (toParam) activeEchoQuery = activeEchoQuery.lte("clicks.created_at", toParam);
+
+  // --- Chart date range ---
+  const nowUTC = new Date();
+  const chartFrom = fromParam ? new Date(fromParam) : new Date(Date.UTC(nowUTC.getUTCFullYear(), nowUTC.getUTCMonth(), nowUTC.getUTCDate() - 13));
+  const chartTo = toParam ? new Date(toParam) : new Date(Date.UTC(nowUTC.getUTCFullYear(), nowUTC.getUTCMonth(), nowUTC.getUTCDate(), 23, 59, 59, 999));
+
+  // Generate day buckets
+  const chartBuckets: string[] = [];
+  const bucketCursor = new Date(chartFrom);
+  bucketCursor.setUTCHours(0, 0, 0, 0);
+  const bucketEnd = new Date(chartTo);
+  bucketEnd.setUTCHours(0, 0, 0, 0);
+  while (bucketCursor <= bucketEnd) {
+    chartBuckets.push(bucketCursor.toISOString().slice(0, 10));
+    bucketCursor.setUTCDate(bucketCursor.getUTCDate() + 1);
+  }
+
+  // --- Acquisition date range ---
+  const acqFrom = fromParam ? new Date(fromParam) : new Date(Date.UTC(nowUTC.getUTCFullYear(), nowUTC.getUTCMonth(), nowUTC.getUTCDate() - 29));
+  const dayCount = chartBuckets.length;
+  const acqDayCount = fromParam ? dayCount : 30;
+
+  // =====================================================================
+  // BATCH 1: Run ALL independent queries in parallel (was sequential)
+  // =====================================================================
   const [
     { count: totalEchos },
     { count: totalBatteurs },
@@ -67,6 +100,13 @@ export async function GET(request: NextRequest) {
     { data: allCampaigns },
     { data: sentPayouts },
     { data: settings },
+    { data: activeEchoLinks },
+    { data: recentSignups },
+    { data: echoSignups30 },
+    { data: brandSignups30 },
+    { count: echosBefore },
+    { count: brandsBefore },
+    { data: activeCampaignsList },
   ] = await Promise.all([
     supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "echo"),
     supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "batteur"),
@@ -84,6 +124,20 @@ export async function GET(request: NextRequest) {
     supabase.from("campaigns").select("spent, budget, status").limit(5000),
     sentPayoutsQuery,
     supabase.from("platform_settings").select("key, value"),
+    // Active echos query (was sequential)
+    activeEchoQuery,
+    // Signups chart query (was sequential)
+    supabase.from("users").select("created_at").eq("role", "echo")
+      .gte("created_at", chartFrom.toISOString()).lte("created_at", chartTo.toISOString()).limit(50000),
+    // Acquisition queries (were sequential)
+    supabase.from("users").select("created_at").eq("role", "echo")
+      .gte("created_at", acqFrom.toISOString()).lte("created_at", chartTo.toISOString()).limit(50000),
+    supabase.from("users").select("created_at").eq("role", "batteur")
+      .gte("created_at", acqFrom.toISOString()).lte("created_at", chartTo.toISOString()).limit(50000),
+    supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "echo").lt("created_at", acqFrom.toISOString()),
+    supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "batteur").lt("created_at", acqFrom.toISOString()),
+    // Active campaigns list (was sequential)
+    supabase.from("campaigns").select("id, title, budget, spent, cpc, status").eq("status", "active"),
   ]);
 
   const grossRevenue = (allCampaigns || []).reduce((s: number, c: { spent: number }) => s + (c.spent || 0), 0);
@@ -93,16 +147,7 @@ export async function GET(request: NextRequest) {
   const pendingPayoutAmount = (pendingPayoutsList || []).reduce((s: number, p: { amount: number }) => s + p.amount, 0);
   const fraudRate = (totalClicks || 0) > 0 ? ((fraudClicks || 0) / (totalClicks || 1) * 100) : 0;
 
-  // --- Active echos (echos with clicks in the selected period, default last 7 days) ---
-  const activeFrom = fromParam || (() => { const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString(); })();
-  let activeEchoQuery = supabase
-    .from("tracked_links")
-    .select("echo_id, clicks!inner(created_at)")
-    .gte("clicks.created_at", activeFrom)
-    .limit(50000);
-  if (toParam) activeEchoQuery = activeEchoQuery.lte("clicks.created_at", toParam);
-  const { data: activeEchoLinks } = await activeEchoQuery;
-
+  // --- Active echos (computed from parallel query) ---
   const activeEchoSet = new Set<string>();
   if (activeEchoLinks) {
     for (const link of activeEchoLinks) {
@@ -122,23 +167,7 @@ export async function GET(request: NextRequest) {
     ? Math.round((totalBudgetActive / totalBudgetActiveAll) * 100)
     : 0;
 
-  // --- Chart data: clicks per day (using Postgres COUNT — immune to row-limit truncation) ---
-  const nowUTC = new Date();
-  const chartFrom = fromParam ? new Date(fromParam) : new Date(Date.UTC(nowUTC.getUTCFullYear(), nowUTC.getUTCMonth(), nowUTC.getUTCDate() - 13));
-  const chartTo = toParam ? new Date(toParam) : new Date(Date.UTC(nowUTC.getUTCFullYear(), nowUTC.getUTCMonth(), nowUTC.getUTCDate(), 23, 59, 59, 999));
-
-  // Generate day buckets
-  const chartBuckets: string[] = [];
-  const bucketCursor = new Date(chartFrom);
-  bucketCursor.setUTCHours(0, 0, 0, 0);
-  const bucketEnd = new Date(chartTo);
-  bucketEnd.setUTCHours(0, 0, 0, 0);
-  while (bucketCursor <= bucketEnd) {
-    chartBuckets.push(bucketCursor.toISOString().slice(0, 10));
-    bucketCursor.setUTCDate(bucketCursor.getUTCDate() + 1);
-  }
-
-  // Per-day Postgres COUNT(*) — immune to row-limit truncation
+  // --- Chart data: clicks per day (parallel per-day COUNT queries) ---
   const clicksChart = await Promise.all(
     chartBuckets.map(async (date) => {
       const dayStart = `${date}T00:00:00.000Z`;
@@ -153,8 +182,6 @@ export async function GET(request: NextRequest) {
     })
   );
 
-  const dayCount = chartBuckets.length;
-
   // --- Chart data: campaign status distribution ---
   const campaignsByStatus: Record<string, number> = {};
   for (const c of allCampaigns || []) {
@@ -162,17 +189,7 @@ export async function GET(request: NextRequest) {
     campaignsByStatus[s] = (campaignsByStatus[s] || 0) + 1;
   }
 
-  // --- Chart data: echo signups per day ---
-  const signupsQuery = supabase
-    .from("users")
-    .select("created_at")
-    .eq("role", "echo")
-    .gte("created_at", chartFrom.toISOString())
-    .lte("created_at", chartTo.toISOString())
-    .limit(50000);
-
-  const { data: recentSignups } = await signupsQuery;
-
+  // --- Chart data: echo signups per day (computed from parallel query) ---
   const signupsByDay: Record<string, number> = {};
   for (const key of chartBuckets) {
     signupsByDay[key] = 0;
@@ -183,21 +200,7 @@ export async function GET(request: NextRequest) {
   }
   const signupsChart = Object.entries(signupsByDay).map(([date, count]) => ({ date, count }));
 
-  // --- Chart data: user acquisition (echos + brands cumulative) ---
-  // Use date range if provided, otherwise default to last 30 days
-  const acqFrom = fromParam ? new Date(fromParam) : new Date(Date.UTC(nowUTC.getUTCFullYear(), nowUTC.getUTCMonth(), nowUTC.getUTCDate() - 29));
-  const acqDayCount = fromParam ? dayCount : 30;
-
-  const echoAcqQuery = supabase.from("users").select("created_at").eq("role", "echo").gte("created_at", acqFrom.toISOString()).lte("created_at", chartTo.toISOString()).limit(50000);
-  const brandAcqQuery = supabase.from("users").select("created_at").eq("role", "batteur").gte("created_at", acqFrom.toISOString()).lte("created_at", chartTo.toISOString()).limit(50000);
-
-  const [{ data: echoSignups30 }, { data: brandSignups30 }, { count: echosBefore }, { count: brandsBefore }] = await Promise.all([
-    echoAcqQuery,
-    brandAcqQuery,
-    supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "echo").lt("created_at", acqFrom.toISOString()),
-    supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "batteur").lt("created_at", acqFrom.toISOString()),
-  ]);
-
+  // --- Chart data: user acquisition (computed from parallel queries) ---
   const acqByDay: Record<string, { date: string; echos: number; brands: number; cumulEchos: number; cumulBrands: number }> = {};
   for (let i = 0; i < acqDayCount; i++) {
     const d = new Date(acqFrom);
@@ -222,11 +225,7 @@ export async function GET(request: NextRequest) {
   });
 
   // --- Active campaigns with Écho engagement details ---
-  const { data: activeCampaignsList } = await supabase
-    .from("campaigns")
-    .select("id, title, budget, spent, cpc, status")
-    .eq("status", "active");
-
+  // Batch fetch all tracked links and clicks for active campaigns in parallel
   interface ActiveCampaignDetail {
     id: string;
     title: string;
@@ -242,56 +241,69 @@ export async function GET(request: NextRequest) {
 
   const activeCampaignsDetails: ActiveCampaignDetail[] = [];
 
-  for (const camp of activeCampaignsList || []) {
-    // Fetch tracked links without nested clicks (avoids row-limit truncation)
-    const { data: links } = await supabase
+  if (activeCampaignsList && activeCampaignsList.length > 0) {
+    // Batch fetch all tracked links for all active campaigns in one query
+    const activeCampaignIds = activeCampaignsList.map(c => c.id);
+    const { data: allLinks } = await supabase
       .from("tracked_links")
-      .select(`
-        id,
-        echo_id,
-        users!tracked_links_echo_id_fkey(id, name, city)
-      `)
-      .eq("campaign_id", camp.id);
+      .select(`id, echo_id, campaign_id, users!tracked_links_echo_id_fkey(id, name, city)`)
+      .in("campaign_id", activeCampaignIds);
 
-    const allLinkIds = (links || []).map((l) => l.id);
-    const echoLinkMap = new Map<string, { user: { id: string; name: string; city: string | null }; linkIds: string[] }>();
-    for (const link of links || []) {
-      const echoUser = link.users as unknown as { id: string; name: string; city: string | null } | null;
-      if (!echoUser) continue;
-      if (!echoLinkMap.has(link.echo_id)) {
-        echoLinkMap.set(link.echo_id, { user: echoUser, linkIds: [] });
-      }
-      echoLinkMap.get(link.echo_id)!.linkIds.push(link.id);
+    // Group links by campaign
+    const linksByCampaign = new Map<string, typeof allLinks>();
+    for (const link of allLinks || []) {
+      const campId = link.campaign_id;
+      if (!linksByCampaign.has(campId)) linksByCampaign.set(campId, []);
+      linksByCampaign.get(campId)!.push(link);
     }
 
-    // Use Postgres COUNT(*) for accurate campaign-level totals
-    const [campTotalClicks, campValidClicks] = await Promise.all([
-      countClicks(supabase, allLinkIds),
-      countClicks(supabase, allLinkIds, true),
-    ]);
+    // Compute per-campaign details with parallel click counts
+    const campaignDetails = await Promise.all(
+      activeCampaignsList.map(async (camp) => {
+        const links = linksByCampaign.get(camp.id) || [];
+        const allLinkIds = links.map((l) => l.id);
+        const echoLinkMap = new Map<string, { user: { id: string; name: string; city: string | null }; linkIds: string[] }>();
+        for (const link of links) {
+          const echoUser = link.users as unknown as { id: string; name: string; city: string | null } | null;
+          if (!echoUser) continue;
+          if (!echoLinkMap.has(link.echo_id)) {
+            echoLinkMap.set(link.echo_id, { user: echoUser, linkIds: [] });
+          }
+          echoLinkMap.get(link.echo_id)!.linkIds.push(link.id);
+        }
 
-    // Per-echo valid clicks using Postgres COUNT(*)
-    const echoEntries = Array.from(echoLinkMap.entries());
-    const echoValidCounts = await Promise.all(
-      echoEntries.map(([, { linkIds }]) => countClicks(supabase, linkIds, true))
+        // Use Postgres COUNT(*) for accurate campaign-level totals
+        const [campTotalClicks, campValidClicks] = await Promise.all([
+          countClicks(supabase, allLinkIds),
+          countClicks(supabase, allLinkIds, true),
+        ]);
+
+        // Per-echo valid clicks using Postgres COUNT(*)
+        const echoEntries = Array.from(echoLinkMap.entries());
+        const echoValidCounts = await Promise.all(
+          echoEntries.map(([, { linkIds }]) => countClicks(supabase, linkIds, true))
+        );
+
+        const echoDetails = echoEntries.map(([, { user }], i) => ({
+          id: user.id,
+          name: user.name,
+          city: user.city,
+          validClicks: echoValidCounts[i],
+        }));
+
+        return {
+          ...camp,
+          engagedEchos: echoLinkMap.size,
+          totalClicks: campTotalClicks,
+          validClicks: campValidClicks,
+          topEchos: echoDetails
+            .sort((a, b) => b.validClicks - a.validClicks)
+            .slice(0, 5),
+        };
+      })
     );
 
-    const echoDetails = echoEntries.map(([, { user }], i) => ({
-      id: user.id,
-      name: user.name,
-      city: user.city,
-      validClicks: echoValidCounts[i],
-    }));
-
-    activeCampaignsDetails.push({
-      ...camp,
-      engagedEchos: echoLinkMap.size,
-      totalClicks: campTotalClicks,
-      validClicks: campValidClicks,
-      topEchos: echoDetails
-        .sort((a, b) => b.validClicks - a.validClicks)
-        .slice(0, 5),
-    });
+    activeCampaignsDetails.push(...campaignDetails);
   }
 
   return NextResponse.json({

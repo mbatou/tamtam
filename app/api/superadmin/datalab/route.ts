@@ -17,50 +17,89 @@ export async function GET() {
   }
 
   const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000).toISOString();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000).toISOString();
+
+  // =====================================================================
+  // SINGLE BATCH: Run ALL queries in parallel (was 15+ sequential queries)
+  // =====================================================================
+  const [
+    totalEchosResult,
+    totalBrandsResult,
+    echoLinksResult,
+    echoClicksResult,
+    echoWithdrawalsResult,
+    echoPayoutResult,
+    recentClicksResult,
+    last30dClicksResult,
+    allEchosResult,
+    brandRechargesResult,
+    brandCampaignsResult,
+    allClicksDataResult,
+    cityDataResult,
+    cityClicksResult,
+    allCampaignsResult,
+    dbTotalUsersResult,
+    dbTotalEchosResult,
+    dbTotalBrandsResult,
+    dbTotalCampaignsResult,
+    dbTotalClicksResult,
+    dbTotalValidClicksResult,
+    dbTransactionTypesResult,
+    dbCampaignSampleResult,
+  ] = await Promise.all([
+    // Echo funnel
+    supabaseAdmin.from("users").select("*", { count: "exact", head: true }).eq("role", "echo"),
+    supabaseAdmin.from("users").select("*", { count: "exact", head: true }).in("role", ["batteur", "brand"]),
+    supabaseAdmin.from("tracked_links").select("echo_id").limit(50000),
+    supabaseAdmin.from("clicks").select("tracked_links!inner(echo_id)").eq("is_valid", true).limit(50000),
+    supabaseAdmin.from("wallet_transactions").select("user_id").in("type", ["withdrawal", "withdrawal_refund"]).limit(50000),
+    supabaseAdmin.from("payouts").select("echo_id").limit(50000),
+    supabaseAdmin.from("clicks").select("tracked_links!inner(echo_id)").eq("is_valid", true).gte("created_at", sevenDaysAgo).limit(50000),
+    supabaseAdmin.from("clicks").select("tracked_links!inner(echo_id)").eq("is_valid", true).gte("created_at", thirtyDaysAgo).limit(50000),
+    // All echos for lifecycle + cohorts
+    supabaseAdmin.from("users").select("id, created_at, city").eq("role", "echo"),
+    // Brand funnel
+    supabaseAdmin.from("wallet_transactions").select("user_id")
+      .in("type", ["wallet_recharge", "welcome_bonus", "manual_credit", "campaign_budget_refund", "legacy_reconciliation"])
+      .gt("amount", 0).limit(50000),
+    supabaseAdmin.from("campaigns").select("batteur_id").limit(50000),
+    // Heatmap
+    supabaseAdmin.from("clicks").select("created_at").eq("is_valid", true).limit(50000),
+    // City performance
+    supabaseAdmin.from("users").select("id, city").eq("role", "echo").not("city", "is", null),
+    supabaseAdmin.from("clicks").select("is_valid, tracked_links!inner(echo_id, users!inner(city))").limit(50000),
+    // Campaign stats
+    supabaseAdmin.from("campaigns").select("id, budget, cpc, spent, created_at, status, moderation_status").in("status", ["active", "completed", "finished"]),
+    // Debug diagnostics
+    supabaseAdmin.from("users").select("*", { count: "exact", head: true }),
+    supabaseAdmin.from("users").select("*", { count: "exact", head: true }).eq("role", "echo"),
+    supabaseAdmin.from("users").select("*", { count: "exact", head: true }).in("role", ["batteur", "brand"]),
+    supabaseAdmin.from("campaigns").select("*", { count: "exact", head: true }),
+    supabaseAdmin.from("clicks").select("*", { count: "exact", head: true }),
+    supabaseAdmin.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", true),
+    supabaseAdmin.from("wallet_transactions").select("type").limit(50000),
+    supabaseAdmin.from("campaigns").select("id, title, batteur_id, status, moderation_status").limit(50),
+  ]);
+
+  // =====================================================================
+  // COMPUTE ALL METRICS IN MEMORY (no more DB queries)
+  // =====================================================================
 
   // ===== ÉCHO ENGAGEMENT FUNNEL =====
-  const { count: totalEchos } = await supabaseAdmin
-    .from("users").select("*", { count: "exact", head: true }).eq("role", "echo");
+  const totalEchos = totalEchosResult.count || 0;
+  const echosWithLinks = new Set((echoLinksResult.data || []).map((l: { echo_id: string }) => l.echo_id)).size;
+  const echosWithClicks = new Set((echoClicksResult.data || []).map((c: Record<string, unknown>) => (c.tracked_links as { echo_id: string } | null)?.echo_id)).size;
 
-  const { data: echoLinks } = await supabaseAdmin
-    .from("tracked_links").select("echo_id").limit(50000);
-  const echosWithLinks = new Set((echoLinks || []).map((l: { echo_id: string }) => l.echo_id)).size;
-
-  const { data: echoClicks } = await supabaseAdmin
-    .from("clicks")
-    .select("tracked_links!inner(echo_id)")
-    .eq("is_valid", true)
-    .limit(50000);
-  const echosWithClicks = new Set((echoClicks || []).map((c: Record<string, unknown>) => (c.tracked_links as { echo_id: string } | null)?.echo_id)).size;
-
-  // Check both wallet_transactions (withdrawal type) AND payouts table
-  const [{ data: echoWithdrawals }, { data: echoPayout }] = await Promise.all([
-    supabaseAdmin
-      .from("wallet_transactions")
-      .select("user_id")
-      .in("type", ["withdrawal", "withdrawal_refund"])
-      .limit(50000),
-    supabaseAdmin
-      .from("payouts")
-      .select("echo_id")
-      .limit(50000),
-  ]);
   const echosWithWithdrawals = new Set([
-    ...(echoWithdrawals || []).map((w: { user_id: string }) => w.user_id),
-    ...(echoPayout || []).map((p: { echo_id: string }) => p.echo_id),
+    ...(echoWithdrawalsResult.data || []).map((w: { user_id: string }) => w.user_id),
+    ...(echoPayoutResult.data || []).map((p: { echo_id: string }) => p.echo_id),
   ].filter(Boolean)).size;
 
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000).toISOString();
-  const { data: recentClicks } = await supabaseAdmin
-    .from("clicks")
-    .select("tracked_links!inner(echo_id)")
-    .eq("is_valid", true)
-    .gte("created_at", sevenDaysAgo)
-    .limit(50000);
-  const activeEchos7d = new Set((recentClicks || []).map((c: Record<string, unknown>) => (c.tracked_links as { echo_id: string } | null)?.echo_id)).size;
+  const activeEchos7d = new Set((recentClicksResult.data || []).map((c: Record<string, unknown>) => (c.tracked_links as { echo_id: string } | null)?.echo_id)).size;
 
   const echoFunnel = {
-    registered: totalEchos || 0,
+    registered: totalEchos,
     acceptedCampaign: echosWithLinks,
     generatedClick: echosWithClicks,
     withdrew: echosWithWithdrawals,
@@ -68,26 +107,13 @@ export async function GET() {
   };
 
   // ===== ÉCHO LIFECYCLE STAGES =====
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000).toISOString();
-
-  const { data: allEchos } = await supabaseAdmin
-    .from("users")
-    .select("id, created_at")
-    .eq("role", "echo");
-
-  const newEchos = (allEchos || []).filter((e: { created_at: string }) =>
+  const allEchos = allEchosResult.data || [];
+  const newEchos = allEchos.filter((e: { created_at: string }) =>
     new Date(e.created_at) > new Date(now.getTime() - 7 * 86400000)
   ).length;
 
   const dormantEchos = echosWithClicks - activeEchos7d;
-
-  const { data: last30dClicks } = await supabaseAdmin
-    .from("clicks")
-    .select("tracked_links!inner(echo_id)")
-    .eq("is_valid", true)
-    .gte("created_at", thirtyDaysAgo)
-    .limit(50000);
-  const activeEchos30d = new Set((last30dClicks || []).map((c: Record<string, unknown>) => (c.tracked_links as { echo_id: string } | null)?.echo_id)).size;
+  const activeEchos30d = new Set((last30dClicksResult.data || []).map((c: Record<string, unknown>) => (c.tracked_links as { echo_id: string } | null)?.echo_id)).size;
   const churnedEchos = echosWithClicks - activeEchos30d;
 
   const echoLifecycle = {
@@ -95,37 +121,18 @@ export async function GET() {
     active: activeEchos7d,
     dormant: Math.max(0, dormantEchos),
     churned: Math.max(0, churnedEchos),
-    neverActive: (totalEchos || 0) - echosWithLinks,
+    neverActive: totalEchos - echosWithLinks,
   };
 
   // ===== BRAND FUNNEL =====
-  const { count: totalBrands } = await supabaseAdmin
-    .from("users").select("*", { count: "exact", head: true }).in("role", ["batteur", "brand"]);
+  const totalBrands = totalBrandsResult.count || 0;
+  const brandsRecharged = new Set((brandRechargesResult.data || []).map((r: { user_id: string }) => r.user_id)).size;
 
-  // Include ALL money-in transaction types for brands
-  const { data: brandRecharges } = await supabaseAdmin
-    .from("wallet_transactions")
-    .select("user_id")
-    .in("type", [
-      "wallet_recharge",
-      "welcome_bonus",
-      "manual_credit",
-      "campaign_budget_refund",
-      "legacy_reconciliation",
-    ])
-    .gt("amount", 0)
-    .limit(50000);
-  const brandsRecharged = new Set((brandRecharges || []).map((r: { user_id: string }) => r.user_id)).size;
-
-  // campaigns table uses batteur_id, NOT user_id
-  const { data: brandCampaigns } = await supabaseAdmin
-    .from("campaigns")
-    .select("batteur_id")
-    .limit(50000);
-  const brandsWithCampaigns = new Set((brandCampaigns || []).map((c: { batteur_id: string }) => c.batteur_id).filter(Boolean)).size;
+  const brandCampaigns = brandCampaignsResult.data || [];
+  const brandsWithCampaigns = new Set(brandCampaigns.map((c: { batteur_id: string }) => c.batteur_id).filter(Boolean)).size;
 
   const brandCampaignCounts: Record<string, number> = {};
-  for (const c of brandCampaigns || []) {
+  for (const c of brandCampaigns) {
     if (c.batteur_id) {
       brandCampaignCounts[c.batteur_id] = (brandCampaignCounts[c.batteur_id] || 0) + 1;
     }
@@ -133,21 +140,15 @@ export async function GET() {
   const brandsRepeat = Object.values(brandCampaignCounts).filter((c: number) => c >= 2).length;
 
   const brandFunnel = {
-    registered: totalBrands || 0,
+    registered: totalBrands,
     recharged: brandsRecharged,
     launchedCampaign: brandsWithCampaigns,
     repeatCampaign: brandsRepeat,
   };
 
   // ===== PEAK HOURS HEATMAP =====
-  const { data: allClicksData } = await supabaseAdmin
-    .from("clicks")
-    .select("created_at")
-    .eq("is_valid", true)
-    .limit(50000);
-
   const heatmap = Array.from({ length: 7 }, () => Array(24).fill(0));
-  for (const click of allClicksData || []) {
+  for (const click of allClicksDataResult.data || []) {
     const date = new Date(click.created_at);
     const day = date.getUTCDay();
     const hour = date.getUTCHours();
@@ -155,14 +156,8 @@ export async function GET() {
   }
 
   // ===== CITY PERFORMANCE =====
-  const { data: cityData } = await supabaseAdmin
-    .from("users")
-    .select("id, city")
-    .eq("role", "echo")
-    .not("city", "is", null);
-
   const cityPerformance: Record<string, { city: string; echoCount: number; totalClicks: number; validClicks: number }> = {};
-  for (const echo of cityData || []) {
+  for (const echo of cityDataResult.data || []) {
     if (!echo.city) continue;
     if (!cityPerformance[echo.city]) {
       cityPerformance[echo.city] = { city: echo.city, echoCount: 0, totalClicks: 0, validClicks: 0 };
@@ -170,12 +165,7 @@ export async function GET() {
     cityPerformance[echo.city].echoCount++;
   }
 
-  const { data: cityClicks } = await supabaseAdmin
-    .from("clicks")
-    .select("is_valid, tracked_links!inner(echo_id, users!inner(city))")
-    .limit(50000);
-
-  for (const click of cityClicks || []) {
+  for (const click of cityClicksResult.data || []) {
     const trackedLinks = click.tracked_links as unknown as { echo_id: string; users: { city: string } | null } | null;
     const city = trackedLinks?.users?.city;
     if (city && cityPerformance[city]) {
@@ -194,12 +184,8 @@ export async function GET() {
     .slice(0, 15);
 
   // ===== CAMPAIGN PERFORMANCE STATS =====
-  const { data: allCampaigns } = await supabaseAdmin
-    .from("campaigns")
-    .select("id, budget, cpc, spent, created_at, status, moderation_status")
-    .in("status", ["active", "completed", "finished"]);
-
-  const completedCampaigns = (allCampaigns || []).filter((c: { status: string }) => c.status === "completed" || c.status === "finished");
+  const allCampaigns = allCampaignsResult.data || [];
+  const completedCampaigns = allCampaigns.filter((c: { status: string }) => c.status === "completed" || c.status === "finished");
   const avgBudget = completedCampaigns.length > 0
     ? Math.round(completedCampaigns.reduce((s: number, c: { budget: number }) => s + c.budget, 0) / completedCampaigns.length)
     : 0;
@@ -207,40 +193,28 @@ export async function GET() {
     ? Math.round(completedCampaigns.reduce((s: number, c: { cpc: number }) => s + c.cpc, 0) / completedCampaigns.length)
     : 0;
 
-  // ===== RETENTION COHORTS (weekly) =====
+  // ===== RETENTION COHORTS — computed from pre-fetched data (was 8 sequential queries) =====
+  const activeEchoIds7d = new Set(
+    (recentClicksResult.data || []).map((c: Record<string, unknown>) => (c.tracked_links as { echo_id: string } | null)?.echo_id).filter(Boolean)
+  );
+
   const cohorts = [];
   for (let w = 0; w < 4; w++) {
     const weekStart = new Date(now.getTime() - (w + 1) * 7 * 86400000);
     const weekEnd = new Date(now.getTime() - w * 7 * 86400000);
 
-    const { data: cohortEchos } = await supabaseAdmin
-      .from("users")
-      .select("id")
-      .eq("role", "echo")
-      .gte("created_at", weekStart.toISOString())
-      .lt("created_at", weekEnd.toISOString());
+    const cohortEchos = allEchos.filter((e: { id: string; created_at: string }) => {
+      const created = new Date(e.created_at);
+      return created >= weekStart && created < weekEnd;
+    });
 
-    const cohortIds = (cohortEchos || []).map((e: { id: string }) => e.id);
-    if (cohortIds.length === 0) {
-      cohorts.push({ week: `Semaine -${w + 1}`, registered: 0, activeNow: 0, retentionRate: 0 });
-      continue;
-    }
-
-    const { data: activeInCohort } = await supabaseAdmin
-      .from("clicks")
-      .select("tracked_links!inner(echo_id)")
-      .eq("is_valid", true)
-      .gte("created_at", sevenDaysAgo)
-      .in("tracked_links.echo_id", cohortIds)
-      .limit(50000);
-
-    const activeCount = new Set((activeInCohort || []).map((c: Record<string, unknown>) => (c.tracked_links as { echo_id: string } | null)?.echo_id)).size;
+    const activeInCohort = cohortEchos.filter((e: { id: string }) => activeEchoIds7d.has(e.id)).length;
 
     cohorts.push({
       week: `Semaine -${w + 1}`,
-      registered: cohortIds.length,
-      activeNow: activeCount,
-      retentionRate: cohortIds.length > 0 ? Math.round((activeCount / cohortIds.length) * 100) : 0,
+      registered: cohortEchos.length,
+      activeNow: activeInCohort,
+      retentionRate: cohortEchos.length > 0 ? Math.round((activeInCohort / cohortEchos.length) * 100) : 0,
     });
   }
 
@@ -286,38 +260,18 @@ export async function GET() {
     });
   }
 
-  // ===== DEBUG DIAGNOSTICS =====
-  const [
-    { count: dbTotalUsers },
-    { count: dbTotalEchos },
-    { count: dbTotalBrands },
-    { count: dbTotalCampaigns },
-    { count: dbTotalClicks },
-    { count: dbTotalValidClicks },
-    { data: dbTransactionTypes },
-    { data: dbCampaignSample },
-  ] = await Promise.all([
-    supabaseAdmin.from("users").select("*", { count: "exact", head: true }),
-    supabaseAdmin.from("users").select("*", { count: "exact", head: true }).eq("role", "echo"),
-    supabaseAdmin.from("users").select("*", { count: "exact", head: true }).in("role", ["batteur", "brand"]),
-    supabaseAdmin.from("campaigns").select("*", { count: "exact", head: true }),
-    supabaseAdmin.from("clicks").select("*", { count: "exact", head: true }),
-    supabaseAdmin.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", true),
-    supabaseAdmin.from("wallet_transactions").select("type").limit(50000),
-    supabaseAdmin.from("campaigns").select("id, title, batteur_id, status, moderation_status").limit(50),
-  ]);
-
-  const distinctTransactionTypes = Array.from(new Set((dbTransactionTypes || []).map((t: { type: string }) => t.type)));
+  // ===== DEBUG DIAGNOSTICS (already parallel from batch) =====
+  const distinctTransactionTypes = Array.from(new Set((dbTransactionTypesResult.data || []).map((t: { type: string }) => t.type)));
 
   const debug = {
-    totalUsersInDB: dbTotalUsers,
-    totalEchosInDB: dbTotalEchos,
-    totalBrandsInDB: dbTotalBrands,
-    totalCampaignsInDB: dbTotalCampaigns,
-    totalClicksInDB: dbTotalClicks,
-    totalValidClicksInDB: dbTotalValidClicks,
+    totalUsersInDB: dbTotalUsersResult.count,
+    totalEchosInDB: dbTotalEchosResult.count,
+    totalBrandsInDB: dbTotalBrandsResult.count,
+    totalCampaignsInDB: dbTotalCampaignsResult.count,
+    totalClicksInDB: dbTotalClicksResult.count,
+    totalValidClicksInDB: dbTotalValidClicksResult.count,
     distinctTransactionTypes,
-    campaignSample: dbCampaignSample,
+    campaignSample: dbCampaignSampleResult.data,
   };
 
   return NextResponse.json({
@@ -326,7 +280,7 @@ export async function GET() {
     brandFunnel,
     heatmap,
     cityStats,
-    campaignStats: { avgBudget, avgCPC, totalCampaigns: (allCampaigns || []).length, completedCampaigns: completedCampaigns.length },
+    campaignStats: { avgBudget, avgCPC, totalCampaigns: allCampaigns.length, completedCampaigns: completedCampaigns.length },
     cohorts,
     suggestions,
     debug,
