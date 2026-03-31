@@ -1,71 +1,116 @@
 import { NextResponse } from "next/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const vercelToken = process.env.VERCEL_API_TOKEN;
-  const projectId = process.env.VERCEL_PROJECT_ID;
-  const teamId = process.env.VERCEL_TEAM_ID;
+  const authClient = createClient();
+  const { data: { session } } = await authClient.auth.getSession();
+  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
-  if (!vercelToken || !projectId) {
-    return NextResponse.json({
-      error: "Vercel API not configured",
-      setup: "Add VERCEL_API_TOKEN and VERCEL_PROJECT_ID to Vercel env vars",
-    }, { status: 400 });
+  const supabaseAdmin = createServiceClient();
+
+  const { data: currentUser } = await supabaseAdmin
+    .from("users").select("role").eq("id", session.user.id).single();
+  if (!currentUser || currentUser.role !== "superadmin") {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 
-  const from = new Date(Date.now() - 30 * 86400000).toISOString();
-  const to = new Date().toISOString();
-  const headers = { Authorization: `Bearer ${vercelToken}` };
-
-  const baseParams = new URLSearchParams({ projectId, from, to });
-  if (teamId) baseParams.set("teamId", teamId);
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000).toISOString();
 
   try {
-    const endpoints = [
-      { key: "pageViews", path: "path", limit: 10 },
-      { key: "referrers", path: "referrer", limit: 10 },
-      { key: "devices", path: "device", limit: 5 },
-      { key: "countries", path: "country", limit: 10 },
-      { key: "browsers", path: "browser", limit: 5 },
-      { key: "os", path: "os", limit: 5 },
-    ];
+    // ===== DAILY CLICKS (30 days) =====
+    const { data: clicksData } = await supabaseAdmin
+      .from("clicks")
+      .select("created_at, is_valid")
+      .gte("created_at", thirtyDaysAgo)
+      .limit(50000);
 
-    const results: Record<string, unknown[]> = {};
+    const dailyClicks: Record<string, { total: number; valid: number }> = {};
+    for (const click of clicksData || []) {
+      const day = click.created_at.slice(0, 10);
+      if (!dailyClicks[day]) dailyClicks[day] = { total: 0, valid: 0 };
+      dailyClicks[day].total++;
+      if (click.is_valid) dailyClicks[day].valid++;
+    }
 
-    for (const ep of endpoints) {
-      const params = new URLSearchParams(baseParams);
-      params.set("limit", String(ep.limit));
-      try {
-        const res = await fetch(
-          `https://vercel.com/api/web/insights/stats/${ep.path}?${params}`,
-          { headers }
-        );
-        if (res.ok) {
-          const data = await res.json();
-          results[ep.key] = data?.data || [];
-        } else {
-          results[ep.key] = [];
-        }
-      } catch {
-        results[ep.key] = [];
+    const clicksTrend = Object.entries(dailyClicks)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, counts]) => ({ date, ...counts }));
+
+    // ===== DAILY SIGNUPS (30 days) =====
+    const { data: signupsData } = await supabaseAdmin
+      .from("users")
+      .select("created_at, role")
+      .gte("created_at", thirtyDaysAgo);
+
+    const dailySignups: Record<string, { echos: number; brands: number }> = {};
+    for (const user of signupsData || []) {
+      const day = user.created_at.slice(0, 10);
+      if (!dailySignups[day]) dailySignups[day] = { echos: 0, brands: 0 };
+      if (user.role === "echo") dailySignups[day].echos++;
+      else if (user.role === "batteur" || user.role === "brand") dailySignups[day].brands++;
+    }
+
+    const signupsTrend = Object.entries(dailySignups)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, counts]) => ({ date, ...counts }));
+
+    // ===== TOP CAMPAIGNS BY CLICKS (30 days) =====
+    const { data: campaignClicks } = await supabaseAdmin
+      .from("clicks")
+      .select("is_valid, tracked_links!inner(campaign_id, campaigns!inner(title))")
+      .gte("created_at", thirtyDaysAgo)
+      .eq("is_valid", true)
+      .limit(50000);
+
+    const campaignCounts: Record<string, { title: string; clicks: number }> = {};
+    for (const click of campaignClicks || []) {
+      const tl = click.tracked_links as unknown as { campaign_id: string; campaigns: { title: string } | null } | null;
+      const title = tl?.campaigns?.title;
+      const cid = tl?.campaign_id;
+      if (cid && title) {
+        if (!campaignCounts[cid]) campaignCounts[cid] = { title, clicks: 0 };
+        campaignCounts[cid].clicks++;
       }
     }
 
-    // Also fetch custom events
-    try {
-      const eventParams = new URLSearchParams(baseParams);
-      eventParams.set("limit", "20");
-      const eventsRes = await fetch(
-        `https://vercel.com/api/web/insights/stats/event?${eventParams}`,
-        { headers }
-      );
-      results["customEvents"] = eventsRes.ok ? (await eventsRes.json())?.data || [] : [];
-    } catch {
-      results["customEvents"] = [];
+    const topCampaigns = Object.values(campaignCounts)
+      .sort((a, b) => b.clicks - a.clicks)
+      .slice(0, 8);
+
+    // ===== CLICK HOURS DISTRIBUTION =====
+    const hourDist: number[] = Array(24).fill(0);
+    for (const click of clicksData || []) {
+      const hour = new Date(click.created_at).getUTCHours();
+      hourDist[hour]++;
     }
 
-    return NextResponse.json({ ...results, period: { from, to } });
+    // ===== SUMMARY TOTALS =====
+    const totalClicks = (clicksData || []).length;
+    const validClicks = (clicksData || []).filter((c: { is_valid: boolean }) => c.is_valid).length;
+    const totalSignups = (signupsData || []).length;
+    const echoSignups = (signupsData || []).filter((u: { role: string }) => u.role === "echo").length;
+    const brandSignups = (signupsData || []).filter((u: { role: string }) => u.role === "batteur" || u.role === "brand").length;
+
+    return NextResponse.json({
+      summary: {
+        totalClicks,
+        validClicks,
+        fraudRate: totalClicks > 0 ? Math.round(((totalClicks - validClicks) / totalClicks) * 100) : 0,
+        totalSignups,
+        echoSignups,
+        brandSignups,
+      },
+      clicksTrend,
+      signupsTrend,
+      topCampaigns,
+      hourDistribution: hourDist,
+      period: { from: thirtyDaysAgo, to: now.toISOString() },
+    });
   } catch (error) {
-    console.error("Vercel Analytics error:", error);
+    console.error("Web analytics error:", error);
     return NextResponse.json({ error: "Failed to fetch analytics" }, { status: 500 });
   }
 }
