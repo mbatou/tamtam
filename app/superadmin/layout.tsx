@@ -27,7 +27,7 @@ const primaryItems: NavItem[] = [
   { label: "Briefing", href: "/superadmin/briefing", emoji: "📋", permKey: "briefing" },
   { label: "Vue d'ensemble", href: "/superadmin", emoji: "📊", exact: true, permKey: "overview" },
   { label: "Modération", href: "/superadmin/campaigns", emoji: "✅", badgeKey: "campaigns", permKey: "campaigns" },
-  { label: "Pipeline", href: "/superadmin/pipeline", emoji: "👥", badgeKey: "leads", permKey: "leads" },
+  { label: "CRM", href: "/superadmin/crm", emoji: "👥", badgeKey: "leads", permKey: "leads" },
   { label: "Finances", href: "/superadmin/finance", emoji: "💰", badgeKey: "payouts", permKey: "finance" },
 ];
 
