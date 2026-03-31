@@ -22,204 +22,173 @@ export async function GET(request: NextRequest) {
 
   const supabase = auth.supabase;
   const { searchParams } = new URL(request.url);
-  const view = searchParams.get("view") || "all"; // all | leads | brands | followups
-  const contactId = searchParams.get("id");
-  const contactType = searchParams.get("type"); // lead | brand
+  const view = searchParams.get("view") || "brands"; // brands | echos
+  const search = searchParams.get("search") || "";
+  const city = searchParams.get("city") || "";
+  const status = searchParams.get("status") || "";
+  const sort = searchParams.get("sort") || "created_at";
+  const order = searchParams.get("order") || "desc";
+  const page = parseInt(searchParams.get("page") || "1");
+  const limit = 25;
+  const offset = (page - 1) * limit;
 
-  // --- Single contact detail with timeline ---
-  if (contactId && contactType) {
-    const timeline: { type: string; date: string; data: Record<string, unknown> }[] = [];
-
-    if (contactType === "brand") {
-      const { data: user } = await supabase
-        .from("users")
-        .select("id, name, phone, role, city, balance, total_earned, crm_stage, crm_tags, created_at, status, total_recharged, company_name")
-        .eq("id", contactId)
-        .single();
-      if (!user) return NextResponse.json({ error: "Contact introuvable" }, { status: 404 });
-
-      const { data: campaigns } = await supabase
-        .from("campaigns")
-        .select("id, title, budget, spent, status, cpc, created_at")
-        .eq("batteur_id", contactId)
-        .order("created_at", { ascending: false })
-        .limit(500);
-
-      const { data: payments } = await supabase
-        .from("payments")
-        .select("id, amount, status, payment_method, created_at, completed_at")
-        .eq("user_id", contactId)
-        .order("created_at", { ascending: false })
-        .limit(500);
-
-      const { data: tickets } = await supabase
-        .from("support_tickets")
-        .select("id, subject, status, created_at")
-        .eq("user_id", contactId)
-        .order("created_at", { ascending: false })
-        .limit(200);
-
-      const { data: notes } = await supabase
-        .from("crm_notes")
-        .select("id, content, note_type, followup_date, created_at, author_id")
-        .eq("contact_id", contactId)
-        .eq("contact_type", "brand")
-        .order("created_at", { ascending: false })
-        .limit(200);
-
-      const authorIds = Array.from(new Set((notes || []).map(n => n.author_id)));
-      const { data: authors } = authorIds.length > 0
-        ? await supabase.from("users").select("id, name").in("id", authorIds)
-        : { data: [] };
-      const authorMap: Record<string, string> = {};
-      (authors || []).forEach(a => { authorMap[a.id] = a.name; });
-
-      timeline.push({ type: "created", date: user.created_at, data: { name: user.name } });
-      for (const c of campaigns || []) {
-        timeline.push({ type: "campaign", date: c.created_at, data: c });
-      }
-      for (const p of payments || []) {
-        timeline.push({ type: "payment", date: p.created_at, data: p });
-      }
-      for (const t of tickets || []) {
-        timeline.push({ type: "ticket", date: t.created_at, data: t });
-      }
-      for (const n of notes || []) {
-        timeline.push({ type: "note", date: n.created_at, data: { ...n, author_name: authorMap[n.author_id] || "Admin" } });
-      }
-      timeline.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-      return NextResponse.json({
-        contact: { ...user, type: "brand" },
-        campaigns: campaigns || [],
-        payments: payments || [],
-        tickets: tickets || [],
-        notes: (notes || []).map(n => ({ ...n, author_name: authorMap[n.author_id] || "Admin" })),
-        timeline,
-      });
-    }
-
-    if (contactType === "lead") {
-      const { data: lead } = await supabase
-        .from("brand_leads")
-        .select("*")
-        .eq("id", contactId)
-        .single();
-      if (!lead) return NextResponse.json({ error: "Lead introuvable" }, { status: 404 });
-
-      const { data: notes } = await supabase
-        .from("crm_notes")
-        .select("id, content, note_type, followup_date, created_at, author_id")
-        .eq("contact_id", contactId)
-        .eq("contact_type", "lead")
-        .order("created_at", { ascending: false });
-
-      const authorIds = Array.from(new Set((notes || []).map(n => n.author_id)));
-      const { data: authors } = authorIds.length > 0
-        ? await supabase.from("users").select("id, name").in("id", authorIds)
-        : { data: [] };
-      const authorMap: Record<string, string> = {};
-      (authors || []).forEach(a => { authorMap[a.id] = a.name; });
-
-      const timeline: { type: string; date: string; data: Record<string, unknown> }[] = [];
-      timeline.push({ type: "lead_created", date: lead.created_at, data: lead });
-      for (const n of notes || []) {
-        timeline.push({ type: "note", date: n.created_at, data: { ...n, author_name: authorMap[n.author_id] || "Admin" } });
-      }
-      timeline.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-      return NextResponse.json({
-        contact: { ...lead, name: lead.contact_name || lead.business_name, type: "lead" },
-        notes: (notes || []).map(n => ({ ...n, author_name: authorMap[n.author_id] || "Admin" })),
-        timeline,
-      });
-    }
-  }
-
-  // --- Contacts list ---
-  const results: { id: string; name: string; company_name?: string; email: string; phone: string | null; type: "lead" | "brand"; stage: string; tags: string[]; created_at: string; stats: Record<string, unknown> }[] = [];
-
-  // Brands (batteur users)
-  if (view === "all" || view === "brands") {
-    const { data: brands } = await supabase
+  if (view === "brands") {
+    let query = supabase
       .from("users")
-      .select("id, name, phone, city, balance, total_earned, crm_stage, crm_tags, created_at, status, total_recharged, company_name")
-      .eq("role", "batteur")
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false });
+      .select("id, name, email, phone, company_name, city, role, wallet_balance, created_at, deleted_at, terms_accepted_at", { count: "exact" })
+      .in("role", ["batteur", "brand"])
+      .is("deleted_at", null);
 
-    const { data: campaignCounts } = await supabase
+    if (search) {
+      query = query.or(`company_name.ilike.%${search}%,name.ilike.%${search}%,email.ilike.%${search}%`);
+    }
+    if (city) {
+      query = query.eq("city", city);
+    }
+
+    const { data: brands, count } = await query
+      .order(sort, { ascending: order === "asc" })
+      .range(offset, offset + limit - 1);
+
+    // Enrich each brand with pipeline stage
+    const brandIds = (brands || []).map(b => b.id);
+
+    if (brandIds.length === 0) {
+      return NextResponse.json({
+        users: [],
+        total: count || 0,
+        page,
+        limit,
+        stageCounts: { registered: 0, recharged: 0, first_campaign: 0, repeat: 0, vip: 0 },
+      });
+    }
+
+    // Get campaign counts per brand
+    const { data: campaigns } = await supabase
       .from("campaigns")
-      .select("batteur_id, id")
-      .limit(5000);
+      .select("batteur_id, status")
+      .in("batteur_id", brandIds);
 
-    const brandCampaigns: Record<string, number> = {};
-    (campaignCounts || []).forEach(c => {
-      brandCampaigns[c.batteur_id] = (brandCampaigns[c.batteur_id] || 0) + 1;
+    // Get recharge status per brand
+    const { data: recharges } = await supabase
+      .from("wallet_transactions")
+      .select("user_id, amount")
+      .in("user_id", brandIds)
+      .gt("amount", 0);
+
+    // Get team members count
+    const { data: teams } = await supabase
+      .from("brand_team_members")
+      .select("brand_owner_id")
+      .in("brand_owner_id", brandIds)
+      .eq("status", "active");
+
+    // Compute pipeline stage for each brand
+    const campaignsByBrand: Record<string, { batteur_id: string; status: string }[]> = {};
+    for (const c of campaigns || []) {
+      if (!campaignsByBrand[c.batteur_id]) campaignsByBrand[c.batteur_id] = [];
+      campaignsByBrand[c.batteur_id].push(c);
+    }
+
+    const rechargedBrands = new Set((recharges || []).map(r => r.user_id));
+    const teamCountByBrand: Record<string, number> = {};
+    for (const t of teams || []) {
+      teamCountByBrand[t.brand_owner_id] = (teamCountByBrand[t.brand_owner_id] || 0) + 1;
+    }
+
+    const enrichedBrands = (brands || []).map(brand => {
+      const brandCampaigns = campaignsByBrand[brand.id] || [];
+      const hasRecharged = rechargedBrands.has(brand.id);
+      const campaignCount = brandCampaigns.length;
+      const activeCampaigns = brandCampaigns.filter(c => c.status === "active").length;
+
+      let pipelineStage = "registered";
+      if (campaignCount >= 3) pipelineStage = "vip";
+      else if (campaignCount >= 2) pipelineStage = "repeat";
+      else if (campaignCount >= 1) pipelineStage = "first_campaign";
+      else if (hasRecharged) pipelineStage = "recharged";
+
+      return {
+        ...brand,
+        pipelineStage,
+        campaignCount,
+        activeCampaigns,
+        hasRecharged,
+        teamMembers: teamCountByBrand[brand.id] || 0,
+      };
     });
 
-    for (const b of brands || []) {
-      results.push({
-        id: b.id,
-        name: b.name,
-        company_name: b.company_name || undefined,
-        email: "",
-        phone: b.phone,
-        type: "brand",
-        stage: b.crm_stage || "onboarding",
-        tags: b.crm_tags || [],
-        created_at: b.created_at,
-        stats: {
-          balance: b.balance,
-          total_earned: b.total_earned,
-          total_recharged: b.total_recharged || 0,
-          campaigns: brandCampaigns[b.id] || 0,
-          city: b.city,
-          status: b.status,
-        },
-      });
+    // Filter by pipeline stage if requested
+    const filteredBrands = status
+      ? enrichedBrands.filter(b => b.pipelineStage === status)
+      : enrichedBrands;
+
+    // Pipeline stage counts
+    const stageCounts = {
+      registered: enrichedBrands.filter(b => b.pipelineStage === "registered").length,
+      recharged: enrichedBrands.filter(b => b.pipelineStage === "recharged").length,
+      first_campaign: enrichedBrands.filter(b => b.pipelineStage === "first_campaign").length,
+      repeat: enrichedBrands.filter(b => b.pipelineStage === "repeat").length,
+      vip: enrichedBrands.filter(b => b.pipelineStage === "vip").length,
+    };
+
+    return NextResponse.json({
+      users: filteredBrands,
+      total: count || 0,
+      page,
+      limit,
+      stageCounts,
+    });
+  } else {
+    // Échos view
+    let query = supabase
+      .from("users")
+      .select("id, name, email, phone, city, role, wallet_balance, created_at, deleted_at", { count: "exact" })
+      .eq("role", "echo")
+      .is("deleted_at", null);
+
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
     }
-  }
-
-  // Leads (ALL statuses now — unified pipeline)
-  if (view === "all" || view === "leads") {
-    const { data: leads } = await supabase
-      .from("brand_leads")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    for (const l of leads || []) {
-      results.push({
-        id: l.id,
-        name: l.contact_name || l.business_name,
-        email: l.email,
-        phone: l.whatsapp,
-        type: "lead",
-        stage: l.status, // new, contacted, converted, rejected
-        tags: l.tags || [],
-        created_at: l.created_at,
-        stats: { business_name: l.business_name, message: l.message, notes: l.notes, contact_name: l.contact_name },
-      });
+    if (city) {
+      query = query.eq("city", city);
     }
+
+    const { data: echos, count } = await query
+      .order(sort, { ascending: order === "asc" })
+      .range(offset, offset + limit - 1);
+
+    // Enrich with click counts and activity
+    const echoIds = (echos || []).map(e => e.id);
+
+    let clicksByEcho: Record<string, { total: number; valid: number }> = {};
+
+    if (echoIds.length > 0) {
+      const { data: clickData } = await supabase
+        .from("tracked_links")
+        .select("echo_id, clicks!inner(is_valid)")
+        .in("echo_id", echoIds);
+
+      for (const link of clickData || []) {
+        if (!clicksByEcho[link.echo_id]) clicksByEcho[link.echo_id] = { total: 0, valid: 0 };
+        clicksByEcho[link.echo_id].total++;
+        if ((link as any).clicks?.is_valid) clicksByEcho[link.echo_id].valid++;
+      }
+    }
+
+    const enrichedEchos = (echos || []).map(echo => ({
+      ...echo,
+      totalClicks: clicksByEcho[echo.id]?.total || 0,
+      validClicks: clicksByEcho[echo.id]?.valid || 0,
+    }));
+
+    return NextResponse.json({
+      users: enrichedEchos,
+      total: count || 0,
+      page,
+      limit,
+    });
   }
-
-  // Upcoming follow-ups
-  let followups: { id: string; contact_id: string; contact_type: string; content: string; followup_date: string; note_type: string }[] = [];
-  if (view === "all" || view === "followups") {
-    const { data: fups } = await supabase
-      .from("crm_notes")
-      .select("id, contact_id, contact_type, content, followup_date, note_type")
-      .not("followup_date", "is", null)
-      .gte("followup_date", new Date().toISOString().split("T")[0])
-      .order("followup_date", { ascending: true })
-      .limit(20);
-    followups = fups || [];
-  }
-
-  // Sort all contacts by date
-  results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-  return NextResponse.json({ contacts: results, followups });
 }
 
 export async function POST(request: NextRequest) {
