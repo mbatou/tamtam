@@ -112,6 +112,56 @@ export async function GET(
 
   // If valid click, update counters (with budget guard)
   if (valid) {
+    // Pre-check: can the campaign afford this click?
+    const preRemaining = campaign.budget - (campaign.spent || 0);
+    if (preRemaining < campaign.cpc) {
+      // Campaign cannot afford this click — reject it
+      await supabase
+        .from("clicks")
+        .update({ is_valid: false, rejection_reason: "budget_exhausted" })
+        .eq("link_id", link.id)
+        .eq("ip_address", ip)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      // Auto-complete the campaign
+      await supabase
+        .from("campaigns")
+        .update({ status: "completed" })
+        .eq("id", campaign.id)
+        .eq("status", "active");
+
+      // Refund remaining balance to brand (if any)
+      if (preRemaining > 0 && campaign.batteur_id) {
+        const { data: existingRefund } = await supabase
+          .from("wallet_transactions")
+          .select("id")
+          .eq("source_id", campaign.id)
+          .eq("type", "campaign_budget_refund")
+          .ilike("description", "%fin de campagne%")
+          .limit(1);
+
+        if (!existingRefund || existingRefund.length === 0) {
+          await supabase.rpc("increment_balance", {
+            p_user_id: campaign.batteur_id,
+            p_amount: preRemaining,
+          });
+
+          await logWalletTransaction({
+            supabase,
+            userId: campaign.batteur_id,
+            amount: preRemaining,
+            type: "campaign_budget_refund",
+            description: `Remboursement fin de campagne: ${campaign.title || campaign.id} (${preRemaining} FCFA restants < CPC ${campaign.cpc} FCFA)`,
+            sourceId: campaign.id,
+            sourceType: "campaign",
+          });
+        }
+      }
+
+      return NextResponse.redirect(campaign.destination_url);
+    }
+
     // Apply tier bonus to echo earnings
     const { data: echo } = await supabase
       .from("users")
@@ -164,6 +214,48 @@ export async function GET(
 
       // Update challenge participation if there's an active challenge
       updateChallengeParticipation(supabase, link.echo_id).catch(console.error);
+
+      // Post-click check: if remaining budget < CPC after this click, auto-complete + refund
+      const postRemaining = campaign.budget - ((campaign.spent || 0) + campaign.cpc);
+      if (postRemaining < campaign.cpc && postRemaining > 0 && campaign.batteur_id) {
+        (async () => {
+          try {
+            // Auto-complete the campaign (only if still active to prevent race condition)
+            await supabase
+              .from("campaigns")
+              .update({ status: "completed" })
+              .eq("id", campaign.id)
+              .eq("status", "active");
+
+            // Refund the small remaining balance (idempotent)
+            const { data: existingRefund } = await supabase
+              .from("wallet_transactions")
+              .select("id")
+              .eq("source_id", campaign.id)
+              .eq("type", "campaign_budget_refund")
+              .ilike("description", "%fin de campagne%")
+              .limit(1);
+
+            if (!existingRefund || existingRefund.length === 0) {
+              await supabase.rpc("increment_balance", {
+                p_user_id: campaign.batteur_id,
+                p_amount: postRemaining,
+              });
+              await logWalletTransaction({
+                supabase,
+                userId: campaign.batteur_id,
+                amount: postRemaining,
+                type: "campaign_budget_refund",
+                description: `Remboursement fin de campagne: ${campaign.title || campaign.id} (${postRemaining} FCFA restants < CPC ${campaign.cpc} FCFA)`,
+                sourceId: campaign.id,
+                sourceType: "campaign",
+              });
+            }
+          } catch (err) {
+            console.error("Auto-complete refund error:", err);
+          }
+        })();
+      }
     }
   }
 
