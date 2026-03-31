@@ -32,15 +32,20 @@ export async function GET(request: NextRequest) {
   const limit = 25;
   const offset = (page - 1) * limit;
 
+  // Fetch auth users once for email lookup
+  const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+  const emailMap = new Map((authUsers || []).map(u => [u.id, u.email || ""]));
+
   if (view === "brands") {
     let query = supabase
       .from("users")
-      .select("id, name, email, phone, company_name, city, role, balance, created_at, deleted_at, terms_accepted_at", { count: "exact" })
+      .select("id, name, phone, company_name, city, role, balance, created_at, deleted_at, terms_accepted_at", { count: "exact" })
       .eq("role", "batteur")
       .is("deleted_at", null);
 
     if (search) {
-      query = query.or(`company_name.ilike.%${search}%,name.ilike.%${search}%,email.ilike.%${search}%`);
+      // Search by name/company in DB, email search done client-side after merge
+      query = query.or(`company_name.ilike.%${search}%,name.ilike.%${search}%,phone.ilike.%${search}%`);
     }
     if (city) {
       query = query.eq("city", city);
@@ -110,6 +115,7 @@ export async function GET(request: NextRequest) {
 
       return {
         ...brand,
+        email: emailMap.get(brand.id) || "",
         pipelineStage,
         campaignCount,
         activeCampaigns,
@@ -143,12 +149,12 @@ export async function GET(request: NextRequest) {
     // Échos view
     let query = supabase
       .from("users")
-      .select("id, name, email, phone, city, role, balance, created_at, deleted_at", { count: "exact" })
+      .select("id, name, phone, city, role, balance, created_at, deleted_at", { count: "exact" })
       .eq("role", "echo")
       .is("deleted_at", null);
 
     if (search) {
-      query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
+      query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`);
     }
     if (city) {
       query = query.eq("city", city);
@@ -179,6 +185,7 @@ export async function GET(request: NextRequest) {
 
     const enrichedEchos = (echos || []).map(echo => ({
       ...echo,
+      email: emailMap.get(echo.id) || "",
       totalClicks: clicksByEcho[echo.id]?.total || 0,
       validClicks: clicksByEcho[echo.id]?.valid || 0,
     }));
