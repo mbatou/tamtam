@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
     // Enrich with click counts and activity
     const echoIds = (echos || []).map(e => e.id);
 
-    let clicksByEcho: Record<string, { total: number; valid: number }> = {};
+    const clicksByEcho: Record<string, { total: number; valid: number }> = {};
 
     if (echoIds.length > 0) {
       const { data: clickData } = await supabase
@@ -172,7 +172,8 @@ export async function GET(request: NextRequest) {
       for (const link of clickData || []) {
         if (!clicksByEcho[link.echo_id]) clicksByEcho[link.echo_id] = { total: 0, valid: 0 };
         clicksByEcho[link.echo_id].total++;
-        if ((link as any).clicks?.is_valid) clicksByEcho[link.echo_id].valid++;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if ((link as Record<string, any>).clicks?.is_valid) clicksByEcho[link.echo_id].valid++;
       }
     }
 
