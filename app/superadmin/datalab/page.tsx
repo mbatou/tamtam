@@ -167,9 +167,15 @@ export default function DataLabPage() {
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [webAnalytics, setWebAnalytics] = useState<Record<string, unknown> | null>(null);
+  const [loadingWeb, setLoadingWeb] = useState(true);
 
   useEffect(() => {
     fetch("/api/superadmin/datalab").then(r => r.json()).then(d => { setData(d); setLoading(false); });
+    fetch("/api/superadmin/datalab/web-analytics")
+      .then(r => r.json())
+      .then(d => { setWebAnalytics(d); setLoadingWeb(false); })
+      .catch(() => setLoadingWeb(false));
   }, []);
 
   const handleAnalyze = async () => {
@@ -190,6 +196,7 @@ export default function DataLabPage() {
             campaignStats: data.campaignStats,
             cohorts: data.cohorts,
             suggestions: data.suggestions,
+            webAnalytics: webAnalytics?.error ? null : webAnalytics,
           },
         }),
       });
@@ -528,6 +535,105 @@ export default function DataLabPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Web Analytics */}
+      <div className="bg-card rounded-xl p-6 mb-6">
+        <h2 className="text-white font-bold text-lg mb-4">{"\u{1F310}"} Web Analytics (30 jours)</h2>
+
+        {loadingWeb ? (
+          <div className="text-gray-500 text-sm">Chargement...</div>
+        ) : (webAnalytics as Record<string, unknown>)?.error ? (
+          <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4">
+            <div className="text-orange-400 text-sm font-medium">{"\u26A0\uFE0F"} Analytics non configur&eacute;</div>
+            <div className="text-gray-500 text-xs mt-1">
+              Ajoutez VERCEL_API_TOKEN et VERCEL_PROJECT_ID dans les variables Vercel.
+            </div>
+          </div>
+        ) : webAnalytics ? (
+          <div className="space-y-6">
+            {/* Top Pages */}
+            {(webAnalytics.pageViews as { key: string; total: number }[] | undefined)?.length ? (
+              <div>
+                <h3 className="text-gray-400 text-sm font-medium mb-3">Pages les plus visit&eacute;es</h3>
+                <div className="space-y-2">
+                  {(webAnalytics.pageViews as { key: string; total: number }[]).slice(0, 8).map((page, i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <span className="text-gray-300 text-sm truncate flex-1">{page.key}</span>
+                      <span className="text-white font-medium text-sm ml-4">
+                        {page.total?.toLocaleString("fr-FR")} vues
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="grid grid-cols-3 gap-6">
+              {/* Referrers */}
+              {(webAnalytics.referrers as { key: string; total: number }[] | undefined)?.length ? (
+                <div>
+                  <h3 className="text-gray-400 text-sm font-medium mb-3">Sources de trafic</h3>
+                  <div className="space-y-2">
+                    {(webAnalytics.referrers as { key: string; total: number }[]).slice(0, 5).map((ref, i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <span className="text-gray-300 text-sm truncate">{ref.key || "Direct"}</span>
+                        <span className="text-white text-sm">{ref.total}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Devices */}
+              {(webAnalytics.devices as { key: string; total: number }[] | undefined)?.length ? (
+                <div>
+                  <h3 className="text-gray-400 text-sm font-medium mb-3">Appareils</h3>
+                  <div className="space-y-2">
+                    {(webAnalytics.devices as { key: string; total: number }[]).map((d, i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <span className="text-gray-300 text-sm">
+                          {d.key === "mobile" ? "\u{1F4F1} Mobile" : d.key === "desktop" ? "\u{1F4BB} Desktop" : d.key === "tablet" ? "\u{1F4CB} Tablet" : d.key}
+                        </span>
+                        <span className="text-white text-sm">{d.total}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Countries */}
+              {(webAnalytics.countries as { key: string; total: number }[] | undefined)?.length ? (
+                <div>
+                  <h3 className="text-gray-400 text-sm font-medium mb-3">Pays</h3>
+                  <div className="space-y-2">
+                    {(webAnalytics.countries as { key: string; total: number }[]).slice(0, 5).map((c, i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <span className="text-gray-300 text-sm">{c.key}</span>
+                        <span className="text-white text-sm">{c.total}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Custom Events */}
+            {(webAnalytics.customEvents as { key: string; total: number }[] | undefined)?.length ? (
+              <div>
+                <h3 className="text-gray-400 text-sm font-medium mb-3">&Eacute;v&eacute;nements cl&eacute;s</h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {(webAnalytics.customEvents as { key: string; total: number }[]).map((event, i) => (
+                    <div key={i} className="bg-gray-800/50 rounded-lg p-3">
+                      <div className="text-gray-500 text-xs">{event.key.replace(/_/g, " ")}</div>
+                      <div className="text-white font-medium">{event.total}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {/* Retention cohorts */}
