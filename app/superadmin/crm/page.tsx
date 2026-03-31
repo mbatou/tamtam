@@ -33,6 +33,42 @@ interface CRMNote {
   author_id: string;
 }
 
+interface BrandCampaign {
+  id: string;
+  title: string;
+  status: string;
+  budget: number;
+  cpc: number;
+  created_at: string;
+  moderation_status: string;
+  target_city: string | null;
+  echoCount: number;
+}
+
+interface BrandPayment {
+  id: string;
+  amount: number;
+  status: string;
+  payment_method: string | null;
+  created_at: string;
+}
+
+interface BrandTransaction {
+  id: string;
+  amount: number;
+  type: string;
+  description: string | null;
+  created_at: string;
+}
+
+interface BrandDetail {
+  campaigns: BrandCampaign[];
+  payments: BrandPayment[];
+  transactions: BrandTransaction[];
+  totalSpent: number;
+  totalRecharged: number;
+}
+
 interface StageCounts {
   registered: number;
   recharged: number;
@@ -72,6 +108,12 @@ export default function CRMPage() {
   const [showBulkEmail, setShowBulkEmail] = useState(false);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
   const [page, setPage] = useState(1);
+  const [brandDetail, setBrandDetail] = useState<BrandDetail | null>(null);
+  const [brandDetailLoading, setBrandDetailLoading] = useState(false);
+  const [detailTab, setDetailTab] = useState<"info" | "campaigns" | "finance">("info");
+  const [showTopup, setShowTopup] = useState(false);
+  const [topupAmount, setTopupAmount] = useState("");
+  const [toppingUp, setToppingUp] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -167,9 +209,55 @@ export default function CRMPage() {
     }
   };
 
+  const fetchBrandDetail = useCallback(async (userId: string) => {
+    setBrandDetailLoading(true);
+    try {
+      const res = await fetch(`/api/superadmin/crm/detail?user_id=${userId}`);
+      if (res.ok) {
+        const detail = await res.json();
+        setBrandDetail(detail);
+      }
+    } catch {
+      setBrandDetail(null);
+    }
+    setBrandDetailLoading(false);
+  }, []);
+
   const openDetail = (user: BrandUser) => {
     setDetailUser(user);
+    setDetailTab("info");
     fetchNotes(user.id);
+    fetchBrandDetail(user.id);
+  };
+
+  const handleTopup = async () => {
+    if (!detailUser || !topupAmount || parseInt(topupAmount) <= 0) return;
+    setToppingUp(true);
+    try {
+      const res = await fetch("/api/superadmin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "topup",
+          user_id: detailUser.id,
+          amount: topupAmount,
+        }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        showToast(`Nouveau solde: ${Number(result.new_balance).toLocaleString("fr-FR")} F`, "success");
+        setShowTopup(false);
+        setTopupAmount("");
+        setDetailUser({ ...detailUser, balance: result.new_balance });
+        fetchBrandDetail(detailUser.id);
+        fetchData();
+      } else {
+        showToast(result.error || "Erreur", "error");
+      }
+    } catch {
+      showToast("Erreur réseau", "error");
+    }
+    setToppingUp(false);
   };
 
   const toggleSelect = (id: string) => {
@@ -495,127 +583,263 @@ export default function CRMPage() {
               </div>
               <div className="bg-white/5 rounded-lg p-3 text-center">
                 <div className="text-white font-bold">{detailUser.teamMembers || 0}</div>
-                <div className="text-white/30 text-xs mt-1">Équipe</div>
+                <div className="text-white/30 text-xs mt-1">Equipe</div>
               </div>
             </div>
 
-            {/* Contact info */}
-            <div className="p-6 border-b border-white/5 space-y-2">
-              <h4 className="text-white/60 text-xs font-semibold uppercase mb-3">Contact</h4>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-white/30 w-16">Email</span>
-                <span className="text-white">{detailUser.email || "—"}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-white/30 w-16">Tél.</span>
-                <span className="text-white">{detailUser.phone || "—"}</span>
-                {detailUser.phone && (
-                  <a
-                    href={`https://wa.me/${detailUser.phone.replace(/[^0-9]/g, "")}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-green-400 hover:text-green-300 text-xs transition"
-                  >
-                    WhatsApp
-                  </a>
+            {/* Tabs */}
+            <div className="flex border-b border-white/5">
+              {(["info", "campaigns", "finance"] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setDetailTab(tab)}
+                  className={`flex-1 py-3 text-xs font-medium uppercase tracking-wide transition ${
+                    detailTab === tab
+                      ? "text-white border-b-2 border-primary"
+                      : "text-white/30 hover:text-white/50"
+                  }`}
+                >
+                  {tab === "info" ? "Infos" : tab === "campaigns" ? "Campagnes" : "Finance"}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab: Info */}
+            {detailTab === "info" && (
+              <>
+                {/* Contact info */}
+                <div className="p-6 border-b border-white/5 space-y-2">
+                  <h4 className="text-white/60 text-xs font-semibold uppercase mb-3">Contact</h4>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-white/30 w-16">Email</span>
+                    <span className="text-white">{detailUser.email || "—"}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-white/30 w-16">Tel.</span>
+                    <span className="text-white">{detailUser.phone || "—"}</span>
+                    {detailUser.phone && (
+                      <a
+                        href={`https://wa.me/${detailUser.phone.replace(/[^0-9]/g, "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-green-400 hover:text-green-300 text-xs transition"
+                      >
+                        WhatsApp
+                      </a>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-white/30 w-16">Inscrit</span>
+                    <span className="text-white">{new Date(detailUser.created_at).toLocaleDateString("fr-FR")}</span>
+                  </div>
+                </div>
+
+                {/* Tags */}
+                <div className="p-6 border-b border-white/5">
+                  <h4 className="text-white/60 text-xs font-semibold uppercase mb-3">Tags</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {AVAILABLE_TAGS.map(tag => {
+                      const isActive = (detailUser.crm_tags || []).includes(tag);
+                      return (
+                        <button
+                          key={tag}
+                          onClick={() => {
+                            const current = detailUser.crm_tags || [];
+                            const newTags = isActive ? current.filter(t => t !== tag) : [...current, tag];
+                            handleUpdateTags(detailUser.id, newTags);
+                          }}
+                          className={`px-2.5 py-1 rounded-full text-xs font-medium transition ${
+                            isActive
+                              ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                              : "bg-white/5 text-white/30 border border-white/5 hover:text-white/50 hover:border-white/10"
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div className="p-6 border-b border-white/5">
+                  <h4 className="text-white/60 text-xs font-semibold uppercase mb-3">Notes</h4>
+                  {detailNotesLoading ? (
+                    <div className="text-white/20 text-sm py-4 text-center">Chargement...</div>
+                  ) : detailNotes.length === 0 ? (
+                    <div className="text-white/20 text-sm py-4 text-center">Aucune note</div>
+                  ) : (
+                    <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
+                      {detailNotes.map(note => (
+                        <div key={note.id} className="bg-white/5 rounded-lg p-3 group">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <NoteTypeBadge type={note.note_type} />
+                                <span className="text-white/20 text-xs">
+                                  {new Date(note.created_at).toLocaleDateString("fr-FR")}
+                                </span>
+                              </div>
+                              <p className="text-white/70 text-sm">{note.content}</p>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteNote(note.id)}
+                              className="text-white/10 hover:text-red-400 text-xs transition opacity-0 group-hover:opacity-100"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <select
+                      value={newNoteType}
+                      onChange={e => setNewNoteType(e.target.value)}
+                      className="bg-white/5 border border-white/10 rounded-lg px-2 py-2 text-white/50 text-xs focus:outline-none"
+                    >
+                      <option value="note">Note</option>
+                      <option value="call">Appel</option>
+                      <option value="email">Email</option>
+                      <option value="followup">Relance</option>
+                      <option value="meeting">Reunion</option>
+                    </select>
+                    <input
+                      value={newNote}
+                      onChange={e => setNewNote(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") handleAddNote(); }}
+                      placeholder="Ajouter une note..."
+                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-primary/50"
+                    />
+                    <button
+                      onClick={handleAddNote}
+                      disabled={!newNote.trim()}
+                      className="bg-gradient-primary text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-30 transition"
+                    >
+                      Ajouter
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Tab: Campaigns */}
+            {detailTab === "campaigns" && (
+              <div className="p-6">
+                <h4 className="text-white/60 text-xs font-semibold uppercase mb-3">Campagnes</h4>
+                {brandDetailLoading ? (
+                  <div className="text-white/20 text-sm py-8 text-center">Chargement...</div>
+                ) : !brandDetail || brandDetail.campaigns.length === 0 ? (
+                  <div className="text-white/20 text-sm py-8 text-center">Aucune campagne</div>
+                ) : (
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                    {brandDetail.campaigns.map(campaign => (
+                      <div key={campaign.id} className="bg-white/5 rounded-lg p-4 hover:bg-white/[0.07] transition">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-white font-medium text-sm truncate">{campaign.title}</div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <CampaignStatusBadge status={campaign.status} moderation={campaign.moderation_status} />
+                              {campaign.target_city && (
+                                <span className="text-xs text-white/20">{campaign.target_city}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right ml-3">
+                            <div className="text-white font-bold text-sm">{Number(campaign.budget || 0).toLocaleString("fr-FR")} F</div>
+                            <div className="text-white/20 text-xs">{campaign.cpc} F/clic</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-white/30 mt-2 pt-2 border-t border-white/5">
+                          <span>{new Date(campaign.created_at).toLocaleDateString("fr-FR")}</span>
+                          <span>{campaign.echoCount} echo{campaign.echoCount !== 1 ? "s" : ""}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-white/30 w-16">Inscrit</span>
-                <span className="text-white">{new Date(detailUser.created_at).toLocaleDateString("fr-FR")}</span>
-              </div>
-            </div>
+            )}
 
-            {/* Tags */}
-            <div className="p-6 border-b border-white/5">
-              <h4 className="text-white/60 text-xs font-semibold uppercase mb-3">Tags</h4>
-              <div className="flex flex-wrap gap-2">
-                {AVAILABLE_TAGS.map(tag => {
-                  const isActive = (detailUser.crm_tags || []).includes(tag);
-                  return (
-                    <button
-                      key={tag}
-                      onClick={() => {
-                        const current = detailUser.crm_tags || [];
-                        const newTags = isActive ? current.filter(t => t !== tag) : [...current, tag];
-                        handleUpdateTags(detailUser.id, newTags);
-                      }}
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium transition ${
-                        isActive
-                          ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
-                          : "bg-white/5 text-white/30 border border-white/5 hover:text-white/50 hover:border-white/10"
-                      }`}
-                    >
-                      {tag}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Notes */}
-            <div className="p-6 border-b border-white/5">
-              <h4 className="text-white/60 text-xs font-semibold uppercase mb-3">Notes</h4>
-              {detailNotesLoading ? (
-                <div className="text-white/20 text-sm py-4 text-center">Chargement...</div>
-              ) : detailNotes.length === 0 ? (
-                <div className="text-white/20 text-sm py-4 text-center">Aucune note</div>
-              ) : (
-                <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
-                  {detailNotes.map(note => (
-                    <div key={note.id} className="bg-white/5 rounded-lg p-3 group">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <NoteTypeBadge type={note.note_type} />
-                            <span className="text-white/20 text-xs">
-                              {new Date(note.created_at).toLocaleDateString("fr-FR")}
-                            </span>
-                          </div>
-                          <p className="text-white/70 text-sm">{note.content}</p>
-                        </div>
-                        <button
-                          onClick={() => handleDeleteNote(note.id)}
-                          className="text-white/10 hover:text-red-400 text-xs transition opacity-0 group-hover:opacity-100"
-                        >
-                          ✕
-                        </button>
+            {/* Tab: Finance */}
+            {detailTab === "finance" && (
+              <div className="p-6">
+                {brandDetailLoading ? (
+                  <div className="text-white/20 text-sm py-8 text-center">Chargement...</div>
+                ) : !brandDetail ? (
+                  <div className="text-white/20 text-sm py-8 text-center">Aucune donnee</div>
+                ) : (
+                  <>
+                    {/* Financial summary */}
+                    <div className="grid grid-cols-3 gap-3 mb-6">
+                      <div className="bg-white/5 rounded-lg p-3 text-center">
+                        <div className="text-white font-bold text-sm">{Number(detailUser.balance || 0).toLocaleString("fr-FR")} F</div>
+                        <div className="text-white/30 text-xs mt-1">Solde actuel</div>
+                      </div>
+                      <div className="bg-green-500/10 rounded-lg p-3 text-center">
+                        <div className="text-green-400 font-bold text-sm">{Number(brandDetail.totalRecharged || 0).toLocaleString("fr-FR")} F</div>
+                        <div className="text-white/30 text-xs mt-1">Total recharge</div>
+                      </div>
+                      <div className="bg-orange-500/10 rounded-lg p-3 text-center">
+                        <div className="text-orange-400 font-bold text-sm">{Number(brandDetail.totalSpent || 0).toLocaleString("fr-FR")} F</div>
+                        <div className="text-white/30 text-xs mt-1">Total depense</div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-              <div className="flex gap-2">
-                <select
-                  value={newNoteType}
-                  onChange={e => setNewNoteType(e.target.value)}
-                  className="bg-white/5 border border-white/10 rounded-lg px-2 py-2 text-white/50 text-xs focus:outline-none"
-                >
-                  <option value="note">Note</option>
-                  <option value="call">Appel</option>
-                  <option value="email">Email</option>
-                  <option value="followup">Relance</option>
-                  <option value="meeting">Réunion</option>
-                </select>
-                <input
-                  value={newNote}
-                  onChange={e => setNewNote(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter") handleAddNote(); }}
-                  placeholder="Ajouter une note..."
-                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-primary/50"
-                />
-                <button
-                  onClick={handleAddNote}
-                  disabled={!newNote.trim()}
-                  className="bg-gradient-primary text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-30 transition"
-                >
-                  Ajouter
-                </button>
+
+                    {/* Recharge history */}
+                    <h4 className="text-white/60 text-xs font-semibold uppercase mb-3">Historique des recharges</h4>
+                    {brandDetail.payments.length === 0 ? (
+                      <div className="text-white/20 text-sm py-4 text-center mb-6">Aucune recharge</div>
+                    ) : (
+                      <div className="space-y-2 mb-6 max-h-48 overflow-y-auto">
+                        {brandDetail.payments.map(payment => (
+                          <div key={payment.id} className="bg-white/5 rounded-lg p-3 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <PaymentStatusBadge status={payment.status} />
+                              <div>
+                                <div className="text-white text-sm font-medium">{Number(payment.amount || 0).toLocaleString("fr-FR")} F</div>
+                                <div className="text-white/20 text-xs">{payment.payment_method || "Wave"}</div>
+                              </div>
+                            </div>
+                            <span className="text-white/20 text-xs">{new Date(payment.created_at).toLocaleDateString("fr-FR")}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Recent transactions */}
+                    <h4 className="text-white/60 text-xs font-semibold uppercase mb-3">Transactions recentes</h4>
+                    {brandDetail.transactions.length === 0 ? (
+                      <div className="text-white/20 text-sm py-4 text-center">Aucune transaction</div>
+                    ) : (
+                      <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                        {brandDetail.transactions.map(tx => (
+                          <div key={tx.id} className="bg-white/5 rounded-lg px-3 py-2.5 flex items-center justify-between">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <span className={`text-xs font-mono font-bold ${tx.amount >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                {tx.amount >= 0 ? "+" : ""}{Number(tx.amount).toLocaleString("fr-FR")} F
+                              </span>
+                              <span className="text-white/30 text-xs truncate">{tx.description || tx.type}</span>
+                            </div>
+                            <span className="text-white/20 text-xs ml-2 shrink-0">{new Date(tx.created_at).toLocaleDateString("fr-FR")}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
-            </div>
+            )}
 
             {/* Actions */}
-            <div className="p-6 flex gap-3">
+            <div className="p-6 border-t border-white/5 flex gap-3 flex-wrap">
+              <button
+                onClick={() => setShowTopup(true)}
+                className="flex-1 bg-blue-500/10 text-blue-400 py-2.5 rounded-lg text-sm hover:bg-blue-500/20 transition font-medium"
+              >
+                Recharger
+              </button>
               <button
                 onClick={() => {
                   setDetailUser(null);
@@ -623,7 +847,7 @@ export default function CRMPage() {
                 }}
                 className="flex-1 bg-white/5 text-white/60 py-2.5 rounded-lg text-sm hover:bg-white/10 transition"
               >
-                ✏️ Modifier
+                Modifier
               </button>
               <button
                 onClick={() => {
@@ -632,7 +856,7 @@ export default function CRMPage() {
                 }}
                 className="flex-1 bg-white/5 text-white/60 py-2.5 rounded-lg text-sm hover:bg-white/10 transition"
               >
-                🔍 Investigation
+                Investigation
               </button>
               {detailUser.phone && (
                 <a
@@ -641,9 +865,69 @@ export default function CRMPage() {
                   rel="noopener noreferrer"
                   className="flex-1 bg-green-500/10 text-green-400 py-2.5 rounded-lg text-sm text-center hover:bg-green-500/20 transition"
                 >
-                  💬 WhatsApp
+                  WhatsApp
                 </a>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Topup modal */}
+      {showTopup && detailUser && (
+        <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4" onClick={() => setShowTopup(false)}>
+          <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            <h3 className="text-white font-bold mb-1">Recharger le compte</h3>
+            <p className="text-white/40 text-sm mb-4">{detailUser.company_name || detailUser.name}</p>
+            <div className="bg-white/5 rounded-lg p-3 mb-4 flex items-center justify-between">
+              <span className="text-white/40 text-sm">Solde actuel</span>
+              <span className="text-white font-bold">{Number(detailUser.balance || 0).toLocaleString("fr-FR")} F</span>
+            </div>
+            <input
+              type="number"
+              value={topupAmount}
+              onChange={e => setTopupAmount(e.target.value)}
+              placeholder="Montant (FCFA)"
+              min="0"
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-primary/50 mb-3"
+            />
+            <div className="flex gap-2 mb-4">
+              {[5000, 10000, 25000, 50000].map(amt => (
+                <button
+                  key={amt}
+                  onClick={() => setTopupAmount(String(amt))}
+                  className={`flex-1 py-2 rounded-lg text-xs font-medium transition ${
+                    topupAmount === String(amt)
+                      ? "bg-primary/20 text-primary border border-primary/30"
+                      : "bg-white/5 text-white/40 hover:bg-white/10"
+                  }`}
+                >
+                  {(amt / 1000)}k
+                </button>
+              ))}
+            </div>
+            {topupAmount && parseInt(topupAmount) > 0 && (
+              <div className="bg-green-500/10 rounded-lg p-3 mb-4 flex items-center justify-between">
+                <span className="text-white/40 text-sm">Nouveau solde</span>
+                <span className="text-green-400 font-bold">
+                  {Number((detailUser.balance || 0) + parseInt(topupAmount)).toLocaleString("fr-FR")} F
+                </span>
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowTopup(false); setTopupAmount(""); }}
+                className="flex-1 bg-white/5 text-white/50 py-2.5 rounded-lg text-sm hover:bg-white/10 transition"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleTopup}
+                disabled={toppingUp || !topupAmount || parseInt(topupAmount) <= 0}
+                className="flex-1 bg-gradient-primary text-white py-2.5 rounded-lg text-sm font-medium disabled:opacity-30 transition"
+              >
+                {toppingUp ? "Recharge..." : `Recharger ${topupAmount ? Number(topupAmount).toLocaleString("fr-FR") + " F" : ""}`}
+              </button>
             </div>
           </div>
         </div>
@@ -808,6 +1092,35 @@ function NoteTypeBadge({ type }: { type: string }) {
     meeting: { label: "Réunion", color: "bg-teal-500/20 text-teal-400" },
   };
   const c = config[type] || config.note;
+  return <span className={`text-xs px-1.5 py-0.5 rounded ${c.color}`}>{c.label}</span>;
+}
+
+function CampaignStatusBadge({ status, moderation }: { status: string; moderation: string }) {
+  const config: Record<string, { label: string; color: string }> = {
+    active: { label: "Active", color: "bg-green-500/20 text-green-400" },
+    paused: { label: "Pause", color: "bg-yellow-500/20 text-yellow-400" },
+    completed: { label: "Terminee", color: "bg-white/10 text-white/40" },
+    draft: { label: "Brouillon", color: "bg-white/10 text-white/30" },
+  };
+  const modConfig: Record<string, { label: string; color: string }> = {
+    pending: { label: "En attente", color: "bg-orange-500/20 text-orange-400" },
+    rejected: { label: "Rejetee", color: "bg-red-500/20 text-red-400" },
+  };
+  if (moderation === "pending" || moderation === "rejected") {
+    const m = modConfig[moderation];
+    return <span className={`text-xs px-1.5 py-0.5 rounded ${m.color}`}>{m.label}</span>;
+  }
+  const c = config[status] || config.draft;
+  return <span className={`text-xs px-1.5 py-0.5 rounded ${c.color}`}>{c.label}</span>;
+}
+
+function PaymentStatusBadge({ status }: { status: string }) {
+  const config: Record<string, { label: string; color: string }> = {
+    completed: { label: "OK", color: "bg-green-500/20 text-green-400" },
+    pending: { label: "En attente", color: "bg-orange-500/20 text-orange-400" },
+    failed: { label: "Echoue", color: "bg-red-500/20 text-red-400" },
+  };
+  const c = config[status] || { label: status, color: "bg-white/10 text-white/40" };
   return <span className={`text-xs px-1.5 py-0.5 rounded ${c.color}`}>{c.label}</span>;
 }
 
