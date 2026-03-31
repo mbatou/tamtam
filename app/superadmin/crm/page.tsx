@@ -12,7 +12,7 @@ interface BrandUser {
   company_name: string | null;
   city: string | null;
   role: string;
-  wallet_balance: number;
+  balance: number;
   created_at: string;
   pipelineStage?: string;
   campaignCount?: number;
@@ -28,7 +28,7 @@ interface EchoUser {
   phone: string | null;
   city: string | null;
   role: string;
-  wallet_balance: number;
+  balance: number;
   created_at: string;
   totalClicks?: number;
   validClicks?: number;
@@ -148,7 +148,7 @@ export default function CRMPage() {
             phone: editingUser.phone,
             city: editingUser.city,
             company_name: (editingUser as BrandUser).company_name,
-            wallet_balance: editingUser.wallet_balance,
+            balance: editingUser.balance,
           },
         }),
       });
@@ -324,7 +324,7 @@ export default function CRMPage() {
                         <td className="py-3 px-4 text-white/40">{user.email}</td>
                         <td className="py-3 px-4 text-white/40">{user.city || "—"}</td>
                         <td className="py-3 px-4 text-right text-white">
-                          {Number(user.wallet_balance || 0).toLocaleString("fr-FR")} F
+                          {Number(user.balance || 0).toLocaleString("fr-FR")} F
                         </td>
                         {view === "brands" && (
                           <td className="py-3 px-4 text-center text-white/40">
@@ -470,8 +470,8 @@ export default function CRMPage() {
                 <label className="text-white/30 text-xs">Solde (FCFA)</label>
                 <input
                   type="number"
-                  value={editingUser.wallet_balance || 0}
-                  onChange={e => setEditingUser({ ...editingUser, wallet_balance: Number(e.target.value) })}
+                  value={editingUser.balance || 0}
+                  onChange={e => setEditingUser({ ...editingUser, balance: Number(e.target.value) })}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-primary/50"
                 />
                 <p className="text-white/20 text-xs mt-1">Les ajustements de solde sont loggés automatiquement</p>

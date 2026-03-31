@@ -23,7 +23,7 @@ export async function PUT(request: NextRequest) {
   if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
 
   // Whitelist of editable fields
-  const allowed = ["name", "email", "phone", "city", "company_name", "wallet_balance"];
+  const allowed = ["name", "email", "phone", "city", "company_name", "balance"];
   const safeUpdates: Record<string, unknown> = {};
   for (const key of Object.keys(updates || {})) {
     if (allowed.includes(key)) {
@@ -35,16 +35,16 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
   }
 
-  // If wallet_balance is being adjusted, log the transaction
-  if (safeUpdates.wallet_balance !== undefined) {
+  // If balance is being adjusted, log the transaction
+  if (safeUpdates.balance !== undefined) {
     const { data: user } = await supabase
       .from("users")
-      .select("wallet_balance")
+      .select("balance")
       .eq("id", userId)
       .single();
 
-    const oldBalance = Number(user?.wallet_balance) || 0;
-    const newBalance = Number(safeUpdates.wallet_balance);
+    const oldBalance = Number(user?.balance) || 0;
+    const newBalance = Number(safeUpdates.balance);
     const diff = newBalance - oldBalance;
 
     if (diff !== 0) {

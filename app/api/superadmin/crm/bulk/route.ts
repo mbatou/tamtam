@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
               phone: null,
               city: null,
               company_name: null,
-              wallet_balance: 0,
+              balance: 0,
               deleted_at: new Date().toISOString(),
               deletion_reason: data?.reason || "Suppression admin (bulk)",
             })
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
     case "export": {
       const { data: users } = await supabase
         .from("users")
-        .select("name, email, phone, company_name, city, role, wallet_balance, created_at")
+        .select("name, email, phone, company_name, city, role, balance, created_at")
         .in("id", userIds);
 
       return NextResponse.json({ users: users || [] });
