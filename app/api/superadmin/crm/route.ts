@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
   if (view === "brands") {
     let query = supabase
       .from("users")
-      .select("id, name, phone, company_name, city, role, balance, created_at, deleted_at, terms_accepted_at", { count: "exact" })
+      .select("id, name, phone, company_name, city, role, balance, created_at, deleted_at, terms_accepted_at, crm_tags", { count: "exact" })
       .eq("role", "batteur")
       .is("deleted_at", null);
 
