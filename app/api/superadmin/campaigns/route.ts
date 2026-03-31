@@ -246,7 +246,7 @@ export async function POST(request: NextRequest) {
   // Get current campaign state
   const { data: campaign, error: fetchErr } = await supabase
     .from("campaigns")
-    .select("id, status, moderation_status, budget, spent, batteur_id")
+    .select("id, title, status, moderation_status, budget, spent, cpc, batteur_id")
     .eq("id", campaign_id)
     .single();
 
@@ -357,12 +357,65 @@ export async function POST(request: NextRequest) {
       // else: refund already issued, skip (idempotent)
       break;
     }
-    case "pause":
+    case "pause": {
+      if (campaign.status !== "active") {
+        return NextResponse.json({ error: `Impossible de mettre en pause — statut: ${campaign.status}` }, { status: 400 });
+      }
       updates.status = "paused";
       break;
-    case "resume":
+    }
+    case "resume": {
+      if (campaign.status !== "paused") {
+        return NextResponse.json({ error: `Impossible de reprendre — statut: ${campaign.status}` }, { status: 400 });
+      }
+      const remaining = campaign.budget - (campaign.spent || 0);
+      if (remaining < campaign.cpc) {
+        return NextResponse.json({
+          error: `Budget restant (${remaining} FCFA) inférieur au CPC (${campaign.cpc} FCFA). Impossible de reprendre.`,
+        }, { status: 400 });
+      }
       updates.status = "active";
       break;
+    }
+    case "stop": {
+      if (!["active", "paused"].includes(campaign.status)) {
+        return NextResponse.json({ error: `Impossible d'arrêter — statut: ${campaign.status}` }, { status: 400 });
+      }
+      updates.status = "completed";
+
+      const stopRemaining = campaign.budget - (campaign.spent || 0);
+
+      // After updating the campaign, refund remaining budget to brand
+      if (stopRemaining > 0 && campaign.batteur_id) {
+        // Idempotency: check if a stop refund already exists
+        const { data: existingRefund } = await supabase
+          .from("wallet_transactions")
+          .select("id")
+          .eq("source_id", campaign_id)
+          .eq("type", "campaign_budget_refund")
+          .ilike("description", "%arrêtée%")
+          .limit(1);
+
+        if (!existingRefund || existingRefund.length === 0) {
+          await supabase.rpc("increment_balance", {
+            p_user_id: campaign.batteur_id,
+            p_amount: stopRemaining,
+          });
+
+          await logWalletTransaction({
+            supabase,
+            userId: campaign.batteur_id,
+            amount: stopRemaining,
+            type: "campaign_budget_refund",
+            description: `Remboursement campagne arrêtée: ${campaign.title || campaign.id} (${stopRemaining} FCFA restants)`,
+            sourceId: campaign_id,
+            sourceType: "campaign",
+            createdBy: session.user.id,
+          });
+        }
+      }
+      break;
+    }
     default:
       return NextResponse.json({ error: "Action invalide" }, { status: 400 });
   }
@@ -484,5 +537,6 @@ export async function POST(request: NextRequest) {
     } catch { /* non-blocking */ }
   }
 
-  return NextResponse.json({ success: true });
+  const refunded = action === "stop" ? campaign.budget - (campaign.spent || 0) : 0;
+  return NextResponse.json({ success: true, refunded });
 }

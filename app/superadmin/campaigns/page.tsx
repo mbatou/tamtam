@@ -151,6 +151,13 @@ function CampaignModerationPageContent() {
   }
 
   async function moderateCampaign(id: string, action: string, reason?: string) {
+    if (action === "stop") {
+      const confirmed = window.confirm(
+        "Arrêter cette campagne ? Le budget restant sera remboursé à la marque."
+      );
+      if (!confirmed) return;
+    }
+
     setModerating(true);
     try {
       const res = await fetch("/api/superadmin/campaigns", {
@@ -163,7 +170,9 @@ function CampaignModerationPageContent() {
         const toastMsg = action === "approve" ? "Campagne approuvée et en ligne" :
           action === "reject" ? "Campagne rejetée" :
           action === "pause" ? "Campagne mise en pause" :
-          action === "resume" ? "Campagne réactivée" : t("common.success");
+          action === "resume" ? "Campagne réactivée" :
+          action === "stop" ? `Campagne arrêtée.${data.refunded > 0 ? ` ${data.refunded.toLocaleString("fr-FR")} FCFA remboursés.` : ""}` :
+          t("common.success");
         showToast(toastMsg, action === "approve" || action === "resume" ? "success" : "info");
         setRejectReason("");
         // Reload data and update the selected campaign in the modal
@@ -385,7 +394,19 @@ function CampaignModerationPageContent() {
                   )}
                 </td>
                 <td className="py-3">
-                  <Badge status={campaign.moderation_status || "pending"} />
+                  <div className="flex flex-col gap-1">
+                    <Badge status={campaign.moderation_status || "pending"} />
+                    {campaign.status !== campaign.moderation_status && (
+                      <Badge status={campaign.status} />
+                    )}
+                    {campaign.status === "active" && (() => {
+                      const remaining = campaign.budget - (campaign.spent || 0);
+                      if (remaining < campaign.cpc) {
+                        return <span className="text-[10px] text-red-400 font-bold">Budget &lt; CPC</span>;
+                      }
+                      return null;
+                    })()}
+                  </div>
                 </td>
                 <td className="py-3 hidden md:table-cell">
                   <div>{formatFCFA(campaign.budget)}</div>
@@ -517,6 +538,19 @@ function CampaignModerationPageContent() {
 
                 {selected.status === "active" && (
                   <div className="pt-2 border-t border-white/5 space-y-2">
+                    {/* Budget warning */}
+                    {(() => {
+                      const remaining = selected.budget - (selected.spent || 0);
+                      const canAffordClick = remaining >= selected.cpc;
+                      if (!canAffordClick) {
+                        return (
+                          <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400 font-bold animate-pulse">
+                            {remaining.toLocaleString("fr-FR")} FCFA restants — inférieur au CPC ({selected.cpc} FCFA). La campagne ne peut plus générer de clics.
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                     <button
                       onClick={() => notifyEchos(selected.id)}
                       disabled={notifying}
@@ -525,23 +559,49 @@ function CampaignModerationPageContent() {
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/></svg>
                       {notifying ? t("superadmin.campaigns.notifying") : t("superadmin.campaigns.notifyEchos")}
                     </button>
-                    <button
-                      onClick={() => moderateCampaign(selected.id, "pause")}
-                      className="w-full py-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 font-bold text-sm"
-                    >
-                      {t("superadmin.campaigns.pendingTab")}
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => moderateCampaign(selected.id, "pause")}
+                        disabled={moderating}
+                        className="flex-1 py-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 font-bold text-sm disabled:opacity-50"
+                      >
+                        Mettre en pause
+                      </button>
+                      <button
+                        onClick={() => moderateCampaign(selected.id, "stop")}
+                        disabled={moderating}
+                        className="flex-1 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-bold text-sm disabled:opacity-50"
+                      >
+                        Arrêter + Rembourser
+                      </button>
+                    </div>
                   </div>
                 )}
 
                 {selected.status === "paused" && (
+                  <div className="pt-2 border-t border-white/5 space-y-2">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => moderateCampaign(selected.id, "resume")}
+                        disabled={moderating}
+                        className="flex-1 py-2.5 rounded-xl bg-accent/10 border border-accent/30 text-accent font-bold text-sm disabled:opacity-50"
+                      >
+                        Reprendre
+                      </button>
+                      <button
+                        onClick={() => moderateCampaign(selected.id, "stop")}
+                        disabled={moderating}
+                        className="flex-1 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-bold text-sm disabled:opacity-50"
+                      >
+                        Arrêter + Rembourser
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {selected.status === "completed" && (
                   <div className="pt-2 border-t border-white/5">
-                    <button
-                      onClick={() => moderateCampaign(selected.id, "resume")}
-                      className="w-full py-2.5 rounded-xl bg-accent/10 border border-accent/30 text-accent font-bold text-sm"
-                    >
-                      {t("superadmin.campaigns.approvedTab")}
-                    </button>
+                    <span className="text-gray-400 text-xs">Campagne terminée</span>
                   </div>
                 )}
 
