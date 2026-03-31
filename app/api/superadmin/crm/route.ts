@@ -35,8 +35,8 @@ export async function GET(request: NextRequest) {
   if (view === "brands") {
     let query = supabase
       .from("users")
-      .select("id, name, email, phone, company_name, city, role, wallet_balance, created_at, deleted_at, terms_accepted_at", { count: "exact" })
-      .in("role", ["batteur", "brand"])
+      .select("id, name, email, phone, company_name, city, role, balance, created_at, deleted_at, terms_accepted_at", { count: "exact" })
+      .eq("role", "batteur")
       .is("deleted_at", null);
 
     if (search) {
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
     // Échos view
     let query = supabase
       .from("users")
-      .select("id, name, email, phone, city, role, wallet_balance, created_at, deleted_at", { count: "exact" })
+      .select("id, name, email, phone, city, role, balance, created_at, deleted_at", { count: "exact" })
       .eq("role", "echo")
       .is("deleted_at", null);
 
