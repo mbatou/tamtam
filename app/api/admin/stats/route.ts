@@ -52,12 +52,6 @@ export async function GET(request: NextRequest) {
   const echoIds = Array.from(new Set(links.map((l) => l.echo_id)));
   const linkIds = links.map((l) => l.id);
 
-  // Count clicks using Postgres COUNT(*) — immune to row-limit truncation
-  const [totalClicks, validClicks] = await Promise.all([
-    countClicks(supabase, linkIds),
-    countClicks(supabase, linkIds, true),
-  ]);
-
   // Get top echos for this brand's campaigns
   const echoEarnings: Record<string, { id: string; clicks: number; earned: number }> = {};
   for (const link of links) {
@@ -113,6 +107,12 @@ export async function GET(request: NextRequest) {
       return { ...c, realClicks, realValidClicks };
     })
   );
+
+  // Overview totals — sum per-campaign counts (avoids PostgREST URL-length
+  // limit that can silently fail when passing hundreds of link IDs in a
+  // single .in() filter).
+  const totalClicks = enrichedCampaigns.reduce((s, c) => s + c.realClicks, 0);
+  const validClicks = enrichedCampaigns.reduce((s, c) => s + c.realValidClicks, 0);
 
   return NextResponse.json({
     totalClicks,
