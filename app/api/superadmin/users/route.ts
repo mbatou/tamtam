@@ -5,7 +5,7 @@ import { normalizeCity } from "@/lib/cities";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
   if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
@@ -18,100 +18,196 @@ export async function GET() {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 
-  const { data: users } = await supabase
-    .from("users")
-    .select("*")
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false });
+  // Parse query params
+  const url = new URL(request.url);
+  const role = url.searchParams.get("role") || "all";
+  const status = url.searchParams.get("status") || "all";
+  const activity = url.searchParams.get("activity") || "all";
+  const search = url.searchParams.get("search") || "";
+  const page = parseInt(url.searchParams.get("page") || "1");
+  const limit = parseInt(url.searchParams.get("limit") || "30");
+  const offset = (page - 1) * limit;
 
-  // Get echo click stats
+  // --- Stats counts (parallel, head-only = no data transfer) ---
+  const [echoCount, batteurCount, flaggedCount, totalPaidResult] = await Promise.all([
+    supabase.from("users").select("*", { count: "exact", head: true })
+      .eq("role", "echo").is("deleted_at", null),
+    supabase.from("users").select("*", { count: "exact", head: true })
+      .in("role", ["batteur", "brand"]).is("deleted_at", null),
+    supabase.from("users").select("*", { count: "exact", head: true })
+      .eq("status", "flagged").is("deleted_at", null),
+    supabase.from("wallet_transactions").select("amount")
+      .in("type", ["withdrawal", "payout", "echo_payout"])
+      .gt("amount", 0),
+  ]);
+
+  const totalPaid = (totalPaidResult.data || []).reduce(
+    (s: number, t: { amount: number }) => s + Math.abs(Number(t.amount) || 0), 0
+  );
+
+  // --- Tab counts (parallel) ---
+  const [allCount, verifiedCount, suspendedCount] = await Promise.all([
+    supabase.from("users").select("*", { count: "exact", head: true })
+      .is("deleted_at", null)
+      .not("role", "eq", "superadmin"),
+    supabase.from("users").select("*", { count: "exact", head: true })
+      .eq("status", "verified").is("deleted_at", null)
+      .not("role", "eq", "superadmin"),
+    supabase.from("users").select("*", { count: "exact", head: true })
+      .eq("status", "suspended").is("deleted_at", null)
+      .not("role", "eq", "superadmin"),
+  ]);
+
+  // --- Build filtered query ---
+  let query = supabase
+    .from("users")
+    .select(
+      "id, name, phone, city, role, status, risk_level, balance, total_earned, mobile_money_provider, created_at, referral_count, referred_by, referral_code",
+      { count: "exact" }
+    )
+    .is("deleted_at", null)
+    .not("role", "eq", "superadmin");
+
+  // Role filter
+  if (role === "echo") query = query.eq("role", "echo");
+  else if (role === "batteur") query = query.in("role", ["batteur", "brand"]);
+
+  // Status filter
+  if (status === "verified") query = query.eq("status", "verified");
+  else if (status === "flagged") query = query.eq("status", "flagged");
+  else if (status === "suspended") query = query.eq("status", "suspended");
+
+  // Search
+  if (search) {
+    query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%,city.ilike.%${search}%`);
+  }
+
+  // Paginate
+  const { data: users, count: filteredCount } = await query
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  const userIds = (users || []).map((u) => u.id);
+
+  // --- Enrichment: only for current page users ---
+  // Click stats via RPC
   const clickStats: Record<string, { total: number; valid: number; fraud: number; rate: number }> = {};
   try {
     const { data: stats } = await supabase.rpc("get_echo_click_stats");
     if (stats) {
       for (const s of stats) {
-        clickStats[s.echo_id] = {
-          total: s.total_clicks,
-          valid: s.valid_clicks,
-          fraud: s.fraud_clicks,
-          rate: parseFloat(s.fraud_rate),
-        };
+        if (userIds.includes(s.echo_id)) {
+          clickStats[s.echo_id] = {
+            total: s.total_clicks,
+            valid: s.valid_clicks,
+            fraud: s.fraud_clicks,
+            rate: parseFloat(s.fraud_rate),
+          };
+        }
       }
     }
   } catch {
     // RPC may not exist yet
   }
 
-  // Detect dual-role users: echo activity (tracked_links) and batteur activity (campaigns created)
+  // Dual-role detection + campaigns joined + last click (only for current page)
   const echoUserIds = new Set<string>();
   const batteurUserIds = new Set<string>();
-  // Last click timestamp per echo (via tracked_links → clicks)
   const lastClickMap: Record<string, string> = {};
-  // Campaigns joined per echo (count of tracked_links per echo, grouped by campaign)
   const campaignsJoinedMap: Record<string, number> = {};
-  try {
-    const { data: echoLinks } = await supabase.from("tracked_links").select("echo_id, campaign_id").limit(50000);
-    if (echoLinks) {
-      const echoCampaignSets: Record<string, Set<string>> = {};
-      echoLinks.forEach((l) => {
-        echoUserIds.add(l.echo_id);
-        if (!echoCampaignSets[l.echo_id]) echoCampaignSets[l.echo_id] = new Set();
-        echoCampaignSets[l.echo_id].add(l.campaign_id);
-      });
-      for (const [echoId, campaigns] of Object.entries(echoCampaignSets)) {
-        campaignsJoinedMap[echoId] = campaigns.size;
+
+  if (userIds.length > 0) {
+    try {
+      const { data: echoLinks } = await supabase
+        .from("tracked_links")
+        .select("echo_id, campaign_id")
+        .in("echo_id", userIds);
+      if (echoLinks) {
+        const echoCampaignSets: Record<string, Set<string>> = {};
+        echoLinks.forEach((l) => {
+          echoUserIds.add(l.echo_id);
+          if (!echoCampaignSets[l.echo_id]) echoCampaignSets[l.echo_id] = new Set();
+          echoCampaignSets[l.echo_id].add(l.campaign_id);
+        });
+        for (const [echoId, campaigns] of Object.entries(echoCampaignSets)) {
+          campaignsJoinedMap[echoId] = campaigns.size;
+        }
       }
-    }
 
-    const { data: batteurCampaigns } = await supabase.from("campaigns").select("batteur_id").limit(5000);
-    if (batteurCampaigns) batteurCampaigns.forEach((c) => batteurUserIds.add(c.batteur_id));
+      const { data: batteurCampaigns } = await supabase
+        .from("campaigns")
+        .select("batteur_id")
+        .in("batteur_id", userIds);
+      if (batteurCampaigns) batteurCampaigns.forEach((c) => batteurUserIds.add(c.batteur_id));
 
-    // Get most recent click per echo via tracked_links
-    const { data: lastClicks } = await supabase
-      .from("tracked_links")
-      .select("echo_id, clicks(created_at)")
-      .order("created_at", { ascending: false, referencedTable: "clicks" })
-      .limit(1, { referencedTable: "clicks" });
-    if (lastClicks) {
-      for (const link of lastClicks) {
-        const clickArr = link.clicks as unknown as { created_at: string }[];
-        if (clickArr && clickArr.length > 0) {
-          const clickDate = clickArr[0].created_at;
-          if (!lastClickMap[link.echo_id] || clickDate > lastClickMap[link.echo_id]) {
-            lastClickMap[link.echo_id] = clickDate;
+      // Last click per echo
+      const { data: lastClicks } = await supabase
+        .from("tracked_links")
+        .select("echo_id, clicks(created_at)")
+        .in("echo_id", userIds)
+        .order("created_at", { ascending: false, referencedTable: "clicks" })
+        .limit(1, { referencedTable: "clicks" });
+      if (lastClicks) {
+        for (const link of lastClicks) {
+          const clickArr = link.clicks as unknown as { created_at: string }[];
+          if (clickArr && clickArr.length > 0) {
+            const clickDate = clickArr[0].created_at;
+            if (!lastClickMap[link.echo_id] || clickDate > lastClickMap[link.echo_id]) {
+              lastClickMap[link.echo_id] = clickDate;
+            }
           }
         }
       }
+    } catch {
+      // tables may not exist yet
     }
-  } catch {
-    // tables may not exist yet
   }
 
-  // Get streak data per echo
-  const streakMap: Record<string, number> = {};
+  // Activity filter — applied post-enrichment since it depends on click_stats
+  let enriched = (users || []).map((u) => ({
+    ...u,
+    click_stats: clickStats[u.id] || { total: 0, valid: 0, fraud: 0, rate: 0 },
+    has_echo_activity: echoUserIds.has(u.id),
+    has_batteur_activity: batteurUserIds.has(u.id),
+    is_dual_role: echoUserIds.has(u.id) && batteurUserIds.has(u.id),
+    last_click_at: lastClickMap[u.id] || null,
+    campaigns_joined: campaignsJoinedMap[u.id] || 0,
+    current_streak: 0,
+  }));
+
+  // Streak data
   try {
-    const { data: streaks } = await supabase.from("echo_streaks").select("echo_id, current_streak");
+    const { data: streaks } = await supabase
+      .from("echo_streaks")
+      .select("echo_id, current_streak")
+      .in("echo_id", userIds);
     if (streaks) {
-      for (const s of streaks) {
-        streakMap[s.echo_id] = s.current_streak || 0;
-      }
+      const streakMap: Record<string, number> = {};
+      for (const s of streaks) streakMap[s.echo_id] = s.current_streak || 0;
+      enriched = enriched.map((u) => ({ ...u, current_streak: streakMap[u.id] || 0 }));
     }
   } catch {
     // echo_streaks may not exist yet
   }
 
-  const enriched = (users || []).map((u: Record<string, unknown>) => ({
-    ...u,
-    click_stats: clickStats[u.id as string] || { total: 0, valid: 0, fraud: 0, rate: 0 },
-    has_echo_activity: echoUserIds.has(u.id as string),
-    has_batteur_activity: batteurUserIds.has(u.id as string),
-    is_dual_role: echoUserIds.has(u.id as string) && batteurUserIds.has(u.id as string),
-    last_click_at: lastClickMap[u.id as string] || null,
-    campaigns_joined: campaignsJoinedMap[u.id as string] || 0,
-    current_streak: streakMap[u.id as string] || 0,
-  }));
-
-  return NextResponse.json(enriched);
+  return NextResponse.json({
+    stats: {
+      totalEchos: echoCount.count || 0,
+      totalBrands: batteurCount.count || 0,
+      flagged: flaggedCount.count || 0,
+      totalPaid: Math.round(totalPaid),
+    },
+    tabs: {
+      all: allCount.count || 0,
+      verified: verifiedCount.count || 0,
+      flagged: flaggedCount.count || 0,
+      suspended: suspendedCount.count || 0,
+    },
+    users: enriched,
+    total: filteredCount || 0,
+    page,
+    limit,
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -269,7 +365,6 @@ export async function POST(request: NextRequest) {
   if (action === "reset_balance") {
     const { data: targetUser } = await supabase.from("users").select("balance, name").eq("id", user_id).single();
     if (targetUser && (targetUser.balance || 0) > 0) {
-      // Log will be recorded after the update succeeds
       const oldBalance = targetUser.balance || 0;
       const { error: resetErr } = await supabase.from("users").update({ balance: 0 }).eq("id", user_id);
       if (resetErr) return NextResponse.json({ error: resetErr.message }, { status: 500 });

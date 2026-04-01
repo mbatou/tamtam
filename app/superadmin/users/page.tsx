@@ -9,7 +9,7 @@ import StatCard from "@/components/StatCard";
 import Badge from "@/components/ui/Badge";
 import TabBar from "@/components/ui/TabBar";
 import Modal from "@/components/ui/Modal";
-import Pagination, { paginate } from "@/components/ui/Pagination";
+import Pagination from "@/components/ui/Pagination";
 import { useToast } from "@/components/ui/Toast";
 import CitySelect from "@/components/ui/CitySelect";
 
@@ -65,13 +65,31 @@ export default function UsersPageWrapper() {
   return <Suspense><UsersPageContent /></Suspense>;
 }
 
+interface ApiStats {
+  totalEchos: number;
+  totalBrands: number;
+  flagged: number;
+  totalPaid: number;
+}
+
+interface ApiTabs {
+  all: number;
+  verified: number;
+  flagged: number;
+  suspended: number;
+}
+
 function UsersPageContent() {
   const { t } = useTranslation();
   const router = useRouter();
   const [users, setUsers] = useState<UserRow[]>([]);
+  const [stats, setStats] = useState<ApiStats>({ totalEchos: 0, totalBrands: 0, flagged: 0, totalPaid: 0 });
+  const [tabs, setTabs] = useState<ApiTabs>({ all: 0, verified: 0, flagged: 0, suspended: 0 });
+  const [totalFiltered, setTotalFiltered] = useState(0);
   const [filter, setFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
   const [activityFilter, setActivityFilter] = useState<"all" | "active" | "inactive">("all");
+  const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<UserRow | null>(null);
   const [loading, setLoading] = useState(true);
   const { showToast, ToastComponent } = useToast();
@@ -162,14 +180,30 @@ function UsersPageContent() {
     }
   }, []);
 
-  useEffect(() => { loadData(); }, []);
+  // Debounce search input
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => { loadData(); }, [page, filter, roleFilter, debouncedSearch]);
 
   async function loadData() {
     try {
-      const res = await fetch("/api/superadmin/users");
+      const params = new URLSearchParams();
+      params.set("page", page.toString());
+      params.set("limit", PAGE_SIZE.toString());
+      if (roleFilter !== "all") params.set("role", roleFilter === "dual" ? "all" : roleFilter);
+      if (filter !== "all") params.set("status", filter);
+      if (debouncedSearch) params.set("search", debouncedSearch);
+      const res = await fetch(`/api/superadmin/users?${params}`);
       const data = await res.json();
-      setUsers(data);
-      if (highlightId) openUserById(data, highlightId);
+      setUsers(data.users || []);
+      setStats(data.stats || { totalEchos: 0, totalBrands: 0, flagged: 0, totalPaid: 0 });
+      setTabs(data.tabs || { all: 0, verified: 0, flagged: 0, suspended: 0 });
+      setTotalFiltered(data.total || 0);
+      if (highlightId) openUserById(data.users || [], highlightId);
     } catch {
       showToast(t("superadmin.users.loadError"), "error");
     }
@@ -284,27 +318,17 @@ function UsersPageContent() {
     setPayoutActionLoading(null);
   }
 
-  const echos = users.filter((u) => u.role === "echo");
-  const batteurs = users.filter((u) => u.role === "batteur");
   const dualRoleUsers = users.filter((u) => u.is_dual_role || (u.has_echo_activity && u.has_batteur_activity));
 
+  // Activity filter applied client-side (depends on enrichment data)
   const displayUsers = users.filter((u) => {
-    if (roleFilter === "echo" && u.role !== "echo") return false;
-    if (roleFilter === "batteur" && u.role !== "batteur") return false;
     if (roleFilter === "dual") {
       if (!u.is_dual_role && !(u.has_echo_activity && u.has_batteur_activity)) return false;
     }
     if (activityFilter === "active" && u.click_stats.total === 0) return false;
     if (activityFilter === "inactive" && u.click_stats.total > 0) return false;
-    if (filter === "verified") return u.status === "verified";
-    if (filter === "flagged") return u.status === "flagged";
-    if (filter === "suspended") return u.status === "suspended";
     return true;
   });
-
-  const paginatedUsers = paginate(displayUsers, page, PAGE_SIZE);
-
-  const totalPaid = echos.reduce((sum, u) => sum + u.total_earned, 0);
 
   function qualityScore(user: UserRow): number {
     const validRatio = user.click_stats.total > 0 ? user.click_stats.valid / user.click_stats.total : 0;
@@ -339,10 +363,10 @@ function UsersPageContent() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label={t("superadmin.users.totalEchos")} value={echos.length.toString()} accent="orange" />
-        <StatCard label={t("superadmin.users.batteurs")} value={batteurs.length.toString()} accent="teal" />
-        <StatCard label={t("superadmin.users.flagged")} value={users.filter((u) => u.status === "flagged").length.toString()} accent="red" />
-        <StatCard label={t("superadmin.users.totalPaid")} value={formatFCFA(totalPaid)} accent="purple" />
+        <StatCard label={t("superadmin.users.totalEchos")} value={stats.totalEchos.toString()} accent="orange" />
+        <StatCard label={t("superadmin.users.batteurs")} value={stats.totalBrands.toString()} accent="teal" />
+        <StatCard label={t("superadmin.users.flagged")} value={stats.flagged.toString()} accent="red" />
+        <StatCard label={t("superadmin.users.totalPaid")} value={formatFCFA(stats.totalPaid)} accent="purple" />
       </div>
 
       {/* Role filter */}
@@ -382,12 +406,23 @@ function UsersPageContent() {
         ))}
       </div>
 
+      {/* Search */}
+      <div className="mb-4">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          placeholder={t("superadmin.users.searchPlaceholder") || "Rechercher par nom, téléphone, ville..."}
+          className="w-full max-w-sm bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition placeholder:text-white/20"
+        />
+      </div>
+
       <TabBar
         tabs={[
-          { key: "all", label: t("superadmin.users.allTab"), count: users.length },
-          { key: "verified", label: t("superadmin.users.verified"), count: users.filter((u) => u.status === "verified").length },
-          { key: "flagged", label: t("superadmin.users.flaggedTab"), count: users.filter((u) => u.status === "flagged").length },
-          { key: "suspended", label: t("superadmin.users.suspended"), count: users.filter((u) => u.status === "suspended").length },
+          { key: "all", label: t("superadmin.users.allTab"), count: tabs.all },
+          { key: "verified", label: t("superadmin.users.verified"), count: tabs.verified },
+          { key: "flagged", label: t("superadmin.users.flaggedTab"), count: tabs.flagged },
+          { key: "suspended", label: t("superadmin.users.suspended"), count: tabs.suspended },
         ]}
         active={filter}
         onChange={(f) => { setFilter(f); setPage(1); }}
@@ -409,7 +444,7 @@ function UsersPageContent() {
             </tr>
           </thead>
           <tbody>
-            {paginatedUsers.map((user) => (
+            {displayUsers.map((user) => (
               <tr
                 key={user.id}
                 className="border-b border-white/5 hover:bg-white/3 cursor-pointer transition"
@@ -489,7 +524,7 @@ function UsersPageContent() {
         </table>
       </div>
 
-      <Pagination currentPage={page} totalItems={displayUsers.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
+      <Pagination currentPage={page} totalItems={totalFiltered} pageSize={PAGE_SIZE} onPageChange={setPage} />
 
       {/* User Detail Modal */}
       <Modal open={!!selected} onClose={() => { setSelected(null); setEchoCampaigns([]); setBatteurCampaigns([]); setPayoutHistory([]); }} title={selected ? getBrandDisplayName(selected) : ""}>
