@@ -80,7 +80,13 @@ export async function countClicks(
   return total;
 }
 
-/** Build a daily clicks chart using Postgres COUNT per day — immune to row-limit truncation */
+/**
+ * Build a daily clicks chart by fetching all clicks in a single query
+ * and grouping by day in memory. This replaces the previous approach of
+ * firing 2 COUNT queries per day (60+ queries for 30 days).
+ *
+ * Only fetches 2 minimal columns (created_at, is_valid) to keep transfer small.
+ */
 export async function getClicksChart(
   supabase: SupabaseClient,
   linkIds: string[],
@@ -90,7 +96,6 @@ export async function getClicksChart(
 ): Promise<{ date: string; valid: number; fraud: number }[]> {
   const now = new Date();
 
-  // Use provided dates or fall back to `days` parameter
   const startDate = from || new Date(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - (days - 1))
   );
@@ -99,57 +104,65 @@ export async function getClicksChart(
   );
 
   // Generate day buckets from startDate to endDate
-  const bucketKeys: string[] = [];
+  const bucketMap: Record<string, { date: string; valid: number; fraud: number }> = {};
   const cursor = new Date(startDate);
   cursor.setUTCHours(0, 0, 0, 0);
   const endDay = new Date(endDate);
   endDay.setUTCHours(0, 0, 0, 0);
 
   while (cursor <= endDay) {
-    bucketKeys.push(cursor.toISOString().slice(0, 10));
+    const key = cursor.toISOString().slice(0, 10);
+    bucketMap[key] = { date: key, valid: 0, fraud: 0 };
     cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
 
   if (linkIds.length === 0) {
-    return bucketKeys.map(date => ({ date, valid: 0, fraud: 0 }));
+    return Object.values(bucketMap);
   }
 
-  // Helper: count clicks for a single day, batching linkIds to avoid URL-length limits
-  async function countDay(date: string) {
-    const dayStart = `${date}T00:00:00.000Z`;
-    const dayEnd = `${date}T23:59:59.999Z`;
+  // Fetch all clicks in the date range with minimal columns, paginated
+  const startISO = startDate.toISOString();
+  const endISO = endDate.toISOString();
+  const PAGE_SIZE = 1000;
 
-    // Batch linkIds into chunks
-    const batches: string[][] = [];
-    for (let i = 0; i < linkIds.length; i += IN_BATCH_SIZE) {
-      batches.push(linkIds.slice(i, i + IN_BATCH_SIZE));
-    }
-
-    let valid = 0;
-    let total = 0;
-    const batchResults = await Promise.all(
-      batches.map(async (batch) => {
-        const [{ count: v }, { count: t }] = await Promise.all([
-          supabase.from("clicks").select("*", { count: "exact", head: true })
-            .in("link_id", batch)
-            .gte("created_at", dayStart).lte("created_at", dayEnd)
-            .eq("is_valid", true),
-          supabase.from("clicks").select("*", { count: "exact", head: true })
-            .in("link_id", batch)
-            .gte("created_at", dayStart).lte("created_at", dayEnd),
-        ]);
-        return { valid: v || 0, total: t || 0 };
-      })
-    );
-    for (const r of batchResults) {
-      valid += r.valid;
-      total += r.total;
-    }
-    return { date, valid, fraud: total - valid };
+  // Batch linkIds to avoid URL-length limits
+  const linkBatches: string[][] = [];
+  for (let i = 0; i < linkIds.length; i += IN_BATCH_SIZE) {
+    linkBatches.push(linkIds.slice(i, i + IN_BATCH_SIZE));
   }
 
-  // Per-day Postgres COUNT(*) — immune to row-limit truncation
-  const results = await Promise.all(bucketKeys.map(countDay));
+  // Fetch all clicks across all link batches
+  await Promise.all(
+    linkBatches.map(async (batch) => {
+      let offset = 0;
+      while (true) {
+        const { data } = await supabase
+          .from("clicks")
+          .select("created_at, is_valid")
+          .in("link_id", batch)
+          .gte("created_at", startISO)
+          .lte("created_at", endISO)
+          .range(offset, offset + PAGE_SIZE - 1);
 
-  return results;
+        const rows = data || [];
+        for (const row of rows) {
+          const day = row.created_at.slice(0, 10);
+          const bucket = bucketMap[day];
+          if (bucket) {
+            if (row.is_valid) {
+              bucket.valid++;
+            } else {
+              bucket.fraud++;
+            }
+          }
+        }
+
+        if (rows.length < PAGE_SIZE) break;
+        offset += PAGE_SIZE;
+      }
+    })
+  );
+
+  // Return sorted by date
+  return Object.values(bucketMap).sort((a, b) => a.date.localeCompare(b.date));
 }
