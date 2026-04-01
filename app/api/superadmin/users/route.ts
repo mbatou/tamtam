@@ -22,7 +22,6 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const role = url.searchParams.get("role") || "all";
   const status = url.searchParams.get("status") || "all";
-  const activity = url.searchParams.get("activity") || "all";
   const search = url.searchParams.get("search") || "";
   const page = parseInt(url.searchParams.get("page") || "1");
   const limit = parseInt(url.searchParams.get("limit") || "30");
