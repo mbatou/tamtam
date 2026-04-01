@@ -43,48 +43,86 @@ export async function GET(request: NextRequest) {
     .eq("campaign_id", campaignId);
 
   const linkIds = (links || []).map(l => l.id);
-
-  // Total + valid click counts
-  const [{ count: totalClicks }, { count: validClicks }] = await Promise.all([
-    supabase.from("clicks").select("*", { count: "exact", head: true }).in("link_id", linkIds),
-    supabase.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", true).in("link_id", linkIds),
-  ]);
-
-  // Unique Échos who generated clicks
   const uniqueEchoIds = Array.from(new Set((links || []).map(l => l.echo_id)));
 
-  // Per-day chart data from campaign start to today
+  if (linkIds.length === 0) {
+    return NextResponse.json({
+      totalClicks: 0,
+      validClicks: 0,
+      activeEchos: 0,
+      costPerVisitor: campaign.cpc,
+      chartData: [],
+      topEchos: [],
+      geoBreakdown: [],
+    });
+  }
+
+  // Run chart data, click counts, and echo user info in parallel
   const now = new Date();
   now.setUTCHours(23, 59, 59, 999);
-  const chartData = await getClicksChart(
-    supabase,
-    linkIds,
-    30,
-    new Date(campaign.created_at),
-    now
-  );
 
-  // Top Échos for this campaign
+  const [chartData, countResults, echoUsers] = await Promise.all([
+    // Chart data (single query + in-memory grouping)
+    getClicksChart(supabase, linkIds, 30, new Date(campaign.created_at), now),
+
+    // Total + valid click counts in parallel
+    Promise.all([
+      supabase.from("clicks").select("*", { count: "exact", head: true }).in("link_id", linkIds),
+      supabase.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", true).in("link_id", linkIds),
+    ]),
+
+    // Fetch all echo user info in one query instead of N individual queries
+    uniqueEchoIds.length > 0
+      ? supabase.from("users").select("id, name, city").in("id", uniqueEchoIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const totalClicks = countResults[0].count || 0;
+  const validClicks = countResults[1].count || 0;
+
+  // Fetch valid clicks per link in one paginated query (replaces N individual COUNT queries)
+  const linkClickCounts: Record<string, number> = {};
+  const PAGE_SIZE = 1000;
+  let offset = 0;
+  while (true) {
+    const { data } = await supabase
+      .from("clicks")
+      .select("link_id")
+      .in("link_id", linkIds)
+      .eq("is_valid", true)
+      .range(offset, offset + PAGE_SIZE - 1);
+
+    const rows = data || [];
+    for (const row of rows) {
+      linkClickCounts[row.link_id] = (linkClickCounts[row.link_id] || 0) + 1;
+    }
+    if (rows.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
+
+  // Build echo performance from pre-fetched data (no N+1 queries)
+  const echoUserMap: Record<string, { name: string; city: string }> = {};
+  for (const u of echoUsers.data || []) {
+    echoUserMap[u.id] = { name: u.name, city: u.city };
+  }
+
   const echoPerformance: { name: string; city: string; clicks: number; earnings: number }[] = [];
   for (const echoId of uniqueEchoIds) {
     const echoLinks = (links || []).filter(l => l.echo_id === echoId).map(l => l.id);
-
-    const [{ count: echoClicks }, { data: echoInfo }] = await Promise.all([
-      supabase.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", true).in("link_id", echoLinks),
-      supabase.from("users").select("name, city").eq("id", echoId).single(),
-    ]);
+    const echoClicks = echoLinks.reduce((sum, lid) => sum + (linkClickCounts[lid] || 0), 0);
+    const info = echoUserMap[echoId];
 
     echoPerformance.push({
-      name: echoInfo?.name || "—",
-      city: echoInfo?.city || "—",
-      clicks: echoClicks || 0,
-      earnings: Math.round((echoClicks || 0) * campaign.cpc * 0.75),
+      name: info?.name || "—",
+      city: info?.city || "—",
+      clicks: echoClicks,
+      earnings: Math.round(echoClicks * campaign.cpc * 0.75),
     });
   }
 
   echoPerformance.sort((a, b) => b.clicks - a.clicks);
 
-  // Geographic breakdown
+  // Geographic breakdown from pre-computed echo data
   const cityMap: Record<string, number> = {};
   for (const echo of echoPerformance) {
     const city = echo.city || "Autre";
@@ -100,10 +138,10 @@ export async function GET(request: NextRequest) {
     .sort((a, b) => b.clicks - a.clicks);
 
   return NextResponse.json({
-    totalClicks: totalClicks || 0,
-    validClicks: validClicks || 0,
+    totalClicks,
+    validClicks,
     activeEchos: uniqueEchoIds.length,
-    costPerVisitor: (validClicks || 0) > 0 ? Math.round(campaign.spent / (validClicks || 1)) : campaign.cpc,
+    costPerVisitor: validClicks > 0 ? Math.round(campaign.spent / validClicks) : campaign.cpc,
     chartData,
     topEchos: echoPerformance.slice(0, 5),
     geoBreakdown,

@@ -431,10 +431,32 @@ export default function AdminCampaignsPage() {
           </div>
         </div>
 
-        {/* Performance Overview */}
+        {/* Performance Overview — skeleton while loading */}
         {perfLoading && (
-          <div className="glass-card p-12 text-center mb-8">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="space-y-4 mb-8 animate-pulse">
+            {/* Metrics skeleton */}
+            <div className="glass-card p-5">
+              <div className="h-5 w-32 bg-white/10 rounded mb-4" />
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i}>
+                    <div className="h-3 w-20 bg-white/10 rounded mb-2" />
+                    <div className="h-7 w-16 bg-white/10 rounded mb-1" />
+                    <div className="h-2 w-24 bg-white/5 rounded" />
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Chart skeleton */}
+            <div className="glass-card p-5">
+              <div className="h-5 w-40 bg-white/10 rounded mb-4" />
+              <div className="flex items-end gap-1 h-48">
+                {Array.from({ length: 14 }).map((_, i) => (
+                  <div key={i} className="flex-1 bg-white/5 rounded-t"
+                    style={{ height: `${25 + (i % 3) * 20 + (i % 5) * 8}%` }} />
+                ))}
+              </div>
+            </div>
           </div>
         )}
         {perf && (
