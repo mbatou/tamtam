@@ -5,7 +5,7 @@ import Link from "next/link";
 import { formatFCFA, formatNumber, timeAgo } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
-import DateRangeSelector, { type DateRange } from "@/components/ui/DateRangeSelector";
+import DateRangeSelector, { type DateRange, getPresetRange } from "@/components/ui/DateRangeSelector";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
@@ -76,7 +76,7 @@ export default function SuperAdminOverview() {
   const { t } = useTranslation();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState<DateRange>({ key: "all", from: null, to: null });
+  const [dateRange, setDateRange] = useState<DateRange>(() => getPresetRange("all"));
 
   useEffect(() => {
     const params = new URLSearchParams();

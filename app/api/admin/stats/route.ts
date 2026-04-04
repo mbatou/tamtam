@@ -94,17 +94,17 @@ export async function GET(request: NextRequest) {
     spent: c.spent || 0,
   }));
 
-  // Enrich campaigns with real click counts using Postgres COUNT(*)
+  // Enrich campaigns with real click counts + echo counts using Postgres COUNT(*)
   const enrichedCampaigns = await Promise.all(
     allCampaigns.map(async (c) => {
-      const campaignLinkIds = links
-        .filter((l) => l.campaign_id === c.id)
-        .map((l) => l.id);
+      const campaignLinks = links.filter((l) => l.campaign_id === c.id);
+      const campaignLinkIds = campaignLinks.map((l) => l.id);
+      const campaignEchoCount = new Set(campaignLinks.map((l) => l.echo_id)).size;
       const [realClicks, realValidClicks] = await Promise.all([
         countClicks(supabase, campaignLinkIds),
         countClicks(supabase, campaignLinkIds, true),
       ]);
-      return { ...c, realClicks, realValidClicks };
+      return { ...c, realClicks, realValidClicks, echoCount: campaignEchoCount };
     })
   );
 

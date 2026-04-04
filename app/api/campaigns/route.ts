@@ -67,12 +67,17 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createServiceClient();
+
+  // Use getEffectiveBrandId so brand team members see the owner's campaigns
   const batteurId = request.nextUrl.searchParams.get("batteur_id");
+  const effectiveId = batteurId
+    ? await getEffectiveBrandId(supabase, batteurId)
+    : null;
 
   let query = supabase.from("campaigns").select("*").order("created_at", { ascending: false }).limit(500);
 
-  if (batteurId) {
-    query = query.eq("batteur_id", batteurId);
+  if (effectiveId) {
+    query = query.eq("batteur_id", effectiveId);
   }
 
   const { data, error } = await query;
