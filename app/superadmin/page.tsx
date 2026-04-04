@@ -125,9 +125,9 @@ export default function SuperAdminOverview() {
       {/* Row 1 — Critical KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          label="Échos actifs (7j)"
+          label="Active Echos (7d)"
           value={formatNumber(stats.activeEchos7d || 0)}
-          sub={`${formatNumber(stats.totalEchos)} inscrits au total`}
+          sub={`${formatNumber(stats.totalEchos)} registered total`}
           accent="orange"
         />
         <StatCard
@@ -137,9 +137,9 @@ export default function SuperAdminOverview() {
         />
         <StatCard label={t("superadmin.dashboard.grossRevenue")} value={formatFCFA(stats.platformRevenue)} accent="purple" />
         <StatCard
-          label="Qualité clics"
+          label="Click Quality"
           value={`${stats.totalClicks > 0 ? (100 - stats.fraudRate).toFixed(1) : "—"}%`}
-          sub={`${formatNumber(stats.fraudClicks)} filtrés sur ${formatNumber(stats.totalClicks)}`}
+          sub={`${formatNumber(stats.fraudClicks)} filtered out of ${formatNumber(stats.totalClicks)}`}
           accent={stats.totalClicks === 0 ? "teal" : (100 - stats.fraudRate) >= 70 ? "teal" : (100 - stats.fraudRate) >= 50 ? "orange" : "red"}
         />
       </div>
@@ -148,16 +148,16 @@ export default function SuperAdminOverview() {
       {stats.activeCampaigns === 0 ? (
         <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-between flex-wrap gap-3">
           <div>
-            <span className="text-red-400 font-bold text-sm">⚠️ Aucune campagne active</span>
+            <span className="text-red-400 font-bold text-sm">⚠️ No active campaigns</span>
             <span className="text-white/40 text-sm ml-2">
-              — {formatNumber(stats.totalEchos)} Échos n&apos;ont rien à partager
+              — {formatNumber(stats.totalEchos)} Echos have nothing to share
             </span>
           </div>
           <Link
             href="/superadmin/campaigns"
             className="px-4 py-2 rounded-lg bg-gradient-primary text-white text-sm font-bold hover:opacity-90 transition"
           >
-            + Créer une campagne
+            + Create a campaign
           </Link>
         </div>
       ) : (
@@ -173,7 +173,7 @@ export default function SuperAdminOverview() {
       {/* Active Campaign Widget */}
       {stats.activeCampaignsDetails && stats.activeCampaignsDetails.length > 0 && (
         <div className="glass-card p-6">
-          <h3 className="text-sm font-bold mb-4">Campagnes en cours</h3>
+          <h3 className="text-sm font-bold mb-4">Active Campaigns</h3>
           {stats.activeCampaignsDetails.map((campaign) => (
             <div key={campaign.id} className="mb-6 last:mb-0">
               <div className="flex items-center justify-between mb-2">
@@ -182,7 +182,7 @@ export default function SuperAdminOverview() {
                   <span className="text-white/30 text-xs ml-2">{campaign.cpc} FCFA/clic</span>
                 </div>
                 <span className="text-white/40 text-xs">
-                  {campaign.budget > 0 ? Math.round((campaign.spent / campaign.budget) * 100) : 0}% consommé
+                  {campaign.budget > 0 ? Math.round((campaign.spent / campaign.budget) * 100) : 0}% consumed
                 </span>
               </div>
               <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden mb-4">
@@ -194,13 +194,13 @@ export default function SuperAdminOverview() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white/5 rounded-lg p-3">
-                  <div className="text-xs text-white/40 mb-1">Participation</div>
+                  <div className="text-xs text-white/40 mb-1">Engagement</div>
                   <div className="text-lg font-bold text-white">
                     {campaign.engagedEchos}
                     <span className="text-white/30 text-xs font-normal"> / {stats.totalEchos} Échos</span>
                   </div>
                   <div className="text-xs text-white/30">
-                    {campaign.validClicks} clics valides · {campaign.totalClicks} total
+                    {campaign.validClicks} valid clicks · {campaign.totalClicks} total
                   </div>
                 </div>
                 <div className="bg-white/5 rounded-lg p-3">
@@ -210,11 +210,11 @@ export default function SuperAdminOverview() {
                       <span className="text-white/60 truncate">
                         {i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"} {echo.name}
                       </span>
-                      <span className="text-accent font-medium text-xs">{echo.validClicks} clics</span>
+                      <span className="text-accent font-medium text-xs">{echo.validClicks} clicks</span>
                     </div>
                   ))}
                   {campaign.topEchos.length === 0 && (
-                    <span className="text-white/30 text-xs">Aucun Écho engagé</span>
+                    <span className="text-white/30 text-xs">No engaged Echos</span>
                   )}
                 </div>
               </div>
@@ -262,7 +262,7 @@ export default function SuperAdminOverview() {
         <div className="glass-card p-5">
           <div className="text-xs text-white/40 font-medium mb-1">{t("superadmin.dashboard.totalClicks")}</div>
           <div className="text-xl font-bold">{formatNumber(stats.totalClicks)}</div>
-          <div className="text-xs text-white/30 mt-1">{formatNumber(stats.validClicks)} valides · {formatNumber(stats.fraudClicks)} filtrés</div>
+          <div className="text-xs text-white/30 mt-1">{formatNumber(stats.validClicks)} valid · {formatNumber(stats.fraudClicks)} filtered</div>
         </div>
       </div>
 

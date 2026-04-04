@@ -24,12 +24,12 @@ async function measureLatency<T>(fn: () => Promise<T>): Promise<{ result: T; lat
 export async function GET() {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
   const { data: user } = await supabase.from("users").select("role").eq("id", session.user.id).single();
   if (!user || user.role !== "superadmin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const checks: HealthCheck[] = [];
@@ -40,12 +40,12 @@ export async function GET() {
       await supabase.from("users").select("id", { count: "exact", head: true })
     );
     checks.push({
-      name: "Base de données",
+      name: "Database",
       status: latencyMs < 500 ? "healthy" : latencyMs < 2000 ? "degraded" : "down",
       latencyMs,
     });
   } catch {
-    checks.push({ name: "Base de données", status: "down", latencyMs: 0, details: "Connexion échouée" });
+    checks.push({ name: "Database", status: "down", latencyMs: 0, details: "Connection failed" });
   }
 
   // 2. Auth service
@@ -54,12 +54,12 @@ export async function GET() {
       supabase.auth.getSession()
     );
     checks.push({
-      name: "Authentification",
+      name: "Authentication",
       status: latencyMs < 500 ? "healthy" : latencyMs < 2000 ? "degraded" : "down",
       latencyMs,
     });
   } catch {
-    checks.push({ name: "Authentification", status: "down", latencyMs: 0, details: "Service auth indisponible" });
+    checks.push({ name: "Authentication", status: "down", latencyMs: 0, details: "Auth service unavailable" });
   }
 
   // 3. Storage (check creatives bucket)
@@ -68,12 +68,12 @@ export async function GET() {
       supabase.storage.from("creatives").list("", { limit: 1 })
     );
     checks.push({
-      name: "Stockage fichiers",
+      name: "File Storage",
       status: latencyMs < 1000 ? "healthy" : latencyMs < 3000 ? "degraded" : "down",
       latencyMs,
     });
   } catch {
-    checks.push({ name: "Stockage fichiers", status: "down", latencyMs: 0, details: "Bucket inaccessible" });
+    checks.push({ name: "File Storage", status: "down", latencyMs: 0, details: "Bucket unreachable" });
   }
 
   // 4. Table counts (data integrity overview)
@@ -119,15 +119,15 @@ export async function GET() {
   const { count: fraudClicks } = await supabase.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", false);
   const fraudRate = (totalClicks || 0) > 0 ? ((fraudClicks || 0) / (totalClicks || 1)) * 100 : 0;
   if (fraudRate > 20) {
-    anomalies.push({ type: "fraud", severity: "critical", message: `Taux de fraude critique: ${fraudRate.toFixed(1)}%` });
+    anomalies.push({ type: "fraud", severity: "critical", message: `Critical fraud rate: ${fraudRate.toFixed(1)}%` });
   } else if (fraudRate > 10) {
-    anomalies.push({ type: "fraud", severity: "warning", message: `Taux de fraude élevé: ${fraudRate.toFixed(1)}%` });
+    anomalies.push({ type: "fraud", severity: "warning", message: `High fraud rate: ${fraudRate.toFixed(1)}%` });
   }
 
   // Check for pending payouts backlog
   const { count: pendingPayouts } = await supabase.from("payouts").select("*", { count: "exact", head: true }).eq("status", "pending");
   if ((pendingPayouts || 0) > 10) {
-    anomalies.push({ type: "payouts", severity: "warning", message: `${pendingPayouts} paiements en attente` });
+    anomalies.push({ type: "payouts", severity: "warning", message: `${pendingPayouts} pending payouts` });
   }
 
   // Check for campaigns with overspend
@@ -137,15 +137,15 @@ export async function GET() {
     .eq("status", "active");
   const overspent = (overspentCampaigns || []).filter((c) => c.spent > c.budget);
   if (overspent.length > 0) {
-    anomalies.push({ type: "budget", severity: "critical", message: `${overspent.length} campagne(s) ont dépassé leur budget` });
+    anomalies.push({ type: "budget", severity: "critical", message: `${overspent.length} campaign(s) exceeded their budget` });
   }
 
   // Check for critical security events in last 24h
   if ((criticalEvents24h || 0) > 0) {
-    anomalies.push({ type: "security", severity: "critical", message: `${criticalEvents24h} événement(s) critiques dans les 24h` });
+    anomalies.push({ type: "security", severity: "critical", message: `${criticalEvents24h} critical event(s) in the last 24h` });
   }
   if ((highEvents24h || 0) > 5) {
-    anomalies.push({ type: "security", severity: "warning", message: `${highEvents24h} événements haute sévérité dans les 24h` });
+    anomalies.push({ type: "security", severity: "warning", message: `${highEvents24h} high severity events in the last 24h` });
   }
 
   // 8. Recent admin activity

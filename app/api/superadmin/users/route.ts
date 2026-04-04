@@ -8,14 +8,14 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
 
   // Verify superadmin role
   const { data: currentUser } = await supabase.from("users").select("role").eq("id", session.user.id).single();
   if (!currentUser || currentUser.role !== "superadmin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   // Parse query params
@@ -212,21 +212,21 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
 
   // Verify superadmin role
   const { data: adminCheck } = await supabase.from("users").select("role").eq("id", session.user.id).single();
   if (!adminCheck || adminCheck.role !== "superadmin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   const body = await request.json();
   const { user_id, action, reason } = body;
 
   if (!action) {
-    return NextResponse.json({ error: "Paramètres manquants" }, { status: 400 });
+    return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
   }
 
   // --- Create a brand user ---
@@ -234,7 +234,7 @@ export async function POST(request: NextRequest) {
     const { name, phone, email, password } = body;
     const city = normalizeCity(body.city);
     if (!name || !email || !password) {
-      return NextResponse.json({ error: "Nom, email et mot de passe requis" }, { status: 400 });
+      return NextResponse.json({ error: "Name, email and password required" }, { status: 400 });
     }
 
     // Create auth user
@@ -275,7 +275,7 @@ export async function POST(request: NextRequest) {
   if (action === "topup") {
     const { amount } = body;
     if (!user_id || !amount || amount <= 0) {
-      return NextResponse.json({ error: "Montant invalide" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
     }
 
     const { data: user } = await supabase
@@ -284,8 +284,8 @@ export async function POST(request: NextRequest) {
       .eq("id", user_id)
       .single();
 
-    if (!user) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-    if (user.role === "echo") return NextResponse.json({ error: "Les echos ne peuvent pas être rechargés directement" }, { status: 400 });
+    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (user.role === "echo") return NextResponse.json({ error: "Echos cannot be topped up directly" }, { status: 400 });
 
     const topupAmount = parseInt(amount);
     const newBalance = (user.balance || 0) + topupAmount;
@@ -310,7 +310,7 @@ export async function POST(request: NextRequest) {
       userId: user_id,
       amount: topupAmount,
       type: "manual_credit",
-      description: `Recharge manuelle par admin — ${user.name || "utilisateur"}`,
+      description: `Manual top-up by admin — ${user.name || "user"}`,
       sourceType: "admin",
       createdBy: session.user.id,
     });
@@ -330,7 +330,7 @@ export async function POST(request: NextRequest) {
 
   // --- Standard user actions ---
   if (!user_id || !action) {
-    return NextResponse.json({ error: "Paramètres manquants" }, { status: 400 });
+    return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
   }
 
   const updates: Record<string, unknown> = {};
@@ -357,7 +357,7 @@ export async function POST(request: NextRequest) {
       updates.role = "superadmin";
       break;
     default:
-      return NextResponse.json({ error: "Action invalide" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }
 
   // For reset_balance, get current balance before reset to log it
@@ -373,7 +373,7 @@ export async function POST(request: NextRequest) {
         userId: user_id,
         amount: -oldBalance,
         type: "balance_reset",
-        description: `Remise à zéro du solde par admin (ancien solde: ${oldBalance} FCFA)`,
+        description: `Balance reset by admin (previous balance: ${oldBalance} FCFA)`,
         sourceType: "admin",
         createdBy: session.user.id,
       });

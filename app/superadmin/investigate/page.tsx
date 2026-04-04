@@ -57,7 +57,7 @@ function InvestigatePageContent() {
       const res = await fetch(`/api/superadmin/investigate?user_id=${encodeURIComponent(id)}`);
       if (!res.ok) {
         const err = await res.json();
-        setError(err.error || "Erreur");
+        setError(err.error || "Error");
         setLoading(false);
         return;
       }
@@ -68,7 +68,7 @@ function InvestigatePageContent() {
       url.searchParams.set("user_id", id);
       window.history.replaceState({}, "", url.toString());
     } catch {
-      setError("Erreur réseau");
+      setError("Network error");
     }
     setLoading(false);
   }, [searchInput]);
@@ -112,8 +112,8 @@ function InvestigatePageContent() {
     <div className="p-6 max-w-7xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Investigation Utilisateur</h1>
-          <p className="text-xs text-white/30 mt-1">Analysez en détail l&apos;activité et les transactions d&apos;un utilisateur</p>
+          <h1 className="text-2xl font-bold">User Investigation</h1>
+          <p className="text-xs text-white/30 mt-1">Analyze a user&apos;s activity and transactions in detail</p>
         </div>
       </div>
 
@@ -124,7 +124,7 @@ function InvestigatePageContent() {
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && investigate()}
-          placeholder="Entrez l'ID utilisateur (UUID)..."
+          placeholder="Enter user ID (UUID)..."
           className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition font-mono"
         />
         <button
@@ -132,7 +132,7 @@ function InvestigatePageContent() {
           disabled={loading || !searchInput.trim()}
           className="px-6 py-3 rounded-xl bg-gradient-primary text-white font-bold text-sm hover:opacity-90 transition disabled:opacity-50"
         >
-          {loading ? "..." : "Investiguer"}
+          {loading ? "..." : "Investigate"}
         </button>
       </div>
 
@@ -157,7 +157,7 @@ function InvestigatePageContent() {
           {data.anomalies.length > 0 && (
             <div className="space-y-2">
               <h2 className="text-sm font-bold text-red-400 flex items-center gap-2">
-                <span>⚠️</span> Anomalies détectées ({data.anomalies.length})
+                <span>⚠️</span> Anomalies detected ({data.anomalies.length})
               </h2>
               {data.anomalies.map((a, i) => (
                 <div key={i} className={`p-3 rounded-xl border text-sm font-medium ${severityColors[a.severity]}`}>
@@ -192,15 +192,15 @@ function InvestigatePageContent() {
                 {getBrandSubtitle({ name: data.user.name as string, company_name: data.user.company_name as string | undefined, role: data.user.role as string }) && <p className="text-sm text-white/40 mt-0.5">{getBrandSubtitle({ name: data.user.name as string, company_name: data.user.company_name as string | undefined, role: data.user.role as string })}</p>}
                 <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-white/40">
                   <span>Tel: <strong className="text-white/70">{(data.user.phone as string) || "—"}</strong></span>
-                  <span>Ville: <strong className="text-white/70">{(data.user.city as string) || "—"}</strong></span>
+                  <span>City: <strong className="text-white/70">{(data.user.city as string) || "—"}</strong></span>
                   <span>Provider: <strong className="text-white/70">{(data.user.mobile_money_provider as string) || "—"}</strong></span>
                   {data.authUser?.email && (
                     <span>Email: <strong className="text-white/70">{data.authUser.email}</strong></span>
                   )}
-                  <span>Créé: <strong className="text-white/70">{new Date(data.user.created_at as string).toLocaleString("fr-FR")}</strong></span>
-                  <span>CGU: <strong className={data.user.terms_accepted_at ? "text-green-400" : "text-red-400"}>{data.user.terms_accepted_at ? `✓ ${new Date(data.user.terms_accepted_at as string).toLocaleDateString("fr-FR")}` : "✗ Non acceptées"}</strong></span>
+                  <span>Created: <strong className="text-white/70">{new Date(data.user.created_at as string).toLocaleString("en-US")}</strong></span>
+                  <span>TOS: <strong className={data.user.terms_accepted_at ? "text-green-400" : "text-red-400"}>{data.user.terms_accepted_at ? `✓ ${new Date(data.user.terms_accepted_at as string).toLocaleDateString("en-US")}` : "✗ Not accepted"}</strong></span>
                   {data.authUser?.last_sign_in_at && (
-                    <span>Dernière connexion: <strong className="text-white/70">{timeAgo(data.authUser.last_sign_in_at)}</strong></span>
+                    <span>Last login: <strong className="text-white/70">{timeAgo(data.authUser.last_sign_in_at)}</strong></span>
                   )}
                 </div>
                 <div className="mt-2">
@@ -208,13 +208,13 @@ function InvestigatePageContent() {
                 </div>
                 {data.user.referral_code ? (
                   <div className="mt-1 text-xs">
-                    <span className="text-white/40">Code parrain: </span>
+                    <span className="text-white/40">Referral code:</span>
                     <span className="font-bold text-purple-300">{data.user.referral_code as string}</span>
                   </div>
                 ) : null}
                 {data.user.brand_owner_id ? (
                   <div className="mt-1 text-xs">
-                    <span className="text-white/40">Membre de l&apos;équipe de: </span>
+                    <span className="text-white/40">Team member of:</span>
                     <button
                       onClick={() => { setSearchInput(data.user.brand_owner_id as string); investigate(data.user.brand_owner_id as string); }}
                       className="font-bold text-blue-300 hover:underline"
@@ -229,20 +229,20 @@ function InvestigatePageContent() {
                   onClick={() => router.push(`/superadmin/users?id=${data.user.id}`)}
                   className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition text-xs font-semibold text-white/50"
                 >
-                  Voir profil
+                  View profile
                 </button>
                 {!data.user.deleted_at ? (
                   <button
                     onClick={() => setShowAdminDelete(true)}
                     className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold hover:bg-red-500/20 transition"
                   >
-                    Supprimer ce compte
+                    Delete this account
                   </button>
                 ) : (
                   <div className="px-3 py-1.5 rounded-lg bg-white/5">
-                    <span className="text-red-400 text-xs">Supprimé le {new Date(data.user.deleted_at as string).toLocaleDateString("fr-FR")}</span>
+                    <span className="text-red-400 text-xs">Deleted on {new Date(data.user.deleted_at as string).toLocaleDateString("en-US")}</span>
                     {data.user.deletion_reason ? (
-                      <span className="text-white/30 text-[10px] block mt-0.5">Raison: {String(data.user.deletion_reason)}</span>
+                      <span className="text-white/30 text-[10px] block mt-0.5">Reason: {String(data.user.deletion_reason)}</span>
                     ) : null}
                   </div>
                 )}
@@ -252,12 +252,12 @@ function InvestigatePageContent() {
 
           {/* Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard label="Solde actuel" value={formatFCFA((data.user.balance as number) || 0)} accent="orange" />
-            <StatCard label="Total gagné" value={formatFCFA((data.user.total_earned as number) || 0)} accent="teal" />
+            <StatCard label="Current balance" value={formatFCFA((data.user.balance as number) || 0)} accent="orange" />
+            <StatCard label="Total earned" value={formatFCFA((data.user.total_earned as number) || 0)} accent="teal" />
             <StatCard
-              label="Clics (total / valides)"
+              label="Clicks (total / valid)"
               value={`${data.clickStats.total} / ${data.clickStats.valid}`}
-              sub={data.clickStats.fraud > 0 ? `${data.clickStats.fraud} fraude` : undefined}
+              sub={data.clickStats.fraud > 0 ? `${data.clickStats.fraud} fraud` : undefined}
               accent="purple"
             />
             <StatCard
@@ -272,12 +272,12 @@ function InvestigatePageContent() {
           {(data.referrer || data.referrals.length > 0) && (
             <div className="glass-card p-4">
               <h3 className="text-sm font-bold text-purple-300 flex items-center gap-2 mb-3">
-                <span>🤝</span> Parrainage
+                <span>🤝</span> Referrals
               </h3>
               <div className="space-y-2">
                 {data.referrer && (
                   <div className="text-xs">
-                    <span className="text-white/40">Parrainé par: </span>
+                    <span className="text-white/40">Referred by:</span>
                     <button
                       onClick={() => { setSearchInput(data.referrer!.id); investigate(data.referrer!.id); }}
                       className="font-bold text-primary hover:underline"
@@ -289,7 +289,7 @@ function InvestigatePageContent() {
                 )}
                 {data.referrals.length > 0 && (
                   <div>
-                    <span className="text-xs text-white/40">Filleuls ({data.referrals.length}):</span>
+                    <span className="text-xs text-white/40">Referrals ({data.referrals.length}):</span>
                     <div className="flex flex-wrap gap-2 mt-1">
                       {data.referrals.map((r) => (
                         <button
@@ -310,12 +310,12 @@ function InvestigatePageContent() {
           {/* Tabs */}
           <div className="flex gap-1 overflow-x-auto">
             {([
-              { key: "timeline", label: "Chronologie", count: data.timeline.length },
+              { key: "timeline", label: "Timeline", count: data.timeline.length },
               { key: "wallet", label: "Transactions", count: data.walletTransactions.length },
-              { key: "payouts", label: "Retraits", count: data.payouts.length },
-              { key: "campaigns", label: "Campagnes", count: data.trackedLinks.length + data.campaignsCreated.length },
+              { key: "payouts", label: "Payouts", count: data.payouts.length },
+              { key: "campaigns", label: "Campaigns", count: data.trackedLinks.length + data.campaignsCreated.length },
               { key: "gamification", label: "Gamification", count: data.achievements.length + data.streakRewards.length },
-              { key: "admin", label: "Actions admin", count: data.adminActions.length },
+              { key: "admin", label: "Admin actions", count: data.adminActions.length },
             ] as { key: typeof activeTab; label: string; count: number }[]).map((tab) => (
               <button
                 key={tab.key}
@@ -334,7 +334,7 @@ function InvestigatePageContent() {
             {activeTab === "timeline" && (
               <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
                 {data.timeline.length === 0 ? (
-                  <p className="text-xs text-white/20 text-center py-6">Aucun événement</p>
+                  <p className="text-xs text-white/20 text-center py-6">No events</p>
                 ) : data.timeline.map((event, i) => (
                   <div key={i} className={`flex items-start gap-3 p-3 rounded-xl border ${typeColors[event.type] || "bg-white/5 border-white/10"}`}>
                     <span className="text-base shrink-0 mt-0.5">{typeEmojis[event.type] || "📌"}</span>
@@ -348,7 +348,7 @@ function InvestigatePageContent() {
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] text-white/30">{new Date(event.time).toLocaleString("fr-FR")}</span>
+                        <span className="text-[10px] text-white/30">{new Date(event.time).toLocaleString("en-US")}</span>
                         <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-white/5 text-white/30">{event.type}</span>
                       </div>
                       {event.details ? (
@@ -365,7 +365,7 @@ function InvestigatePageContent() {
             {activeTab === "wallet" && (
               <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
                 {data.walletTransactions.length === 0 ? (
-                  <p className="text-xs text-white/20 text-center py-6">Aucune transaction</p>
+                  <p className="text-xs text-white/20 text-center py-6">No transactions</p>
                 ) : (
                   <>
                     <div className="overflow-x-auto">
@@ -375,14 +375,14 @@ function InvestigatePageContent() {
                             <th className="pb-2 font-semibold">Date</th>
                             <th className="pb-2 font-semibold">Type</th>
                             <th className="pb-2 font-semibold">Description</th>
-                            <th className="pb-2 font-semibold text-right">Montant</th>
-                            <th className="pb-2 font-semibold">Statut</th>
+                            <th className="pb-2 font-semibold text-right">Amount</th>
+                            <th className="pb-2 font-semibold">Status</th>
                           </tr>
                         </thead>
                         <tbody>
                           {data.walletTransactions.map((tx) => (
                             <tr key={tx.id} className="border-b border-white/5">
-                              <td className="py-2 text-xs text-white/40">{new Date(tx.created_at).toLocaleString("fr-FR")}</td>
+                              <td className="py-2 text-xs text-white/40">{new Date(tx.created_at).toLocaleString("en-US")}</td>
                               <td className="py-2">
                                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/5 text-white/50">
                                   {tx.type}
@@ -408,7 +408,7 @@ function InvestigatePageContent() {
             {activeTab === "payouts" && (
               <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
                 {data.payouts.length === 0 ? (
-                  <p className="text-xs text-white/20 text-center py-6">Aucun retrait</p>
+                  <p className="text-xs text-white/20 text-center py-6">No payouts</p>
                 ) : data.payouts.map((p) => (
                   <div key={p.id} className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
                     <div className="flex items-start justify-between gap-2">
@@ -419,8 +419,8 @@ function InvestigatePageContent() {
                       <Badge status={p.status} />
                     </div>
                     <div className="flex flex-wrap gap-x-4 text-[11px] text-white/40 mt-1">
-                      <span>{new Date(p.created_at).toLocaleString("fr-FR")}</span>
-                      {p.failure_reason && <span className="text-red-400">Raison: {p.failure_reason}</span>}
+                      <span>{new Date(p.created_at).toLocaleString("en-US")}</span>
+                      {p.failure_reason && <span className="text-red-400">Reason: {p.failure_reason}</span>}
                     </div>
                     <div className="mt-1 text-[10px] font-mono text-white/15 select-all">{p.id}</div>
                   </div>
@@ -432,7 +432,7 @@ function InvestigatePageContent() {
               <div className="space-y-4 max-h-[600px] overflow-y-auto pr-1">
                 {data.trackedLinks.length > 0 && (
                   <div>
-                    <h4 className="text-xs font-bold text-primary mb-2">Campagnes rejointes ({data.trackedLinks.length})</h4>
+                    <h4 className="text-xs font-bold text-primary mb-2">Joined campaigns ({data.trackedLinks.length})</h4>
                     <div className="space-y-2">
                       {data.trackedLinks.map((l) => (
                         <div key={l.id} className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
@@ -441,10 +441,10 @@ function InvestigatePageContent() {
                             <Badge status={l.campaigns?.status || "unknown"} />
                           </div>
                           <div className="flex flex-wrap gap-x-4 text-[11px] text-white/40 mt-1">
-                            <span>Clics: <strong className="text-white/70">{l.click_count}</strong></span>
+                            <span>Clicks: <strong className="text-white/70">{l.click_count}</strong></span>
                             <span>CPC: <strong className="text-white/70">{formatFCFA(l.campaigns?.cpc || 0)}</strong></span>
-                            <span>Gagné: <strong className="text-accent">{formatFCFA(Math.floor((l.click_count || 0) * (l.campaigns?.cpc || 0) * ECHO_SHARE_PERCENT / 100))}</strong></span>
-                            <span>{new Date(l.created_at).toLocaleDateString("fr-FR")}</span>
+                            <span>Earned: <strong className="text-accent">{formatFCFA(Math.floor((l.click_count || 0) * (l.campaigns?.cpc || 0) * ECHO_SHARE_PERCENT / 100))}</strong></span>
+                            <span>{new Date(l.created_at).toLocaleDateString("en-US")}</span>
                           </div>
                         </div>
                       ))}
@@ -453,7 +453,7 @@ function InvestigatePageContent() {
                 )}
                 {data.campaignsCreated.length > 0 && (
                   <div>
-                    <h4 className="text-xs font-bold text-accent mb-2">Campagnes créées ({data.campaignsCreated.length})</h4>
+                    <h4 className="text-xs font-bold text-accent mb-2">Created campaigns ({data.campaignsCreated.length})</h4>
                     <div className="space-y-2">
                       {data.campaignsCreated.map((c) => (
                         <div key={c.id} className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
@@ -463,9 +463,9 @@ function InvestigatePageContent() {
                           </div>
                           <div className="flex flex-wrap gap-x-4 text-[11px] text-white/40 mt-1">
                             <span>Budget: {formatFCFA(c.budget)}</span>
-                            <span>Dépensé: {formatFCFA(c.spent)}</span>
+                            <span>Spent: {formatFCFA(c.spent)}</span>
                             <span>CPC: {formatFCFA(c.cpc)}</span>
-                            <span>{new Date(c.created_at).toLocaleDateString("fr-FR")}</span>
+                            <span>{new Date(c.created_at).toLocaleDateString("en-US")}</span>
                           </div>
                         </div>
                       ))}
@@ -473,7 +473,7 @@ function InvestigatePageContent() {
                   </div>
                 )}
                 {data.trackedLinks.length === 0 && data.campaignsCreated.length === 0 && (
-                  <p className="text-xs text-white/20 text-center py-6">Aucune campagne</p>
+                  <p className="text-xs text-white/20 text-center py-6">No campaigns</p>
                 )}
               </div>
             )}
@@ -482,7 +482,7 @@ function InvestigatePageContent() {
               <div className="space-y-4 max-h-[600px] overflow-y-auto pr-1">
                 {data.streakData && (
                   <div className="p-3 rounded-xl bg-orange-500/5 border border-orange-500/10">
-                    <h4 className="text-xs font-bold text-orange-400 mb-2">Série actuelle</h4>
+                    <h4 className="text-xs font-bold text-orange-400 mb-2">Current streak</h4>
                     <div className="flex gap-4 text-xs">
                       <span>Série: <strong className="text-white">{data.streakData.current_streak} jours</strong></span>
                       <span>Record: <strong className="text-white">{data.streakData.longest_streak} jours</strong></span>
@@ -502,7 +502,7 @@ function InvestigatePageContent() {
                           </div>
                           <div className="flex items-center gap-3">
                             <span className="text-sm font-bold text-emerald-400">+{formatFCFA(a.reward_fcfa)}</span>
-                            <span className="text-[10px] text-white/30">{new Date(a.created_at).toLocaleDateString("fr-FR")}</span>
+                            <span className="text-[10px] text-white/30">{new Date(a.created_at).toLocaleDateString("en-US")}</span>
                           </div>
                         </div>
                       ))}
@@ -511,17 +511,17 @@ function InvestigatePageContent() {
                 )}
                 {data.streakRewards.length > 0 && (
                   <div>
-                    <h4 className="text-xs font-bold text-orange-400 mb-2">Récompenses série ({data.streakRewards.length})</h4>
+                    <h4 className="text-xs font-bold text-orange-400 mb-2">Streak rewards ({data.streakRewards.length})</h4>
                     <div className="space-y-2">
                       {data.streakRewards.map((s, i) => (
                         <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.03] border border-white/5">
                           <div className="flex items-center gap-2">
                             <span>🔥</span>
-                            <span className="text-sm">Série de {s.streak_count} jours</span>
+                            <span className="text-sm">{s.streak_count}-day streak</span>
                           </div>
                           <div className="flex items-center gap-3">
                             <span className="text-sm font-bold text-emerald-400">+{formatFCFA(s.reward_fcfa)}</span>
-                            <span className="text-[10px] text-white/30">{new Date(s.created_at).toLocaleDateString("fr-FR")}</span>
+                            <span className="text-[10px] text-white/30">{new Date(s.created_at).toLocaleDateString("en-US")}</span>
                           </div>
                         </div>
                       ))}
@@ -529,7 +529,7 @@ function InvestigatePageContent() {
                   </div>
                 )}
                 {data.achievements.length === 0 && data.streakRewards.length === 0 && !data.streakData && (
-                  <p className="text-xs text-white/20 text-center py-6">Aucune donnée de gamification</p>
+                  <p className="text-xs text-white/20 text-center py-6">No gamification data</p>
                 )}
               </div>
             )}
@@ -537,12 +537,12 @@ function InvestigatePageContent() {
             {activeTab === "admin" && (
               <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
                 {data.adminActions.length === 0 ? (
-                  <p className="text-xs text-white/20 text-center py-6">Aucune action admin</p>
+                  <p className="text-xs text-white/20 text-center py-6">No admin actions</p>
                 ) : data.adminActions.map((a, i) => (
                   <div key={i} className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
                     <div className="flex items-start justify-between gap-2">
                       <span className="text-sm font-semibold">{a.action}</span>
-                      <span className="text-[10px] text-white/30">{new Date(a.created_at).toLocaleString("fr-FR")}</span>
+                      <span className="text-[10px] text-white/30">{new Date(a.created_at).toLocaleString("en-US")}</span>
                     </div>
                     {a.details ? (
                       <div className="mt-1 text-[10px] text-white/20 font-mono break-all">
@@ -562,26 +562,26 @@ function InvestigatePageContent() {
       {showAdminDelete && data && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
           <div className="bg-gray-900 border border-red-500/30 rounded-xl p-6 max-w-md w-full">
-            <h3 className="text-red-400 font-bold text-lg mb-2">Supprimer {getBrandDisplayName({ name: data.user.name as string, company_name: data.user.company_name as string | undefined, role: data.user.role as string })}</h3>
+            <h3 className="text-red-400 font-bold text-lg mb-2">Delete {getBrandDisplayName({ name: data.user.name as string, company_name: data.user.company_name as string | undefined, role: data.user.role as string })}</h3>
             <p className="text-white/40 text-sm mb-4">
-              Le compte sera désactivé et les données anonymisées. L&apos;historique financier sera conservé.
+              The account will be deactivated and data anonymized. Financial history will be preserved.
             </p>
 
             {(data.user.balance as number) > 0 && (
               <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3 mb-4">
                 <div className="text-orange-400 text-sm">
-                  Ce compte a un solde de {Number(data.user.balance).toLocaleString("fr-FR")} FCFA. Il sera perdu.
+                  This account has a balance of {Number(data.user.balance).toLocaleString("en-US")} FCFA. It will be lost.
                 </div>
               </div>
             )}
 
             <div className="mb-4">
-              <label className="text-white/30 text-xs mb-1 block">Raison de la suppression *</label>
+              <label className="text-white/30 text-xs mb-1 block">Deletion reason *</label>
               <input
                 type="text"
                 value={deleteReason}
                 onChange={e => setDeleteReason(e.target.value)}
-                placeholder="Ex: Demande de l'utilisateur, compte frauduleux..."
+                placeholder="E.g.: User request, fraudulent account..."
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-red-500 transition"
               />
             </div>
@@ -591,7 +591,7 @@ function InvestigatePageContent() {
                 onClick={() => { setShowAdminDelete(false); setDeleteReason(""); }}
                 className="flex-1 bg-white/5 text-white/60 py-2.5 rounded-lg text-sm hover:bg-white/10 transition"
               >
-                Annuler
+                Cancel
               </button>
               <button
                 onClick={async () => {

@@ -15,7 +15,7 @@ async function requireSuperadmin() {
 
 export async function PUT(request: NextRequest) {
   const auth = await requireSuperadmin();
-  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = auth.supabase;
   const { userId, updates } = await request.json();

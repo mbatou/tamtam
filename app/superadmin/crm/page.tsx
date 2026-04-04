@@ -86,8 +86,8 @@ interface CRMData {
 }
 
 const AVAILABLE_TAGS = [
-  "VIP", "Prioritaire", "Nouveau", "Inactif", "Relance", "Fidèle",
-  "Grand compte", "PME", "Startup", "E-commerce", "Service", "Média",
+  "VIP", "Priority", "New", "Inactive", "Follow-up", "Loyal",
+  "Enterprise", "SMB", "Startup", "E-commerce", "Service", "Media",
 ];
 
 export default function CRMPage() {
@@ -129,7 +129,7 @@ export default function CRMPage() {
       const result = await res.json();
       setData(result);
     } catch {
-      showToast("Erreur de chargement", "error");
+      showToast("Loading error", "error");
     }
     setLoading(false);
   }, [search, cityFilter, stageFilter, page]);
@@ -167,10 +167,10 @@ export default function CRMPage() {
       if (res.ok) {
         setNewNote("");
         fetchNotes(detailUser.id);
-        showToast("Note ajoutée", "success");
+        showToast("Note added", "success");
       }
     } catch {
-      showToast("Erreur", "error");
+      showToast("Error", "error");
     }
   };
 
@@ -183,7 +183,7 @@ export default function CRMPage() {
       });
       if (detailUser) fetchNotes(detailUser.id);
     } catch {
-      showToast("Erreur", "error");
+      showToast("Error", "error");
     }
   };
 
@@ -203,9 +203,9 @@ export default function CRMPage() {
         setDetailUser({ ...detailUser, crm_tags: tags });
       }
       fetchData();
-      showToast("Tags mis à jour", "success");
+      showToast("Tags updated", "success");
     } catch {
-      showToast("Erreur", "error");
+      showToast("Error", "error");
     }
   };
 
@@ -245,17 +245,17 @@ export default function CRMPage() {
       });
       const result = await res.json();
       if (res.ok) {
-        showToast(`Nouveau solde: ${Number(result.new_balance).toLocaleString("fr-FR")} F`, "success");
+        showToast(`New balance: ${Number(result.new_balance).toLocaleString("en-US")} F`, "success");
         setShowTopup(false);
         setTopupAmount("");
         setDetailUser({ ...detailUser, balance: result.new_balance });
         fetchBrandDetail(detailUser.id);
         fetchData();
       } else {
-        showToast(result.error || "Erreur", "error");
+        showToast(result.error || "Error", "error");
       }
     } catch {
-      showToast("Erreur réseau", "error");
+      showToast("Network error", "error");
     }
     setToppingUp(false);
   };
@@ -300,9 +300,9 @@ export default function CRMPage() {
       a.download = "tamtam-export.csv";
       a.click();
       URL.revokeObjectURL(url);
-      showToast("Export CSV téléchargé", "success");
+      showToast("CSV export downloaded", "success");
     } catch {
-      showToast("Erreur d'export", "error");
+      showToast("Export error", "error");
     }
   };
 
@@ -326,14 +326,14 @@ export default function CRMPage() {
       });
       if (!res.ok) {
         const err = await res.json();
-        showToast(err.error || "Erreur", "error");
+        showToast(err.error || "Error", "error");
         return;
       }
-      showToast("Utilisateur mis à jour", "success");
+      showToast("User updated", "success");
       setEditingUser(null);
       fetchData();
     } catch {
-      showToast("Erreur de mise à jour", "error");
+      showToast("Update error", "error");
     }
   };
 
@@ -347,11 +347,11 @@ export default function CRMPage() {
       {/* Brand pipeline stages */}
       <div className="flex flex-wrap gap-2 mb-6">
         {[
-          { key: "", label: "Tous", count: data.total },
-          { key: "registered", label: "Inscrits", count: stageCounts.registered, color: "text-white/40" },
-          { key: "recharged", label: "Rechargé", count: stageCounts.recharged, color: "text-blue-400" },
-          { key: "first_campaign", label: "1ère campagne", count: stageCounts.first_campaign, color: "text-teal-400" },
-          { key: "repeat", label: "Récurrent", count: stageCounts.repeat, color: "text-green-400" },
+          { key: "", label: "All", count: data.total },
+          { key: "registered", label: "Registered", count: stageCounts.registered, color: "text-white/40" },
+          { key: "recharged", label: "Recharged", count: stageCounts.recharged, color: "text-blue-400" },
+          { key: "first_campaign", label: "1st campaign", count: stageCounts.first_campaign, color: "text-teal-400" },
+          { key: "repeat", label: "Recurring", count: stageCounts.repeat, color: "text-green-400" },
           { key: "vip", label: "VIP", count: stageCounts.vip, color: "text-yellow-400" },
         ].map(stage => (
           <button
@@ -374,7 +374,7 @@ export default function CRMPage() {
           type="text"
           value={search}
           onChange={e => { setSearch(e.target.value); setPage(1); }}
-          placeholder="Rechercher par nom, email, entreprise..."
+          placeholder="Search by name, email, company..."
           className="flex-1 min-w-[200px] bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-primary/50"
         />
 
@@ -383,7 +383,7 @@ export default function CRMPage() {
           onChange={e => { setCityFilter(e.target.value); setPage(1); }}
           className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white/70 text-sm focus:outline-none"
         >
-          <option value="">Toutes les villes</option>
+          <option value="">All cities</option>
           <option value="Dakar">Dakar</option>
           <option value="Rufisque">Rufisque</option>
           <option value="Thiès">Thiès</option>
@@ -394,7 +394,7 @@ export default function CRMPage() {
         {/* Bulk actions */}
         {selectedUsers.length > 0 && (
           <div className="flex items-center gap-2">
-            <span className="text-white/40 text-sm">{selectedUsers.length} sélectionné(s)</span>
+            <span className="text-white/40 text-sm">{selectedUsers.length} selected</span>
             <button
               onClick={() => setShowBulkEmail(true)}
               className="bg-blue-500/20 text-blue-400 px-3 py-2 rounded-lg text-xs hover:bg-blue-500/30 transition"
@@ -405,7 +405,7 @@ export default function CRMPage() {
               onClick={() => setShowBulkDelete(true)}
               className="bg-red-500/20 text-red-400 px-3 py-2 rounded-lg text-xs hover:bg-red-500/30 transition"
             >
-              Supprimer
+              Delete
             </button>
             <button
               onClick={handleExport}
@@ -422,11 +422,11 @@ export default function CRMPage() {
         {loading ? (
           <div className="flex items-center justify-center py-20 text-white/30">
             <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mr-3" />
-            Chargement...
+            Loading...
           </div>
         ) : data.users.length === 0 ? (
           <div className="text-center py-20 text-white/30 text-sm">
-            Aucun utilisateur trouvé
+            No users found
           </div>
         ) : (
           <>
@@ -442,13 +442,13 @@ export default function CRMPage() {
                         className="rounded accent-orange-500"
                       />
                     </th>
-                    <th className="py-3 px-4 text-left">Entreprise</th>
+                    <th className="py-3 px-4 text-left">Company</th>
                     <th className="py-3 px-4 text-left">Email</th>
-                    <th className="py-3 px-4 text-left">Ville</th>
-                    <th className="py-3 px-4 text-right">Solde</th>
-                    <th className="py-3 px-4 text-center">Campagnes</th>
-                    <th className="py-3 px-4 text-center">Statut</th>
-                    <th className="py-3 px-4 text-left">Inscrit</th>
+                    <th className="py-3 px-4 text-left">City</th>
+                    <th className="py-3 px-4 text-right">Balance</th>
+                    <th className="py-3 px-4 text-center">Campaigns</th>
+                    <th className="py-3 px-4 text-center">Status</th>
+                    <th className="py-3 px-4 text-left">Registered</th>
                     <th className="py-3 px-4 text-center">Actions</th>
                   </tr>
                 </thead>
@@ -479,7 +479,7 @@ export default function CRMPage() {
                         <td className="py-3 px-4 text-white/40">{user.email}</td>
                         <td className="py-3 px-4 text-white/40">{user.city || "—"}</td>
                         <td className="py-3 px-4 text-right text-white">
-                          {Number(user.balance || 0).toLocaleString("fr-FR")} F
+                          {Number(user.balance || 0).toLocaleString("en-US")} F
                         </td>
                         <td className="py-3 px-4 text-center text-white/40">
                           {brand.campaignCount || 0}
@@ -491,14 +491,14 @@ export default function CRMPage() {
                           <PipelineStageBadge stage={brand.pipelineStage || "registered"} />
                         </td>
                         <td className="py-3 px-4 text-white/30 text-xs">
-                          {new Date(user.created_at).toLocaleDateString("fr-FR")}
+                          {new Date(user.created_at).toLocaleDateString("en-US")}
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center justify-center gap-1">
                             <button
                               onClick={() => setEditingUser(brand)}
                               className="text-white/30 hover:text-orange-400 text-xs px-2 py-1 transition"
-                              title="Modifier"
+                              title="Edit"
                             >
                               ✏️
                             </button>
@@ -570,20 +570,20 @@ export default function CRMPage() {
             {/* Stats */}
             <div className="grid grid-cols-4 gap-3 p-6 border-b border-white/5">
               <div className="bg-white/5 rounded-lg p-3 text-center">
-                <div className="text-white font-bold">{Number(detailUser.balance || 0).toLocaleString("fr-FR")} F</div>
-                <div className="text-white/30 text-xs mt-1">Solde</div>
+                <div className="text-white font-bold">{Number(detailUser.balance || 0).toLocaleString("en-US")} F</div>
+                <div className="text-white/30 text-xs mt-1">Balance</div>
               </div>
               <div className="bg-white/5 rounded-lg p-3 text-center">
                 <div className="text-white font-bold">{detailUser.campaignCount || 0}</div>
-                <div className="text-white/30 text-xs mt-1">Campagnes</div>
+                <div className="text-white/30 text-xs mt-1">Campaigns</div>
               </div>
               <div className="bg-white/5 rounded-lg p-3 text-center">
                 <div className="text-green-400 font-bold">{detailUser.activeCampaigns || 0}</div>
-                <div className="text-white/30 text-xs mt-1">Actives</div>
+                <div className="text-white/30 text-xs mt-1">Active</div>
               </div>
               <div className="bg-white/5 rounded-lg p-3 text-center">
                 <div className="text-white font-bold">{detailUser.teamMembers || 0}</div>
-                <div className="text-white/30 text-xs mt-1">Equipe</div>
+                <div className="text-white/30 text-xs mt-1">Team</div>
               </div>
             </div>
 
@@ -599,7 +599,7 @@ export default function CRMPage() {
                       : "text-white/30 hover:text-white/50"
                   }`}
                 >
-                  {tab === "info" ? "Infos" : tab === "campaigns" ? "Campagnes" : "Finance"}
+                  {tab === "info" ? "Info" : tab === "campaigns" ? "Campaigns" : "Finance"}
                 </button>
               ))}
             </div>
@@ -629,8 +629,8 @@ export default function CRMPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 text-sm">
-                    <span className="text-white/30 w-16">Inscrit</span>
-                    <span className="text-white">{new Date(detailUser.created_at).toLocaleDateString("fr-FR")}</span>
+                    <span className="text-white/30 w-16">Joined</span>
+                    <span className="text-white">{new Date(detailUser.created_at).toLocaleDateString("en-US")}</span>
                   </div>
                 </div>
 
@@ -665,9 +665,9 @@ export default function CRMPage() {
                 <div className="p-6 border-b border-white/5">
                   <h4 className="text-white/60 text-xs font-semibold uppercase mb-3">Notes</h4>
                   {detailNotesLoading ? (
-                    <div className="text-white/20 text-sm py-4 text-center">Chargement...</div>
+                    <div className="text-white/20 text-sm py-4 text-center">Loading...</div>
                   ) : detailNotes.length === 0 ? (
-                    <div className="text-white/20 text-sm py-4 text-center">Aucune note</div>
+                    <div className="text-white/20 text-sm py-4 text-center">No notes</div>
                   ) : (
                     <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
                       {detailNotes.map(note => (
@@ -677,7 +677,7 @@ export default function CRMPage() {
                               <div className="flex items-center gap-2 mb-1">
                                 <NoteTypeBadge type={note.note_type} />
                                 <span className="text-white/20 text-xs">
-                                  {new Date(note.created_at).toLocaleDateString("fr-FR")}
+                                  {new Date(note.created_at).toLocaleDateString("en-US")}
                                 </span>
                               </div>
                               <p className="text-white/70 text-sm">{note.content}</p>
@@ -700,16 +700,16 @@ export default function CRMPage() {
                       className="bg-white/5 border border-white/10 rounded-lg px-2 py-2 text-white/50 text-xs focus:outline-none"
                     >
                       <option value="note">Note</option>
-                      <option value="call">Appel</option>
+                      <option value="call">Call</option>
                       <option value="email">Email</option>
-                      <option value="followup">Relance</option>
-                      <option value="meeting">Reunion</option>
+                      <option value="followup">Follow-up</option>
+                      <option value="meeting">Meeting</option>
                     </select>
                     <input
                       value={newNote}
                       onChange={e => setNewNote(e.target.value)}
                       onKeyDown={e => { if (e.key === "Enter") handleAddNote(); }}
-                      placeholder="Ajouter une note..."
+                      placeholder="Add a note..."
                       className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-primary/50"
                     />
                     <button
@@ -717,7 +717,7 @@ export default function CRMPage() {
                       disabled={!newNote.trim()}
                       className="bg-gradient-primary text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-30 transition"
                     >
-                      Ajouter
+                      Add
                     </button>
                   </div>
                 </div>
@@ -727,11 +727,11 @@ export default function CRMPage() {
             {/* Tab: Campaigns */}
             {detailTab === "campaigns" && (
               <div className="p-6">
-                <h4 className="text-white/60 text-xs font-semibold uppercase mb-3">Campagnes</h4>
+                <h4 className="text-white/60 text-xs font-semibold uppercase mb-3">Campaigns</h4>
                 {brandDetailLoading ? (
-                  <div className="text-white/20 text-sm py-8 text-center">Chargement...</div>
+                  <div className="text-white/20 text-sm py-8 text-center">Loading...</div>
                 ) : !brandDetail || brandDetail.campaigns.length === 0 ? (
-                  <div className="text-white/20 text-sm py-8 text-center">Aucune campagne</div>
+                  <div className="text-white/20 text-sm py-8 text-center">No campaigns</div>
                 ) : (
                   <div className="space-y-2 max-h-[400px] overflow-y-auto">
                     {brandDetail.campaigns.map(campaign => (
@@ -747,12 +747,12 @@ export default function CRMPage() {
                             </div>
                           </div>
                           <div className="text-right ml-3">
-                            <div className="text-white font-bold text-sm">{Number(campaign.budget || 0).toLocaleString("fr-FR")} F</div>
+                            <div className="text-white font-bold text-sm">{Number(campaign.budget || 0).toLocaleString("en-US")} F</div>
                             <div className="text-white/20 text-xs">{campaign.cpc} F/clic</div>
                           </div>
                         </div>
                         <div className="flex items-center justify-between text-xs text-white/30 mt-2 pt-2 border-t border-white/5">
-                          <span>{new Date(campaign.created_at).toLocaleDateString("fr-FR")}</span>
+                          <span>{new Date(campaign.created_at).toLocaleDateString("en-US")}</span>
                           <span>{campaign.echoCount} echo{campaign.echoCount !== 1 ? "s" : ""}</span>
                         </div>
                       </div>
@@ -766,31 +766,31 @@ export default function CRMPage() {
             {detailTab === "finance" && (
               <div className="p-6">
                 {brandDetailLoading ? (
-                  <div className="text-white/20 text-sm py-8 text-center">Chargement...</div>
+                  <div className="text-white/20 text-sm py-8 text-center">Loading...</div>
                 ) : !brandDetail ? (
-                  <div className="text-white/20 text-sm py-8 text-center">Aucune donnee</div>
+                  <div className="text-white/20 text-sm py-8 text-center">No data</div>
                 ) : (
                   <>
                     {/* Financial summary */}
                     <div className="grid grid-cols-3 gap-3 mb-6">
                       <div className="bg-white/5 rounded-lg p-3 text-center">
-                        <div className="text-white font-bold text-sm">{Number(detailUser.balance || 0).toLocaleString("fr-FR")} F</div>
-                        <div className="text-white/30 text-xs mt-1">Solde actuel</div>
+                        <div className="text-white font-bold text-sm">{Number(detailUser.balance || 0).toLocaleString("en-US")} F</div>
+                        <div className="text-white/30 text-xs mt-1">Current balance</div>
                       </div>
                       <div className="bg-green-500/10 rounded-lg p-3 text-center">
-                        <div className="text-green-400 font-bold text-sm">{Number(brandDetail.totalRecharged || 0).toLocaleString("fr-FR")} F</div>
-                        <div className="text-white/30 text-xs mt-1">Total recharge</div>
+                        <div className="text-green-400 font-bold text-sm">{Number(brandDetail.totalRecharged || 0).toLocaleString("en-US")} F</div>
+                        <div className="text-white/30 text-xs mt-1">Total recharged</div>
                       </div>
                       <div className="bg-orange-500/10 rounded-lg p-3 text-center">
-                        <div className="text-orange-400 font-bold text-sm">{Number(brandDetail.totalSpent || 0).toLocaleString("fr-FR")} F</div>
-                        <div className="text-white/30 text-xs mt-1">Total depense</div>
+                        <div className="text-orange-400 font-bold text-sm">{Number(brandDetail.totalSpent || 0).toLocaleString("en-US")} F</div>
+                        <div className="text-white/30 text-xs mt-1">Total spent</div>
                       </div>
                     </div>
 
                     {/* Recharge history */}
-                    <h4 className="text-white/60 text-xs font-semibold uppercase mb-3">Historique des recharges</h4>
+                    <h4 className="text-white/60 text-xs font-semibold uppercase mb-3">Recharge history</h4>
                     {brandDetail.payments.length === 0 ? (
-                      <div className="text-white/20 text-sm py-4 text-center mb-6">Aucune recharge</div>
+                      <div className="text-white/20 text-sm py-4 text-center mb-6">No recharges</div>
                     ) : (
                       <div className="space-y-2 mb-6 max-h-48 overflow-y-auto">
                         {brandDetail.payments.map(payment => (
@@ -798,31 +798,31 @@ export default function CRMPage() {
                             <div className="flex items-center gap-3">
                               <PaymentStatusBadge status={payment.status} />
                               <div>
-                                <div className="text-white text-sm font-medium">{Number(payment.amount || 0).toLocaleString("fr-FR")} F</div>
+                                <div className="text-white text-sm font-medium">{Number(payment.amount || 0).toLocaleString("en-US")} F</div>
                                 <div className="text-white/20 text-xs">{payment.payment_method || "Wave"}</div>
                               </div>
                             </div>
-                            <span className="text-white/20 text-xs">{new Date(payment.created_at).toLocaleDateString("fr-FR")}</span>
+                            <span className="text-white/20 text-xs">{new Date(payment.created_at).toLocaleDateString("en-US")}</span>
                           </div>
                         ))}
                       </div>
                     )}
 
                     {/* Recent transactions */}
-                    <h4 className="text-white/60 text-xs font-semibold uppercase mb-3">Transactions recentes</h4>
+                    <h4 className="text-white/60 text-xs font-semibold uppercase mb-3">Recent transactions</h4>
                     {brandDetail.transactions.length === 0 ? (
-                      <div className="text-white/20 text-sm py-4 text-center">Aucune transaction</div>
+                      <div className="text-white/20 text-sm py-4 text-center">No transactions</div>
                     ) : (
                       <div className="space-y-1.5 max-h-48 overflow-y-auto">
                         {brandDetail.transactions.map(tx => (
                           <div key={tx.id} className="bg-white/5 rounded-lg px-3 py-2.5 flex items-center justify-between">
                             <div className="flex items-center gap-2 flex-1 min-w-0">
                               <span className={`text-xs font-mono font-bold ${tx.amount >= 0 ? "text-green-400" : "text-red-400"}`}>
-                                {tx.amount >= 0 ? "+" : ""}{Number(tx.amount).toLocaleString("fr-FR")} F
+                                {tx.amount >= 0 ? "+" : ""}{Number(tx.amount).toLocaleString("en-US")} F
                               </span>
                               <span className="text-white/30 text-xs truncate">{tx.description || tx.type}</span>
                             </div>
-                            <span className="text-white/20 text-xs ml-2 shrink-0">{new Date(tx.created_at).toLocaleDateString("fr-FR")}</span>
+                            <span className="text-white/20 text-xs ml-2 shrink-0">{new Date(tx.created_at).toLocaleDateString("en-US")}</span>
                           </div>
                         ))}
                       </div>
@@ -838,7 +838,7 @@ export default function CRMPage() {
                 onClick={() => setShowTopup(true)}
                 className="flex-1 bg-blue-500/10 text-blue-400 py-2.5 rounded-lg text-sm hover:bg-blue-500/20 transition font-medium"
               >
-                Recharger
+                Top up
               </button>
               <button
                 onClick={() => {
@@ -847,7 +847,7 @@ export default function CRMPage() {
                 }}
                 className="flex-1 bg-white/5 text-white/60 py-2.5 rounded-lg text-sm hover:bg-white/10 transition"
               >
-                Modifier
+                Edit
               </button>
               <button
                 onClick={() => {
@@ -877,17 +877,17 @@ export default function CRMPage() {
       {showTopup && detailUser && (
         <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4" onClick={() => setShowTopup(false)}>
           <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
-            <h3 className="text-white font-bold mb-1">Recharger le compte</h3>
+            <h3 className="text-white font-bold mb-1">Top up account</h3>
             <p className="text-white/40 text-sm mb-4">{detailUser.company_name || detailUser.name}</p>
             <div className="bg-white/5 rounded-lg p-3 mb-4 flex items-center justify-between">
-              <span className="text-white/40 text-sm">Solde actuel</span>
-              <span className="text-white font-bold">{Number(detailUser.balance || 0).toLocaleString("fr-FR")} F</span>
+              <span className="text-white/40 text-sm">Current balance</span>
+              <span className="text-white font-bold">{Number(detailUser.balance || 0).toLocaleString("en-US")} F</span>
             </div>
             <input
               type="number"
               value={topupAmount}
               onChange={e => setTopupAmount(e.target.value)}
-              placeholder="Montant (FCFA)"
+              placeholder="Amount (FCFA)"
               min="0"
               className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-primary/50 mb-3"
             />
@@ -908,9 +908,9 @@ export default function CRMPage() {
             </div>
             {topupAmount && parseInt(topupAmount) > 0 && (
               <div className="bg-green-500/10 rounded-lg p-3 mb-4 flex items-center justify-between">
-                <span className="text-white/40 text-sm">Nouveau solde</span>
+                <span className="text-white/40 text-sm">New balance</span>
                 <span className="text-green-400 font-bold">
-                  {Number((detailUser.balance || 0) + parseInt(topupAmount)).toLocaleString("fr-FR")} F
+                  {Number((detailUser.balance || 0) + parseInt(topupAmount)).toLocaleString("en-US")} F
                 </span>
               </div>
             )}
@@ -919,14 +919,14 @@ export default function CRMPage() {
                 onClick={() => { setShowTopup(false); setTopupAmount(""); }}
                 className="flex-1 bg-white/5 text-white/50 py-2.5 rounded-lg text-sm hover:bg-white/10 transition"
               >
-                Annuler
+                Cancel
               </button>
               <button
                 onClick={handleTopup}
                 disabled={toppingUp || !topupAmount || parseInt(topupAmount) <= 0}
                 className="flex-1 bg-gradient-primary text-white py-2.5 rounded-lg text-sm font-medium disabled:opacity-30 transition"
               >
-                {toppingUp ? "Recharge..." : `Recharger ${topupAmount ? Number(topupAmount).toLocaleString("fr-FR") + " F" : ""}`}
+                {toppingUp ? "Topping up..." : `Top up ${topupAmount ? Number(topupAmount).toLocaleString("en-US") + " F" : ""}`}
               </button>
             </div>
           </div>
@@ -938,11 +938,11 @@ export default function CRMPage() {
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setEditingUser(null)}>
           <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-6 max-w-lg w-full" onClick={e => e.stopPropagation()}>
             <h3 className="text-white font-bold text-lg mb-4">
-              Modifier {editingUser.company_name || editingUser.name}
+              Edit {editingUser.company_name || editingUser.name}
             </h3>
             <div className="space-y-3">
               <div>
-                <label className="text-white/30 text-xs">Nom</label>
+                <label className="text-white/30 text-xs">Name</label>
                 <input
                   type="text"
                   value={editingUser.name || ""}
@@ -1030,11 +1030,11 @@ export default function CRMPage() {
                   data: { subject, message },
                 }),
               });
-              showToast(`${selectedUsers.length} emails envoyés`, "success");
+              showToast(`${selectedUsers.length} emails sent`, "success");
               setShowBulkEmail(false);
               setSelectedUsers([]);
             } catch {
-              showToast("Erreur d'envoi", "error");
+              showToast("Send error", "error");
             }
           }}
           onClose={() => setShowBulkEmail(false)}
@@ -1056,12 +1056,12 @@ export default function CRMPage() {
                   data: { reason },
                 }),
               });
-              showToast(`${selectedUsers.length} comptes supprimés`, "success");
+              showToast(`${selectedUsers.length} accounts deleted`, "success");
               setShowBulkDelete(false);
               setSelectedUsers([]);
               fetchData();
             } catch {
-              showToast("Erreur de suppression", "error");
+              showToast("Deletion error", "error");
             }
           }}
           onClose={() => setShowBulkDelete(false)}
@@ -1074,10 +1074,10 @@ export default function CRMPage() {
 function PipelineStageBadge({ stage }: { stage: string }) {
   const config: Record<string, { label: string; color: string }> = {
     vip: { label: "VIP", color: "bg-yellow-500/20 text-yellow-400" },
-    repeat: { label: "Récurrent", color: "bg-green-500/20 text-green-400" },
-    first_campaign: { label: "1ère campagne", color: "bg-teal-500/20 text-teal-400" },
-    recharged: { label: "Rechargé", color: "bg-blue-500/20 text-blue-400" },
-    registered: { label: "Inscrit", color: "bg-white/10 text-white/40" },
+    repeat: { label: "Repeat", color: "bg-green-500/20 text-green-400" },
+    first_campaign: { label: "1st Campaign", color: "bg-teal-500/20 text-teal-400" },
+    recharged: { label: "Recharged", color: "bg-blue-500/20 text-blue-400" },
+    registered: { label: "Registered", color: "bg-white/10 text-white/40" },
   };
   const c = config[stage] || config.registered;
   return <span className={`text-xs px-2 py-1 rounded ${c.color}`}>{c.label}</span>;
@@ -1086,10 +1086,10 @@ function PipelineStageBadge({ stage }: { stage: string }) {
 function NoteTypeBadge({ type }: { type: string }) {
   const config: Record<string, { label: string; color: string }> = {
     note: { label: "Note", color: "bg-white/10 text-white/40" },
-    call: { label: "Appel", color: "bg-blue-500/20 text-blue-400" },
+    call: { label: "Call", color: "bg-blue-500/20 text-blue-400" },
     email: { label: "Email", color: "bg-purple-500/20 text-purple-400" },
-    followup: { label: "Relance", color: "bg-orange-500/20 text-orange-400" },
-    meeting: { label: "Réunion", color: "bg-teal-500/20 text-teal-400" },
+    followup: { label: "Follow-up", color: "bg-orange-500/20 text-orange-400" },
+    meeting: { label: "Meeting", color: "bg-teal-500/20 text-teal-400" },
   };
   const c = config[type] || config.note;
   return <span className={`text-xs px-1.5 py-0.5 rounded ${c.color}`}>{c.label}</span>;
@@ -1098,13 +1098,13 @@ function NoteTypeBadge({ type }: { type: string }) {
 function CampaignStatusBadge({ status, moderation }: { status: string; moderation: string }) {
   const config: Record<string, { label: string; color: string }> = {
     active: { label: "Active", color: "bg-green-500/20 text-green-400" },
-    paused: { label: "Pause", color: "bg-yellow-500/20 text-yellow-400" },
-    completed: { label: "Terminee", color: "bg-white/10 text-white/40" },
-    draft: { label: "Brouillon", color: "bg-white/10 text-white/30" },
+    paused: { label: "Paused", color: "bg-yellow-500/20 text-yellow-400" },
+    completed: { label: "Completed", color: "bg-white/10 text-white/40" },
+    draft: { label: "Draft", color: "bg-white/10 text-white/30" },
   };
   const modConfig: Record<string, { label: string; color: string }> = {
-    pending: { label: "En attente", color: "bg-orange-500/20 text-orange-400" },
-    rejected: { label: "Rejetee", color: "bg-red-500/20 text-red-400" },
+    pending: { label: "Pending", color: "bg-orange-500/20 text-orange-400" },
+    rejected: { label: "Rejected", color: "bg-red-500/20 text-red-400" },
   };
   if (moderation === "pending" || moderation === "rejected") {
     const m = modConfig[moderation];
@@ -1117,8 +1117,8 @@ function CampaignStatusBadge({ status, moderation }: { status: string; moderatio
 function PaymentStatusBadge({ status }: { status: string }) {
   const config: Record<string, { label: string; color: string }> = {
     completed: { label: "OK", color: "bg-green-500/20 text-green-400" },
-    pending: { label: "En attente", color: "bg-orange-500/20 text-orange-400" },
-    failed: { label: "Echoue", color: "bg-red-500/20 text-red-400" },
+    pending: { label: "Pending", color: "bg-orange-500/20 text-orange-400" },
+    failed: { label: "Failed", color: "bg-red-500/20 text-red-400" },
   };
   const c = config[status] || { label: status, color: "bg-white/10 text-white/40" };
   return <span className={`text-xs px-1.5 py-0.5 rounded ${c.color}`}>{c.label}</span>;
@@ -1136,12 +1136,12 @@ function BulkEmailModal({ count, onSend, onClose }: {
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
-        <h3 className="text-white font-bold mb-4">Envoyer un email à {count} utilisateur(s)</h3>
+        <h3 className="text-white font-bold mb-4">Send email to {count} user(s)</h3>
         <div className="space-y-3">
           <input
             value={subject}
             onChange={e => setSubject(e.target.value)}
-            placeholder="Objet"
+            placeholder="Subject"
             className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-primary/50"
           />
           <textarea
@@ -1154,14 +1154,14 @@ function BulkEmailModal({ count, onSend, onClose }: {
         </div>
         <div className="flex gap-3 mt-4">
           <button onClick={onClose} className="flex-1 bg-white/5 text-white/50 py-2 rounded-lg text-sm hover:bg-white/10 transition">
-            Annuler
+            Cancel
           </button>
           <button
             onClick={async () => { setSending(true); await onSend(subject, message); }}
             disabled={sending}
             className="flex-1 bg-blue-500 text-white py-2 rounded-lg text-sm font-medium disabled:opacity-50"
           >
-            {sending ? "Envoi..." : `Envoyer à ${count}`}
+            {sending ? "Sending..." : `Send to ${count}`}
           </button>
         </div>
       </div>
@@ -1180,24 +1180,24 @@ function BulkDeleteModal({ count, onDelete, onClose }: {
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-[#1a1a2e] border border-red-500/30 rounded-xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
-        <h3 className="text-red-400 font-bold mb-2">Supprimer {count} compte(s)</h3>
-        <p className="text-white/40 text-sm mb-4">Cette action est irréversible. Les données seront anonymisées.</p>
+        <h3 className="text-red-400 font-bold mb-2">Delete {count} account(s)</h3>
+        <p className="text-white/40 text-sm mb-4">This action is irreversible. Data will be anonymized.</p>
         <input
           value={reason}
           onChange={e => setReason(e.target.value)}
-          placeholder="Raison de la suppression..."
+          placeholder="Reason for deletion..."
           className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm mb-4 focus:outline-none focus:border-red-500/50"
         />
         <div className="flex gap-3">
           <button onClick={onClose} className="flex-1 bg-white/5 text-white/50 py-2 rounded-lg text-sm hover:bg-white/10 transition">
-            Annuler
+            Cancel
           </button>
           <button
             onClick={async () => { setDeleting(true); await onDelete(reason); }}
             disabled={deleting || !reason}
             className="flex-1 bg-red-500 text-white py-2 rounded-lg text-sm font-medium disabled:opacity-50"
           >
-            {deleting ? "Suppression..." : `Supprimer ${count} compte(s)`}
+            {deleting ? "Deleting..." : `Delete ${count} account(s)`}
           </button>
         </div>
       </div>

@@ -10,7 +10,7 @@ export async function GET(
 ) {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
 
@@ -21,7 +21,7 @@ export async function GET(
     .eq("id", session.user.id)
     .single();
   if (!user || user.role !== "superadmin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const campaignId = params.id;
@@ -33,7 +33,7 @@ export async function GET(
     .eq("id", campaignId)
     .single();
   if (!campaign) {
-    return NextResponse.json({ error: "Campagne introuvable" }, { status: 404 });
+    return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
   }
 
   // Get all tracked links with echo info and clicks

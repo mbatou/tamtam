@@ -354,7 +354,7 @@ export default function AdminCampaignsPage() {
                   ? "bg-blue-500/20 text-blue-300"
                   : "bg-teal-500/20 text-teal-300"
               }`}>
-                {(c.objective || "traffic") === "awareness" ? "Notoriete" : "Trafic"}
+                {(c.objective || "traffic") === "awareness" ? "Notoriété" : "Trafic"}
               </span>
             </div>
             {c.description && <p className="text-white/40 text-sm max-w-xl">{c.description}</p>}
@@ -446,11 +446,11 @@ export default function AdminCampaignsPage() {
         {/* Objective context */}
         {(c.objective || "traffic") === "awareness" ? (
           <p className="text-sm text-white/40 mb-4">
-            Chaque clic signifie qu&apos;une personne a vu votre visuel ET a clique.
+            Chaque clic signifie qu&apos;une personne a vu votre visuel ET a cliqué.
           </p>
         ) : (
           <p className="text-sm text-white/40 mb-4">
-            Chaque clic est un visiteur verifie sur votre lien.
+            Chaque clic est un visiteur vérifié sur votre lien.
           </p>
         )}
 
@@ -699,15 +699,15 @@ export default function AdminCampaignsPage() {
         id: "traffic" as const,
         label: "Trafic",
         description: "Maximisez les clics vers votre site ou lien",
-        detail: "Les Echos partagent votre lien. Vous payez par clic verifie.",
+        detail: "Les Échos partagent votre lien. Vous payez par clic vérifié.",
         icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>,
         disabled: false,
       },
       {
         id: "awareness" as const,
-        label: "Notoriete",
-        description: "Maximisez la visibilite de votre marque",
-        detail: "Les Echos partagent votre visuel + lien ensemble. Votre image est vue a chaque partage.",
+        label: "Notoriété",
+        description: "Maximisez la visibilité de votre marque",
+        detail: "Les Échos partagent votre visuel + lien ensemble. Votre image est vue à chaque partage.",
         icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
         disabled: false,
       },
@@ -715,7 +715,7 @@ export default function AdminCampaignsPage() {
         id: "conversion" as const,
         label: "Conversion",
         description: "Suivez les actions sur votre site",
-        detail: "Bientot disponible — Tamtam Pixel",
+        detail: "Bientôt disponible — Tamtam Pixel",
         icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
         disabled: true,
       },
@@ -747,7 +747,7 @@ export default function AdminCampaignsPage() {
             >
               {obj.disabled && (
                 <span className="absolute top-3 right-3 text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/40 font-semibold">
-                  Bientot
+                  Bientôt
                 </span>
               )}
               {!obj.disabled && objective === obj.id && (
@@ -793,7 +793,7 @@ export default function AdminCampaignsPage() {
               ? "bg-blue-500/20 text-blue-300"
               : "bg-teal-500/20 text-teal-300"
           }`}>
-            {objective === "awareness" ? "Notoriete" : "Trafic"}
+            {objective === "awareness" ? "Notoriété" : "Trafic"}
           </span>
           {!editingId && (
             <button onClick={() => setView("objective")} className="text-xs text-white/30 hover:text-white/50 transition">
@@ -806,8 +806,8 @@ export default function AdminCampaignsPage() {
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mb-6 flex items-start gap-3">
             <span className="text-lg">📸</span>
             <div>
-              <p className="text-sm font-semibold text-blue-300">Campagne Notoriete</p>
-              <p className="text-xs text-white/40">Les Echos partageront votre visuel + lien ensemble. L&apos;image est obligatoire.</p>
+              <p className="text-sm font-semibold text-blue-300">Campagne Notoriété</p>
+              <p className="text-xs text-white/40">Les Échos partageront votre visuel + lien ensemble. L&apos;image est obligatoire.</p>
             </div>
           </div>
         )}
@@ -833,7 +833,7 @@ export default function AdminCampaignsPage() {
                 {objective === "awareness" && <span className="text-red-400 ml-1">*</span>}
               </label>
               {objective === "awareness" && creativeUrls.length === 0 && (
-                <p className="text-xs text-red-400 mb-2">Image obligatoire pour une campagne Notoriete</p>
+                <p className="text-xs text-red-400 mb-2">Image obligatoire pour une campagne Notoriété</p>
               )}
               <div className="flex flex-wrap gap-3 mb-3">
                 {creativeUrls.map((url, i) => (
@@ -1135,7 +1135,7 @@ export default function AdminCampaignsPage() {
                           ? "bg-blue-500/20 text-blue-300"
                           : "bg-teal-500/20 text-teal-300"
                       }`}>
-                        {(campaign.objective || "traffic") === "awareness" ? "Notoriete" : "Trafic"}
+                        {(campaign.objective || "traffic") === "awareness" ? "Notoriété" : "Trafic"}
                       </span>
                       <span className={`badge-${campaign.status === "draft" && campaign.moderation_status === "pending" ? "pending" : campaign.status} shrink-0`}>{getStatusLabel(campaign)}</span>
                     </div>

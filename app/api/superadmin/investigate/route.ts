@@ -7,13 +7,13 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
   const userId = req.nextUrl.searchParams.get("user_id");
 
   if (!userId) {
-    return NextResponse.json({ error: "user_id requis" }, { status: 400 });
+    return NextResponse.json({ error: "user_id required" }, { status: 400 });
   }
 
   // 1. User profile
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     .single();
 
   if (userErr || !user) {
-    return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
   // 2. Wallet transactions (all balance movements)
@@ -170,7 +170,7 @@ export async function GET(req: NextRequest) {
   timeline.push({
     time: user.created_at,
     type: "account",
-    description: `Compte créé avec le rôle "${user.role}"`,
+    description: `Account created with role "${user.role}"`,
   });
 
   // Wallet transactions
@@ -189,7 +189,7 @@ export async function GET(req: NextRequest) {
     timeline.push({
       time: p.created_at,
       type: "payment",
-      description: `Paiement ${p.payment_method || ""} — ${p.status}`,
+      description: `Payment ${p.payment_method || ""} — ${p.status}`,
       amount: p.amount,
       details: { ref: p.ref_command, method: p.payment_method, status: p.status },
     });
@@ -200,7 +200,7 @@ export async function GET(req: NextRequest) {
     timeline.push({
       time: p.created_at,
       type: "payout",
-      description: `Demande de retrait — ${p.status}${p.failure_reason ? ` (${p.failure_reason})` : ""}`,
+      description: `Withdrawal request — ${p.status}${p.failure_reason ? ` (${p.failure_reason})` : ""}`,
       amount: -p.amount,
       details: { provider: p.provider, status: p.status, failure_reason: p.failure_reason },
     });
@@ -212,7 +212,7 @@ export async function GET(req: NextRequest) {
     timeline.push({
       time: l.created_at,
       type: "campaign_join",
-      description: `A rejoint la campagne "${c?.title || "?"}"`,
+      description: `Joined campaign "${c?.title || "?"}"`,
       details: { clicks: l.click_count, cpc: c?.cpc },
     });
   }
@@ -222,7 +222,7 @@ export async function GET(req: NextRequest) {
     timeline.push({
       time: a.created_at,
       type: "achievement",
-      description: `Milestone atteint: ${a.gamification_milestones?.name || "?"}`,
+      description: `Milestone reached: ${a.gamification_milestones?.name || "?"}`,
       amount: a.reward_fcfa,
     });
   }
@@ -232,7 +232,7 @@ export async function GET(req: NextRequest) {
     timeline.push({
       time: s.created_at,
       type: "streak",
-      description: `Récompense série ${s.streak_count} jours`,
+      description: `Streak reward ${s.streak_count} days`,
       amount: s.reward_fcfa,
     });
   }
@@ -257,7 +257,7 @@ export async function GET(req: NextRequest) {
   if (user.balance > 0 && (trackedLinks || []).length === 0 && user.role === "echo") {
     anomalies.push({
       severity: "high",
-      message: `Solde de ${user.balance} FCFA sans aucune campagne rejointe`,
+      message: `Balance of ${user.balance} FCFA with no campaigns joined`,
     });
   }
 
@@ -268,7 +268,7 @@ export async function GET(req: NextRequest) {
   if (welcomeBonus && user.role === "echo") {
     anomalies.push({
       severity: "high",
-      message: `Bonus de bienvenue (${welcomeBonus.amount} FCFA) attribué à un echo — normalement réservé aux marques`,
+      message: `Welcome bonus (${welcomeBonus.amount} FCFA) given to echo — normally reserved for brands`,
     });
   }
 
@@ -280,7 +280,7 @@ export async function GET(req: NextRequest) {
   if (user.total_earned > expectedEarnings + 500 && user.role === "echo") {
     anomalies.push({
       severity: "medium",
-      message: `Gains totaux (${user.total_earned} FCFA) supérieurs aux gains attendus (${Math.round(expectedEarnings)} FCFA)`,
+      message: `Total earnings (${user.total_earned} FCFA) exceed expected earnings (${Math.round(expectedEarnings)} FCFA)`,
     });
   }
 
@@ -289,7 +289,7 @@ export async function GET(req: NextRequest) {
   if (hasPayout && clickStats.total === 0 && user.role === "echo") {
     anomalies.push({
       severity: "high",
-      message: "Demande de retrait sans aucun clic enregistré",
+      message: "Payout request with no recorded clicks",
     });
   }
 
@@ -297,7 +297,7 @@ export async function GET(req: NextRequest) {
   if (user.balance > 0 && (walletTransactions || []).length === 0 && (payments || []).length === 0) {
     anomalies.push({
       severity: "medium",
-      message: "Solde non-nul sans aucune transaction enregistrée",
+      message: "Non-zero balance with no recorded transactions",
     });
   }
 

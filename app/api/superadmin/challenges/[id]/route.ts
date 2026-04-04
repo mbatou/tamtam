@@ -18,7 +18,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   const auth = await requireSuperadmin();
-  if (!auth) return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { supabase } = auth;
   const { id } = params;

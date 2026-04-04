@@ -63,7 +63,7 @@ function formatMetricValue(key: string, value: number, t: (k: string) => string)
   if (key === "fraud_rate_below" || key === "echo_retention_30d") return `${value}%`;
   if (key === "first_payout_done") return value >= 1 ? t("superadmin.roadmap.yes") : t("superadmin.roadmap.no");
   if (value >= 10000) return formatNumber(value);
-  return value.toLocaleString("fr-FR");
+  return value.toLocaleString("en-US");
 }
 
 function formatTargetValue(key: string, value: number, t: (k: string) => string): string {
@@ -71,7 +71,7 @@ function formatTargetValue(key: string, value: number, t: (k: string) => string)
   if (key === "fraud_rate_below") return `< ${value}%`;
   if (key === "echo_retention_30d") return `${value}%`;
   if (key === "first_payout_done") return t("superadmin.roadmap.yes");
-  return value.toLocaleString("fr-FR");
+  return value.toLocaleString("en-US");
 }
 
 function getGoalProgress(key: string, current: number, target: number): number {
@@ -186,9 +186,9 @@ export default function RoadmapPage() {
         <h1 className="text-2xl font-bold">{t("superadmin.roadmap.title")}</h1>
         <div className="text-right">
           <span className="text-lg font-bold text-primary">
-            {t("superadmin.roadmap.dayLabel") || "Jour"} {Math.floor((Date.now() - new Date("2026-03-10").getTime()) / 86400000)}
+            {t("superadmin.roadmap.dayLabel") || "Day"} {Math.floor((Date.now() - new Date("2026-03-10").getTime()) / 86400000)}
           </span>
-          <span className="text-xs text-white/30 block">{t("superadmin.roadmap.sinceLaunch") || "depuis le lancement"}</span>
+          <span className="text-xs text-white/30 block">{t("superadmin.roadmap.sinceLaunch") || "since launch"}</span>
         </div>
       </div>
 
@@ -323,9 +323,9 @@ export default function RoadmapPage() {
               const isOverdue = !m.achieved && m.target_date && new Date(m.target_date) < new Date();
               const icon = m.achieved ? "✅" : isOverdue ? "⚠️" : "⬜";
               const dateStr = m.achieved && m.achieved_at
-                ? new Date(m.achieved_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })
+                ? new Date(m.achieved_at).toLocaleDateString("en-US", { day: "numeric", month: "short" })
                 : m.target_date
-                ? t("superadmin.roadmap.targetDate", { date: new Date(m.target_date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) })
+                ? t("superadmin.roadmap.targetDate", { date: new Date(m.target_date).toLocaleDateString("en-US", { day: "numeric", month: "short" }) })
                 : "";
 
               return (

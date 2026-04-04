@@ -63,7 +63,7 @@ export default function AnalyticsPage() {
     for (let i = 6; i >= 0; i--) {
       const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
       const dateStr = d.toISOString().split("T")[0];
-      const label = d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" });
+      const label = d.toLocaleDateString("en-US", { weekday: "short", day: "numeric" });
       const dayClicks = (allClicksRes.data || []).filter(
         (c) => c.created_at.startsWith(dateStr) && c.is_valid !== false
       ).length;

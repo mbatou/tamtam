@@ -76,7 +76,7 @@ export default function BriefingPage() {
   }
 
   const now = new Date(data.date);
-  const dateStr = now.toLocaleDateString("fr-FR", {
+  const dateStr = now.toLocaleDateString("en-US", {
     weekday: "long",
     day: "numeric",
     month: "long",

@@ -26,15 +26,15 @@ const POSITION_LABELS: Record<string, { label: string; emoji: string; color: str
 
 const ALL_PAGES = [
   { key: "briefing", label: "Briefing", emoji: "☀️" },
-  { key: "overview", label: "Vue d'ensemble", emoji: "🏠" },
+  { key: "overview", label: "Overview", emoji: "🏠" },
   { key: "roadmap", label: "Roadmap", emoji: "🎯" },
-  { key: "fraud", label: "Anti-Fraude", emoji: "🛡️" },
-  { key: "campaigns", label: "Modération", emoji: "🥁" },
+  { key: "fraud", label: "Anti-Fraud", emoji: "🛡️" },
+  { key: "campaigns", label: "Moderation", emoji: "🥁" },
   { key: "leads", label: "Leads", emoji: "📩" },
-  { key: "finance", label: "Finances", emoji: "💰" },
-  { key: "users", label: "Utilisateurs", emoji: "👥" },
+  { key: "finance", label: "Finance", emoji: "💰" },
+  { key: "users", label: "Users", emoji: "👥" },
   { key: "gamification", label: "Gamification", emoji: "🎮" },
-  { key: "health", label: "Santé", emoji: "🩺" },
+  { key: "health", label: "Health", emoji: "🩺" },
   { key: "support", label: "Support", emoji: "💬" },
   { key: "crm", label: "CRM", emoji: "📇" },
 ];
@@ -79,7 +79,7 @@ export default function TeamPage() {
 
   async function createMember() {
     if (!form.name || !form.email || !form.password) {
-      showToast("Nom, email et mot de passe requis", "error");
+      showToast("Name, email and password are required", "error");
       return;
     }
     setSaving(true);
@@ -91,12 +91,12 @@ export default function TeamPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        showToast("Membre ajouté avec succès", "success");
+        showToast("Member added successfully", "success");
         setShowCreate(false);
         setForm({ name: "", email: "", password: "", phone: "", team_position: "customer_success", team_permissions: POSITION_DEFAULTS["customer_success"] });
         loadTeam();
       } else {
-        showToast(data.error || "Erreur", "error");
+        showToast(data.error || "Error", "error");
       }
     } catch {
       showToast(t("common.networkError"), "error");
@@ -113,12 +113,12 @@ export default function TeamPage() {
         body: JSON.stringify({ action: "update", user_id: userId, team_position: position, team_permissions: permissions }),
       });
       if (res.ok) {
-        showToast("Permissions mises à jour", "success");
+        showToast("Permissions updated", "success");
         setEditing(null);
         loadTeam();
       } else {
         const data = await res.json();
-        showToast(data.error || "Erreur", "error");
+        showToast(data.error || "Error", "error");
       }
     } catch {
       showToast(t("common.networkError"), "error");
@@ -127,7 +127,7 @@ export default function TeamPage() {
   }
 
   async function removeMember(userId: string, name: string) {
-    if (!confirm(`Retirer ${name} de l'équipe ? Son accès au dashboard admin sera révoqué.`)) return;
+    if (!confirm(`Remove ${name} from the team? Their admin dashboard access will be revoked.`)) return;
     try {
       const res = await fetch("/api/superadmin/team", {
         method: "POST",
@@ -135,11 +135,11 @@ export default function TeamPage() {
         body: JSON.stringify({ action: "remove", user_id: userId }),
       });
       if (res.ok) {
-        showToast(`${name} retiré de l'équipe`, "success");
+        showToast(`${name} removed from the team`, "success");
         loadTeam();
       } else {
         const data = await res.json();
-        showToast(data.error || "Erreur", "error");
+        showToast(data.error || "Error", "error");
       }
     } catch {
       showToast(t("common.networkError"), "error");
@@ -162,16 +162,16 @@ export default function TeamPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Équipe</h1>
+          <h1 className="text-2xl font-bold">Team</h1>
           <p className="text-sm text-white/40 mt-1">
-            {members.length} membre{members.length !== 1 ? "s" : ""} · Gérez les accès de votre équipe
+            {members.length} member{members.length !== 1 ? "s" : ""} · Manage your team access
           </p>
         </div>
         <button
           onClick={() => setShowCreate(true)}
           className="btn-primary text-sm px-4 py-2.5"
         >
-          + Ajouter un membre
+          + Add member
         </button>
       </div>
 
@@ -196,7 +196,7 @@ export default function TeamPage() {
                       </span>
                     </div>
                     <p className="text-xs text-white/30 mt-0.5">
-                      Ajouté {timeAgo(member.created_at)} · {(member.team_permissions || []).length} page{(member.team_permissions || []).length !== 1 ? "s" : ""} autorisée{(member.team_permissions || []).length !== 1 ? "s" : ""}
+                      Added {timeAgo(member.created_at)} · {(member.team_permissions || []).length} authorized page{(member.team_permissions || []).length !== 1 ? "s" : ""}
                     </p>
                   </div>
                 </div>
@@ -205,13 +205,13 @@ export default function TeamPage() {
                     onClick={() => setEditing(isEditing ? null : member)}
                     className="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition text-white/50 hover:text-white/80 font-semibold"
                   >
-                    {isEditing ? "Fermer" : "Modifier"}
+                    {isEditing ? "Close" : "Edit"}
                   </button>
                   <button
                     onClick={() => removeMember(member.id, member.name)}
                     className="text-xs px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition text-red-400 font-semibold"
                   >
-                    Retirer
+                    Remove
                   </button>
                 </div>
               </div>
@@ -245,8 +245,8 @@ export default function TeamPage() {
         {members.length === 0 && (
           <div className="glass-card p-10 text-center">
             <span className="text-3xl block mb-3">👥</span>
-            <p className="text-sm font-semibold text-white/50 mb-1">Aucun membre dans l&apos;équipe</p>
-            <p className="text-xs text-white/30">Ajoutez des membres pour leur donner accès au dashboard admin</p>
+            <p className="text-sm font-semibold text-white/50 mb-1">No team members</p>
+            <p className="text-xs text-white/30">Add members to give them access to the admin dashboard</p>
           </div>
         )}
       </div>
@@ -256,15 +256,15 @@ export default function TeamPage() {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowCreate(false)}>
           <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="p-5 border-b border-white/5">
-              <h2 className="text-lg font-bold">Ajouter un membre</h2>
-              <p className="text-xs text-white/40 mt-1">Créez un compte avec un accès personnalisé au dashboard</p>
+              <h2 className="text-lg font-bold">Add a member</h2>
+              <p className="text-xs text-white/40 mt-1">Create an account with custom dashboard access</p>
             </div>
 
             <div className="p-5 space-y-4">
               {/* Basic info */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
-                  <label className="text-xs font-medium text-white/50 mb-1 block">Nom complet *</label>
+                  <label className="text-xs font-medium text-white/50 mb-1 block">Full name *</label>
                   <input
                     type="text"
                     value={form.name}
@@ -284,7 +284,7 @@ export default function TeamPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-white/50 mb-1 block">Mot de passe *</label>
+                  <label className="text-xs font-medium text-white/50 mb-1 block">Password *</label>
                   <input
                     type="password"
                     value={form.password}
@@ -294,7 +294,7 @@ export default function TeamPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-white/50 mb-1 block">Téléphone</label>
+                  <label className="text-xs font-medium text-white/50 mb-1 block">Phone</label>
                   <input
                     type="tel"
                     value={form.phone}
@@ -307,7 +307,7 @@ export default function TeamPage() {
 
               {/* Position selector */}
               <div>
-                <label className="text-xs font-medium text-white/50 mb-2 block">Poste *</label>
+                <label className="text-xs font-medium text-white/50 mb-2 block">Position *</label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {Object.entries(POSITION_LABELS).map(([key, val]) => (
                     <button
@@ -333,7 +333,7 @@ export default function TeamPage() {
               {/* Permissions grid */}
               <div>
                 <label className="text-xs font-medium text-white/50 mb-2 block">
-                  Pages autorisées ({form.team_permissions.length}/{ALL_PAGES.length})
+                  Authorized pages ({form.team_permissions.length}/{ALL_PAGES.length})
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {ALL_PAGES.map((page) => {
@@ -367,14 +367,14 @@ export default function TeamPage() {
                 onClick={() => setShowCreate(false)}
                 className="flex-1 py-2.5 rounded-xl bg-white/5 text-sm font-semibold text-white/50 hover:bg-white/10 transition"
               >
-                Annuler
+                Cancel
               </button>
               <button
                 onClick={createMember}
                 disabled={saving}
                 className="flex-1 btn-primary text-sm py-2.5 disabled:opacity-50"
               >
-                {saving ? "Création..." : "Créer le compte"}
+                {saving ? "Creating..." : "Create account"}
               </button>
             </div>
           </div>
@@ -411,7 +411,7 @@ function EditPermissions({
     <div className="mt-4 pt-4 border-t border-white/5 space-y-4">
       {/* Position selector */}
       <div>
-        <label className="text-xs font-medium text-white/50 mb-2 block">Poste</label>
+        <label className="text-xs font-medium text-white/50 mb-2 block">Position</label>
         <div className="flex flex-wrap gap-2">
           {Object.entries(POSITION_LABELS).map(([key, val]) => (
             <button
@@ -432,7 +432,7 @@ function EditPermissions({
       {/* Permissions */}
       <div>
         <label className="text-xs font-medium text-white/50 mb-2 block">
-          Pages autorisées ({permissions.length}/{ALL_PAGES.length})
+          Authorized pages ({permissions.length}/{ALL_PAGES.length})
         </label>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {ALL_PAGES.map((page) => {
@@ -460,7 +460,7 @@ function EditPermissions({
         disabled={saving}
         className="btn-primary text-xs px-6 py-2 disabled:opacity-50"
       >
-        {saving ? "Enregistrement..." : "Enregistrer les modifications"}
+        {saving ? "Saving..." : "Save changes"}
       </button>
     </div>
   );

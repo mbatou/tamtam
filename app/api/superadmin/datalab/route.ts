@@ -6,14 +6,14 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabaseAdmin = createServiceClient();
 
   const { data: currentUser } = await supabaseAdmin
     .from("users").select("role").eq("id", session.user.id).single();
   if (!currentUser || currentUser.role !== "superadmin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   const now = new Date();
@@ -233,14 +233,14 @@ export async function GET() {
   if (brandFunnel.registered > 0 && brandFunnel.launchedCampaign / brandFunnel.registered < 0.2) {
     suggestions.push({
       severity: "red",
-      text: `Seulement ${brandFunnel.launchedCampaign} marques sur ${brandFunnel.registered} ont lancé une campagne (${Math.round(brandFunnel.launchedCampaign / brandFunnel.registered * 100)}%). Les marques s'inscrivent mais ne convertissent pas. Améliorez l'onboarding.`,
+      text: `Only ${brandFunnel.launchedCampaign} out of ${brandFunnel.registered} brands launched a campaign (${Math.round(brandFunnel.launchedCampaign / brandFunnel.registered * 100)}%). Brands sign up but don't convert. Improve onboarding.`,
     });
   }
 
   if (brandFunnel.repeatCampaign > 0) {
     suggestions.push({
       severity: "green",
-      text: `${brandFunnel.repeatCampaign} marque(s) ont lancé 2+ campagnes. Signe fort de product-market fit. Contactez-les pour un témoignage.`,
+      text: `${brandFunnel.repeatCampaign} brand(s) launched 2+ campaigns. Strong product-market fit signal. Reach out for a testimonial.`,
     });
   }
 
@@ -249,14 +249,14 @@ export async function GET() {
   if (bestCity && worstCity && bestCity.city !== worstCity.city) {
     suggestions.push({
       severity: "yellow",
-      text: `${bestCity.city} a le meilleur taux de clics valides (${bestCity.validRate}%) vs ${worstCity.city} (${worstCity.validRate}%). Recrutez plus d'Échos à ${bestCity.city}.`,
+      text: `${bestCity.city} has the best valid click rate (${bestCity.validRate}%) vs ${worstCity.city} (${worstCity.validRate}%). Recruit more Echos in ${bestCity.city}.`,
     });
   }
 
   if (echoLifecycle.dormant > echoLifecycle.active) {
     suggestions.push({
       severity: "yellow",
-      text: `Plus d'Échos dormants (${echoLifecycle.dormant}) que d'actifs (${echoLifecycle.active}). Lancez un challenge ou une campagne pour réactiver.`,
+      text: `More dormant Echos (${echoLifecycle.dormant}) than active (${echoLifecycle.active}). Launch a challenge or campaign to reactivate.`,
     });
   }
 

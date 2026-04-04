@@ -28,7 +28,7 @@ async function requireSuperadmin() {
 
 export async function GET() {
   const auth = await requireSuperadmin();
-  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = auth.supabase;
 
@@ -47,7 +47,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const auth = await requireSuperadmin();
-  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = auth.supabase;
   const session = auth.session;
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
   if (action === "create") {
     const { name, email, password, phone, team_position, team_permissions } = body;
     if (!name || !email || !password || !team_position) {
-      return NextResponse.json({ error: "Nom, email, mot de passe et poste requis" }, { status: 400 });
+      return NextResponse.json({ error: "Name, email, password and role required" }, { status: 400 });
     }
 
     const permissions = team_permissions || POSITION_DEFAULTS[team_position] || [];
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
   // --- Update a team member's position/permissions ---
   if (action === "update") {
     const { user_id, team_position, team_permissions } = body;
-    if (!user_id) return NextResponse.json({ error: "user_id requis" }, { status: 400 });
+    if (!user_id) return NextResponse.json({ error: "user_id required" }, { status: 400 });
 
     const updates: Record<string, unknown> = {};
     if (team_position !== undefined) updates.team_position = team_position;
@@ -126,11 +126,11 @@ export async function POST(request: NextRequest) {
   // --- Remove a team member (revoke access, set back to echo) ---
   if (action === "remove") {
     const { user_id } = body;
-    if (!user_id) return NextResponse.json({ error: "user_id requis" }, { status: 400 });
+    if (!user_id) return NextResponse.json({ error: "user_id required" }, { status: 400 });
 
     // Don't allow removing yourself
     if (user_id === session.user.id) {
-      return NextResponse.json({ error: "Impossible de se retirer soi-même" }, { status: 400 });
+      return NextResponse.json({ error: "Cannot remove yourself" }, { status: 400 });
     }
 
     const { error } = await supabase
@@ -151,5 +151,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   }
 
-  return NextResponse.json({ error: "Action invalide" }, { status: 400 });
+  return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 }

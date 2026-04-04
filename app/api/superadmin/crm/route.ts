@@ -18,7 +18,7 @@ async function requireSuperadmin() {
 
 export async function GET(request: NextRequest) {
   const auth = await requireSuperadmin();
-  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = auth.supabase;
   const { searchParams } = new URL(request.url);
@@ -201,7 +201,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const auth = await requireSuperadmin();
-  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = auth.supabase;
   const session = auth.session;
@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
   if (action === "add_note") {
     const { contact_id, contact_type, content, note_type, followup_date } = body;
     if (!contact_id || !contact_type || !content) {
-      return NextResponse.json({ error: "Champs requis manquants" }, { status: 400 });
+      return NextResponse.json({ error: "Required fields missing" }, { status: 400 });
     }
 
     const { data, error } = await supabase.from("crm_notes").insert({
@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
   // --- Delete note ---
   if (action === "delete_note") {
     const { note_id } = body;
-    if (!note_id) return NextResponse.json({ error: "note_id requis" }, { status: 400 });
+    if (!note_id) return NextResponse.json({ error: "note_id required" }, { status: 400 });
 
     const { error } = await supabase.from("crm_notes").delete().eq("id", note_id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -241,7 +241,7 @@ export async function POST(request: NextRequest) {
   // --- Update brand stage ---
   if (action === "update_stage") {
     const { user_id, crm_stage } = body;
-    if (!user_id || !crm_stage) return NextResponse.json({ error: "Champs requis" }, { status: 400 });
+    if (!user_id || !crm_stage) return NextResponse.json({ error: "Required fields" }, { status: 400 });
 
     const { error } = await supabase.from("users").update({ crm_stage }).eq("id", user_id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -251,7 +251,7 @@ export async function POST(request: NextRequest) {
   // --- Update tags ---
   if (action === "update_tags") {
     const { contact_id, contact_type, tags } = body;
-    if (!contact_id || !contact_type) return NextResponse.json({ error: "Champs requis" }, { status: 400 });
+    if (!contact_id || !contact_type) return NextResponse.json({ error: "Required fields" }, { status: 400 });
 
     const table = contact_type === "brand" ? "users" : "brand_leads";
     const col = contact_type === "brand" ? "crm_tags" : "tags";
@@ -263,11 +263,11 @@ export async function POST(request: NextRequest) {
   // --- Update lead status ---
   if (action === "update_lead_status") {
     const { lead_id, status, notes } = body;
-    if (!lead_id) return NextResponse.json({ error: "lead_id requis" }, { status: 400 });
+    if (!lead_id) return NextResponse.json({ error: "lead_id required" }, { status: 400 });
 
     const parsed = updateLeadSchema.safeParse({ status, notes });
     if (!parsed.success) {
-      return NextResponse.json({ error: "Données invalides", details: parsed.error.flatten().fieldErrors }, { status: 400 });
+      return NextResponse.json({ error: "Invalid data", details: parsed.error.flatten().fieldErrors }, { status: 400 });
     }
 
     const updates: Record<string, unknown> = {};
@@ -288,7 +288,7 @@ export async function POST(request: NextRequest) {
   // --- Convert lead to brand ---
   if (action === "convert_lead") {
     const { lead_id, email: overrideEmail, promote_echo } = body;
-    if (!lead_id) return NextResponse.json({ error: "lead_id requis" }, { status: 400 });
+    if (!lead_id) return NextResponse.json({ error: "lead_id required" }, { status: 400 });
 
     const { data: lead } = await supabase
       .from("brand_leads")
@@ -296,9 +296,9 @@ export async function POST(request: NextRequest) {
       .eq("id", lead_id)
       .single();
 
-    if (!lead) return NextResponse.json({ error: "Lead introuvable" }, { status: 404 });
+    if (!lead) return NextResponse.json({ error: "Lead not found" }, { status: 404 });
     if (lead.status === "converted") {
-      return NextResponse.json({ error: "Ce lead est déjà converti." }, { status: 400 });
+      return NextResponse.json({ error: "This lead is already converted." }, { status: 400 });
     }
 
     const accountEmail = overrideEmail || lead.email;
@@ -363,7 +363,7 @@ export async function POST(request: NextRequest) {
         }
 
         return NextResponse.json({
-          error: `Cet email est déjà utilisé par un compte ${existingProfile.role === "echo" ? "Echo" : existingProfile.role}.`,
+          error: `This email is already used by a ${existingProfile.role === "echo" ? "Echo" : existingProfile.role} account.`,
           email_conflict: true,
           existing_role: existingProfile.role,
           can_promote: existingProfile.role === "echo",
@@ -383,11 +383,11 @@ export async function POST(request: NextRequest) {
     if (authError || !authUser.user) {
       if (authError?.message?.includes("already been registered") || authError?.message?.includes("already exists")) {
         return NextResponse.json({
-          error: "Cet email est déjà enregistré. Veuillez utiliser un email différent.",
+          error: "This email is already registered. Please use a different email.",
           email_conflict: true,
         }, { status: 409 });
       }
-      return NextResponse.json({ error: authError?.message || "Erreur création compte" }, { status: 500 });
+      return NextResponse.json({ error: authError?.message || "Account creation error" }, { status: 500 });
     }
 
     const { error: profileError } = await supabase.from("users").insert({
@@ -407,7 +407,7 @@ export async function POST(request: NextRequest) {
       .from("brand_leads")
       .update({
         status: "converted",
-        notes: `Compte créé le ${new Date().toLocaleDateString("fr-FR")} (${accountEmail}). ${lead.notes || ""}`.trim(),
+        notes: `Account created on ${new Date().toLocaleDateString("en-US")} (${accountEmail}). ${lead.notes || ""}`.trim(),
       })
       .eq("id", lead_id);
 
@@ -439,5 +439,5 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  return NextResponse.json({ error: "Action invalide" }, { status: 400 });
+  return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 }

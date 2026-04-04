@@ -113,7 +113,7 @@ export default function Footer() {
             <a href="https://wa.me/221762799393" target="_blank" rel="noopener noreferrer" className="text-xs text-green-400/40 hover:text-green-400/70 transition flex items-center gap-1">
               💬 WhatsApp
             </a>
-            <span className="text-xs text-white/15">Built by Lupandu</span>
+            <span className="text-xs text-white/15">Conçu par Lupandu</span>
           </div>
         </div>
       </footer>

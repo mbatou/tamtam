@@ -16,7 +16,7 @@ async function requireSuperadmin() {
 
 export async function GET(request: NextRequest) {
   const auth = await requireSuperadmin();
-  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = auth.supabase;
 
@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const auth = await requireSuperadmin();
-  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = auth.supabase;
   const session = auth.session;
@@ -128,11 +128,11 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (fetchError || !payment) {
-        return NextResponse.json({ error: "Paiement introuvable" }, { status: 404 });
+        return NextResponse.json({ error: "Payment not found" }, { status: 404 });
       }
 
       if (payment.status !== "pending") {
-        return NextResponse.json({ error: "Ce paiement a déjà été traité" }, { status: 400 });
+        return NextResponse.json({ error: "This payment has already been processed" }, { status: 400 });
       }
 
       // Mark payment as completed
@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
         userId: payment.user_id,
         amount: payment.amount,
         type: "wallet_recharge",
-        description: `Recharge validée par admin`,
+        description: `Top-up validated by admin`,
         sourceId: payment_id,
         sourceType: "payment",
         createdBy: session.user.id,
@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
   const { payout_id, action, reason } = body;
 
   if (!payout_id || !action) {
-    return NextResponse.json({ error: "Paramètres manquants" }, { status: 400 });
+    return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
   }
 
   if (action === "approve") {
@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
 
     const { error: updateErr } = await supabase
       .from("payouts")
-      .update({ status: "failed", failure_reason: reason || "Refusé par l'admin", completed_at: new Date().toISOString() })
+      .update({ status: "failed", failure_reason: reason || "Rejected by admin", completed_at: new Date().toISOString() })
       .eq("id", payout_id);
     if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
 
@@ -243,13 +243,13 @@ export async function POST(request: NextRequest) {
       userId: payout.echo_id,
       amount: payout.amount,
       type: "withdrawal_refund",
-      description: `Remboursement — retrait refusé par l'admin`,
+      description: `Refund — withdrawal rejected by admin`,
       sourceId: payout_id,
       sourceType: "payout",
       createdBy: session.user.id,
     });
   } else {
-    return NextResponse.json({ error: "Action invalide" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }
 
   try {

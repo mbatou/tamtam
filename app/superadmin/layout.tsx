@@ -25,36 +25,36 @@ interface NavItem {
 // Sidebar structure: 5 primary + 2 collapsible groups
 const primaryItems: NavItem[] = [
   { label: "Briefing", href: "/superadmin/briefing", emoji: "📋", permKey: "briefing" },
-  { label: "Vue d'ensemble", href: "/superadmin", emoji: "📊", exact: true, permKey: "overview" },
-  { label: "Modération", href: "/superadmin/campaigns", emoji: "✅", badgeKey: "campaigns", permKey: "campaigns" },
+  { label: "Overview", href: "/superadmin", emoji: "📊", exact: true, permKey: "overview" },
+  { label: "Moderation", href: "/superadmin/campaigns", emoji: "✅", badgeKey: "campaigns", permKey: "campaigns" },
   { label: "CRM", href: "/superadmin/crm", emoji: "👥", badgeKey: "leads", permKey: "leads" },
-  { label: "Finances", href: "/superadmin/finance", emoji: "💰", badgeKey: "payouts", permKey: "finance" },
+  { label: "Finance", href: "/superadmin/finance", emoji: "💰", badgeKey: "payouts", permKey: "finance" },
 ];
 
 const toolsGroup = {
-  label: "Outils",
+  label: "Tools",
   storageKey: "sidebar_tools_open",
   items: [
-    { label: "Utilisateurs", href: "/superadmin/users", emoji: "👤", permKey: "users" },
+    { label: "Users", href: "/superadmin/users", emoji: "👤", permKey: "users" },
     { label: "Gamification", href: "/superadmin/gamification", emoji: "🎮", permKey: "gamification" },
-    { label: "Anti-Fraude", href: "/superadmin/fraud", emoji: "🛡️", badgeKey: "fraud", permKey: "fraud" },
+    { label: "Anti-Fraud", href: "/superadmin/fraud", emoji: "🛡️", badgeKey: "fraud", permKey: "fraud" },
     { label: "Investigation", href: "/superadmin/investigate", emoji: "🔍", superadminOnly: true },
     { label: "Challenges", href: "/superadmin/challenges", emoji: "🥚", permKey: "challenges" },
-    { label: "Ambassadeurs", href: "/superadmin/ambassadors", emoji: "🤝", permKey: "ambassadors" },
+    { label: "Ambassadors", href: "/superadmin/ambassadors", emoji: "🤝", permKey: "ambassadors" },
     { label: "Roadmap", href: "/superadmin/roadmap", emoji: "🗺️", permKey: "roadmap" },
-    { label: "Réconciliation", href: "/superadmin/reconciliation", emoji: "⚖️", superadminOnly: true },
+    { label: "Reconciliation", href: "/superadmin/reconciliation", emoji: "⚖️", superadminOnly: true },
     { label: "Data Lab", href: "/superadmin/datalab", emoji: "🔬", superadminOnly: true },
   ] as NavItem[],
 };
 
 const systemGroup = {
-  label: "Système",
+  label: "System",
   storageKey: "sidebar_system_open",
   items: [
-    { label: "Santé", href: "/superadmin/health", emoji: "💚", permKey: "health" },
-    { label: "Équipe", href: "/superadmin/team", emoji: "👥", superadminOnly: true },
+    { label: "Health", href: "/superadmin/health", emoji: "💚", permKey: "health" },
+    { label: "Team", href: "/superadmin/team", emoji: "👥", superadminOnly: true },
     { label: "Support", href: "/superadmin/support", emoji: "💬", permKey: "support" },
-    { label: "Paramètres", href: "/superadmin/settings", emoji: "⚙️", superadminOnly: true },
+    { label: "Settings", href: "/superadmin/settings", emoji: "⚙️", superadminOnly: true },
   ] as NavItem[],
 };
 
@@ -292,7 +292,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
           onClick={() => setCollapsed(!collapsed)}
           className="p-4 border-t border-white/5 text-white/30 hover:text-white/50 text-xs text-center"
         >
-          {collapsed ? "→" : "← Réduire"}
+          {collapsed ? "→" : "← Collapse"}
         </button>
       </aside>
 
@@ -418,7 +418,7 @@ function DashboardSwitcher() {
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
         </svg>
-        Changer de vue
+        Switch view
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${open ? "rotate-180" : ""}`}>
           <polyline points="6 9 12 15 18 9" />
         </svg>
@@ -427,7 +427,7 @@ function DashboardSwitcher() {
       {open && (
         <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-white/10 bg-[#1a1a2e] shadow-2xl z-50 overflow-hidden">
           <div className="px-3 py-2 border-b border-white/5">
-            <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider">Changer de dashboard</p>
+            <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider">Switch dashboard</p>
           </div>
           {dashboards.map((d) => (
             <Link

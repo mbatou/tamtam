@@ -299,7 +299,7 @@ export default function HealthPage() {
                   <div key={t.name} className="text-center">
                     <p className="text-xs text-white/40 font-semibold mb-1 truncate">{t.name}</p>
                     <p className={`text-xl font-bold ${t.count === -1 ? "text-red-400" : ""}`}>
-                      {t.count === -1 ? "ERR" : t.count.toLocaleString("fr-FR")}
+                      {t.count === -1 ? "ERR" : t.count.toLocaleString("en-US")}
                     </p>
                   </div>
                 ))}
@@ -387,7 +387,7 @@ export default function HealthPage() {
                         return (
                           <tr key={event.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
                             <td className="p-3 text-xs text-white/40 whitespace-nowrap">
-                              {new Date(event.created_at).toLocaleString("fr-FR", {
+                              {new Date(event.created_at).toLocaleString("en-US", {
                                 day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
                               })}
                             </td>

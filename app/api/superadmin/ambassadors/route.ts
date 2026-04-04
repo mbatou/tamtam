@@ -16,7 +16,7 @@ async function requireSuperadmin() {
 // GET — list all ambassadors with stats
 export async function GET(request: NextRequest) {
   const auth = await requireSuperadmin();
-  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = auth.supabase;
   const ambassadorId = request.nextUrl.searchParams.get("id");
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       .eq("id", ambassadorId)
       .single();
 
-    if (!ambassador) return NextResponse.json({ error: "Ambassadeur introuvable" }, { status: 404 });
+    if (!ambassador) return NextResponse.json({ error: "Ambassador not found" }, { status: 404 });
 
     const { data: referrals } = await supabase
       .from("ambassador_referrals")
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
 // POST — create ambassador or mark commissions as paid
 export async function POST(request: NextRequest) {
   const auth = await requireSuperadmin();
-  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = auth.supabase;
   const body = await request.json();
@@ -93,10 +93,10 @@ export async function POST(request: NextRequest) {
       .eq("id", body.ambassador_id)
       .single();
 
-    if (!ambassador) return NextResponse.json({ error: "Ambassadeur introuvable" }, { status: 404 });
+    if (!ambassador) return NextResponse.json({ error: "Ambassador not found" }, { status: 404 });
 
     const pendingAmount = (ambassador.total_earned || 0) - (ambassador.total_paid || 0);
-    if (pendingAmount <= 0) return NextResponse.json({ error: "Aucune commission en attente" }, { status: 400 });
+    if (pendingAmount <= 0) return NextResponse.json({ error: "No pending commission" }, { status: 400 });
 
     // Mark all earned commissions as paid
     await supabase
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
       .eq("id", body.ambassador_id)
       .single();
 
-    if (!amb) return NextResponse.json({ error: "Ambassadeur introuvable" }, { status: 404 });
+    if (!amb) return NextResponse.json({ error: "Ambassador not found" }, { status: 404 });
 
     const newStatus = amb.status === "active" ? "inactive" : "active";
     await supabase.from("ambassadors").update({ status: newStatus, updated_at: new Date().toISOString() }).eq("id", body.ambassador_id);
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
   // Create ambassador
   const { name, email, phone, referral_code, commission_rate } = body;
   if (!name || !email || !referral_code) {
-    return NextResponse.json({ error: "Nom, email et code de parrainage requis" }, { status: 400 });
+    return NextResponse.json({ error: "Name, email and referral code required" }, { status: 400 });
   }
 
   // Check uniqueness
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
     .limit(1);
 
   if (existing && existing.length > 0) {
-    return NextResponse.json({ error: "Email ou code de parrainage déjà utilisé" }, { status: 409 });
+    return NextResponse.json({ error: "Email or referral code already used" }, { status: 409 });
   }
 
   const { data: ambassador, error: createErr } = await supabase

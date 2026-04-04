@@ -6,20 +6,20 @@ import crypto from "crypto";
 export async function POST(req: Request) {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
 
   // Verify superadmin role
   const { data: adminCheck } = await supabase.from("users").select("role").eq("id", session.user.id).single();
   if (!adminCheck || adminCheck.role !== "superadmin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   const { userId, reason } = await req.json();
 
   if (!userId || !reason) {
-    return NextResponse.json({ error: "userId et reason requis" }, { status: 400 });
+    return NextResponse.json({ error: "userId and reason required" }, { status: 400 });
   }
 
   // Get user data
@@ -29,8 +29,8 @@ export async function POST(req: Request) {
     .eq("id", userId)
     .single();
 
-  if (!user) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-  if (user.deleted_at) return NextResponse.json({ error: "Compte déjà supprimé" }, { status: 400 });
+  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+  if (user.deleted_at) return NextResponse.json({ error: "Account already deleted" }, { status: 400 });
 
   // Cancel active campaigns if brand
   if (user.role === "batteur" || user.role === "brand") {
@@ -48,12 +48,12 @@ export async function POST(req: Request) {
   await supabase
     .from("users")
     .update({
-      name: "Compte supprimé",
+      name: "Deleted account",
       email: `deleted_${hashedEmail}@deleted.tamma.me`,
       original_email: userEmail,
       phone: null,
       city: null,
-      company_name: user.company_name ? "Entreprise supprimée" : null,
+      company_name: user.company_name ? "Deleted company" : null,
       balance: 0,
       deleted_at: new Date().toISOString(),
       deleted_by: session.user.id,
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
     userId,
     amount: 0,
     type: "account_deletion",
-    description: `Compte supprimé par admin: ${reason}`,
+    description: `Account deleted by admin: ${reason}`,
     sourceType: "system",
     createdBy: session.user.id,
   });

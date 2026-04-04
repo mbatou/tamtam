@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   const supabase = createServiceClient();
   const { challengeId } = await req.json();
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     .eq("echo_id", session.user.id)
     .single();
 
-  if (!participant) return NextResponse.json({ error: "Not a participant" }, { status: 400 });
+  if (!participant) return NextResponse.json({ error: "Vous n'êtes pas inscrit à ce défi" }, { status: 400 });
 
   // Get challenge
   const { data: challenge } = await supabase
@@ -29,12 +29,12 @@ export async function POST(req: Request) {
     .eq("id", challengeId)
     .single();
 
-  if (!challenge) return NextResponse.json({ error: "Challenge not found" }, { status: 404 });
+  if (!challenge) return NextResponse.json({ error: "Défi non trouvé" }, { status: 404 });
 
   // Check if echo has enough clicks for another egg
   const clicksForNextEgg = (participant.eggs_earned + 1) * challenge.clicks_per_reward;
   if (participant.valid_clicks < clicksForNextEgg) {
-    return NextResponse.json({ error: "Not enough clicks" }, { status: 400 });
+    return NextResponse.json({ error: "Pas assez de clics" }, { status: 400 });
   }
 
   // Pick a random reward from remaining
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     .gt("remaining_quantity", 0);
 
   if (!availableRewards || availableRewards.length === 0) {
-    return NextResponse.json({ error: "No eggs remaining" }, { status: 400 });
+    return NextResponse.json({ error: "Aucun œuf disponible" }, { status: 400 });
   }
 
   // Weighted random: more bronze eggs = higher chance of getting bronze

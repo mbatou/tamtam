@@ -157,7 +157,7 @@ function CampaignModerationPageContent() {
   async function moderateCampaign(id: string, action: string, reason?: string) {
     if (action === "stop") {
       const confirmed = window.confirm(
-        "Arrêter cette campagne ? Le budget restant sera remboursé à la marque."
+        "Stop this campaign? The remaining budget will be refunded to the brand."
       );
       if (!confirmed) return;
     }
@@ -171,11 +171,11 @@ function CampaignModerationPageContent() {
       });
       const data = await res.json();
       if (res.ok) {
-        const toastMsg = action === "approve" ? "Campagne approuvée et en ligne" :
-          action === "reject" ? "Campagne rejetée" :
-          action === "pause" ? "Campagne mise en pause" :
-          action === "resume" ? "Campagne réactivée" :
-          action === "stop" ? `Campagne arrêtée.${data.refunded > 0 ? ` ${data.refunded.toLocaleString("fr-FR")} FCFA remboursés.` : ""}` :
+        const toastMsg = action === "approve" ? "Campaign approved and live" :
+          action === "reject" ? "Campaign rejected" :
+          action === "pause" ? "Campaign paused" :
+          action === "resume" ? "Campaign resumed" :
+          action === "stop" ? `Campaign stopped.${data.refunded > 0 ? ` ${data.refunded.toLocaleString()} FCFA refunded.` : ""}` :
           t("common.success");
         showToast(toastMsg, action === "approve" || action === "resume" ? "success" : "info");
         setRejectReason("");
@@ -287,14 +287,14 @@ function CampaignModerationPageContent() {
               <div className="absolute right-0 mt-2 glass-card rounded-xl border border-white/10 w-64 z-50 overflow-hidden">
                 <button
                   onClick={() => {
-                    setNewCamp({ batteur_id: "", title: "Recrutement Échos", description: "Campagne pour recruter de nouveaux Échos sur Tamtam.", destination_url: "https://tamma.me/register", cpc: "15", budget: "", objective: "traffic" });
+                    setNewCamp({ batteur_id: "", title: "Echo Recruitment", description: "Campaign to recruit new Echos on Tamtam.", destination_url: "https://tamma.me/register", cpc: "15", budget: "", objective: "traffic" });
                     setShowCreate(true);
                     setShowTemplateMenu(false);
                   }}
                   className="w-full text-left px-4 py-3 hover:bg-white/5 transition"
                 >
-                  <div className="text-sm font-bold">🤝 Recrutement Échos</div>
-                  <div className="text-[10px] text-white/40">Campagne pour recruter de nouveaux Échos</div>
+                  <div className="text-sm font-bold">🤝 Echo Recruitment</div>
+                  <div className="text-[10px] text-white/40">Campaign to recruit new Echos</div>
                 </button>
                 <button
                   onClick={() => {
@@ -304,8 +304,8 @@ function CampaignModerationPageContent() {
                   }}
                   className="w-full text-left px-4 py-3 hover:bg-white/5 transition border-t border-white/5"
                 >
-                  <div className="text-sm font-bold">📢 Promo Marque</div>
-                  <div className="text-[10px] text-white/40">Campagne type pour une marque</div>
+                  <div className="text-sm font-bold">📢 Brand Promo</div>
+                  <div className="text-[10px] text-white/40">Standard campaign for a brand</div>
                 </button>
                 <button
                   onClick={() => {
@@ -315,8 +315,8 @@ function CampaignModerationPageContent() {
                   }}
                   className="w-full text-left px-4 py-3 hover:bg-white/5 transition border-t border-white/5"
                 >
-                  <div className="text-sm font-bold">✏️ Campagne libre</div>
-                  <div className="text-[10px] text-white/40">Commencer de zéro</div>
+                  <div className="text-sm font-bold">✏️ Custom Campaign</div>
+                  <div className="text-[10px] text-white/40">Start from scratch</div>
                 </button>
               </div>
             </>
@@ -379,7 +379,7 @@ function CampaignModerationPageContent() {
                         ? "bg-blue-500/20 text-blue-300"
                         : "bg-teal-500/20 text-teal-300"
                     }`}>
-                      {(campaign.objective || "traffic") === "awareness" ? "Notoriete" : "Trafic"}
+                      {(campaign.objective || "traffic") === "awareness" ? "Awareness" : "Traffic"}
                     </span>
                   </div>
                   <div className="text-xs text-white/30">{campaign.users ? getBrandDisplayName({ ...campaign.users, role: "batteur" }) : "—"}</div>
@@ -436,7 +436,7 @@ function CampaignModerationPageContent() {
                   <span className="cursor-pointer hover:underline">{campaign.total_clicks}</span>
                 </td>
                 <td className="py-3 text-xs text-white/40 hidden lg:table-cell">
-                  {new Date(campaign.created_at).toLocaleDateString("fr-FR")}
+                  {new Date(campaign.created_at).toLocaleDateString("en-US")}
                 </td>
               </tr>
             ))}
@@ -454,15 +454,15 @@ function CampaignModerationPageContent() {
             <div className="flex gap-1 bg-white/5 rounded-lg p-1">
               <button onClick={() => setDetailTab("info")}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition ${detailTab === "info" ? "bg-primary text-white" : "text-white/40 hover:text-white/60"}`}>
-                Infos
+                Info
               </button>
               <button onClick={() => setDetailTab("echos")}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition ${detailTab === "echos" ? "bg-primary text-white" : "text-white/40 hover:text-white/60"}`}>
-                Échos ({echoData?.engagedCount ?? selected.echo_count})
+                Echos ({echoData?.engagedCount ?? selected.echo_count})
               </button>
               <button onClick={() => setDetailTab("clicks")}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition ${detailTab === "clicks" ? "bg-primary text-white" : "text-white/40 hover:text-white/60"}`}>
-                Clics récents
+                Recent Clicks
               </button>
             </div>
 
@@ -479,9 +479,9 @@ function CampaignModerationPageContent() {
                     <Badge status={selected.moderation_status || "pending"} />
                   </div>
                   <div className="col-span-2">
-                    <span className="text-xs text-white/40 block">Objectif</span>
+                    <span className="text-xs text-white/40 block">Objective</span>
                     <span className="text-white font-medium">
-                      {(selected.objective || "traffic") === "awareness" ? "Notoriete (visuel obligatoire)" : "Trafic (clics)"}
+                      {(selected.objective || "traffic") === "awareness" ? "Awareness (visual required)" : "Traffic (clicks)"}
                     </span>
                   </div>
                   <div>
@@ -539,7 +539,7 @@ function CampaignModerationPageContent() {
                         disabled={moderating}
                         className={`flex-1 py-2.5 rounded-xl bg-accent/10 border border-accent/30 text-accent font-bold text-sm ${moderating ? "opacity-50 cursor-not-allowed" : ""}`}
                       >
-                        {moderating ? "Validation..." : t("superadmin.campaigns.approvedTab")}
+                        {moderating ? "Approving..." : t("superadmin.campaigns.approvedTab")}
                       </button>
                       <button
                         onClick={() => {
@@ -549,7 +549,7 @@ function CampaignModerationPageContent() {
                         disabled={moderating}
                         className={`flex-1 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-bold text-sm ${moderating ? "opacity-50 cursor-not-allowed" : ""}`}
                       >
-                        {moderating ? "Rejet en cours..." : t("superadmin.campaigns.rejectedTab")}
+                        {moderating ? "Rejecting..." : t("superadmin.campaigns.rejectedTab")}
                       </button>
                     </div>
                   </div>
@@ -564,7 +564,7 @@ function CampaignModerationPageContent() {
                       if (!canAffordClick) {
                         return (
                           <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400 font-bold animate-pulse">
-                            {remaining.toLocaleString("fr-FR")} FCFA restants — inférieur au CPC ({selected.cpc} FCFA). La campagne ne peut plus générer de clics.
+                            {remaining.toLocaleString()} FCFA remaining — below CPC ({selected.cpc} FCFA). The campaign can no longer generate clicks.
                           </div>
                         );
                       }
@@ -584,14 +584,14 @@ function CampaignModerationPageContent() {
                         disabled={moderating}
                         className="flex-1 py-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 font-bold text-sm disabled:opacity-50"
                       >
-                        Mettre en pause
+                        Pause
                       </button>
                       <button
                         onClick={() => moderateCampaign(selected.id, "stop")}
                         disabled={moderating}
                         className="flex-1 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-bold text-sm disabled:opacity-50"
                       >
-                        Arrêter + Rembourser
+                        Stop + Refund
                       </button>
                     </div>
                   </div>
@@ -605,14 +605,14 @@ function CampaignModerationPageContent() {
                         disabled={moderating}
                         className="flex-1 py-2.5 rounded-xl bg-accent/10 border border-accent/30 text-accent font-bold text-sm disabled:opacity-50"
                       >
-                        Reprendre
+                        Resume
                       </button>
                       <button
                         onClick={() => moderateCampaign(selected.id, "stop")}
                         disabled={moderating}
                         className="flex-1 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-bold text-sm disabled:opacity-50"
                       >
-                        Arrêter + Rembourser
+                        Stop + Refund
                       </button>
                     </div>
                   </div>
@@ -620,7 +620,7 @@ function CampaignModerationPageContent() {
 
                 {selected.status === "completed" && (
                   <div className="pt-2 border-t border-white/5">
-                    <span className="text-gray-400 text-xs">Campagne terminée</span>
+                    <span className="text-gray-400 text-xs">Campaign completed</span>
                   </div>
                 )}
 
@@ -648,7 +648,7 @@ function CampaignModerationPageContent() {
               </>
             )}
 
-            {/* Tab: Échos */}
+            {/* Tab: Echos */}
             {detailTab === "echos" && (
               <div>
                 {loadingEchos ? (
@@ -660,9 +660,9 @@ function CampaignModerationPageContent() {
                     {/* Participation rate */}
                     <div className="bg-white/5 rounded-lg p-4 mb-4">
                       <div className="flex items-center justify-between">
-                        <span className="text-white/40 text-sm">Participation</span>
+                        <span className="text-white/40 text-sm">Participation Rate</span>
                         <span className="text-white font-bold text-sm">
-                          {echoData.engagedCount} / {echoData.totalEchos} Échos
+                          {echoData.engagedCount} / {echoData.totalEchos} Echos
                           <span className="text-white/40 text-xs ml-2">
                             ({echoData.participationRate}%)
                           </span>
@@ -676,7 +676,7 @@ function CampaignModerationPageContent() {
                       </div>
                     </div>
 
-                    {/* Écho leaderboard */}
+                    {/* Echo leaderboard */}
                     <div className="space-y-1">
                       {echoData.echos.map((echo, i) => (
                         <div key={echo.id}
@@ -690,20 +690,20 @@ function CampaignModerationPageContent() {
                             <div>
                               <div className="text-white text-sm font-medium">{echo.name}</div>
                               <div className="text-white/30 text-xs">
-                                {echo.city || "—"} · rejoint {new Date(echo.joinedAt).toLocaleDateString("fr-FR")}
+                                {echo.city || "—"} · joined {new Date(echo.joinedAt).toLocaleDateString("en-US")}
                               </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-6 text-sm">
                             <div className="text-right">
                               <div className="text-white font-medium">{echo.validClicks}</div>
-                              <div className="text-white/30 text-xs">clics valides</div>
+                              <div className="text-white/30 text-xs">valid clicks</div>
                             </div>
                             <div className="text-right">
                               <div className="text-accent font-bold">
-                                {Math.round(echo.earnings).toLocaleString("fr-FR")} F
+                                {Math.round(echo.earnings).toLocaleString()} F
                               </div>
-                              <div className="text-white/30 text-xs">gagné</div>
+                              <div className="text-white/30 text-xs">earned</div>
                             </div>
                             {echo.phone && (
                               <a href={`https://wa.me/${echo.phone.replace(/[^0-9]/g, "")}`}
@@ -720,7 +720,7 @@ function CampaignModerationPageContent() {
 
                       {echoData.echos.length === 0 && (
                         <div className="text-center py-8 text-white/30 text-sm">
-                          Aucun Écho n&apos;a encore rejoint cette campagne
+                          No Echo has joined this campaign yet
                         </div>
                       )}
                     </div>
@@ -729,7 +729,7 @@ function CampaignModerationPageContent() {
               </div>
             )}
 
-            {/* Tab: Clics récents */}
+            {/* Tab: Recent Clicks */}
             {detailTab === "clicks" && (
               <div>
                 {loadingEchos ? (
@@ -739,17 +739,17 @@ function CampaignModerationPageContent() {
                 ) : echoData ? (
                   <div className="space-y-1">
                     <div className="grid grid-cols-5 gap-2 text-xs text-white/30 uppercase tracking-wider px-3 py-2">
-                      <span>Heure</span>
-                      <span>Écho</span>
-                      <span>Ville</span>
+                      <span>Time</span>
+                      <span>Echo</span>
+                      <span>City</span>
                       <span>IP</span>
-                      <span>Statut</span>
+                      <span>Status</span>
                     </div>
                     {echoData.recentClicks.map((click) => (
                       <div key={click.id}
                         className="grid grid-cols-5 gap-2 text-sm px-3 py-2 rounded-lg hover:bg-white/5 transition">
                         <span className="text-white/40">
-                          {new Date(click.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                          {new Date(click.created_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                         </span>
                         <span className="text-white truncate">
                           {click.tracked_links?.users?.name || "—"}
@@ -761,14 +761,14 @@ function CampaignModerationPageContent() {
                           {click.ip_address ? `${click.ip_address.substring(0, 12)}...` : "—"}
                         </span>
                         <span className={click.is_valid ? "text-green-400" : "text-red-400"}>
-                          {click.is_valid ? "✓ Valide" : "✕ Filtré"}
+                          {click.is_valid ? "✓ Valid" : "✕ Filtered"}
                         </span>
                       </div>
                     ))}
 
                     {echoData.recentClicks.length === 0 && (
                       <div className="text-center py-8 text-white/30 text-sm">
-                        Aucun clic enregistré
+                        No clicks recorded
                       </div>
                     )}
                   </div>
@@ -808,11 +808,11 @@ function CampaignModerationPageContent() {
 
           {/* Objective picker */}
           <div>
-            <label className="text-xs text-white/40 block mb-1">Objectif</label>
+            <label className="text-xs text-white/40 block mb-1">Objective</label>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { id: "traffic", label: "Trafic", desc: "Clics vers un lien" },
-                { id: "awareness", label: "Notoriete", desc: "Visuel + lien obligatoire" },
+                { id: "traffic", label: "Traffic", desc: "Clicks to a link" },
+                { id: "awareness", label: "Awareness", desc: "Visual + link required" },
               ].map((obj) => (
                 <button
                   key={obj.id}

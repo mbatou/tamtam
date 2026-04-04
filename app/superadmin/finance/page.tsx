@@ -225,19 +225,19 @@ function FinancePageContent() {
 
         return (
           <div className="glass-card p-6 mb-8">
-            <h3 className="text-sm font-bold mb-4">{t("superadmin.finance.netPosition") || "Position nette"}</h3>
+            <h3 className="text-sm font-bold mb-4">{t("superadmin.finance.netPosition") || "Net Position"}</h3>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <div className="text-xs text-white/40 mb-1">{t("superadmin.finance.commissionEarned") || "Commission gagnée"}</div>
+                <div className="text-xs text-white/40 mb-1">{t("superadmin.finance.commissionEarned") || "Commission Earned"}</div>
                 <div className="text-xl font-bold text-emerald-400">{formatFCFA(data.platformCut)}</div>
               </div>
               <div>
-                <div className="text-xs text-white/40 mb-1">{t("superadmin.finance.fixedCosts") || "Coûts fixes estimés"}</div>
+                <div className="text-xs text-white/40 mb-1">{t("superadmin.finance.fixedCosts") || "Estimated Fixed Costs"}</div>
                 <div className="text-xl font-bold text-red-400">{formatFCFA(proRatedCosts)}</div>
-                <div className="text-[10px] text-white/20">~{formatFCFA(MONTHLY_FIXED_COSTS)}/mois</div>
+                <div className="text-[10px] text-white/20">~{formatFCFA(MONTHLY_FIXED_COSTS)}/mo</div>
               </div>
               <div>
-                <div className="text-xs text-white/40 mb-1">{t("superadmin.finance.netPositionLabel") || "Position nette"}</div>
+                <div className="text-xs text-white/40 mb-1">{t("superadmin.finance.netPositionLabel") || "Net Position"}</div>
                 <div className={`text-xl font-bold ${netPosition >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                   {netPosition >= 0 ? "+" : ""}{formatFCFA(netPosition)}
                 </div>
@@ -250,13 +250,13 @@ function FinancePageContent() {
       {/* Daily Revenue Trend */}
       {data.dailyRevenue && data.dailyRevenue.length > 0 && (
         <div className="glass-card p-6 mb-8">
-          <h3 className="text-sm font-bold mb-4">{t("superadmin.finance.dailyRevenue") || "Revenus quotidiens"}</h3>
+          <h3 className="text-sm font-bold mb-4">{t("superadmin.finance.dailyRevenue") || "Daily Revenue"}</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={data.dailyRevenue}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
               <XAxis
                 dataKey="date"
-                tickFormatter={(v) => new Date(v).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                tickFormatter={(v) => new Date(v).toLocaleDateString("en-US", { day: "numeric", month: "short" })}
                 tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
@@ -264,7 +264,7 @@ function FinancePageContent() {
               <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip
                 contentStyle={{ background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
-                labelFormatter={(v) => new Date(String(v)).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}
+                labelFormatter={(v) => new Date(String(v)).toLocaleDateString("en-US", { day: "numeric", month: "long" })}
                 formatter={(value) => [formatFCFA(Number(value)), "Commission"]}
               />
               <Bar dataKey="revenue" name="Commission" fill="#D35400" radius={[4, 4, 0, 0]} />
@@ -350,7 +350,7 @@ function FinancePageContent() {
                   <div className="text-right">
                     <div className="font-bold text-lg">{formatFCFA(payout.amount)}</div>
                     <div className="text-xs text-white/30">
-                      {new Date(payout.created_at).toLocaleDateString("fr-FR")}
+                      {new Date(payout.created_at).toLocaleDateString("en-US")}
                     </div>
                   </div>
                   <div className="flex gap-2 ml-4">
@@ -408,7 +408,7 @@ function FinancePageContent() {
               {paginate(completedPayouts, historyPage, PAGE_SIZE).map((payout) => (
                 <tr key={payout.id} className="border-b border-white/5">
                   <td className="py-3 text-xs text-white/50">
-                    {new Date(payout.created_at).toLocaleDateString("fr-FR")}
+                    {new Date(payout.created_at).toLocaleDateString("en-US")}
                   </td>
                   <td className="py-3">
                     <div className="font-semibold text-sm">{payout.users?.name || "—"}</div>
@@ -460,7 +460,7 @@ function FinancePageContent() {
                   <div className="text-right">
                     <div className="font-bold text-lg">{formatFCFA(payment.amount)}</div>
                     <div className="text-xs text-white/30">
-                      {new Date(payment.created_at).toLocaleDateString("fr-FR")}
+                      {new Date(payment.created_at).toLocaleDateString("en-US")}
                     </div>
                   </div>
                   <div className="flex gap-2 ml-4">
@@ -523,7 +523,7 @@ function FinancePageContent() {
               {paginate(processedRecharges, paymentsPage, PAGE_SIZE).map((payment) => (
                 <tr key={payment.id} className="border-b border-white/5">
                   <td className="py-3 text-xs text-white/50">
-                    {new Date(payment.created_at).toLocaleDateString("fr-FR")}
+                    {new Date(payment.created_at).toLocaleDateString("en-US")}
                   </td>
                   <td className="py-3 font-semibold text-sm">{payment.users ? getBrandDisplayName(payment.users) : "—"}</td>
                   <td className="py-3 font-bold">{formatFCFA(payment.amount)}</td>
@@ -579,7 +579,7 @@ function FinancePageContent() {
             </div>
 
             <div className="text-xs text-white/30">
-              {t("superadmin.finance.requestedOn")} {new Date(selectedPayout.created_at).toLocaleDateString("fr-FR", {
+              {t("superadmin.finance.requestedOn")} {new Date(selectedPayout.created_at).toLocaleString("en-US", {
                 weekday: "long",
                 day: "numeric",
                 month: "long",

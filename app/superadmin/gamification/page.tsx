@@ -198,7 +198,7 @@ export default function SuperadminGamification() {
           icon="🏆"
           label={t("gamification.badgesUnlocked")}
           value={totalBadgesUnlocked.toString()}
-          sub={`${totalEchos} échos au total`}
+          sub={`${totalEchos} total echos`}
         />
         <OverviewCard
           icon="💰"
@@ -210,9 +210,9 @@ export default function SuperadminGamification() {
 
       {/* Section 2: Activity Feed */}
       <div className="glass-card p-5">
-        <h2 className="text-sm font-bold mb-4">📋 Activité récente</h2>
+        <h2 className="text-sm font-bold mb-4">📋 Recent Activity</h2>
         {recentActivity.length === 0 ? (
-          <p className="text-xs text-white/40 text-center py-6">Aucune activité récente</p>
+          <p className="text-xs text-white/40 text-center py-6">No recent activity</p>
         ) : (
           <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
             {recentActivity.map((item, i) => (
@@ -234,11 +234,11 @@ export default function SuperadminGamification() {
                       <span className="text-white/80">{item.echoName}</span>
                       <span className="text-white/30 ml-1.5">—</span>
                       <span className="text-white/50 ml-1.5">
-                        {item.type === "achievement" ? "Badge débloqué" : "Bonus série"}
+                        {item.type === "achievement" ? "Badge unlocked" : "Streak bonus"}
                       </span>
                     </p>
                     <p className="text-[10px] text-white/30 truncate">
-                      {new Date(item.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      {new Date(item.date).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </p>
                   </div>
                 </div>
@@ -251,9 +251,9 @@ export default function SuperadminGamification() {
         )}
       </div>
 
-      {/* Section 3: Top Échos Leaderboard */}
+      {/* Section 3: Top Echos Leaderboard */}
       <div className="glass-card p-5">
-        <h2 className="text-sm font-bold mb-4">🏅 Top Échos</h2>
+        <h2 className="text-sm font-bold mb-4">🏅 Top Echos</h2>
         <TabBar
           tabs={[
             { key: "week", label: t("gamification.thisWeek") },

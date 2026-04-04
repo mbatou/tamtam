@@ -79,7 +79,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function formatDate(d: string) {
-  return new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  return new Date(d).toLocaleDateString("en-US", { day: "numeric", month: "short" });
 }
 
 export default function ChallengesPage() {
@@ -181,8 +181,8 @@ export default function ChallengesPage() {
   }
 
   function prefillEasterEgg() {
-    setName("La Chasse aux Oeufs de Tamtam 🥚🇸🇳");
-    setDescription("Partage, gagne 10 clics, et craque ton oeuf de Paques! Fete de l'Independance du Senegal.");
+    setName("Tamtam Egg Hunt 🥚🇸🇳");
+    setDescription("Share, earn 10 clicks, and crack your Easter egg! Senegal Independence Day celebration.");
     setTheme("easter_egg");
     setStartDate("2026-04-01T00:00");
     setEndDate("2026-04-04T23:59");
@@ -252,7 +252,7 @@ export default function ChallengesPage() {
     return (
       <div className="p-6 max-w-6xl mx-auto">
         <button onClick={() => setDetail(null)} className="text-white/40 text-sm mb-4 hover:text-white/60">
-          &larr; Retour aux challenges
+          &larr; Back to Challenges
         </button>
 
         <div className="flex items-center justify-between mb-6">
@@ -263,12 +263,12 @@ export default function ChallengesPage() {
           <div className="flex gap-2">
             {detail.status === "draft" && (
               <button onClick={activate} className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition">
-                🚀 Activer le challenge
+                🚀 Activate Challenge
               </button>
             )}
             {detail.status === "active" && (
               <button onClick={deactivate} className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition">
-                Desactiver
+                Deactivate
               </button>
             )}
             <StatusBadge status={detail.status} />
@@ -279,11 +279,11 @@ export default function ChallengesPage() {
         <div className="grid grid-cols-4 gap-4 mb-6">
           <div className="glass-card p-4 text-center">
             <div className="text-2xl font-black text-white">{eggsRemaining} / {totalEggs}</div>
-            <div className="text-xs text-white/40 mt-1">Oeufs restants</div>
+            <div className="text-xs text-white/40 mt-1">Eggs Remaining</div>
           </div>
           <div className="glass-card p-4 text-center">
-            <div className="text-2xl font-black text-white">{detail.budget_spent.toLocaleString("fr-FR")} / {detail.total_budget.toLocaleString("fr-FR")} F</div>
-            <div className="text-xs text-white/40 mt-1">Budget depense</div>
+            <div className="text-2xl font-black text-white">{detail.budget_spent.toLocaleString("en-US")} / {detail.total_budget.toLocaleString("en-US")} F</div>
+            <div className="text-xs text-white/40 mt-1">Budget Spent</div>
           </div>
           <div className="glass-card p-4 text-center">
             <div className="text-2xl font-black text-white">{detail.participants.length}</div>
@@ -291,7 +291,7 @@ export default function ChallengesPage() {
           </div>
           <div className="glass-card p-4 text-center">
             <div className="text-2xl font-black text-white">{totalCracked}</div>
-            <div className="text-xs text-white/40 mt-1">Oeufs craques</div>
+            <div className="text-xs text-white/40 mt-1">Eggs Cracked</div>
           </div>
         </div>
 
@@ -302,7 +302,7 @@ export default function ChallengesPage() {
               <div className="text-2xl">{tier.emoji}</div>
               <div className="text-white font-bold">{tier.tier}</div>
               <div className="text-accent">{tier.amount} FCFA</div>
-              <div className="text-gray-500 text-sm">{tier.remaining_quantity} / {tier.total_quantity} restants</div>
+              <div className="text-gray-500 text-sm">{tier.remaining_quantity} / {tier.total_quantity} remaining</div>
               <div className="w-full h-2 bg-gray-700 rounded-full mt-2">
                 <div
                   className="h-full bg-accent rounded-full transition-all"
@@ -315,9 +315,9 @@ export default function ChallengesPage() {
 
         {/* Live activity feed */}
         <div className="glass-card rounded-xl p-6">
-          <h3 className="text-white font-bold mb-4">Activite en direct</h3>
+          <h3 className="text-white font-bold mb-4">Live Activity</h3>
           {detail.activityFeed.length === 0 ? (
-            <p className="text-white/30 text-sm">Aucune activite pour le moment.</p>
+            <p className="text-white/30 text-sm">No activity yet.</p>
           ) : (
             <div className="space-y-2 max-h-80 overflow-y-auto">
               {detail.activityFeed.map((event) => (
@@ -325,7 +325,7 @@ export default function ChallengesPage() {
                   <div className="flex items-center gap-2">
                     <span>{event.emoji}</span>
                     <span className="text-white text-sm">{event.users?.name || "Echo"}</span>
-                    <span className="text-gray-500 text-xs">a craque un oeuf {event.tier}!</span>
+                    <span className="text-gray-500 text-xs">cracked an egg {event.tier}!</span>
                   </div>
                   <span className="text-green-400 font-bold text-sm">+{event.amount} F</span>
                 </div>
@@ -345,15 +345,15 @@ export default function ChallengesPage() {
       <div className="grid grid-cols-4 gap-4 mb-6">
         <div className="glass-card p-4 text-center">
           <div className="text-2xl font-black text-white">{activeChallenges}</div>
-          <div className="text-xs text-white/40 mt-1">Challenges actifs</div>
+          <div className="text-xs text-white/40 mt-1">Active Challenges</div>
         </div>
         <div className="glass-card p-4 text-center">
           <div className="text-2xl font-black text-white">{totalEggsRemaining}</div>
-          <div className="text-xs text-white/40 mt-1">Oeufs restants</div>
+          <div className="text-xs text-white/40 mt-1">Eggs Remaining</div>
         </div>
         <div className="glass-card p-4 text-center">
-          <div className="text-2xl font-black text-white">{budgetSpent.toLocaleString("fr-FR")} FCFA</div>
-          <div className="text-xs text-white/40 mt-1">Budget depense</div>
+          <div className="text-2xl font-black text-white">{budgetSpent.toLocaleString("en-US")} FCFA</div>
+          <div className="text-xs text-white/40 mt-1">Budget Spent</div>
         </div>
         <div className="glass-card p-4 text-center">
           <div className="text-2xl font-black text-white">{totalParticipants}</div>
@@ -366,26 +366,26 @@ export default function ChallengesPage() {
         onClick={() => setShowCreate(true)}
         className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg mb-6 text-sm font-bold transition"
       >
-        + Creer un challenge
+        + Create a Challenge
       </button>
 
       {/* Challenge table */}
       {challenges.length === 0 ? (
         <div className="glass-card p-8 text-center">
           <div className="text-4xl mb-3">🥚</div>
-          <p className="text-white font-bold mb-1">Aucun challenge</p>
-          <p className="text-white/30 text-sm">Creez votre premier challenge pour booster l&apos;engagement des Echos!</p>
+          <p className="text-white font-bold mb-1">No challenges yet</p>
+          <p className="text-white/30 text-sm">Create your first challenge to boost Echo engagement!</p>
         </div>
       ) : (
         <div className="glass-card overflow-hidden rounded-xl">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/5">
-                <th className="text-left p-3 text-white/40 font-semibold text-xs">Nom</th>
+                <th className="text-left p-3 text-white/40 font-semibold text-xs">Name</th>
                 <th className="text-left p-3 text-white/40 font-semibold text-xs">Theme</th>
                 <th className="text-left p-3 text-white/40 font-semibold text-xs">Dates</th>
                 <th className="text-left p-3 text-white/40 font-semibold text-xs">Budget</th>
-                <th className="text-left p-3 text-white/40 font-semibold text-xs">Oeufs restants</th>
+                <th className="text-left p-3 text-white/40 font-semibold text-xs">Eggs Remaining</th>
                 <th className="text-left p-3 text-white/40 font-semibold text-xs">Participants</th>
                 <th className="text-left p-3 text-white/40 font-semibold text-xs">Status</th>
               </tr>
@@ -399,10 +399,10 @@ export default function ChallengesPage() {
                 >
                   <td className="p-3 text-white font-medium">{c.name}</td>
                   <td className="p-3 text-white/60">
-                    {c.theme === "easter_egg" ? "🥚 Easter Egg" : c.theme === "independence" ? "🇸🇳 Independance" : c.theme}
+                    {c.theme === "easter_egg" ? "🥚 Easter Egg" : c.theme === "independence" ? "🇸🇳 Independence" : c.theme}
                   </td>
                   <td className="p-3 text-white/60">{formatDate(c.start_date)} &rarr; {formatDate(c.end_date)}</td>
-                  <td className="p-3 text-white/60">{c.budget_spent.toLocaleString("fr-FR")} / {c.total_budget.toLocaleString("fr-FR")} F</td>
+                  <td className="p-3 text-white/60">{c.budget_spent.toLocaleString("en-US")} / {c.total_budget.toLocaleString("en-US")} F</td>
                   <td className="p-3 text-white/60">{c.eggsRemaining} / {c.totalEggs}</td>
                   <td className="p-3 text-white/60">{c.participantCount}</td>
                   <td className="p-3"><StatusBadge status={c.status} /></td>
@@ -418,13 +418,13 @@ export default function ChallengesPage() {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-white font-bold text-lg">Creer un challenge</h2>
+              <h2 className="text-white font-bold text-lg">Create a Challenge</h2>
               <button onClick={() => setShowCreate(false)} className="text-white/30 hover:text-white/60 text-xl">&times;</button>
             </div>
 
             <form onSubmit={handleCreate} className="space-y-4">
               <input
-                placeholder="Nom du challenge"
+                placeholder="Challenge name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -454,7 +454,7 @@ export default function ChallengesPage() {
                     onClick={() => setTheme("independence")}
                     className={`px-3 py-2 rounded-lg text-sm font-semibold transition ${theme === "independence" ? "bg-green-500 text-white" : "bg-white/5 text-white/50"}`}
                   >
-                    🇸🇳 Independance
+                    🇸🇳 Independence
                   </button>
                 </div>
               </div>
@@ -462,7 +462,7 @@ export default function ChallengesPage() {
               {/* Dates */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-white/40 font-semibold mb-1 block">Debut</label>
+                  <label className="text-xs text-white/40 font-semibold mb-1 block">Start</label>
                   <input
                     type="datetime-local"
                     value={startDate}
@@ -472,7 +472,7 @@ export default function ChallengesPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-white/40 font-semibold mb-1 block">Fin</label>
+                  <label className="text-xs text-white/40 font-semibold mb-1 block">End</label>
                   <input
                     type="datetime-local"
                     value={endDate}
@@ -486,7 +486,7 @@ export default function ChallengesPage() {
               {/* Budget */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-white/40 font-semibold mb-1 block">Budget total (FCFA)</label>
+                  <label className="text-xs text-white/40 font-semibold mb-1 block">Total budget (FCFA)</label>
                   <input
                     type="number"
                     value={budget}
@@ -496,7 +496,7 @@ export default function ChallengesPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-white/40 font-semibold mb-1 block">Clics par recompense</label>
+                  <label className="text-xs text-white/40 font-semibold mb-1 block">Clicks per reward</label>
                   <input
                     type="number"
                     value={clicksPerReward}
@@ -509,13 +509,13 @@ export default function ChallengesPage() {
 
               {/* Campaign link */}
               <div>
-                <label className="text-xs text-white/40 font-semibold mb-1 block">Campagne liee (optionnel)</label>
+                <label className="text-xs text-white/40 font-semibold mb-1 block">Linked campaign (optional)</label>
                 <select
                   value={campaignId}
                   onChange={(e) => setCampaignId(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
                 >
-                  <option value="">Aucune campagne liee (challenge libre)</option>
+                  <option value="">No linked campaign (free challenge)</option>
                   {campaigns.map((c) => (
                     <option key={c.id} value={c.id}>{c.title}</option>
                   ))}
@@ -524,7 +524,7 @@ export default function ChallengesPage() {
 
               {/* Reward tiers */}
               <div>
-                <label className="text-xs text-white/40 font-semibold mb-2 block">Recompenses</label>
+                <label className="text-xs text-white/40 font-semibold mb-2 block">Rewards</label>
                 {rewards.map((r, i) => (
                   <div key={i} className="flex gap-2 mb-2 items-center">
                     <input
@@ -565,7 +565,7 @@ export default function ChallengesPage() {
                   </div>
                 ))}
                 <button type="button" onClick={addReward} className="text-primary text-xs font-semibold">
-                  + Ajouter un tier
+                  + Add a tier
                 </button>
               </div>
 
@@ -575,7 +575,7 @@ export default function ChallengesPage() {
                 onClick={prefillEasterEgg}
                 className="text-orange-400 text-sm underline"
               >
-                Pre-remplir: Chasse aux Oeufs de Paques
+                Pre-fill: Easter Egg Hunt
               </button>
 
               <button
@@ -583,7 +583,7 @@ export default function ChallengesPage() {
                 disabled={creating}
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl font-bold text-sm transition disabled:opacity-50"
               >
-                {creating ? "Creation..." : "Creer le challenge"}
+                {creating ? "Creating..." : "Create Challenge"}
               </button>
             </form>
           </div>

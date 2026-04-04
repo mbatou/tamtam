@@ -16,11 +16,11 @@ async function requireSuperadmin() {
 // Update a goal's target value
 export async function PUT(req: NextRequest) {
   const auth = await requireSuperadmin();
-  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id, target_value } = await req.json();
   if (!id || target_value === undefined) {
-    return NextResponse.json({ error: "ID et target_value requis" }, { status: 400 });
+    return NextResponse.json({ error: "ID and target_value required" }, { status: 400 });
   }
 
   const { data, error } = await auth.supabase

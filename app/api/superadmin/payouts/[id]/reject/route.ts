@@ -12,7 +12,7 @@ export async function POST(
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
   if (!session) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const supabase = createServiceClient();
@@ -32,7 +32,7 @@ export async function POST(
   // Mark as failed
   const { error } = await supabase
     .from("payouts")
-    .update({ status: "failed", failure_reason: "Refusé par l'admin", completed_at: new Date().toISOString() })
+    .update({ status: "failed", failure_reason: "Rejected by admin", completed_at: new Date().toISOString() })
     .eq("id", params.id);
 
   if (error) {
@@ -50,7 +50,7 @@ export async function POST(
     userId: payout.echo_id,
     amount: payout.amount,
     type: "withdrawal_refund",
-    description: "Remboursement — retrait refusé par l'admin",
+    description: "Refund — withdrawal rejected by admin",
     sourceId: params.id,
     sourceType: "payout",
     createdBy: session.user.id,
