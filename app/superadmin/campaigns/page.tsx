@@ -22,6 +22,7 @@ interface Campaign {
   spent: number;
   cpc: number;
   status: string;
+  objective: string | null;
   moderation_status: string | null;
   moderation_reason: string | null;
   created_at: string;
@@ -105,6 +106,7 @@ function CampaignModerationPageContent() {
     destination_url: "",
     cpc: "25",
     budget: "5000",
+    objective: "traffic",
   });
 
   const openById = useCallback((list: Campaign[], id: string) => {
@@ -233,7 +235,7 @@ function CampaignModerationPageContent() {
       if (res.ok) {
         showToast(t("superadmin.campaigns.approvedTab"), "success");
         setShowCreate(false);
-        setNewCamp({ batteur_id: "", title: "", description: "", destination_url: "", cpc: "25", budget: "5000" });
+        setNewCamp({ batteur_id: "", title: "", description: "", destination_url: "", cpc: "25", budget: "5000", objective: "traffic" });
         loadData();
       } else {
         showToast(data.error || t("common.error"), "error");
@@ -285,7 +287,7 @@ function CampaignModerationPageContent() {
               <div className="absolute right-0 mt-2 glass-card rounded-xl border border-white/10 w-64 z-50 overflow-hidden">
                 <button
                   onClick={() => {
-                    setNewCamp({ batteur_id: "", title: "Recrutement Échos", description: "Campagne pour recruter de nouveaux Échos sur Tamtam.", destination_url: "https://tamma.me/register", cpc: "15", budget: "" });
+                    setNewCamp({ batteur_id: "", title: "Recrutement Échos", description: "Campagne pour recruter de nouveaux Échos sur Tamtam.", destination_url: "https://tamma.me/register", cpc: "15", budget: "", objective: "traffic" });
                     setShowCreate(true);
                     setShowTemplateMenu(false);
                   }}
@@ -296,7 +298,7 @@ function CampaignModerationPageContent() {
                 </button>
                 <button
                   onClick={() => {
-                    setNewCamp({ batteur_id: "", title: "", description: "", destination_url: "", cpc: "25", budget: "" });
+                    setNewCamp({ batteur_id: "", title: "", description: "", destination_url: "", cpc: "25", budget: "", objective: "traffic" });
                     setShowCreate(true);
                     setShowTemplateMenu(false);
                   }}
@@ -307,7 +309,7 @@ function CampaignModerationPageContent() {
                 </button>
                 <button
                   onClick={() => {
-                    setNewCamp({ batteur_id: "", title: "", description: "", destination_url: "", cpc: "", budget: "" });
+                    setNewCamp({ batteur_id: "", title: "", description: "", destination_url: "", cpc: "", budget: "", objective: "traffic" });
                     setShowCreate(true);
                     setShowTemplateMenu(false);
                   }}
@@ -370,7 +372,16 @@ function CampaignModerationPageContent() {
                 onClick={() => setSelected(campaign)}
               >
                 <td className="py-3">
-                  <div className="font-semibold">{campaign.title}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">{campaign.title}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                      (campaign.objective || "traffic") === "awareness"
+                        ? "bg-blue-500/20 text-blue-300"
+                        : "bg-teal-500/20 text-teal-300"
+                    }`}>
+                      {(campaign.objective || "traffic") === "awareness" ? "Notoriete" : "Trafic"}
+                    </span>
+                  </div>
                   <div className="text-xs text-white/30">{campaign.users ? getBrandDisplayName({ ...campaign.users, role: "batteur" }) : "—"}</div>
                   {campaign.target_cities && campaign.target_cities.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
@@ -466,6 +477,12 @@ function CampaignModerationPageContent() {
                   <div>
                     <span className="text-xs text-white/40 block">{t("common.status")}</span>
                     <Badge status={selected.moderation_status || "pending"} />
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-xs text-white/40 block">Objectif</span>
+                    <span className="text-white font-medium">
+                      {(selected.objective || "traffic") === "awareness" ? "Notoriete (visuel obligatoire)" : "Trafic (clics)"}
+                    </span>
                   </div>
                   <div>
                     <span className="text-xs text-white/40 block">{t("common.budget")}</span>
@@ -618,6 +635,7 @@ function CampaignModerationPageContent() {
                         destination_url: selected.destination_url,
                         cpc: String(selected.cpc),
                         budget: String(selected.budget),
+                        objective: selected.objective || "traffic",
                       });
                       setSelected(null);
                       setShowCreate(true);
@@ -787,6 +805,31 @@ function CampaignModerationPageContent() {
               <span className="font-bold text-accent">{formatFCFA(selectedBatteur.balance)}</span>
             </div>
           )}
+
+          {/* Objective picker */}
+          <div>
+            <label className="text-xs text-white/40 block mb-1">Objectif</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { id: "traffic", label: "Trafic", desc: "Clics vers un lien" },
+                { id: "awareness", label: "Notoriete", desc: "Visuel + lien obligatoire" },
+              ].map((obj) => (
+                <button
+                  key={obj.id}
+                  type="button"
+                  onClick={() => setNewCamp({ ...newCamp, objective: obj.id })}
+                  className={`text-left p-3 rounded-xl border-2 transition ${
+                    newCamp.objective === obj.id
+                      ? "border-primary bg-primary/10"
+                      : "border-white/10 bg-white/[0.03] hover:border-white/20"
+                  }`}
+                >
+                  <div className="text-sm font-bold">{obj.label}</div>
+                  <div className="text-[10px] text-white/40">{obj.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div>
             <label className="text-xs text-white/40 block mb-1">{t("superadmin.campaigns.campaignTitleLabel")}</label>
