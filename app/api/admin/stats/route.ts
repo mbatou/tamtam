@@ -70,8 +70,7 @@ export async function GET(request: NextRequest) {
     const { data: echoUsers } = await supabase
       .from("users")
       .select("id, name")
-      .in("id", echoIds)
-      .is("deleted_at", null);
+      .in("id", echoIds);
 
     const nameMap = new Map((echoUsers || []).map((u) => [u.id, u.name]));
     topEchos = Object.values(echoEarnings)
