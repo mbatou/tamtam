@@ -7,6 +7,45 @@ import { SupabaseClient } from "@supabase/supabase-js";
  * to avoid silent row-limit truncation that can occur when fetching individual rows.
  */
 
+/**
+ * Fetch users by IDs in batches to avoid PostgREST URL-length limits.
+ * A single .in() with 200+ UUIDs can exceed the ~8 KB URL limit, causing
+ * the query to silently fail (data=null). This helper batches the IDs and
+ * merges the results.
+ */
+export async function fetchUsersByIds<T extends Record<string, unknown>>(
+  supabase: SupabaseClient,
+  userIds: string[],
+  select: string = "id, name"
+): Promise<T[]> {
+  if (userIds.length === 0) return [];
+
+  const BATCH = 80; // ~80 UUIDs ≈ 3 KB, safe margin
+  const all: T[] = [];
+
+  const batches: string[][] = [];
+  for (let i = 0; i < userIds.length; i += BATCH) {
+    batches.push(userIds.slice(i, i + BATCH));
+  }
+
+  const results = await Promise.all(
+    batches.map(async (batch) => {
+      const { data, error } = await supabase
+        .from("users")
+        .select(select)
+        .in("id", batch);
+      if (error) {
+        console.error("[fetchUsersByIds] batch error:", error.message);
+        return [];
+      }
+      return (data || []) as unknown as T[];
+    })
+  );
+
+  for (const r of results) all.push(...r);
+  return all;
+}
+
 /** Get tracked link IDs for a set of campaigns (paginated to avoid the 1 000-row default) */
 export async function getLinksForCampaigns(
   supabase: SupabaseClient,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { getClicksChart } from "@/lib/click-utils";
+import { getClicksChart, fetchUsersByIds } from "@/lib/click-utils";
 import { getEffectiveBrandId } from "@/lib/brand-utils";
 
 export const dynamic = "force-dynamic";
@@ -71,10 +71,9 @@ export async function GET(request: NextRequest) {
       supabase.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", true).in("link_id", linkIds),
     ]),
 
-    // Fetch all echo user info in one query instead of N individual queries
-    uniqueEchoIds.length > 0
-      ? supabase.from("users").select("id, name, city").in("id", uniqueEchoIds).is("deleted_at", null)
-      : Promise.resolve({ data: [] }),
+    // Fetch all echo user info (batched to avoid PostgREST URL-length silent failures;
+    // no deleted_at filter — brand needs historical participation data)
+    fetchUsersByIds<{ id: string; name: string; city: string }>(supabase, uniqueEchoIds, "id, name, city"),
   ]);
 
   const totalClicks = countResults[0].count || 0;
@@ -102,7 +101,7 @@ export async function GET(request: NextRequest) {
 
   // Build echo performance from pre-fetched data (no N+1 queries)
   const echoUserMap: Record<string, { name: string; city: string }> = {};
-  for (const u of echoUsers.data || []) {
+  for (const u of echoUsers) {
     echoUserMap[u.id] = { name: u.name, city: u.city };
   }
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { getEffectiveBrandId } from "@/lib/brand-utils";
+import { fetchUsersByIds } from "@/lib/click-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -50,11 +51,13 @@ export async function GET() {
     return NextResponse.json([]);
   }
 
-  // Get echo user details (include soft-deleted so brand sees historical data)
-  const { data: echoUsers } = await supabase
-    .from("users")
-    .select("id, name, phone, city, mobile_money_provider, balance, total_earned, status, created_at")
-    .in("id", echoIds);
+  // Get echo user details (batched to avoid PostgREST URL-length silent failures;
+  // no deleted_at filter so brand sees historical participation data)
+  const echoUsers = await fetchUsersByIds<{
+    id: string; name: string; phone: string; city: string;
+    mobile_money_provider: string; balance: number; total_earned: number;
+    status: string; created_at: string;
+  }>(supabase, echoIds, "id, name, phone, city, mobile_money_provider, balance, total_earned, status, created_at");
 
   // Build campaign map for CPC lookup
   const campaignMap = new Map((campaigns || []).map((c) => [c.id, c]));
@@ -74,7 +77,7 @@ export async function GET() {
   }
 
   // Merge user data with stats
-  const result = (echoUsers || []).map((user) => ({
+  const result = echoUsers.map((user) => ({
     ...user,
     brand_clicks: echoStats[user.id]?.totalClicks || 0,
     brand_earned: echoStats[user.id]?.totalEarned || 0,

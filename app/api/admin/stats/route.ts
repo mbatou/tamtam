@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { countClicks, getLinksForCampaigns, getClicksChart } from "@/lib/click-utils";
+import { countClicks, getLinksForCampaigns, getClicksChart, fetchUsersByIds } from "@/lib/click-utils";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { getEffectiveBrandId } from "@/lib/brand-utils";
 
@@ -64,15 +64,12 @@ export async function GET(request: NextRequest) {
     echoEarnings[link.echo_id].earned += Math.floor(link.click_count * cpc * ECHO_SHARE_PERCENT / 100);
   }
 
-  // Fetch echo names
+  // Fetch echo names (batched to avoid PostgREST URL-length silent failures)
   let topEchos: { id: string; name: string; clicks: number; earned: number }[] = [];
   if (echoIds.length > 0) {
-    const { data: echoUsers } = await supabase
-      .from("users")
-      .select("id, name")
-      .in("id", echoIds);
+    const echoUsers = await fetchUsersByIds<{ id: string; name: string }>(supabase, echoIds, "id, name");
 
-    const nameMap = new Map((echoUsers || []).map((u) => [u.id, u.name]));
+    const nameMap = new Map(echoUsers.map((u) => [u.id, u.name]));
     topEchos = Object.values(echoEarnings)
       .map((e) => ({ ...e, name: nameMap.get(e.id) || "Inconnu" }))
       .sort((a, b) => b.earned - a.earned)
