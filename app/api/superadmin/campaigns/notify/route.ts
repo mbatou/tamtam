@@ -7,25 +7,25 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
   const { data: admin } = await supabase.from("users").select("role").eq("id", session.user.id).single();
   if (!admin || admin.role !== "superadmin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   // Check RESEND_API_KEY upfront
   if (!process.env.RESEND_API_KEY) {
     return NextResponse.json(
-      { error: "RESEND_API_KEY non configuré sur le serveur" },
+      { error: "RESEND_API_KEY not configured on server" },
       { status: 500 }
     );
   }
 
   const { campaign_id } = await request.json();
   if (!campaign_id) {
-    return NextResponse.json({ error: "campaign_id requis" }, { status: 400 });
+    return NextResponse.json({ error: "campaign_id required" }, { status: 400 });
   }
 
   // Get campaign details
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (!campaign) {
-    return NextResponse.json({ error: "Campagne introuvable" }, { status: 404 });
+    return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
   }
 
   // Get all echos
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     .eq("role", "echo");
 
   if (!echos?.length) {
-    return NextResponse.json({ error: "Aucun echo trouvé" }, { status: 404 });
+    return NextResponse.json({ error: "No echos found" }, { status: 404 });
   }
 
   // Get all auth emails (paginate through all pages)

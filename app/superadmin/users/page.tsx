@@ -412,7 +412,7 @@ function UsersPageContent() {
           type="text"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          placeholder={t("superadmin.users.searchPlaceholder") || "Rechercher par nom, téléphone, ville..."}
+          placeholder={t("superadmin.users.searchPlaceholder") || "Search by name, phone, city..."}
           className="w-full max-w-sm bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition placeholder:text-white/20"
         />
       </div>
@@ -438,7 +438,7 @@ function UsersPageContent() {
               <th className="pb-3 font-semibold">{t("common.status")}</th>
               <th className="pb-3 font-semibold hidden md:table-cell">{t("superadmin.users.clicks")}</th>
               <th className="pb-3 font-semibold hidden md:table-cell">{t("superadmin.users.gains")}</th>
-              <th className="pb-3 font-semibold hidden md:table-cell">{t("superadmin.users.quality") || "Qualité"}</th>
+              <th className="pb-3 font-semibold hidden md:table-cell">{t("superadmin.users.quality") || "Quality"}</th>
               <th className="pb-3 font-semibold hidden lg:table-cell">{t("superadmin.users.balance")}</th>
               <th className="pb-3 font-semibold hidden lg:table-cell">{t("superadmin.users.registered")}</th>
             </tr>
@@ -492,7 +492,7 @@ function UsersPageContent() {
                 <td className="py-3 hidden md:table-cell text-xs">
                   {user.click_stats.total > 0 ? (
                     <span>
-                      {user.click_stats.total} ({user.click_stats.rate}% fraude)
+                      {user.click_stats.total} ({user.click_stats.rate}% fraud)
                     </span>
                   ) : "—"}
                 </td>
@@ -513,7 +513,7 @@ function UsersPageContent() {
                 </td>
                 <td className="py-3 hidden lg:table-cell">{formatFCFA(user.balance)}</td>
                 <td className="py-3 hidden lg:table-cell">
-                  <div className="text-xs text-white/40">{new Date(user.created_at).toLocaleDateString("fr-FR")}</div>
+                  <div className="text-xs text-white/40">{new Date(user.created_at).toLocaleDateString("en-US")}</div>
                   <div className={`text-[10px] ${user.last_click_at ? "text-accent/70" : "text-white/20"}`}>
                     {user.last_click_at ? timeAgo(user.last_click_at, t) : t("superadmin.users.neverActive")}
                   </div>
@@ -553,8 +553,8 @@ function UsersPageContent() {
                 </div>
                 {getBrandSubtitle(selected) && <p className="text-xs text-white/50">{getBrandSubtitle(selected)}</p>}
                 <p className="text-xs text-white/40">{selected.phone || ""} · {selected.city || ""} · {selected.role}</p>
-                <p className="text-[10px] font-mono text-white/20 mt-0.5 select-all cursor-pointer" title="Cliquer pour copier"
-                  onClick={() => { navigator.clipboard.writeText(selected.id); showToast("UUID copié", "success"); }}
+                <p className="text-[10px] font-mono text-white/20 mt-0.5 select-all cursor-pointer" title="Click to copy"
+                  onClick={() => { navigator.clipboard.writeText(selected.id); showToast("UUID copied", "success"); }}
                 >{selected.id}</p>
               </div>
             </div>
@@ -595,16 +595,16 @@ function UsersPageContent() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-sm">{score >= 70 ? "⭐" : score >= 40 ? "📊" : "⚠️"}</span>
-                      <span className="text-xs font-bold text-white/60">{t("superadmin.users.qualityScore") || "Score Qualité"}</span>
+                      <span className="text-xs font-bold text-white/60">{t("superadmin.users.qualityScore") || "Quality Score"}</span>
                     </div>
                     <span className={`text-lg font-black ${
                       score >= 70 ? "text-emerald-400" : score >= 40 ? "text-orange-400" : "text-red-400"
                     }`}>{score}%</span>
                   </div>
                   <div className="flex gap-4 mt-2 text-[10px] text-white/30">
-                    <span>{t("superadmin.users.validRatio") || "Ratio valide"}: {selected.click_stats.total > 0 ? Math.round(selected.click_stats.valid / selected.click_stats.total * 100) : 0}%</span>
-                    <span>{t("superadmin.users.campaignsJoinedLabel") || "Campagnes"}: {selected.campaigns_joined}</span>
-                    <span>{t("superadmin.users.streakLabel") || "Série"}: {selected.current_streak}</span>
+                    <span>{t("superadmin.users.validRatio") || "Valid ratio"}: {selected.click_stats.total > 0 ? Math.round(selected.click_stats.valid / selected.click_stats.total * 100) : 0}%</span>
+                    <span>{t("superadmin.users.campaignsJoinedLabel") || "Campaigns"}: {selected.campaigns_joined}</span>
+                    <span>{t("superadmin.users.streakLabel") || "Streak"}: {selected.current_streak}</span>
                   </div>
                 </div>
               );
@@ -725,7 +725,7 @@ function UsersPageContent() {
                           </div>
                           <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-white/40">
                             <span>{t("superadmin.finance.provider")}: <strong className="text-white/70">{p.provider === "wave" ? t("common.wave") : t("common.orangeMoney")}</strong></span>
-                            <span>{new Date(p.created_at).toLocaleDateString("fr-FR")}</span>
+                            <span>{new Date(p.created_at).toLocaleDateString("en-US")}</span>
                             {p.failure_reason && (
                               <span className="text-red-400">{p.failure_reason}</span>
                             )}
@@ -850,7 +850,7 @@ function UsersPageContent() {
                 onClick={() => router.push(`/superadmin/investigate?user_id=${selected.id}`)}
                 className="w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 font-bold text-sm hover:bg-white/10 transition flex items-center justify-center gap-2"
               >
-                <span>🔍</span> Investiguer cet utilisateur
+                <span>🔍</span> Investigate this user
               </button>
             </div>
 

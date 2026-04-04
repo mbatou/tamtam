@@ -67,16 +67,16 @@ function generateInvitationEmail({ firstName, companyName, signupUrl }: { firstN
 export async function POST(request: NextRequest) {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autoris\u00e9" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
   const { data: admin } = await supabase.from("users").select("role").eq("id", session.user.id).single();
   if (!admin || (admin.role !== "superadmin" && admin.role !== "admin")) {
-    return NextResponse.json({ error: "Non autoris\u00e9" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { leadId } = await request.json();
-  if (!leadId) return NextResponse.json({ error: "leadId requis" }, { status: 400 });
+  if (!leadId) return NextResponse.json({ error: "leadId required" }, { status: 400 });
 
   const { data: lead } = await supabase
     .from("brand_leads")
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (!lead || !lead.email) {
-    return NextResponse.json({ error: "Lead invalide ou sans email" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid lead or missing email" }, { status: 400 });
   }
 
   // Check not already invited in last 7 days
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
     .limit(1);
 
   if (recent && recent.length > 0) {
-    return NextResponse.json({ error: "D\u00e9j\u00e0 invit\u00e9 cette semaine" }, { status: 409 });
+    return NextResponse.json({ error: "Already invited this week" }, { status: 409 });
   }
 
   const firstName = lead.contact_name?.split(" ")[0] || lead.business_name || "Bonjour";

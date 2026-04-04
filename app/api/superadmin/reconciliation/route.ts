@@ -6,14 +6,14 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabaseAdmin = createServiceClient();
 
   const { data: currentUser } = await supabaseAdmin
     .from("users").select("role").eq("id", session.user.id).single();
   if (!currentUser || currentUser.role !== "superadmin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   // =====================================================================
@@ -217,8 +217,8 @@ export async function GET() {
   if (balanceMismatches.length > 0) {
     advice.push({
       severity: "red",
-      title: `${balanceMismatches.length} compte(s) avec des soldes incohérents`,
-      detail: `Les transactions ne correspondent pas au solde affiché. Vérifiez manuellement.`,
+      title: `${balanceMismatches.length} account(s) with inconsistent balances`,
+      detail: `Transactions do not match displayed balance. Verify manually.`,
     });
   }
 
@@ -227,8 +227,8 @@ export async function GET() {
     const totalDuplicateAmount = duplicateRefunds.reduce((s, r) => s + Math.abs(r.amount), 0);
     advice.push({
       severity: "red",
-      title: `${duplicateRefunds.length} remboursement(s) en double détecté(s)`,
-      detail: `Montant total en double: ${totalDuplicateAmount.toLocaleString("fr-FR")} FCFA. Ajustement manuel recommandé.`,
+      title: `${duplicateRefunds.length} duplicate refund(s) detected`,
+      detail: `Total duplicate amount: ${totalDuplicateAmount.toLocaleString("fr-FR")} FCFA. Manual adjustment recommended.`,
     });
   }
 
@@ -236,16 +236,16 @@ export async function GET() {
   if (draftDebited.length > 0) {
     advice.push({
       severity: "red",
-      title: `${draftDebited.length} brouillon(s) avec budget débité`,
-      detail: `Des campagnes en brouillon ont été débitées du portefeuille. Bug identifié et corrigé (LUP-95).`,
+      title: `${draftDebited.length} draft campaign(s) with debited budget`,
+      detail: `Draft campaigns were debited from wallet. Bug identified and fixed (LUP-95).`,
     });
   }
 
   if (advice.length === 0) {
     advice.push({
       severity: "green",
-      title: "Plateforme saine",
-      detail: "Tous les soldes correspondent aux transactions. Aucune anomalie détectée.",
+      title: "Platform healthy",
+      detail: "All balances match transactions. No anomalies detected.",
     });
   }
 

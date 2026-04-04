@@ -15,14 +15,14 @@ async function requireSuperadmin() {
 
 export async function GET(request: NextRequest) {
   const auth = await requireSuperadmin();
-  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = auth.supabase;
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get("user_id");
 
   if (!userId) {
-    return NextResponse.json({ error: "user_id requis" }, { status: 400 });
+    return NextResponse.json({ error: "user_id required" }, { status: 400 });
   }
 
   // Fetch campaigns for this brand

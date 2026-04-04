@@ -7,14 +7,14 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
 
   // Verify superadmin role
   const { data: admin } = await supabase.from("users").select("role").eq("id", session.user.id).single();
   if (!admin || admin.role !== "superadmin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   // Parse date range from query params

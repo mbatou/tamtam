@@ -8,13 +8,13 @@ export async function POST(req: Request) {
   // Auth check: superadmin only
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabaseAdmin = createServiceClient();
   const { data: currentUser } = await supabaseAdmin
     .from("users").select("role").eq("id", session.user.id).single();
   if (!currentUser || currentUser.role !== "superadmin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   const { metrics } = await req.json();
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("AI analysis failed:", error);
     return NextResponse.json({
-      error: "Analyse IA échouée",
+      error: "AI analysis failed",
       detail: error instanceof Error ? error.message : "Unknown error",
     }, { status: 500 });
   }

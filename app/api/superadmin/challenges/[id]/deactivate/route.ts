@@ -9,11 +9,11 @@ export async function POST(
 ) {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
   const { data: user } = await supabase.from("users").select("role").eq("id", session.user.id).single();
-  if (!user || user.role !== "superadmin") return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+  if (!user || user.role !== "superadmin") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // Check if challenge has ended — mark as completed instead of draft
   const { data: challenge } = await supabase

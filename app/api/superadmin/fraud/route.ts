@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
 
@@ -152,7 +152,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
   const body = await request.json();
@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
     await supabase.from("blocked_ips").upsert({
       ip_address: ip,
       blocked_by: session.user.id,
-      reason: body.reason || "Bloqué par superadmin",
+      reason: body.reason || "Blocked by superadmin",
       block_type: blockType,
       carrier_ip: !!matchedCarrier,
       expires_at: body.expires_at || null,
@@ -367,5 +367,5 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  return NextResponse.json({ error: "Action invalide" }, { status: 400 });
+  return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 }

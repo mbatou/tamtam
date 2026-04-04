@@ -16,10 +16,10 @@ async function requireSuperadmin() {
 // Toggle milestone achieved status
 export async function PUT(req: NextRequest) {
   const auth = await requireSuperadmin();
-  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id, achieved } = await req.json();
-  if (!id) return NextResponse.json({ error: "ID requis" }, { status: 400 });
+  if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
   const { data, error } = await auth.supabase
     .from("roadmap_milestones")

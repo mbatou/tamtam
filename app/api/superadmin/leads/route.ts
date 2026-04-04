@@ -18,7 +18,7 @@ async function requireSuperadmin() {
 
 export async function GET() {
   const auth = await requireSuperadmin();
-  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data: leads } = await auth.supabase
     .from("brand_leads")
@@ -30,16 +30,16 @@ export async function GET() {
 
 export async function PUT(req: NextRequest) {
   const auth = await requireSuperadmin();
-  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
   const { id, ...rest } = body;
-  if (!id) return NextResponse.json({ error: "ID requis" }, { status: 400 });
+  if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
   const parsed = updateLeadSchema.safeParse(rest);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Données invalides", details: parsed.error.flatten().fieldErrors },
+      { error: "Invalid data", details: parsed.error.flatten().fieldErrors },
       { status: 400 }
     );
   }
@@ -62,11 +62,11 @@ export async function PUT(req: NextRequest) {
 // POST: Convert lead to Batteur account
 export async function POST(req: NextRequest) {
   const auth = await requireSuperadmin();
-  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
   const { id, email: overrideEmail, promote_echo } = body;
-  if (!id) return NextResponse.json({ error: "ID requis" }, { status: 400 });
+  if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
   // Get lead
   const { data: lead } = await auth.supabase
@@ -75,9 +75,9 @@ export async function POST(req: NextRequest) {
     .eq("id", id)
     .single();
 
-  if (!lead) return NextResponse.json({ error: "Lead introuvable" }, { status: 404 });
+  if (!lead) return NextResponse.json({ error: "Lead not found" }, { status: 404 });
   if (lead.status === "converted") {
-    return NextResponse.json({ error: "Ce lead est déjà converti." }, { status: 400 });
+    return NextResponse.json({ error: "This lead is already converted." }, { status: 400 });
   }
 
   // Use override email if provided (for cases where lead email is already taken)
@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
 
       // Email exists but promotion not requested — return conflict with option to promote
       return NextResponse.json({
-        error: `Cet email est déjà utilisé par un compte ${existingProfile.role === "echo" ? "Echo" : existingProfile.role}.`,
+        error: `This email is already used by a ${existingProfile.role === "echo" ? "Echo" : existingProfile.role} account.`,
         email_conflict: true,
         existing_role: existingProfile.role,
         can_promote: existingProfile.role === "echo",
@@ -170,11 +170,11 @@ export async function POST(req: NextRequest) {
   if (authError || !authUser.user) {
     if (authError?.message?.includes("already been registered") || authError?.message?.includes("already exists")) {
       return NextResponse.json({
-        error: "Cet email est déjà enregistré. Veuillez utiliser un email différent.",
+        error: "This email is already registered. Please use a different email.",
         email_conflict: true,
       }, { status: 409 });
     }
-    return NextResponse.json({ error: authError?.message || "Erreur création compte" }, { status: 500 });
+    return NextResponse.json({ error: authError?.message || "Account creation error" }, { status: 500 });
   }
 
   // Create user profile (users table has: id, role, name, phone, city, balance, etc.)
@@ -197,7 +197,7 @@ export async function POST(req: NextRequest) {
     .from("brand_leads")
     .update({
       status: "converted",
-      notes: `Compte créé le ${new Date().toLocaleDateString("fr-FR")} (${accountEmail}). ${lead.notes || ""}`.trim(),
+      notes: `Account created on ${new Date().toLocaleDateString("en-US")} (${accountEmail}). ${lead.notes || ""}`.trim(),
     })
     .eq("id", id);
 

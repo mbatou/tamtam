@@ -102,21 +102,21 @@ interface FraudData {
 // ── Helpers ──
 
 const REJECTION_LABELS: Record<string, { label: string; isFraud: boolean }> = {
-  ip_cooldown_24h: { label: "IP cooldown (24h dédup)", isFraud: false },
-  ip_daily_limit: { label: "Limite IP journalière", isFraud: false },
-  link_rate_limit: { label: "Limite lien/heure", isFraud: false },
+  ip_cooldown_24h: { label: "IP cooldown (24h dedup)", isFraud: false },
+  ip_daily_limit: { label: "IP daily limit", isFraud: false },
+  link_rate_limit: { label: "Link rate limit/hour", isFraud: false },
   bot_useragent: { label: "Bot user-agent", isFraud: true },
-  speed_bot: { label: "Vitesse (<3s)", isFraud: true },
-  blocked_bot: { label: "IP bloquée (bot)", isFraud: true },
+  speed_bot: { label: "Speed (<3s)", isFraud: true },
+  blocked_bot: { label: "IP blocked (bot)", isFraud: true },
   blocked_datacenter: { label: "IP datacenter", isFraud: true },
-  blocked_manual: { label: "IP bloquée (manuel)", isFraud: true },
-  missing_user_agent: { label: "UA manquant", isFraud: true },
-  manual_invalidation: { label: "Invalidation manuelle", isFraud: true },
+  blocked_manual: { label: "IP blocked (manual)", isFraud: true },
+  missing_user_agent: { label: "Missing UA", isFraud: true },
+  manual_invalidation: { label: "Manual invalidation", isFraud: true },
   // Legacy reasons from old system
-  ip_duplicate_24h: { label: "IP cooldown (24h dédup)", isFraud: false },
-  blocked_ip: { label: "IP bloquée", isFraud: true },
-  bot_detected: { label: "Bot détecté", isFraud: true },
-  ip_global_rate_limit: { label: "Limite IP globale", isFraud: false },
+  ip_duplicate_24h: { label: "IP cooldown (24h dedup)", isFraud: false },
+  blocked_ip: { label: "IP blocked", isFraud: true },
+  bot_detected: { label: "Bot detected", isFraud: true },
+  ip_global_rate_limit: { label: "IP global limit", isFraud: false },
 };
 
 const RISK_COLORS: Record<string, string> = {
@@ -129,9 +129,9 @@ const RISK_COLORS: Record<string, string> = {
 
 const RISK_LABELS: Record<string, string> = {
   bot: "Bot",
-  targeted_abuse: "Abus ciblé",
-  suspicious: "Suspect",
-  likely_carrier_ip: "IP opérateur",
+  targeted_abuse: "Targeted abuse",
+  suspicious: "Suspicious",
+  likely_carrier_ip: "Carrier IP",
   normal: "Normal",
 };
 
@@ -139,7 +139,7 @@ function formatTimeSpan(seconds: number): string {
   if (seconds < 60) return `${Math.round(seconds)}s`;
   if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
   if (seconds < 86400) return `${Math.round(seconds / 3600)}h`;
-  return `${Math.round(seconds / 86400)} jours`;
+  return `${Math.round(seconds / 86400)} days`;
 }
 
 function getCarrierDot(carrier: string | null): string {
@@ -241,7 +241,7 @@ export default function FraudPage() {
         body: JSON.stringify({ action: "unblock_ip", ip }),
       });
       if (res.ok) {
-        showToast(`IP ${ip} débloquée`, "success");
+        showToast(`IP ${ip} unblocked`, "success");
         loadData();
       }
     } catch {
@@ -273,7 +273,7 @@ export default function FraudPage() {
         body: JSON.stringify({ action: "flag_echo", echo_id: echoId, risk_level: riskLevel }),
       });
       if (res.ok) {
-        showToast("Écho signalé", "success");
+        showToast("Echo flagged", "success");
         loadData();
       }
     } catch {
@@ -307,7 +307,7 @@ export default function FraudPage() {
       });
       const result = await res.json();
       if (res.ok) {
-        showToast(`${result.blocked} IPs bot bloquées`, "success");
+        showToast(`${result.blocked} bot IPs blocked`, "success");
         loadData();
       }
     } catch {
@@ -324,7 +324,7 @@ export default function FraudPage() {
         body: JSON.stringify({ action: "update_fraud_settings", settings }),
       });
       if (res.ok) {
-        showToast("Paramètres sauvegardés", "success");
+        showToast("Settings saved", "success");
       }
     } catch {
       showToast(t("common.networkError"), "error");
@@ -384,11 +384,11 @@ export default function FraudPage() {
       {/* Section Navigation */}
       <TabBar
         tabs={[
-          { key: "overview", label: "Vue d'ensemble" },
-          { key: "ips", label: "Analyse IP", count: data.ipAnalysis.length },
-          { key: "echos", label: "Analyse Échos", count: data.echoAnalysis.length },
-          { key: "clicks", label: "Journal des clics", count: data.recentClicks.length },
-          { key: "settings", label: "Paramètres" },
+          { key: "overview", label: "Overview" },
+          { key: "ips", label: "IP Analysis", count: data.ipAnalysis.length },
+          { key: "echos", label: "Echo Analysis", count: data.echoAnalysis.length },
+          { key: "clicks", label: "Click Log", count: data.recentClicks.length },
+          { key: "settings", label: "Settings" },
         ]}
         active={activeSection}
         onChange={setActiveSection}
@@ -402,21 +402,21 @@ export default function FraudPage() {
         <div className="space-y-8">
           {/* Top Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard label="Clics valides" value={formatNumber(data.validClicks)} accent="teal" />
-            <StatCard label="Rejetés" value={formatNumber(data.flaggedClicks)} accent="red" />
+            <StatCard label="Valid clicks" value={formatNumber(data.validClicks)} accent="teal" />
+            <StatCard label="Rejected" value={formatNumber(data.flaggedClicks)} accent="red" />
             <StatCard
-              label="Taux de rejet"
+              label="Rejection rate"
               value={`${data.rejectionRate}%`}
-              sub={`Fraude réelle: ~${actualFraudRate}%`}
+              sub={`Actual fraud: ~${actualFraudRate}%`}
               accent={data.rejectionRate > 30 ? "red" : "orange"}
             />
-            <StatCard label="Revenu protégé" value={formatNumber(data.revenueSaved) + " F"} accent="teal" />
+            <StatCard label="Revenue protected" value={formatNumber(data.revenueSaved) + " F"} accent="teal" />
           </div>
 
           {/* Rejection Breakdown */}
           {breakdownEntries.length > 0 && (
             <div className="glass-card p-6">
-              <h2 className="text-lg font-bold mb-4">Détail des rejets</h2>
+              <h2 className="text-lg font-bold mb-4">Rejection breakdown</h2>
               <div className="space-y-3">
                 {breakdownEntries.map(([reason, count]) => {
                   const info = REJECTION_LABELS[reason] || { label: reason, isFraud: false };
@@ -428,7 +428,7 @@ export default function FraudPage() {
                           <span className="text-sm flex items-center gap-2">
                             <span className={`w-2 h-2 rounded-full ${info.isFraud ? "bg-red-400" : "bg-blue-400"}`} />
                             {info.label}
-                            {info.isFraud && <span className="text-[10px] text-red-400 font-bold uppercase">fraude</span>}
+                            {info.isFraud && <span className="text-[10px] text-red-400 font-bold uppercase">fraud</span>}
                           </span>
                           <span className="text-xs text-white/50">{formatNumber(count)} ({pct}%)</span>
                         </div>
@@ -445,10 +445,10 @@ export default function FraudPage() {
               </div>
               <div className="mt-4 pt-4 border-t border-white/5 flex gap-6 text-xs text-white/40">
                 <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-blue-400" /> Dédup / throttling (légitime)
+                  <span className="w-2 h-2 rounded-full bg-blue-400" /> Dedup / throttling (legitimate)
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-red-400" /> Fraude réelle (bots)
+                  <span className="w-2 h-2 rounded-full bg-red-400" /> Actual fraud (bots)
                 </span>
               </div>
             </div>
@@ -456,15 +456,15 @@ export default function FraudPage() {
 
           {/* Real-time Alerts */}
           <div className="glass-card p-6">
-            <h2 className="text-lg font-bold mb-4">Alertes récentes</h2>
+            <h2 className="text-lg font-bold mb-4">Recent alerts</h2>
             <div className="space-y-3 max-h-64 overflow-y-auto">
               {botIPs.length > 0 && botIPs.slice(0, 5).map((ip) => (
                 <div key={ip.ip_address} className="flex items-start gap-3 p-3 rounded-lg bg-red-500/5 border border-red-500/10">
                   <span className="text-sm">🤖</span>
                   <div className="flex-1 text-sm">
                     <span className="font-mono text-xs">{ip.ip_address}</span>
-                    {" — "}{ip.total_clicks} clics en {formatTimeSpan(ip.time_span_seconds)}
-                    <span className="text-red-400 text-xs ml-2">[Bot détecté]</span>
+                    {" — "}{ip.total_clicks} clicks in {formatTimeSpan(ip.time_span_seconds)}
+                    <span className="text-red-400 text-xs ml-2">[Bot detected]</span>
                   </div>
                 </div>
               ))}
@@ -475,8 +475,8 @@ export default function FraudPage() {
                   <div key={echo.echo_id} className="flex items-start gap-3 p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/10">
                     <span className="text-sm">📊</span>
                     <div className="flex-1 text-sm">
-                      Écho <span className="font-bold">{echo.name}</span> — taux valide: {echo.valid_rate_pct}%
-                      <span className="text-yellow-400 text-xs ml-2">[Vérification recommandée]</span>
+                      Echo <span className="font-bold">{echo.name}</span> — valid rate: {echo.valid_rate_pct}%
+                      <span className="text-yellow-400 text-xs ml-2">[Verification recommended]</span>
                     </div>
                   </div>
                 ))}
@@ -484,13 +484,13 @@ export default function FraudPage() {
                 <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
                   <span className="text-sm">📡</span>
                   <div className="flex-1 text-sm">
-                    {carrierIPs.length} IPs d&apos;opérateurs détectées — protégées contre le blocage
+                    {carrierIPs.length} carrier IPs detected — protected from blocking
                     <span className="text-blue-400 text-xs ml-2">[CGNAT Sénégal]</span>
                   </div>
                 </div>
               )}
               {botIPs.length === 0 && data.echoAnalysis.filter((e) => e.risk_level === "high_fraud_risk").length === 0 && (
-                <p className="text-sm text-white/30">Aucune alerte en cours</p>
+                <p className="text-sm text-white/30">No active alerts</p>
               )}
             </div>
           </div>
@@ -505,8 +505,8 @@ export default function FraudPage() {
                     <tr className="text-left text-xs text-white/30 border-b border-white/5">
                       <th className="pb-3 font-semibold">IP</th>
                       <th className="pb-3 font-semibold">Type</th>
-                      <th className="pb-3 font-semibold">Raison</th>
-                      <th className="pb-3 font-semibold">Expire</th>
+                      <th className="pb-3 font-semibold">Reason</th>
+                      <th className="pb-3 font-semibold">Expires</th>
                       <th className="pb-3 font-semibold">Action</th>
                     </tr>
                   </thead>
@@ -525,14 +525,14 @@ export default function FraudPage() {
                         </td>
                         <td className="py-2 text-xs text-white/50">{ip.reason}</td>
                         <td className="py-2 text-xs text-white/50">
-                          {ip.expires_at ? new Date(ip.expires_at).toLocaleDateString("fr-FR") : "Permanent"}
+                          {ip.expires_at ? new Date(ip.expires_at).toLocaleDateString("en-US") : "Permanent"}
                         </td>
                         <td className="py-2">
                           <button
                             onClick={() => unblockIP(ip.ip_address)}
                             className="text-xs text-accent hover:text-accent/80 font-bold"
                           >
-                            Débloquer
+                            Unblock
                           </button>
                         </td>
                       </tr>
@@ -552,15 +552,15 @@ export default function FraudPage() {
         <div className="space-y-6">
           {/* Quick stats */}
           <div className="flex items-center gap-4 flex-wrap">
-            <span className="text-sm text-white/50">{data.ipAnalysis.length} IPs analysées</span>
+            <span className="text-sm text-white/50">{data.ipAnalysis.length} IPs analyzed</span>
             <span className="text-sm text-red-400">{botIPs.length} bots</span>
-            <span className="text-sm text-blue-400">{carrierIPs.length} IPs opérateur</span>
+            <span className="text-sm text-blue-400">{carrierIPs.length} carrier IPs</span>
             {botIPs.length > 0 && (
               <button
                 onClick={bulkBlockBots}
                 className="ml-auto px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold hover:bg-red-500/30 transition"
               >
-                Bloquer tous les bots ({botIPs.length})
+                Block all bots ({botIPs.length})
               </button>
             )}
           </div>
@@ -573,7 +573,7 @@ export default function FraudPage() {
                 onClick={() => setIpSort(key)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${ipSort === key ? "bg-accent/20 text-accent border border-accent/30" : "bg-white/5 text-white/50 hover:bg-white/10"}`}
               >
-                {key === "total_clicks" ? "Clics" : key === "valid_clicks" ? "Valides" : "Jours actifs"}
+                {key === "total_clicks" ? "Clicks" : key === "valid_clicks" ? "Valid" : "Active days"}
               </button>
             ))}
           </div>
@@ -583,12 +583,12 @@ export default function FraudPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-white/30 border-b border-white/5">
-                  <th className="pb-3 font-semibold">Adresse IP</th>
-                  <th className="pb-3 font-semibold">Clics</th>
-                  <th className="pb-3 font-semibold">Valides</th>
-                  <th className="pb-3 font-semibold hidden md:table-cell">Opérateur</th>
-                  <th className="pb-3 font-semibold">Risque</th>
-                  <th className="pb-3 font-semibold hidden lg:table-cell">Durée</th>
+                  <th className="pb-3 font-semibold">IP Address</th>
+                  <th className="pb-3 font-semibold">Clicks</th>
+                  <th className="pb-3 font-semibold">Valid</th>
+                  <th className="pb-3 font-semibold hidden md:table-cell">Carrier</th>
+                  <th className="pb-3 font-semibold">Risk</th>
+                  <th className="pb-3 font-semibold hidden lg:table-cell">Duration</th>
                   <th className="pb-3 font-semibold">Action</th>
                 </tr>
               </thead>
@@ -619,17 +619,17 @@ export default function FraudPage() {
                           onClick={() => loadIPDetails(ip.ip_address)}
                           className="text-xs text-accent hover:text-accent/80 font-semibold"
                         >
-                          Détails
+                          Details
                         </button>
                         {ip.is_carrier_ip ? (
-                          <span className="text-xs text-orange-400/70 font-semibold">Protégé</span>
+                          <span className="text-xs text-orange-400/70 font-semibold">Protected</span>
                         ) : (
                           !data.blockedIPs.some((b) => b.ip_address === ip.ip_address) && (
                             <button
                               onClick={() => blockIP(ip.ip_address)}
                               className="text-xs text-red-400 hover:text-red-300 font-semibold"
                             >
-                              Bloquer
+                              Block
                             </button>
                           )
                         )}
@@ -646,7 +646,7 @@ export default function FraudPage() {
       )}
 
       {/* ══════════════════════════════════════════════
-          SECTION 3: Écho Fraud Analysis
+          SECTION 3: Echo Fraud Analysis
           ══════════════════════════════════════════════ */}
       {activeSection === "echos" && (
         <div className="space-y-6">
@@ -654,12 +654,12 @@ export default function FraudPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-white/30 border-b border-white/5">
-                  <th className="pb-3 font-semibold">Écho</th>
-                  <th className="pb-3 font-semibold">Clics</th>
-                  <th className="pb-3 font-semibold">Valides</th>
-                  <th className="pb-3 font-semibold">Taux valide</th>
-                  <th className="pb-3 font-semibold hidden md:table-cell">IPs suspectes</th>
-                  <th className="pb-3 font-semibold">Risque</th>
+                  <th className="pb-3 font-semibold">Echo</th>
+                  <th className="pb-3 font-semibold">Clicks</th>
+                  <th className="pb-3 font-semibold">Valid</th>
+                  <th className="pb-3 font-semibold">Valid rate</th>
+                  <th className="pb-3 font-semibold hidden md:table-cell">Suspicious IPs</th>
+                  <th className="pb-3 font-semibold">Risk</th>
                   <th className="pb-3 font-semibold">Action</th>
                 </tr>
               </thead>
@@ -671,7 +671,7 @@ export default function FraudPage() {
                         <span className="text-sm font-semibold">{echo.name}</span>
                         {echo.phone && <span className="text-xs text-white/30 ml-2">{echo.phone}</span>}
                       </div>
-                      <span className="text-xs text-white/30">{echo.links_created} liens</span>
+                      <span className="text-xs text-white/30">{echo.links_created} links</span>
                     </td>
                     <td className="py-3 text-xs">{echo.total_clicks}</td>
                     <td className="py-3 text-xs">{echo.valid_clicks}</td>
@@ -699,8 +699,8 @@ export default function FraudPage() {
                           "active"
                         }
                         label={
-                          echo.risk_level === "high_fraud_risk" ? "Haut risque" :
-                          echo.risk_level === "moderate_risk" ? "Modéré" :
+                          echo.risk_level === "high_fraud_risk" ? "High risk" :
+                          echo.risk_level === "moderate_risk" ? "Moderate" :
                           "Clean"
                         }
                       />
@@ -711,7 +711,7 @@ export default function FraudPage() {
                           onClick={() => flagEcho(echo.echo_id, "high")}
                           className="text-xs text-red-400 hover:text-red-300 font-semibold"
                         >
-                          Signaler
+                          Flag
                         </button>
                       )}
                     </td>
@@ -747,7 +747,7 @@ export default function FraudPage() {
                 <tr className="text-left text-xs text-white/30 border-b border-white/5">
                   <th className="pb-3 font-semibold">{t("common.date")}</th>
                   <th className="pb-3 font-semibold">{t("superadmin.fraud.ip")}</th>
-                  <th className="pb-3 font-semibold hidden lg:table-cell">Raison</th>
+                  <th className="pb-3 font-semibold hidden lg:table-cell">Reason</th>
                   <th className="pb-3 font-semibold">{t("superadmin.fraud.echoLabel")}</th>
                   <th className="pb-3 font-semibold hidden md:table-cell">{t("superadmin.fraud.campaign")}</th>
                   <th className="pb-3 font-semibold">{t("common.status")}</th>
@@ -757,7 +757,7 @@ export default function FraudPage() {
                 {paginate(filteredClicks, clickPage, PAGE_SIZE).map((click) => (
                   <tr key={click.id} className="border-b border-white/5 hover:bg-white/3 transition">
                     <td className="py-3 text-xs text-white/50">
-                      {new Date(click.created_at).toLocaleDateString("fr-FR", {
+                      {new Date(click.created_at).toLocaleDateString("en-US", {
                         day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
                       })}
                     </td>
@@ -769,7 +769,7 @@ export default function FraudPage() {
                     <td className="py-3 text-xs hidden md:table-cell">{click.tracked_links?.campaigns?.title || "—"}</td>
                     <td className="py-3">
                       <button onClick={() => toggleClickValidity(click.id)}>
-                        <Badge status={click.is_valid ? "active" : "flagged"} label={click.is_valid ? t("common.valid") : "Rejeté"} />
+                        <Badge status={click.is_valid ? "active" : "flagged"} label={click.is_valid ? t("common.valid") : "Rejected"} />
                       </button>
                     </td>
                   </tr>
@@ -809,20 +809,20 @@ export default function FraudPage() {
             {ipDetails.is_carrier_ip && (
               <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
                 <p className="text-sm font-bold text-orange-400">
-                  {getCarrierDot(ipDetails.carrier)} Opérateur: {ipDetails.carrier}
+                  {getCarrierDot(ipDetails.carrier)} Carrier: {ipDetails.carrier}
                 </p>
                 {ipDetails.carrier_notes && (
                   <p className="text-xs text-orange-400/70 mt-1">{ipDetails.carrier_notes}</p>
                 )}
                 <p className="text-xs text-orange-400/60 mt-2">
-                  ⚠️ IP partagée (CGNAT). Le blocage affectera tous les abonnés de cette antenne.
+                  ⚠️ Shared IP (CGNAT). Blocking will affect all subscribers on this tower.
                 </p>
               </div>
             )}
 
             {/* Click timeline */}
             <div>
-              <h3 className="text-sm font-bold mb-3">Chronologie des clics ({ipDetails.clicks.length})</h3>
+              <h3 className="text-sm font-bold mb-3">Click timeline ({ipDetails.clicks.length})</h3>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {ipDetails.clicks.map((click) => {
                   const link = Array.isArray(click.tracked_links) ? click.tracked_links[0] : click.tracked_links;
@@ -830,7 +830,7 @@ export default function FraudPage() {
                     <div key={click.id} className="flex items-center gap-3 text-xs py-1.5 border-b border-white/5">
                       <span className={`w-1.5 h-1.5 rounded-full ${click.is_valid ? "bg-emerald-400" : "bg-red-400"}`} />
                       <span className="text-white/40 w-28 shrink-0">
-                        {new Date(click.created_at).toLocaleString("fr-FR", {
+                        {new Date(click.created_at).toLocaleString("en-US", {
                           month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit",
                         })}
                       </span>
@@ -849,14 +849,14 @@ export default function FraudPage() {
             <div className="flex gap-2 pt-2">
               {ipDetails.is_carrier_ip ? (
                 <div className="flex-1 py-2 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-bold text-center">
-                  IP protégée — opérateur {ipDetails.carrier}
+                  Protected IP — carrier {ipDetails.carrier}
                 </div>
               ) : (
                 <button
                   onClick={() => { blockIP(selectedIP!); setSelectedIP(null); setIPDetails(null); }}
                   className="flex-1 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold"
                 >
-                  Bloquer cette IP
+                  Block this IP
                 </button>
               )}
             </div>
@@ -868,14 +868,14 @@ export default function FraudPage() {
       <Modal
         open={!!blockConfirm}
         onClose={() => setBlockConfirm(null)}
-        title="⚠️ IP opérateur détectée"
+        title="⚠️ Carrier IP detected"
       >
         {blockConfirm && (
           <div className="space-y-4">
             <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20">
               <p className="text-sm text-orange-400">
-                Cette IP appartient au réseau de <strong>{blockConfirm.carrier}</strong>.
-                Le blocage rejettera les clics de <strong>tous les abonnés</strong> de cette antenne — potentiellement des milliers de personnes.
+                This IP belongs to the <strong>{blockConfirm.carrier}</strong> network.
+                Blocking will reject clicks from <strong>all subscribers</strong> on this tower — potentially thousands of people.
               </p>
             </div>
             <div className="flex gap-2">
@@ -883,13 +883,13 @@ export default function FraudPage() {
                 onClick={() => setBlockConfirm(null)}
                 className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-bold"
               >
-                Annuler
+                Cancel
               </button>
               <button
                 onClick={() => { blockIP(blockConfirm.ip, true); }}
                 className="flex-1 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-bold"
               >
-                Bloquer quand même
+                Block anyway
               </button>
             </div>
           </div>
@@ -911,22 +911,22 @@ function FraudSettings({ onSave, saving }: { onSave: (s: Record<string, string>)
 
   return (
     <div className="glass-card p-6 max-w-xl space-y-6">
-      <h2 className="text-lg font-bold">Paramètres anti-fraude</h2>
+      <h2 className="text-lg font-bold">Anti-fraud settings</h2>
 
       <div className="space-y-4">
         <div>
-          <label className="text-xs text-white/50 block mb-1">Cooldown IP par lien (heures)</label>
+          <label className="text-xs text-white/50 block mb-1">IP cooldown per link (hours)</label>
           <input
             type="number"
             value={cooldownHours}
             onChange={(e) => setCooldownHours(e.target.value)}
             className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent/50"
           />
-          <p className="text-xs text-white/30 mt-1">Même IP + même lien = 1 clic valide par période</p>
+          <p className="text-xs text-white/30 mt-1">Same IP + same link = 1 valid click per period</p>
         </div>
 
         <div>
-          <label className="text-xs text-white/50 block mb-1">Limite clics par lien / heure</label>
+          <label className="text-xs text-white/50 block mb-1">Click limit per link / hour</label>
           <input
             type="number"
             value={linkHourlyLimit}
@@ -936,31 +936,31 @@ function FraudSettings({ onSave, saving }: { onSave: (s: Record<string, string>)
         </div>
 
         <div>
-          <label className="text-xs text-white/50 block mb-1">Limite clics valides par IP / jour</label>
+          <label className="text-xs text-white/50 block mb-1">Valid click limit per IP / day</label>
           <input
             type="number"
             value={ipDailyLimit}
             onChange={(e) => setIpDailyLimit(e.target.value)}
             className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent/50"
           />
-          <p className="text-xs text-white/30 mt-1">Maximum de clics valides par IP par jour (tous liens confondus)</p>
+          <p className="text-xs text-white/30 mt-1">Maximum valid clicks per IP per day (all links combined)</p>
         </div>
 
         <div>
-          <label className="text-xs text-white/50 block mb-1">Intervalle minimum entre clics (secondes)</label>
+          <label className="text-xs text-white/50 block mb-1">Minimum interval between clicks (seconds)</label>
           <input
             type="number"
             value={speedSeconds}
             onChange={(e) => setSpeedSeconds(e.target.value)}
             className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent/50"
           />
-          <p className="text-xs text-white/30 mt-1">Clics plus rapides = bot automatique</p>
+          <p className="text-xs text-white/30 mt-1">Faster clicks = automated bot</p>
         </div>
 
         <div className="flex items-center justify-between py-2">
           <div>
-            <span className="text-sm">Auto-bloquer IPs datacenter</span>
-            <p className="text-xs text-white/30">Bloquer automatiquement les IPs identifiées comme datacenter</p>
+            <span className="text-sm">Auto-block datacenter IPs</span>
+            <p className="text-xs text-white/30">Automatically block IPs identified as datacenter</p>
           </div>
           <button
             onClick={() => setAutoBlockDatacenter(!autoBlockDatacenter)}
@@ -972,8 +972,8 @@ function FraudSettings({ onSave, saving }: { onSave: (s: Record<string, string>)
 
         <div className="flex items-center justify-between py-2">
           <div>
-            <span className="text-sm">Protection IPs opérateur</span>
-            <p className="text-xs text-white/30">Empêcher le blocage des IPs CGNAT des opérateurs sénégalais (recommandé)</p>
+            <span className="text-sm">Carrier IP protection</span>
+            <p className="text-xs text-white/30">Prevent blocking CGNAT IPs from Senegalese carriers (recommended)</p>
           </div>
           <button
             onClick={() => setCarrierProtection(!carrierProtection)}
@@ -996,7 +996,7 @@ function FraudSettings({ onSave, saving }: { onSave: (s: Record<string, string>)
         disabled={saving}
         className="w-full py-2.5 rounded-xl bg-accent/20 border border-accent/30 text-accent text-sm font-bold hover:bg-accent/30 transition disabled:opacity-40"
       >
-        {saving ? "Sauvegarde..." : "Sauvegarder les paramètres"}
+        {saving ? "Saving..." : "Save settings"}
       </button>
     </div>
   );

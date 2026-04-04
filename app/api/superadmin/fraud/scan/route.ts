@@ -16,7 +16,7 @@ export async function POST() {
   // Verify superadmin role
   const { data: admin } = await supabase.from("users").select("role").eq("id", session.user.id).single();
   if (!admin || admin.role !== "superadmin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
   let flagged = 0;
 

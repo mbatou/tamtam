@@ -6,14 +6,14 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
 
   // Verify superadmin role
   const { data: admin } = await supabase.from("users").select("role").eq("id", session.user.id).single();
   if (!admin || admin.role !== "superadmin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   // Fetch all tickets with user info
@@ -36,21 +36,21 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
 
   // Verify superadmin role
   const { data: admin } = await supabase.from("users").select("role").eq("id", session.user.id).single();
   if (!admin || admin.role !== "superadmin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   const body = await request.json();
   const { ticket_id, action, reply } = body;
 
   if (!ticket_id || !action) {
-    return NextResponse.json({ error: "ticket_id et action requis" }, { status: 400 });
+    return NextResponse.json({ error: "ticket_id and action required" }, { status: 400 });
   }
 
   // Get current ticket
@@ -61,12 +61,12 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (!ticket) {
-    return NextResponse.json({ error: "Ticket introuvable" }, { status: 404 });
+    return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
   }
 
   if (action === "reply") {
     if (!reply || reply.trim().length === 0) {
-      return NextResponse.json({ error: "Réponse requise" }, { status: 400 });
+      return NextResponse.json({ error: "Response required" }, { status: 400 });
     }
 
     const { error } = await supabase
@@ -115,5 +115,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   }
 
-  return NextResponse.json({ error: "Action invalide" }, { status: 400 });
+  return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 }

@@ -15,7 +15,7 @@ async function requireSuperadmin() {
 
 export async function GET() {
   const auth = await requireSuperadmin();
-  if (!auth) return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { supabase } = auth;
 
@@ -55,7 +55,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const auth = await requireSuperadmin();
-  if (!auth) return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { supabase, session } = auth;
   const body = await req.json();

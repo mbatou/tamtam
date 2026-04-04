@@ -15,14 +15,14 @@ async function requireSuperadmin() {
 
 export async function GET(request: NextRequest) {
   const auth = await requireSuperadmin();
-  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(request.url);
   const contactId = searchParams.get("contact_id");
   const contactType = searchParams.get("contact_type") || "brand";
 
   if (!contactId) {
-    return NextResponse.json({ error: "contact_id requis" }, { status: 400 });
+    return NextResponse.json({ error: "contact_id required" }, { status: 400 });
   }
 
   const { data: notes, error } = await auth.supabase

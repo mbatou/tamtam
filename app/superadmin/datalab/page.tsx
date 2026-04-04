@@ -58,7 +58,7 @@ export default function DataLabPage() {
         setAiAnalysis(result.analysis);
       }
     } catch {
-      setAiError("Erreur de connexion \u00e0 l\u2019IA");
+      setAiError("AI connection error");
     }
     setAnalyzing(false);
   };

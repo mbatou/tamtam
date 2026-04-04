@@ -37,7 +37,7 @@ async function requireSuperadmin() {
 
 export async function GET() {
   const auth = await requireSuperadmin();
-  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = auth.supabase;
 
@@ -91,7 +91,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const auth = await requireSuperadmin();
-  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = auth.supabase;
   const session = auth.session;
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
   if (action === "create") {
     const { batteur_id, title, description, destination_url, cpc, budget, objective } = body;
     if (!batteur_id || !title || !destination_url || !cpc || !budget) {
-      return NextResponse.json({ error: "Champs obligatoires manquants" }, { status: 400 });
+      return NextResponse.json({ error: "Required fields missing" }, { status: 400 });
     }
 
     // Verify the batteur exists and has enough balance
@@ -113,10 +113,10 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!batteur || batteur.role !== "batteur") {
-      return NextResponse.json({ error: "Batteur introuvable" }, { status: 404 });
+      return NextResponse.json({ error: "Brand not found" }, { status: 404 });
     }
     if ((batteur.balance || 0) < budget) {
-      return NextResponse.json({ error: `Solde insuffisant (${batteur.balance || 0} FCFA disponible)` }, { status: 400 });
+      return NextResponse.json({ error: `Insufficient balance (${batteur.balance || 0} FCFA available)` }, { status: 400 });
     }
 
     // Deduct from batteur balance
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
       userId: batteur_id,
       amount: -parseInt(budget),
       type: "campaign_budget_debit",
-      description: `Création campagne par admin: ${title}`,
+      description: `Campaign created by admin: ${title}`,
       sourceType: "campaign",
       createdBy: session.user.id,
     });
@@ -249,7 +249,7 @@ export async function POST(request: NextRequest) {
   const { campaign_id, reason } = body;
 
   if (!campaign_id || !action) {
-    return NextResponse.json({ error: "Paramètres manquants" }, { status: 400 });
+    return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
   }
 
   // Get current campaign state
@@ -260,7 +260,7 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (fetchErr || !campaign) {
-    return NextResponse.json({ error: "Campagne introuvable" }, { status: 404 });
+    return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
   }
 
   const updates: Record<string, unknown> = {
@@ -286,7 +286,7 @@ export async function POST(request: NextRequest) {
 
         if (!batteur || (batteur.balance || 0) < campaign.budget) {
           return NextResponse.json({
-            error: `Solde insuffisant du batteur (${batteur?.balance || 0} FCFA disponible, ${campaign.budget} FCFA requis)`,
+            error: `Insufficient brand balance (${batteur?.balance || 0} FCFA available, ${campaign.budget} FCFA required)`,
           }, { status: 400 });
         }
 
@@ -316,13 +316,13 @@ export async function POST(request: NextRequest) {
       // Guard: only reject if campaign is actually pending review
       if (campaign.moderation_status === "rejected") {
         return NextResponse.json({
-          error: "Cette campagne est déjà rejetée",
+          error: "This campaign is already rejected",
         }, { status: 400 });
       }
 
       updates.moderation_status = "rejected";
       updates.status = "rejected";
-      updates.moderation_reason = reason || "Rejeté par l'admin";
+      updates.moderation_reason = reason || "Rejected by admin";
 
       // Idempotent refund: check if a refund was already issued for this campaign
       const { data: existingRefund } = await supabase
@@ -354,7 +354,7 @@ export async function POST(request: NextRequest) {
               userId: campaign.batteur_id,
               amount: unspent,
               type: "campaign_budget_refund",
-              description: `Remboursement campagne rejetée par admin`,
+              description: `Refund for rejected campaign by admin`,
               sourceId: campaign_id,
               sourceType: "campaign",
               createdBy: session.user.id,
@@ -368,19 +368,19 @@ export async function POST(request: NextRequest) {
     }
     case "pause": {
       if (campaign.status !== "active") {
-        return NextResponse.json({ error: `Impossible de mettre en pause — statut: ${campaign.status}` }, { status: 400 });
+        return NextResponse.json({ error: `Cannot pause — status: ${campaign.status}` }, { status: 400 });
       }
       updates.status = "paused";
       break;
     }
     case "resume": {
       if (campaign.status !== "paused") {
-        return NextResponse.json({ error: `Impossible de reprendre — statut: ${campaign.status}` }, { status: 400 });
+        return NextResponse.json({ error: `Cannot resume — status: ${campaign.status}` }, { status: 400 });
       }
       const remaining = campaign.budget - (campaign.spent || 0);
       if (remaining < campaign.cpc) {
         return NextResponse.json({
-          error: `Budget restant (${remaining} FCFA) inférieur au CPC (${campaign.cpc} FCFA). Impossible de reprendre.`,
+          error: `Remaining budget (${remaining} FCFA) is less than CPC (${campaign.cpc} FCFA). Cannot resume.`,
         }, { status: 400 });
       }
       updates.status = "active";
@@ -388,7 +388,7 @@ export async function POST(request: NextRequest) {
     }
     case "stop": {
       if (!["active", "paused"].includes(campaign.status)) {
-        return NextResponse.json({ error: `Impossible d'arrêter — statut: ${campaign.status}` }, { status: 400 });
+        return NextResponse.json({ error: `Cannot stop — status: ${campaign.status}` }, { status: 400 });
       }
       updates.status = "completed";
 
@@ -416,7 +416,7 @@ export async function POST(request: NextRequest) {
             userId: campaign.batteur_id,
             amount: stopRemaining,
             type: "campaign_budget_refund",
-            description: `Remboursement campagne arrêtée: ${campaign.title || campaign.id} (${stopRemaining} FCFA restants)`,
+            description: `Refund for stopped campaign: ${campaign.title || campaign.id} (${stopRemaining} FCFA remaining)`,
             sourceId: campaign_id,
             sourceType: "campaign",
             createdBy: session.user.id,
@@ -426,7 +426,7 @@ export async function POST(request: NextRequest) {
       break;
     }
     default:
-      return NextResponse.json({ error: "Action invalide" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }
 
   const { error } = await supabase

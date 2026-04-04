@@ -17,7 +17,7 @@ async function requireSuperadmin() {
 
 export async function POST(request: NextRequest) {
   const auth = await requireSuperadmin();
-  if (!auth) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = auth.supabase;
   const { action, userIds, data } = await request.json();
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
           await supabase
             .from("users")
             .update({
-              name: "Compte supprimé",
+              name: "Deleted account",
               email: `deleted_${hash}@deleted.tamma.me`,
               original_email: user.email,
               phone: null,
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
               company_name: null,
               balance: 0,
               deleted_at: new Date().toISOString(),
-              deletion_reason: data?.reason || "Suppression admin (bulk)",
+              deletion_reason: data?.reason || "Admin deletion (bulk)",
             })
             .eq("id", userId);
 

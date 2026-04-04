@@ -103,18 +103,18 @@ export default function AmbassadorsPage() {
     });
     const data = await res.json();
     if (res.ok) {
-      showToast("Ambassadeur créé !", "success");
+      showToast("Ambassador created!", "success");
       setShowCreate(false);
       setCreateForm({ name: "", email: "", phone: "", code: "", rate: "5" });
       loadData();
     } else {
-      showToast(data.error || "Erreur", "error");
+      showToast(data.error || "Error", "error");
     }
     setSaving(false);
   }
 
   async function handlePay(ambassadorId: string) {
-    if (!confirm("Confirmer le paiement de toutes les commissions en attente ?")) return;
+    if (!confirm("Confirm payment of all pending commissions?")) return;
     const res = await fetch("/api/superadmin/ambassadors", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -122,11 +122,11 @@ export default function AmbassadorsPage() {
     });
     const data = await res.json();
     if (res.ok) {
-      showToast(`${data.paidAmount?.toLocaleString("fr-FR")} FCFA marqué comme payé`, "success");
+      showToast(`${data.paidAmount?.toLocaleString("fr-FR")} FCFA marked as paid`, "success");
       loadData();
       if (selected) loadDetail(selected);
     } else {
-      showToast(data.error || "Erreur", "error");
+      showToast(data.error || "Error", "error");
     }
   }
 
@@ -137,7 +137,7 @@ export default function AmbassadorsPage() {
       body: JSON.stringify({ action: "toggle_status", ambassador_id: ambassadorId }),
     });
     if (res.ok) {
-      showToast("Statut mis à jour", "success");
+      showToast("Status updated", "success");
       loadData();
       if (selected) {
         const updated = { ...selected, status: selected.status === "active" ? "inactive" : "active" };
@@ -148,7 +148,7 @@ export default function AmbassadorsPage() {
 
   function copyUrl(code: string) {
     navigator.clipboard.writeText(`https://www.tamma.me/signup/brand?ref=${code}`);
-    showToast("Lien copié !", "success");
+    showToast("Link copied!", "success");
   }
 
   if (loading) {
@@ -170,21 +170,21 @@ export default function AmbassadorsPage() {
         {ToastComponent}
         <button onClick={() => setSelected(null)} className="flex items-center gap-2 text-sm text-white/40 hover:text-white/70 transition mb-6">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-          Retour
+          Back
         </button>
 
         <div className="flex items-start justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold">{selected.name}</h1>
             <p className="text-sm text-white/40">{selected.email} {selected.phone && `· ${selected.phone}`}</p>
-            <p className="text-xs text-white/20 mt-1">Créé {timeAgo(selected.created_at)}</p>
+            <p className="text-xs text-white/20 mt-1">Created {timeAgo(selected.created_at)}</p>
           </div>
           <div className="flex gap-2">
             <span className={`text-xs font-bold px-2 py-1 rounded-full ${selected.status === "active" ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"}`}>
-              {selected.status === "active" ? "Actif" : "Inactif"}
+              {selected.status === "active" ? "Active" : "Inactive"}
             </span>
             <button onClick={() => handleToggleStatus(selected.id)} className="text-xs px-3 py-1 rounded-lg bg-white/5 text-white/50 hover:bg-white/10 transition">
-              {selected.status === "active" ? "Désactiver" : "Activer"}
+              {selected.status === "active" ? "Deactivate" : "Activate"}
             </button>
           </div>
         </div>
@@ -193,26 +193,26 @@ export default function AmbassadorsPage() {
         <div className="glass-card p-4 mb-6 flex items-center gap-3">
           <input readOnly value={`tamma.me/signup/brand?ref=${selected.referral_code}`} className="flex-1 bg-transparent text-accent text-sm font-mono" />
           <button onClick={() => copyUrl(selected.referral_code)} className="px-3 py-1.5 rounded-lg bg-orange-500/10 text-orange-400 text-sm font-semibold hover:bg-orange-500/20 transition">
-            Copier
+            Copy
           </button>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
           <div className="glass-card p-4">
-            <p className="text-xs text-white/40 mb-1">Marques référées</p>
+            <p className="text-xs text-white/40 mb-1">Referred Brands</p>
             <p className="text-xl font-bold">{selected.total_referrals}</p>
           </div>
           <div className="glass-card p-4">
-            <p className="text-xs text-white/40 mb-1">Marques actives</p>
+            <p className="text-xs text-white/40 mb-1">Active Brands</p>
             <p className="text-xl font-bold text-accent">{detailData?.activeReferrals ?? "..."}</p>
           </div>
           <div className="glass-card p-4">
-            <p className="text-xs text-white/40 mb-1">Total gagné</p>
+            <p className="text-xs text-white/40 mb-1">Total Earned</p>
             <p className="text-xl font-bold text-emerald-400">{(selected.total_earned || 0).toLocaleString("fr-FR")} F</p>
           </div>
           <div className="glass-card p-4">
-            <p className="text-xs text-white/40 mb-1">En attente</p>
+            <p className="text-xs text-white/40 mb-1">Pending</p>
             <p className="text-xl font-bold text-orange-400">{pending.toLocaleString("fr-FR")} F</p>
           </div>
         </div>
@@ -220,23 +220,23 @@ export default function AmbassadorsPage() {
         {/* Pay button */}
         {pending > 0 && (
           <button onClick={() => handlePay(selected.id)} className="mb-6 px-5 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 font-bold text-sm hover:bg-emerald-500/20 transition">
-            Marquer comme payé ({pending.toLocaleString("fr-FR")} FCFA)
+            Mark as paid ({pending.toLocaleString("fr-FR")} FCFA)
           </button>
         )}
 
         {/* Referred brands */}
         <div className="glass-card p-5 mb-4">
-          <h3 className="font-bold mb-4">Marques référées</h3>
+          <h3 className="font-bold mb-4">Referred Brands</h3>
           {detailData?.referrals && detailData.referrals.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-white/30 text-xs border-b border-white/5">
-                    <th className="text-left pb-2 font-semibold">Marque</th>
-                    <th className="text-left pb-2 font-semibold">Inscription</th>
-                    <th className="text-left pb-2 font-semibold">Campagnes</th>
+                    <th className="text-left pb-2 font-semibold">Brand</th>
+                    <th className="text-left pb-2 font-semibold">Sign-up</th>
+                    <th className="text-left pb-2 font-semibold">Campaigns</th>
                     <th className="text-right pb-2 font-semibold">Commission</th>
-                    <th className="text-right pb-2 font-semibold">Statut</th>
+                    <th className="text-right pb-2 font-semibold">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -255,7 +255,7 @@ export default function AmbassadorsPage() {
                       <td className="py-3 text-right text-emerald-400">{(ref.total_commission_earned || 0).toLocaleString("fr-FR")} F</td>
                       <td className="py-3 text-right">
                         <span className={`text-xs px-2 py-0.5 rounded-full ${ref.status === "active" ? "bg-emerald-500/10 text-emerald-400" : "bg-white/5 text-white/40"}`}>
-                          {ref.status === "active" ? "Active" : "Inscrite"}
+                          {ref.status === "active" ? "Active" : "Signed up"}
                         </span>
                       </td>
                     </tr>
@@ -264,7 +264,7 @@ export default function AmbassadorsPage() {
               </table>
             </div>
           ) : (
-            <p className="text-sm text-white/30">Aucune marque référée</p>
+            <p className="text-sm text-white/30">No referred brands</p>
           )}
         </div>
 
@@ -276,11 +276,11 @@ export default function AmbassadorsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-white/30 text-xs border-b border-white/5">
-                    <th className="text-left pb-2 font-semibold">Campagne</th>
+                    <th className="text-left pb-2 font-semibold">Campaign</th>
                     <th className="text-left pb-2 font-semibold">Budget</th>
-                    <th className="text-left pb-2 font-semibold">Taux</th>
+                    <th className="text-left pb-2 font-semibold">Rate</th>
                     <th className="text-right pb-2 font-semibold">Commission</th>
-                    <th className="text-right pb-2 font-semibold">Statut</th>
+                    <th className="text-right pb-2 font-semibold">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -292,7 +292,7 @@ export default function AmbassadorsPage() {
                       <td className="py-3 text-right text-emerald-400">{(c.commission_amount || 0).toLocaleString("fr-FR")} F</td>
                       <td className="py-3 text-right">
                         <span className={`text-xs px-2 py-0.5 rounded-full ${c.status === "paid" ? "bg-emerald-500/10 text-emerald-400" : "bg-orange-500/10 text-orange-400"}`}>
-                          {c.status === "paid" ? "Payé" : "En attente"}
+                          {c.status === "paid" ? "Paid" : "Pending"}
                         </span>
                       </td>
                     </tr>
@@ -301,7 +301,7 @@ export default function AmbassadorsPage() {
               </table>
             </div>
           ) : (
-            <p className="text-sm text-white/30">Aucune commission</p>
+            <p className="text-sm text-white/30">No commissions</p>
           )}
         </div>
       </div>
@@ -313,28 +313,28 @@ export default function AmbassadorsPage() {
     <div className="p-6 max-w-6xl">
       {ToastComponent}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Ambassadeurs</h1>
+        <h1 className="text-2xl font-bold">Ambassadors</h1>
         <button onClick={() => setShowCreate(true)} className="px-4 py-2 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-600 transition">
-          + Créer un ambassadeur
+          + Create an ambassador
         </button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="glass-card p-4">
-          <p className="text-xs text-white/40 mb-1">Ambassadeurs</p>
+          <p className="text-xs text-white/40 mb-1">Ambassadors</p>
           <p className="text-xl font-bold">{stats.totalAmbassadors}</p>
         </div>
         <div className="glass-card p-4">
-          <p className="text-xs text-white/40 mb-1">Marques référées</p>
+          <p className="text-xs text-white/40 mb-1">Referred Brands</p>
           <p className="text-xl font-bold">{stats.totalReferrals}</p>
         </div>
         <div className="glass-card p-4">
-          <p className="text-xs text-white/40 mb-1">Commissions gagnées</p>
+          <p className="text-xs text-white/40 mb-1">Commissions Earned</p>
           <p className="text-xl font-bold text-emerald-400">{stats.totalEarned.toLocaleString("fr-FR")} F</p>
         </div>
         <div className="glass-card p-4">
-          <p className="text-xs text-white/40 mb-1">En attente de paiement</p>
+          <p className="text-xs text-white/40 mb-1">Pending Payment</p>
           <p className="text-xl font-bold text-orange-400">{stats.totalPending.toLocaleString("fr-FR")} F</p>
         </div>
       </div>
@@ -346,13 +346,13 @@ export default function AmbassadorsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-white/30 text-xs border-b border-white/5">
-                  <th className="text-left p-4 font-semibold">Nom</th>
+                  <th className="text-left p-4 font-semibold">Name</th>
                   <th className="text-left p-4 font-semibold">Code</th>
-                  <th className="text-left p-4 font-semibold">Marques</th>
+                  <th className="text-left p-4 font-semibold">Brands</th>
                   <th className="text-left p-4 font-semibold">Commission</th>
-                  <th className="text-right p-4 font-semibold">Gagné</th>
-                  <th className="text-right p-4 font-semibold">Payé</th>
-                  <th className="text-right p-4 font-semibold">Statut</th>
+                  <th className="text-right p-4 font-semibold">Earned</th>
+                  <th className="text-right p-4 font-semibold">Paid</th>
+                  <th className="text-right p-4 font-semibold">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -369,7 +369,7 @@ export default function AmbassadorsPage() {
                     <td className="p-4 text-right text-white/40">{(amb.total_paid || 0).toLocaleString("fr-FR")} F</td>
                     <td className="p-4 text-right">
                       <span className={`text-xs font-bold px-2 py-1 rounded-full ${amb.status === "active" ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"}`}>
-                        {amb.status === "active" ? "Actif" : "Inactif"}
+                        {amb.status === "active" ? "Active" : "Inactive"}
                       </span>
                     </td>
                   </tr>
@@ -383,8 +383,8 @@ export default function AmbassadorsPage() {
           <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">🤝</span>
           </div>
-          <p className="text-white/40 text-sm mb-2">Aucun ambassadeur</p>
-          <p className="text-xs text-white/30">Créez votre premier ambassadeur pour commencer le programme de parrainage.</p>
+          <p className="text-white/40 text-sm mb-2">No ambassadors</p>
+          <p className="text-xs text-white/30">Create your first ambassador to start the referral program.</p>
         </div>
       )}
 
@@ -392,10 +392,10 @@ export default function AmbassadorsPage() {
       {showCreate && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="glass-card p-6 w-full max-w-md">
-            <h2 className="text-lg font-bold mb-4">Créer un ambassadeur</h2>
+            <h2 className="text-lg font-bold mb-4">Create an Ambassador</h2>
             <div className="space-y-3">
               <input
-                placeholder="Nom complet"
+                placeholder="Full name"
                 value={createForm.name}
                 onChange={e => setCreateForm({ ...createForm, name: e.target.value })}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-orange-500 transition"
@@ -408,19 +408,19 @@ export default function AmbassadorsPage() {
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-orange-500 transition"
               />
               <input
-                placeholder="Téléphone / WhatsApp (optionnel)"
+                placeholder="Phone / WhatsApp (optional)"
                 value={createForm.phone}
                 onChange={e => setCreateForm({ ...createForm, phone: e.target.value })}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-orange-500 transition"
               />
               <div>
                 <input
-                  placeholder={`Code de parrainage (ex: AMB-${createForm.name.split(" ")[0]?.toUpperCase() || "NOM"})`}
+                  placeholder={`Referral code (e.g.: AMB-${createForm.name.split(" ")[0]?.toUpperCase() || "NAME"})`}
                   value={createForm.code}
                   onChange={e => setCreateForm({ ...createForm, code: e.target.value.toUpperCase() })}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-orange-500 transition"
                 />
-                <p className="text-xs text-white/20 mt-1">Laissez vide pour générer automatiquement</p>
+                <p className="text-xs text-white/20 mt-1">Leave empty to auto-generate</p>
               </div>
               <div>
                 <label className="text-xs text-white/40 mb-1 block">Commission (%)</label>
@@ -438,13 +438,13 @@ export default function AmbassadorsPage() {
                 disabled={saving || !createForm.name || !createForm.email}
                 className="flex-1 py-3 rounded-xl bg-orange-500 text-white font-bold text-sm hover:bg-orange-600 transition disabled:opacity-40"
               >
-                {saving ? "Création..." : "Créer"}
+                {saving ? "Creating..." : "Create"}
               </button>
               <button
                 onClick={() => setShowCreate(false)}
                 className="px-5 py-3 rounded-xl bg-white/5 text-white/60 text-sm hover:bg-white/10 transition"
               >
-                Annuler
+                Cancel
               </button>
             </div>
           </div>

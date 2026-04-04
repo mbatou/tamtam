@@ -112,7 +112,7 @@ function SuperadminSupportPageContent() {
   }
 
   function getRoleLabel(role: string) {
-    const map: Record<string, string> = { batteur: "Batteur", echo: "Echo", admin: "Admin" };
+    const map: Record<string, string> = { batteur: "Drummer", echo: "Echo", admin: "Admin" };
     return map[role] || role;
   }
 
@@ -252,7 +252,7 @@ function SuperadminSupportPageContent() {
                 <span className={`badge-${getStatusBadge(selectedTicket.status)}`}>{getStatusLabel(selectedTicket.status)}</span>
               </div>
               <p className="text-xs text-white/30">
-                {new Date(selectedTicket.created_at).toLocaleDateString("fr-FR", {
+                {new Date(selectedTicket.created_at).toLocaleDateString("en-US", {
                   weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
                 })}
               </p>
