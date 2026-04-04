@@ -30,6 +30,8 @@ export interface User {
   created_at: string;
 }
 
+export type CampaignObjective = "awareness" | "traffic";
+
 export interface Campaign {
   id: string;
   batteur_id: string;
@@ -41,6 +43,7 @@ export interface Campaign {
   budget: number;
   spent: number;
   status: "draft" | "active" | "paused" | "completed" | "rejected";
+  objective: CampaignObjective;
   moderation_status?: "pending" | "approved" | "rejected";
   moderation_reason?: string | null;
   moderated_by?: string | null;

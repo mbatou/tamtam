@@ -11,6 +11,7 @@ export const createCampaignSchema = z.object({
   ends_at: z.string().optional().nullable(),
   target_cities: z.array(z.string()).optional(),
   save_as_draft: z.boolean().optional(),
+  objective: z.enum(["awareness", "traffic"]).optional(),
 });
 
 export const updateCampaignSchema = z.object({
@@ -26,6 +27,7 @@ export const updateCampaignSchema = z.object({
   target_cities: z.array(z.string()).optional(),
   status: z.enum(["draft", "active", "paused", "completed"]).optional(),
   moderation_status: z.enum(["pending", "approved", "rejected"]).optional(),
+  objective: z.enum(["awareness", "traffic"]).optional(),
 });
 
 export const deleteCampaignSchema = z.object({
