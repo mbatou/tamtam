@@ -133,7 +133,8 @@ function CampaignModerationPageContent() {
       ]);
       const campData = await campRes.json();
       const usersData = await usersRes.json();
-      setCampaigns(campData);
+      if (!campRes.ok || !usersRes.ok) throw new Error("API error");
+      setCampaigns(Array.isArray(campData) ? campData : []);
       if (highlightId) openById(campData, highlightId);
       setBatteurs(
         (usersData || [])
