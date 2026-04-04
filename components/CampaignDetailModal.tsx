@@ -23,16 +23,16 @@ export default function CampaignDetailModal({ campaign, link, open, onClose }: C
   const isShareable = campaign.status === "active";
   const statusLabel: Record<string, string> = {
     active: "Actif",
-    completed: "Termine",
+    completed: "Terminé",
     paused: "En pause",
-    rejected: "Supprime",
+    rejected: "Supprimé",
     draft: "Brouillon",
   };
 
   function copyLink() {
     if (!link) return;
     navigator.clipboard.writeText(getTrackingUrl(link.short_code));
-    showToast("Lien copie !", "success");
+    showToast("Lien copié !", "success");
   }
 
   const objective = campaign.objective || "traffic";
@@ -90,9 +90,9 @@ export default function CampaignDetailModal({ campaign, link, open, onClose }: C
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(a.href);
-      showToast("Telechargement lance !", "success");
+      showToast("Téléchargement lancé !", "success");
     } catch {
-      showToast("Erreur de telechargement", "error");
+      showToast("Erreur de téléchargement", "error");
     }
     setDownloading(null);
   }
@@ -144,7 +144,7 @@ export default function CampaignDetailModal({ campaign, link, open, onClose }: C
             <span className="text-lg font-black block text-accent">
               {formatFCFA(Math.floor(link.click_count * campaign.cpc * ECHO_SHARE_PERCENT / 100))}
             </span>
-            <span className="text-[9px] text-white/40 font-semibold">Gagne</span>
+            <span className="text-[9px] text-white/40 font-semibold">Gagné</span>
           </div>
         </div>
       )}
@@ -153,7 +153,7 @@ export default function CampaignDetailModal({ campaign, link, open, onClose }: C
       {campaign.creative_urls && campaign.creative_urls.length > 0 && (
         <div className="mb-4">
           <p className="text-xs font-semibold text-white/50 mb-2">
-            Assets ({campaign.creative_urls.length})
+            Visuels ({campaign.creative_urls.length})
           </p>
           <div className="grid grid-cols-2 gap-2">
             {campaign.creative_urls.map((url, i) => {
@@ -185,7 +185,7 @@ export default function CampaignDetailModal({ campaign, link, open, onClose }: C
                   </button>
                   {isVideo && (
                     <div className="absolute top-1.5 left-1.5 bg-black/50 rounded px-1.5 py-0.5 text-[9px] text-white/70">
-                      Video
+                      Vidéo
                     </div>
                   )}
                 </div>
@@ -198,7 +198,7 @@ export default function CampaignDetailModal({ campaign, link, open, onClose }: C
       {/* Awareness indicator */}
       {objective === "awareness" && (
         <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2 text-xs text-blue-300 mb-4">
-          Campagne Notoriete — Partage le visuel + lien ensemble
+          Campagne Notoriété — Partage le visuel + lien ensemble
         </div>
       )}
 
@@ -243,7 +243,7 @@ export default function CampaignDetailModal({ campaign, link, open, onClose }: C
       {/* Disabled message */}
       {link && !isShareable && (
         <p className="text-[11px] text-white/30 text-center mt-2">
-          Cette campagne est {statusLabel[campaign.status]?.toLowerCase() || campaign.status} — le partage est desactive.
+          Cette campagne est {statusLabel[campaign.status]?.toLowerCase() || campaign.status} — le partage est désactivé.
         </p>
       )}
     </Modal>

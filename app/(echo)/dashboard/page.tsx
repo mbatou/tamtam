@@ -202,8 +202,8 @@ export default function EchoDashboard() {
       {theme === "independence_day" && (
         <div className="bg-gradient-to-r from-green-600/30 via-yellow-500/20 to-red-600/30 border border-green-500/30 rounded-xl p-4 mb-4 text-center">
           <div className="text-3xl mb-1">🇸🇳</div>
-          <h3 className="text-white font-bold text-lg">Bonne Fete de l&apos;Independance!</h3>
-          <p className="text-gray-300 text-sm">4 avril — Le Senegal celebre 66 ans d&apos;independance</p>
+          <h3 className="text-white font-bold text-lg">Bonne Fête de l&apos;Indépendance !</h3>
+          <p className="text-gray-300 text-sm">4 avril — Le Sénégal célèbre 66 ans d&apos;indépendance</p>
         </div>
       )}
 

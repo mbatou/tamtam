@@ -165,7 +165,7 @@ export default function LeaderboardPage() {
           )}
           {currentRank === 1 && (
             <p className="text-center text-xs text-green-400 font-medium mt-1">
-              🏆 Tu es en tête!
+              🏆 Tu es en tête !
             </p>
           )}
           {/* All period ranks */}
@@ -194,7 +194,7 @@ export default function LeaderboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <h4 className="text-white font-bold text-sm">🏆 Prix de la semaine</h4>
-            <p className="text-gray-400 text-xs mt-0.5">Bientôt disponible!</p>
+            <p className="text-gray-400 text-xs mt-0.5">Bientôt disponible !</p>
           </div>
           <div className="flex gap-3 text-xs">
             <div className="text-center">

@@ -209,7 +209,7 @@ export default function RythmesPage() {
 
                 {(campaign.objective || "traffic") === "awareness" && (
                   <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2 text-xs text-blue-300 mb-2">
-                    Campagne Notoriete — Partage le visuel + lien ensemble
+                    Campagne Notoriété — Partage le visuel + lien ensemble
                   </div>
                 )}
 
