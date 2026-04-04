@@ -46,35 +46,34 @@ export async function GET() {
     .select("*, users!batteur_id(name, phone, company_name)")
     .order("created_at", { ascending: false });
 
-  // Get echo counts per campaign
-  const { data: links } = await supabase
-    .from("tracked_links")
-    .select("campaign_id, echo_id")
-    .limit(50000);
-
-  const echoCountMap: Record<string, number> = {};
+  // Get echo counts and click counts per campaign in a single query
+  const echoCountMap: Record<string, Set<string>> = {};
   const clickCountMap: Record<string, number> = {};
-  if (links) {
-    for (const link of links) {
-      echoCountMap[link.campaign_id] = (echoCountMap[link.campaign_id] || 0) + 1;
-    }
-  }
 
-  // Get click counts per campaign
-  const { data: linkClicks } = await supabase
-    .from("tracked_links")
-    .select("campaign_id, click_count")
-    .limit(50000);
+  const campaignIds = (campaigns || []).map((c: Record<string, unknown>) => c.id as string);
 
-  if (linkClicks) {
-    for (const link of linkClicks) {
-      clickCountMap[link.campaign_id] = (clickCountMap[link.campaign_id] || 0) + link.click_count;
+  if (campaignIds.length > 0) {
+    const { data: links } = await supabase
+      .from("tracked_links")
+      .select("campaign_id, echo_id, click_count")
+      .in("campaign_id", campaignIds);
+
+    if (links) {
+      for (const link of links) {
+        // Count distinct echos per campaign
+        if (!echoCountMap[link.campaign_id]) {
+          echoCountMap[link.campaign_id] = new Set();
+        }
+        echoCountMap[link.campaign_id].add(link.echo_id);
+        // Sum click counts per campaign
+        clickCountMap[link.campaign_id] = (clickCountMap[link.campaign_id] || 0) + (link.click_count || 0);
+      }
     }
   }
 
   const enriched = (campaigns || []).map((c: Record<string, unknown>) => ({
     ...c,
-    echo_count: echoCountMap[c.id as string] || 0,
+    echo_count: echoCountMap[c.id as string]?.size || 0,
     total_clicks: clickCountMap[c.id as string] || 0,
   }));
 
