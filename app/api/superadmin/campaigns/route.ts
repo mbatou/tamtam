@@ -53,20 +53,29 @@ export async function GET() {
   const campaignIds = (campaigns || []).map((c: Record<string, unknown>) => c.id as string);
 
   if (campaignIds.length > 0) {
-    const { data: links } = await supabase
-      .from("tracked_links")
-      .select("campaign_id, echo_id, click_count")
-      .in("campaign_id", campaignIds);
+    // Paginate to avoid Supabase default 1000-row limit
+    const PAGE_SIZE = 1000;
+    let offset = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const { data: links } = await supabase
+        .from("tracked_links")
+        .select("campaign_id, echo_id, click_count")
+        .in("campaign_id", campaignIds)
+        .range(offset, offset + PAGE_SIZE - 1);
 
-    if (links) {
-      for (const link of links) {
-        // Count distinct echos per campaign
-        if (!echoCountMap[link.campaign_id]) {
-          echoCountMap[link.campaign_id] = new Set();
+      if (links && links.length > 0) {
+        for (const link of links) {
+          if (!echoCountMap[link.campaign_id]) {
+            echoCountMap[link.campaign_id] = new Set();
+          }
+          echoCountMap[link.campaign_id].add(link.echo_id);
+          clickCountMap[link.campaign_id] = (clickCountMap[link.campaign_id] || 0) + (link.click_count || 0);
         }
-        echoCountMap[link.campaign_id].add(link.echo_id);
-        // Sum click counts per campaign
-        clickCountMap[link.campaign_id] = (clickCountMap[link.campaign_id] || 0) + (link.click_count || 0);
+        hasMore = links.length === PAGE_SIZE;
+        offset += PAGE_SIZE;
+      } else {
+        hasMore = false;
       }
     }
   }
