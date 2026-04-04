@@ -10,7 +10,9 @@ import { SENEGAL_CITIES } from "@/lib/cities";
 import { trackEvent } from "@/lib/analytics";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
-type View = "list" | "detail" | "form";
+import type { CampaignObjective } from "@/lib/types";
+
+type View = "list" | "detail" | "objective" | "form";
 
 export default function AdminCampaignsPage() {
   const { t } = useTranslation();
@@ -33,6 +35,7 @@ export default function AdminCampaignsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [avgCpc, setAvgCpc] = useState<number>(0);
   const [imageFormatHint, setImageFormatHint] = useState<{ type: "warning" | "success"; message: string } | null>(null);
+  const [objective, setObjective] = useState<CampaignObjective>("traffic");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [perf, setPerf] = useState<{
     totalClicks: number; validClicks: number; activeEchos: number; costPerVisitor: number;
@@ -95,6 +98,7 @@ export default function AdminCampaignsPage() {
     setTargetCities([]);
     setCitySearch("");
     setEditingId(null);
+    setObjective("traffic");
     setError(null);
     setShowRechargePrompt(false);
     setShowCancelConfirm(false);
@@ -107,7 +111,7 @@ export default function AdminCampaignsPage() {
 
   function openNewForm() {
     resetForm();
-    setView("form");
+    setView("objective");
   }
 
   function openEditForm(campaign: Campaign) {
@@ -123,6 +127,7 @@ export default function AdminCampaignsPage() {
     setCreativeUrls(campaign.creative_urls || []);
     setTargetCities(campaign.target_cities || []);
     setEditingId(campaign.id);
+    setObjective(campaign.objective || "traffic");
     setError(null);
     setShowRechargePrompt(false);
     setView("form");
@@ -185,6 +190,7 @@ export default function AdminCampaignsPage() {
         ends_at: form.ends_at || null,
         creative_urls: creativeUrls,
         target_cities: targetCities,
+        objective,
         ...(!editingId && asDraft ? { save_as_draft: true } : {}),
       };
       const res = await fetch("/api/campaigns", {
@@ -343,6 +349,13 @@ export default function AdminCampaignsPage() {
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-2xl font-bold">{c.title}</h1>
               <span className={`badge-${c.status === "draft" && c.moderation_status === "pending" ? "pending" : c.status}`}>{getStatusLabel(c)}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                (c.objective || "traffic") === "awareness"
+                  ? "bg-blue-500/20 text-blue-300"
+                  : "bg-teal-500/20 text-teal-300"
+              }`}>
+                {(c.objective || "traffic") === "awareness" ? "Notoriete" : "Trafic"}
+              </span>
             </div>
             {c.description && <p className="text-white/40 text-sm max-w-xl">{c.description}</p>}
             {c.target_cities && c.target_cities.length > 0 && (
@@ -429,6 +442,17 @@ export default function AdminCampaignsPage() {
             <p className="text-xl font-bold">{formatFCFA(c.cpc)}</p>
           </div>
         </div>
+
+        {/* Objective context */}
+        {(c.objective || "traffic") === "awareness" ? (
+          <p className="text-sm text-white/40 mb-4">
+            Chaque clic signifie qu&apos;une personne a vu votre visuel ET a clique.
+          </p>
+        ) : (
+          <p className="text-sm text-white/40 mb-4">
+            Chaque clic est un visiteur verifie sur votre lien.
+          </p>
+        )}
 
         {/* Progress bar */}
         <div className="glass-card p-5 mb-8">
@@ -668,6 +692,89 @@ export default function AdminCampaignsPage() {
     );
   }
 
+  // ==================== OBJECTIVE PICKER VIEW ====================
+  if (view === "objective") {
+    const objectives = [
+      {
+        id: "traffic" as const,
+        label: "Trafic",
+        description: "Maximisez les clics vers votre site ou lien",
+        detail: "Les Echos partagent votre lien. Vous payez par clic verifie.",
+        icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>,
+        disabled: false,
+      },
+      {
+        id: "awareness" as const,
+        label: "Notoriete",
+        description: "Maximisez la visibilite de votre marque",
+        detail: "Les Echos partagent votre visuel + lien ensemble. Votre image est vue a chaque partage.",
+        icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
+        disabled: false,
+      },
+      {
+        id: "conversion" as const,
+        label: "Conversion",
+        description: "Suivez les actions sur votre site",
+        detail: "Bientot disponible — Tamtam Pixel",
+        icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
+        disabled: true,
+      },
+    ];
+
+    return (
+      <div className="p-6 max-w-4xl">
+        <button onClick={() => { resetForm(); setView("list"); }} className="flex items-center gap-2 text-sm text-white/40 hover:text-white/70 transition mb-6">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          {t("common.back")}
+        </button>
+
+        <h1 className="text-2xl font-bold mb-2">{t("admin.campaigns.newRythme")}</h1>
+        <p className="text-white/40 text-sm mb-8">Quel est l&apos;objectif de votre campagne ?</p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          {objectives.map((obj) => (
+            <button
+              key={obj.id}
+              onClick={() => !obj.disabled && setObjective(obj.id as CampaignObjective)}
+              disabled={obj.disabled}
+              className={`relative text-left p-5 rounded-2xl border-2 transition-all ${
+                obj.disabled
+                  ? "opacity-40 cursor-not-allowed border-white/5 bg-white/[0.02]"
+                  : objective === obj.id
+                    ? "border-primary bg-primary/10"
+                    : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]"
+              }`}
+            >
+              {obj.disabled && (
+                <span className="absolute top-3 right-3 text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/40 font-semibold">
+                  Bientot
+                </span>
+              )}
+              {!obj.disabled && objective === obj.id && (
+                <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </span>
+              )}
+              <div className="text-primary mb-3">{obj.icon}</div>
+              <h3 className="font-bold text-lg mb-1">{obj.label}</h3>
+              <p className="text-sm text-white/60 mb-2">{obj.description}</p>
+              <p className="text-xs text-white/30">{obj.detail}</p>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            onClick={() => setView("form")}
+            className="btn-primary px-8 py-3"
+          >
+            Continuer
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // ==================== FORM VIEW ====================
   if (view === "form") {
     return (
@@ -677,7 +784,33 @@ export default function AdminCampaignsPage() {
           {t("common.back")}
         </button>
 
-        <h1 className="text-2xl font-bold mb-8">{editingId ? t("admin.campaigns.editRythme") : t("admin.campaigns.newRythme")}</h1>
+        <h1 className="text-2xl font-bold mb-4">{editingId ? t("admin.campaigns.editRythme") : t("admin.campaigns.newRythme")}</h1>
+
+        {/* Objective indicator */}
+        <div className="flex items-center gap-2 mb-6">
+          <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
+            objective === "awareness"
+              ? "bg-blue-500/20 text-blue-300"
+              : "bg-teal-500/20 text-teal-300"
+          }`}>
+            {objective === "awareness" ? "Notoriete" : "Trafic"}
+          </span>
+          {!editingId && (
+            <button onClick={() => setView("objective")} className="text-xs text-white/30 hover:text-white/50 transition">
+              Changer
+            </button>
+          )}
+        </div>
+
+        {objective === "awareness" && (
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mb-6 flex items-start gap-3">
+            <span className="text-lg">📸</span>
+            <div>
+              <p className="text-sm font-semibold text-blue-300">Campagne Notoriete</p>
+              <p className="text-xs text-white/40">Les Echos partageront votre visuel + lien ensemble. L&apos;image est obligatoire.</p>
+            </div>
+          </div>
+        )}
 
         <div className="glass-card p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -695,7 +828,13 @@ export default function AdminCampaignsPage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.campaigns.campaignVisuals")}</label>
+              <label className="block text-xs font-semibold text-white/40 mb-2">
+                {t("admin.campaigns.campaignVisuals")}
+                {objective === "awareness" && <span className="text-red-400 ml-1">*</span>}
+              </label>
+              {objective === "awareness" && creativeUrls.length === 0 && (
+                <p className="text-xs text-red-400 mb-2">Image obligatoire pour une campagne Notoriete</p>
+              )}
               <div className="flex flex-wrap gap-3 mb-3">
                 {creativeUrls.map((url, i) => (
                   <div key={i} className="relative group">
@@ -874,7 +1013,7 @@ export default function AdminCampaignsPage() {
                 <button
                   type="button"
                   onClick={() => handleSubmit(true)}
-                  disabled={submitting || !form.title || !form.destination_url || !form.cpc || !form.budget}
+                  disabled={submitting || !form.title || !form.destination_url || !form.cpc || !form.budget || (objective === "awareness" && creativeUrls.length === 0)}
                   className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 font-semibold text-sm hover:bg-white/10 transition disabled:opacity-40"
                 >
                   {submitting ? "..." : t("admin.campaigns.saveDraft")}
@@ -883,7 +1022,7 @@ export default function AdminCampaignsPage() {
               <button
                 type="button"
                 onClick={() => handleSubmit(false)}
-                disabled={submitting || !form.title || !form.destination_url || !form.cpc || !form.budget}
+                disabled={submitting || !form.title || !form.destination_url || !form.cpc || !form.budget || (objective === "awareness" && creativeUrls.length === 0)}
                 className="btn-primary px-8 py-3 disabled:opacity-40"
               >
                 {submitting ? t("common.saving") : editingId ? t("common.save") : t("admin.campaigns.launchRythme")}
@@ -990,7 +1129,16 @@ export default function AdminCampaignsPage() {
                       <h3 className="font-bold text-sm truncate">{campaign.title}</h3>
                       {campaign.description && <p className="text-xs text-white/30 truncate mt-0.5">{campaign.description}</p>}
                     </div>
-                    <span className={`badge-${campaign.status === "draft" && campaign.moderation_status === "pending" ? "pending" : campaign.status} shrink-0`}>{getStatusLabel(campaign)}</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                        (campaign.objective || "traffic") === "awareness"
+                          ? "bg-blue-500/20 text-blue-300"
+                          : "bg-teal-500/20 text-teal-300"
+                      }`}>
+                        {(campaign.objective || "traffic") === "awareness" ? "Notoriete" : "Trafic"}
+                      </span>
+                      <span className={`badge-${campaign.status === "draft" && campaign.moderation_status === "pending" ? "pending" : campaign.status} shrink-0`}>{getStatusLabel(campaign)}</span>
+                    </div>
                   </div>
 
                   {/* Budget progress */}

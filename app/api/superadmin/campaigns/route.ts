@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
 
   // --- Create a campaign on behalf of a brand ---
   if (action === "create") {
-    const { batteur_id, title, description, destination_url, cpc, budget } = body;
+    const { batteur_id, title, description, destination_url, cpc, budget, objective } = body;
     if (!batteur_id || !title || !destination_url || !cpc || !budget) {
       return NextResponse.json({ error: "Champs obligatoires manquants" }, { status: 400 });
     }
@@ -151,6 +151,7 @@ export async function POST(request: NextRequest) {
         moderation_status: "approved",
         moderated_by: session.user.id,
         moderated_at: new Date().toISOString(),
+        objective: objective || "traffic",
       })
       .select()
       .single();
