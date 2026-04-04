@@ -50,11 +50,12 @@ export async function GET() {
     return NextResponse.json([]);
   }
 
-  // Get echo user details
+  // Get echo user details (exclude soft-deleted)
   const { data: echoUsers } = await supabase
     .from("users")
     .select("id, name, phone, city, mobile_money_provider, balance, total_earned, status, created_at")
-    .in("id", echoIds);
+    .in("id", echoIds)
+    .is("deleted_at", null);
 
   // Build campaign map for CPC lookup
   const campaignMap = new Map((campaigns || []).map((c) => [c.id, c]));

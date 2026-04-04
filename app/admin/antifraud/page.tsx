@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { timeAgo } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
@@ -10,33 +9,25 @@ export default function AntiFraudPage() {
   const { t } = useTranslation();
   const [stats, setStats] = useState({ totalClicks: 0, validClicks: 0, invalidClicks: 0, fraudRate: 0 });
   const [recentClicks, setRecentClicks] = useState<Array<{
-    id: string; ip_address: string; user_agent: string; is_valid: boolean; created_at: string;
+    id: string; ip_address: string; is_valid: boolean; created_at: string;
     tracked_links: { short_code: string; users: { name: string }; campaigns: { title: string } };
   }>>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
-    const [totalRes, validRes, invalidRes, recentRes] = await Promise.all([
-      supabase.from("clicks").select("*", { count: "exact", head: true }),
-      supabase.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", true),
-      supabase.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", false),
-      supabase.from("clicks").select("*, tracked_links(short_code, users(name), campaigns(title))").order("created_at", { ascending: false }).limit(50),
-    ]);
-
-    const total = totalRes.count || 0;
-    const valid = validRes.count || 0;
-    const invalid = invalidRes.count || 0;
-
-    setStats({
-      totalClicks: total, validClicks: valid, invalidClicks: invalid,
-      fraudRate: total > 0 ? Math.round((invalid / total) * 100) : 0,
-    });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setRecentClicks((recentRes.data || []) as any);
+    const res = await fetch("/api/admin/antifraud");
+    if (res.ok) {
+      const data = await res.json();
+      setStats({
+        totalClicks: data.totalClicks || 0,
+        validClicks: data.validClicks || 0,
+        invalidClicks: data.invalidClicks || 0,
+        fraudRate: data.fraudRate || 0,
+      });
+      setRecentClicks(data.recentClicks || []);
+    }
     setLoading(false);
   }
 
