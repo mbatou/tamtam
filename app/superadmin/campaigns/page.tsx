@@ -136,8 +136,9 @@ function CampaignModerationPageContent() {
       if (!campRes.ok || !usersRes.ok) throw new Error("API error");
       setCampaigns(Array.isArray(campData) ? campData : []);
       if (highlightId) openById(campData, highlightId);
+      const usersList = Array.isArray(usersData) ? usersData : usersData?.users || [];
       setBatteurs(
-        (usersData || [])
+        usersList
           .filter((u: { role: string }) => u.role === "batteur")
           .map((u: { id: string; name: string; balance: number }) => ({
             id: u.id,
@@ -331,7 +332,7 @@ function CampaignModerationPageContent() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard label={t("superadmin.campaigns.allTab")} value={campaigns.length.toString()} accent="orange" />
-        <StatCard label={t("superadmin.campaigns.approvedTab")} value={campaigns.filter((c) => c.status === "active").length.toString()} accent="teal" />
+        <StatCard label={t("superadmin.campaigns.approvedTab")} value={campaigns.filter((c) => c.moderation_status === "approved").length.toString()} accent="teal" />
         <StatCard label={t("superadmin.campaigns.pendingTab")} value={pendingCount.toString()} accent="purple" />
         <StatCard label={t("superadmin.campaigns.rejectedTab")} value={campaigns.filter((c) => c.moderation_status === "rejected").length.toString()} accent="red" />
       </div>
