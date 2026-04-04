@@ -167,20 +167,39 @@ export async function GET(request: NextRequest) {
     ? Math.round((totalBudgetActive / totalBudgetActiveAll) * 100)
     : 0;
 
-  // --- Chart data: clicks per day (parallel per-day COUNT queries) ---
-  const clicksChart = await Promise.all(
-    chartBuckets.map(async (date) => {
-      const dayStart = `${date}T00:00:00.000Z`;
-      const dayEnd = `${date}T23:59:59.999Z`;
-      const [{ count: valid }, { count: total }] = await Promise.all([
-        supabase.from("clicks").select("*", { count: "exact", head: true })
-          .gte("created_at", dayStart).lte("created_at", dayEnd).eq("is_valid", true),
-        supabase.from("clicks").select("*", { count: "exact", head: true })
-          .gte("created_at", dayStart).lte("created_at", dayEnd),
-      ]);
-      return { date, valid: valid || 0, fraud: (total || 0) - (valid || 0) };
-    })
-  );
+  // --- Chart data: clicks per day (single query + in-memory grouping) ---
+  // Replaces 2*N parallel COUNT queries that could saturate the connection pool
+  // and silently return 0 for later days.
+  const clicksBucketMap: Record<string, { date: string; valid: number; fraud: number }> = {};
+  for (const date of chartBuckets) {
+    clicksBucketMap[date] = { date, valid: 0, fraud: 0 };
+  }
+  {
+    const chartStartISO = chartFrom.toISOString();
+    const chartEndISO = chartTo.toISOString();
+    const PAGE = 1000;
+    let off = 0;
+    while (true) {
+      const { data: rows } = await supabase
+        .from("clicks")
+        .select("created_at, is_valid")
+        .gte("created_at", chartStartISO)
+        .lte("created_at", chartEndISO)
+        .range(off, off + PAGE - 1);
+      const batch = rows || [];
+      for (const row of batch) {
+        const day = row.created_at.slice(0, 10);
+        const bucket = clicksBucketMap[day];
+        if (bucket) {
+          if (row.is_valid) bucket.valid++;
+          else bucket.fraud++;
+        }
+      }
+      if (batch.length < PAGE) break;
+      off += PAGE;
+    }
+  }
+  const clicksChart = Object.values(clicksBucketMap).sort((a, b) => a.date.localeCompare(b.date));
 
   // --- Chart data: campaign status distribution ---
   const campaignsByStatus: Record<string, number> = {};
