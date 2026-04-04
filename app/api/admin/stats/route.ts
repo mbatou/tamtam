@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
   // Get brand's campaigns
   const { data: campaigns } = await supabase
     .from("campaigns")
-    .select("id, title, budget, spent, status, cpc, created_at")
+    .select("id, title, budget, spent, status, cpc, created_at, objective")
     .eq("batteur_id", batteurId);
 
   const allCampaigns = campaigns || [];
@@ -70,7 +70,8 @@ export async function GET(request: NextRequest) {
     const { data: echoUsers } = await supabase
       .from("users")
       .select("id, name")
-      .in("id", echoIds);
+      .in("id", echoIds)
+      .is("deleted_at", null);
 
     const nameMap = new Map((echoUsers || []).map((u) => [u.id, u.name]));
     topEchos = Object.values(echoEarnings)

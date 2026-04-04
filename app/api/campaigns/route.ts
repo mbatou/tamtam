@@ -31,7 +31,8 @@ async function notifyCampaignCompleted(campaignId: string) {
     const { data: echos } = await supabase
       .from("users")
       .select("id, name")
-      .in("id", echoIds);
+      .in("id", echoIds)
+      .is("deleted_at", null);
     if (!echos) return;
 
     const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });

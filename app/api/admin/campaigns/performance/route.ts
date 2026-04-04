@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch all echo user info in one query instead of N individual queries
     uniqueEchoIds.length > 0
-      ? supabase.from("users").select("id, name, city").in("id", uniqueEchoIds)
+      ? supabase.from("users").select("id, name, city").in("id", uniqueEchoIds).is("deleted_at", null)
       : Promise.resolve({ data: [] }),
   ]);
 
