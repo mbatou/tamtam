@@ -41,6 +41,8 @@ export default function AdminCampaignsPage() {
     geoBreakdown: { city: string; clicks: number; percentage: number }[];
   } | null>(null);
   const [perfLoading, setPerfLoading] = useState(false);
+  // Per-campaign real click + echo counts from stats API
+  const [campaignStats, setCampaignStats] = useState<Record<string, { realClicks: number; realValidClicks: number; echoCount: number }>>({});
   const supabase = createClient();
 
   useEffect(() => { loadCampaigns(); }, []);
@@ -48,6 +50,18 @@ export default function AdminCampaignsPage() {
     fetch("/api/campaigns/avg-cpc")
       .then((r) => r.ok ? r.json() : null)
       .then((data) => data && setAvgCpc(data.avgCpc));
+    // Fetch enriched campaign data (real click + echo counts)
+    fetch("/api/admin/stats")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.campaigns) {
+          const map: Record<string, { realClicks: number; realValidClicks: number; echoCount: number }> = {};
+          for (const c of data.campaigns) {
+            map[c.id] = { realClicks: c.realClicks || 0, realValidClicks: c.realValidClicks || 0, echoCount: c.echoCount || 0 };
+          }
+          setCampaignStats(map);
+        }
+      });
   }, []);
   useEffect(() => {
     if (view === "detail" && selectedCampaign) {
@@ -935,7 +949,10 @@ export default function AdminCampaignsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {campaigns.map((campaign) => {
             const progress = campaign.budget > 0 ? (campaign.spent / campaign.budget) * 100 : 0;
-            const estimatedClicks = campaign.cpc > 0 ? Math.floor(campaign.spent / campaign.cpc) : 0;
+            const stats = campaignStats[campaign.id];
+            const realClicks = stats?.realValidClicks ?? 0;
+            const echoCount = stats?.echoCount ?? 0;
+            const estimatedClicks = realClicks > 0 ? realClicks : (campaign.cpc > 0 ? Math.floor(campaign.spent / campaign.cpc) : 0);
             const actualCPC = estimatedClicks > 0 ? Math.round(campaign.spent / estimatedClicks) : campaign.cpc;
             const isFinished = campaign.status === "completed";
             const budgetConsumed = progress >= 100;
@@ -991,6 +1008,8 @@ export default function AdminCampaignsPage() {
 
                   {/* Metrics row */}
                   <div className="flex items-center gap-3 text-xs text-white/40 mb-2">
+                    <span>{echoCount} Échos</span>
+                    <span>·</span>
                     <span>{estimatedClicks} {t("admin.campaigns.realClicks")}</span>
                     <span>·</span>
                     <span>{formatFCFA(actualCPC)}/{t("admin.campaigns.perClick")}</span>
