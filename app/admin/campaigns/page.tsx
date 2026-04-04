@@ -1135,7 +1135,7 @@ export default function AdminCampaignsPage() {
                           ? "bg-blue-500/20 text-blue-300"
                           : "bg-teal-500/20 text-teal-300"
                       }`}>
-                        {(campaign.objective || "traffic") === "awareness" ? "Notoriete" : "Trafic"}
+                        {(campaign.objective || "traffic") === "awareness" ? "Notoriété" : "Trafic"}
                       </span>
                       <span className={`badge-${campaign.status === "draft" && campaign.moderation_status === "pending" ? "pending" : campaign.status} shrink-0`}>{getStatusLabel(campaign)}</span>
                     </div>

@@ -8,13 +8,13 @@ export default function OfflinePage() {
       </div>
       <h1 className="text-2xl font-black mb-2">Pas de connexion</h1>
       <p className="text-sm text-white/40 max-w-[300px] leading-relaxed mb-6">
-        Tu es hors ligne. Verifie ta connexion internet et reessaie.
+        Tu es hors ligne. Vérifie ta connexion internet et réessaie.
       </p>
       <button
         onClick={() => window.location.reload()}
         className="btn-primary text-sm px-8 py-3"
       >
-        Reessayer
+        Réessayer
       </button>
     </div>
   );

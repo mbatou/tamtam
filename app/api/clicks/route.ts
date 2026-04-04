@@ -6,7 +6,7 @@ export async function GET() {
   const authClient = createClient();
   const { data: { session } } = await authClient.auth.getSession();
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   const supabase = createServiceClient();
