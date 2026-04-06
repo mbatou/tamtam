@@ -364,6 +364,9 @@ export default function ProfilPage() {
                 {gamification && (
                   <span className="text-base">{TIER_INFO[gamification.tier]?.icon || "🔵"}</span>
                 )}
+                {user?.is_founding_echo && (
+                  <span className="text-sm" title="Écho Fondateur — Fait partie des premiers Échos de Tamtam">&#129351;</span>
+                )}
               </div>
               <p className="text-xs text-white/40">{user?.phone}</p>
               {user?.city && <p className="text-xs text-white/30">{user.city}</p>}
@@ -523,6 +526,19 @@ export default function ProfilPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Écho Fondateur badge */}
+      {user?.is_founding_echo && (
+        <div className="glass-card p-4 mb-5 border border-[#FDEF42]/20 bg-[#FDEF42]/5">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">&#129351;</span>
+            <div className="flex-1">
+              <h3 className="text-sm font-bold text-[#FDEF42]">&Eacute;cho Fondateur</h3>
+              <p className="text-[10px] text-white/40">Fait partie des premiers 1 152 &Eacute;chos de Tamtam. Ce badge est exclusif et ne sera jamais redistribu&eacute;.</p>
+            </div>
+          </div>
         </div>
       )}
 
