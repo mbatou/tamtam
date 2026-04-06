@@ -10,6 +10,7 @@ import { useTranslation } from "@/lib/i18n";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import CitySelect from "@/components/ui/CitySelect";
 import type { User } from "@/lib/types";
+import InterestOnboardingModal from "@/components/echo/InterestOnboardingModal";
 
 const TIER_INFO: Record<string, { icon: string; label: string }> = {
   echo: { icon: "🔵", label: "tierName_echo" },
@@ -64,6 +65,12 @@ export default function ProfilPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [passwords, setPasswords] = useState({ new_password: "", confirm: "" });
   const [pwSaving, setPwSaving] = useState(false);
+
+  // Interest onboarding
+  const [showInterestModal, setShowInterestModal] = useState(false);
+  const [interestEditMode, setInterestEditMode] = useState(false);
+  const [userInterests, setUserInterests] = useState<{ id: string; emoji: string; name_fr: string }[]>([]);
+  const [userSignals, setUserSignals] = useState<{ id: string; emoji: string; name_fr: string }[]>([]);
 
   // Account deletion
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -135,6 +142,20 @@ export default function ProfilPage() {
       const settingsData = await settingsRes.json();
       setReferralEnabled(settingsData.referral_program_enabled !== false);
     }
+
+    // Load interest data
+    try {
+      const interestRes = await fetch("/api/echo/interests");
+      if (interestRes.ok) {
+        const interestData = await interestRes.json();
+        const allCats = interestData.categories || [];
+        const allSigs = interestData.signals || [];
+        const selInterests = interestData.selectedInterests || [];
+        const selSignals = interestData.selectedSignals || [];
+        setUserInterests(allCats.filter((c: { id: string }) => selInterests.includes(c.id)));
+        setUserSignals(allSigs.filter((s: { id: string }) => selSignals.includes(s.id)));
+      }
+    } catch {}
 
     setLoading(false);
   }
@@ -293,6 +314,31 @@ export default function ProfilPage() {
         </div>
       )}
 
+      {/* Interest onboarding banner — show if not completed */}
+      {user && !user.interests_completed_at && (
+        <div className="mb-4 p-4 rounded-xl bg-[#D35400]/10 border border-[#D35400]/20">
+          <div className="flex items-start gap-3">
+            <span className="text-lg shrink-0">&#128221;</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-[#D35400] mb-1">
+                Compl&egrave;te tes centres d&apos;int&eacute;r&ecirc;t
+              </p>
+              <p className="text-xs text-white/40 mb-3">
+                {new Date() <= new Date("2026-04-30T23:59:59Z")
+                  ? "Gagne 100 FCFA + badge \"Écho Fondateur\" (jusqu'au 30 avril)"
+                  : "Dis-nous ce que tu aimes pour voir de meilleures campagnes"}
+              </p>
+              <button
+                onClick={() => { setInterestEditMode(false); setShowInterestModal(true); }}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#D35400] to-[#E67E22] text-white text-xs font-bold hover:opacity-90 transition"
+              >
+                Commencer &rarr;
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Feedback */}
       {error && (
         <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
@@ -317,6 +363,9 @@ export default function ProfilPage() {
                 <h2 className="text-lg font-bold truncate">{user?.name}</h2>
                 {gamification && (
                   <span className="text-base">{TIER_INFO[gamification.tier]?.icon || "🔵"}</span>
+                )}
+                {user?.is_founding_echo && (
+                  <span className="text-sm" title="Écho Fondateur — Fait partie des premiers Échos de Tamtam">&#129351;</span>
                 )}
               </div>
               <p className="text-xs text-white/40">{user?.phone}</p>
@@ -480,6 +529,19 @@ export default function ProfilPage() {
         </div>
       )}
 
+      {/* Écho Fondateur badge */}
+      {user?.is_founding_echo && (
+        <div className="glass-card p-4 mb-5 border border-[#FDEF42]/20 bg-[#FDEF42]/5">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">&#129351;</span>
+            <div className="flex-1">
+              <h3 className="text-sm font-bold text-[#FDEF42]">&Eacute;cho Fondateur</h3>
+              <p className="text-[10px] text-white/40">Fait partie des premiers 1 152 &Eacute;chos de Tamtam. Ce badge est exclusif et ne sera jamais redistribu&eacute;.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Visual Badge Grid */}
       {gamification && gamification.milestones.length > 0 && (
         <div className="glass-card p-4 mb-5">
@@ -519,6 +581,41 @@ export default function ProfilPage() {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* Mes centres d'intérêt */}
+      {user?.interests_completed_at && (userInterests.length > 0 || userSignals.length > 0) && (
+        <div className="glass-card p-4 mb-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold">Mes centres d&apos;int&eacute;r&ecirc;t</h3>
+            <button
+              onClick={() => { setInterestEditMode(true); setShowInterestModal(true); }}
+              className="text-xs text-primary font-semibold hover:underline"
+            >
+              Modifier
+            </button>
+          </div>
+          {userInterests.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {userInterests.map((cat) => (
+                <span key={cat.id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#D35400]/10 border border-[#D35400]/20 text-xs">
+                  <span>{cat.emoji}</span>
+                  <span className="font-semibold">{cat.name_fr}</span>
+                </span>
+              ))}
+            </div>
+          )}
+          {userSignals.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {userSignals.map((sig) => (
+                <span key={sig.id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-xs">
+                  <span>{sig.emoji}</span>
+                  <span className="font-semibold">{sig.name_fr}</span>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -741,6 +838,37 @@ export default function ProfilPage() {
       >
         {t("echo.profile.logout")}
       </button>
+
+      {/* Interest onboarding/edit modal */}
+      <InterestOnboardingModal
+        isOpen={showInterestModal}
+        onClose={() => setShowInterestModal(false)}
+        onComplete={(reward) => {
+          setShowInterestModal(false);
+          if (reward.founding) {
+            setUser((prev) => prev ? { ...prev, is_founding_echo: true, interests_completed_at: new Date().toISOString() } : prev);
+          } else {
+            setUser((prev) => prev ? { ...prev, interests_completed_at: new Date().toISOString() } : prev);
+          }
+          // Reload interest data
+          fetch("/api/echo/interests").then(r => r.json()).then(data => {
+            const allCats = data.categories || [];
+            const allSigs = data.signals || [];
+            setUserInterests(allCats.filter((c: { id: string }) => (data.selectedInterests || []).includes(c.id)));
+            setUserSignals(allSigs.filter((s: { id: string }) => (data.selectedSignals || []).includes(s.id)));
+          }).catch(() => {});
+          if (!interestEditMode) {
+            setSuccess(reward.credited ? "100 FCFA crédités + badge Écho Fondateur !" : "Préférences enregistrées !");
+            setTimeout(() => setSuccess(""), 5000);
+          } else {
+            setSuccess("Préférences mises à jour");
+            setTimeout(() => setSuccess(""), 3000);
+          }
+        }}
+        isExistingEcho={true}
+        showReward={!user?.interests_completed_at && new Date() <= new Date("2026-04-30T23:59:59Z")}
+        editMode={interestEditMode}
+      />
     </div>
   );
 }

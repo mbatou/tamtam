@@ -27,6 +27,9 @@ export interface User {
   deleted_by?: string | null;
   deletion_reason?: string | null;
   original_email?: string | null;
+  interests_completed_at?: string | null;
+  is_founding_echo?: boolean;
+  interests_prompt_dismissed_at?: string | null;
   created_at: string;
 }
 

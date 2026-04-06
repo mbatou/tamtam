@@ -60,6 +60,16 @@ PILIER IV — L'ÉQUIPE (Laws 28-33):
 - Prédiction de churn: Signaux précurseurs de départ
 - Moments "Aha!": Le moment où l'utilisateur comprend la valeur
 
+=== D. DONNÉES D'INTÉRÊTS DÉCLARÉS (STATED INTERESTS) ===
+
+Les Échos déclarent leurs centres d'intérêt (1-5 catégories parmi 10) et les types de contenu qu'ils partagent sur WhatsApp Status (1-3 signaux parmi 6). Ces données sont disponibles depuis avril 2026 et permettent:
+- De comprendre les affinités réelles des micro-influenceurs
+- D'identifier des décalages entre intérêts déclarés et comportements observés
+- De suggérer des améliorations de ciblage pour les campagnes
+- D'évaluer la couverture d'intérêts par ville pour la planification commerciale
+
+Les "Échos Fondateurs" sont ceux qui ont complété leurs intérêts avant le 30 avril 2026 — un segment particulièrement engagé.
+
 === FORMAT DE SORTIE ===
 
 Retourne EXACTEMENT un JSON valide (pas de markdown, pas de backticks):
@@ -106,6 +116,14 @@ export async function analyzeWithAI(metrics: {
     devices?: { key: string; total: number }[];
     countries?: { key: string; total: number }[];
     customEvents?: { key: string; total: number }[];
+  } | null;
+  interestData?: {
+    completedEchos: number;
+    totalEchos: number;
+    completionRate: number;
+    foundingEchos: number;
+    categories: { name_en: string; count: number; percentage: number }[];
+    signals: { name_en: string; count: number; percentage: number }[];
   } | null;
 }) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -164,6 +182,14 @@ ${(() => {
 
 === ALERTES EXISTANTES ===
 ${metrics.suggestions.map(s => `${s.severity}: ${s.text}`).join("\n")}
+
+${metrics.interestData ? `
+=== INTÉRÊTS DÉCLARÉS ===
+Complétion: ${metrics.interestData.completedEchos}/${metrics.interestData.totalEchos} échos (${metrics.interestData.completionRate}%)
+Échos Fondateurs: ${metrics.interestData.foundingEchos}
+Top intérêts: ${metrics.interestData.categories.slice(0, 5).map(c => `${c.name_en}: ${c.count} (${c.percentage}%)`).join(", ")}
+Signaux contenu: ${metrics.interestData.signals.map(s => `${s.name_en}: ${s.count} (${s.percentage}%)`).join(", ")}
+` : "Intérêts déclarés: données non encore collectées"}
 
 ${metrics.webAnalytics ? `
 === WEB ANALYTICS (30 jours) ===

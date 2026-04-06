@@ -2,6 +2,7 @@ import EchoBottomNav from "@/components/EchoBottomNav";
 import SoundWave from "@/components/ui/SoundWave";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { getActiveTheme, THEME_COLORS } from "@/lib/theme";
+import InterestOnboardingWrapper from "@/components/echo/InterestOnboardingWrapper";
 
 export default function EchoLayout({ children }: { children: React.ReactNode }) {
   const theme = getActiveTheme();
@@ -30,6 +31,7 @@ export default function EchoLayout({ children }: { children: React.ReactNode }) 
         </div>
       </header>
       <main>{children}</main>
+      <InterestOnboardingWrapper />
       <InstallPrompt />
       <EchoBottomNav />
     </div>

@@ -10,6 +10,7 @@ interface LeaderboardEntry {
   tier: string;
   rythmes_joined: number;
   resonances: number;
+  is_founding_echo?: boolean;
 }
 
 export default function LeaderboardPage() {
@@ -48,6 +49,7 @@ export default function LeaderboardPage() {
           tier: String(e.tier || "echo"),
           rythmes_joined: Number(e.campaigns_joined ?? e.rythmes_joined ?? 0),
           resonances: Number(e.total_clicks ?? e.resonances ?? 0),
+          is_founding_echo: Boolean(e.is_founding_echo),
         }));
         setEntries(mapped);
       } else {
@@ -272,6 +274,9 @@ export default function LeaderboardPage() {
                   <span className={`text-sm font-semibold truncate ${isCurrentUser ? "text-primary" : ""}`}>
                     {formatName(entry.name)}
                   </span>
+                  {entry.is_founding_echo && (
+                    <span className="text-xs shrink-0" title="Écho Fondateur">&#129351;</span>
+                  )}
                 </div>
 
                 {/* Rythmes joined */}

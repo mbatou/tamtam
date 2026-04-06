@@ -188,9 +188,14 @@ export default function EchoDashboard() {
       {/* Greeting + avatar */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-xl font-bold">
-            {t("echo.dashboard.greeting", { name: user?.name?.split(" ")[0] || "" })}
-          </h1>
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-xl font-bold">
+              {t("echo.dashboard.greeting", { name: user?.name?.split(" ")[0] || "" })}
+            </h1>
+            {user?.is_founding_echo && (
+              <span className="text-sm" title="Écho Fondateur — Fait partie des premiers Échos de Tamtam">&#129351;</span>
+            )}
+          </div>
           <p className="text-xs text-white/40 mt-0.5">{t("echo.dashboard.yourPulse")}</p>
         </div>
         <div className="w-9 h-9 rounded-full bg-gradient-primary flex items-center justify-center text-sm font-bold">
