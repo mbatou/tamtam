@@ -11,6 +11,7 @@ import { HeatmapCard } from "./components/HeatmapCard";
 import { CityPerformanceCard } from "./components/CityPerformanceCard";
 import { WebAnalyticsCard } from "./components/WebAnalyticsCard";
 import { RetentionCohortsCard } from "./components/RetentionCohortsCard";
+import { InterestsTab } from "./components/InterestsTab";
 
 export default function DataLabPage() {
   const [data, setData] = useState<DataLabData | null>(null);
@@ -20,6 +21,7 @@ export default function DataLabPage() {
   const [aiError, setAiError] = useState<string | null>(null);
   const [webAnalytics, setWebAnalytics] = useState<WebAnalyticsData | null>(null);
   const [loadingWeb, setLoadingWeb] = useState(true);
+  const [activeTab, setActiveTab] = useState<"overview" | "interests">("overview");
 
   useEffect(() => {
     fetch("/api/superadmin/datalab").then(r => r.json()).then(d => { setData(d); setLoading(false); });
@@ -78,7 +80,32 @@ export default function DataLabPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold text-white mb-6">{"\u{1F52C}"} Data Lab</h1>
+      <h1 className="text-2xl font-bold text-white mb-4">{"\u{1F52C}"} Data Lab</h1>
+
+      {/* Tab navigation */}
+      <div className="flex gap-1 mb-6 bg-gray-800/50 rounded-lg p-1 w-fit">
+        <button
+          onClick={() => setActiveTab("overview")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+            activeTab === "overview" ? "bg-white/10 text-white" : "text-gray-400 hover:text-white"
+          }`}
+        >
+          Overview
+        </button>
+        <button
+          onClick={() => setActiveTab("interests")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+            activeTab === "interests" ? "bg-white/10 text-white" : "text-gray-400 hover:text-white"
+          }`}
+        >
+          Interests
+        </button>
+      </div>
+
+      {activeTab === "interests" ? (
+        <InterestsTab />
+      ) : (
+      <>
 
       <AIAnalysisSection
         aiAnalysis={aiAnalysis}
@@ -102,6 +129,9 @@ export default function DataLabPage() {
       <WebAnalyticsCard webAnalytics={webAnalytics} loading={loadingWeb} />
 
       <RetentionCohortsCard cohorts={data.cohorts} />
+
+      </>
+      )}
     </div>
   );
 }
