@@ -93,7 +93,8 @@ export async function GET() {
   // City × Interest heatmap
   const cityInterestMap: Record<string, Record<string, number>> = {};
   for (const row of echoInterestsWithCityResult.data || []) {
-    const city = (row.users as { city: string } | null)?.city;
+    const users = row.users as unknown as { city: string } | null;
+    const city = users?.city;
     if (!city) continue;
     if (!cityInterestMap[city]) cityInterestMap[city] = {};
     cityInterestMap[city][row.interest_id] = (cityInterestMap[city][row.interest_id] || 0) + 1;

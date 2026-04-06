@@ -5,7 +5,7 @@ import InterestOnboardingModal from "./InterestOnboardingModal";
 
 export default function InterestOnboardingWrapper() {
   const [showModal, setShowModal] = useState(false);
-  const [isExistingEcho, setIsExistingEcho] = useState(true);
+  const [isExistingEcho] = useState(true);
   const [showReward, setShowReward] = useState(true);
   const [checked, setChecked] = useState(false);
 
