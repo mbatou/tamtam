@@ -36,6 +36,13 @@ export default function DataLabPage() {
     setAnalyzing(true);
     setAiError(null);
     try {
+      // Fetch interest data for AI context
+      let interestData = null;
+      try {
+        const intRes = await fetch("/api/superadmin/datalab/interests");
+        if (intRes.ok) interestData = await intRes.json();
+      } catch {}
+
       const res = await fetch("/api/superadmin/datalab/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -50,6 +57,7 @@ export default function DataLabPage() {
             cohorts: data.cohorts,
             suggestions: data.suggestions,
             webAnalytics: webAnalytics?.error ? null : webAnalytics,
+            interestData,
           },
         }),
       });
