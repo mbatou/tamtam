@@ -251,9 +251,10 @@ export function calculatePayoutFee(amount: number): {
 
 export type WaveWebhookEventType =
   | "checkout.session.completed"
-  | "payout.completed"
-  | "payout.failed"
-  | "payout.reversed";
+  | "checkout.session.payment_failed"
+  | "b2b.payment_received"
+  | "b2b.payment_failed"
+  | "merchant.payment_received";
 
 export interface WaveWebhookEvent {
   id: string;
