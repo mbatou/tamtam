@@ -45,6 +45,7 @@ const toolsGroup = {
     { label: "Reconciliation", href: "/superadmin/reconciliation", emoji: "⚖️", superadminOnly: true },
     { label: "Data Lab", href: "/superadmin/datalab", emoji: "🔬", superadminOnly: true },
     { label: "Email Campaigns", href: "/superadmin/email-campaigns", emoji: "✉️", superadminOnly: true },
+    { label: "Wave Recon", href: "/superadmin/wave-reconciliation", emoji: "🌊", superadminOnly: true },
   ] as NavItem[],
 };
 
