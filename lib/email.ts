@@ -13,10 +13,12 @@ export async function sendEmail({
   to,
   subject,
   html,
+  tags,
 }: {
   to: string;
   subject: string;
   html: string;
+  tags?: { name: string; value: string }[];
 }) {
   if (!process.env.RESEND_API_KEY) {
     console.error("RESEND_API_KEY not set — cannot send email to:", to);
@@ -28,6 +30,7 @@ export async function sendEmail({
     to,
     subject,
     html,
+    tags,
   });
 
   if (result.error) {
@@ -36,6 +39,24 @@ export async function sendEmail({
   }
 
   return result;
+}
+
+/**
+ * Non-throwing version of sendEmail for batch operations.
+ * Returns { success, id } or { success: false, error }.
+ */
+export async function sendEmailSafe(options: {
+  to: string;
+  subject: string;
+  html: string;
+  tags?: { name: string; value: string }[];
+}): Promise<{ success: true; id: string | undefined } | { success: false; error: string }> {
+  try {
+    const result = await sendEmail(options);
+    return { success: true, id: result.data?.id };
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
 }
 
 export async function sendLeadNotification({
