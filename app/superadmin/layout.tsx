@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect, useCallback } from "react";
 import SuperadminSearch from "@/components/SuperadminSearch";
+import ReconciliationBanner from "@/components/superadmin/ReconciliationBanner";
 
 interface PendingCounts {
   pendingLeads: number;
@@ -347,6 +348,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
           })}
         </div>
 
+        <ReconciliationBanner />
         <main className="flex-1 overflow-auto">{children}</main>
       </div>
     </div>
