@@ -15,68 +15,98 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
-  // Fetch recent checkouts
+  // Wave checkouts
   const { data: checkouts } = await supabase
     .from("wave_checkouts")
     .select("*, users!user_id(name)")
     .order("created_at", { ascending: false })
     .limit(50);
 
-  // Fetch recent payouts
-  const { data: payouts } = await supabase
+  // Wave payouts
+  const { data: wavePayouts } = await supabase
     .from("wave_payouts")
     .select("*, users!user_id(name)")
     .order("created_at", { ascending: false })
     .limit(50);
 
-  // Fetch unprocessed webhook events
+  // Legacy payments (recharges)
+  const { data: payments } = await supabase
+    .from("payments")
+    .select("*, users!user_id(name)")
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  // Legacy payouts (withdrawals)
+  const { data: legacyPayouts } = await supabase
+    .from("payouts")
+    .select("*, users!echo_id(name)")
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  // Unprocessed webhook events
   const { data: pendingEvents } = await supabase
     .from("wave_webhook_events")
     .select("*")
-    .eq("processed", false)
     .order("created_at", { ascending: false })
-    .limit(20);
+    .limit(30);
 
-  // Summary stats
+  // Stats — Wave
   const { count: totalCheckouts } = await supabase
-    .from("wave_checkouts")
-    .select("*", { count: "exact", head: true });
-
+    .from("wave_checkouts").select("*", { count: "exact", head: true });
   const { count: completedCheckouts } = await supabase
-    .from("wave_checkouts")
-    .select("*", { count: "exact", head: true })
+    .from("wave_checkouts").select("*", { count: "exact", head: true })
     .eq("checkout_status", "complete");
-
-  const { count: totalPayouts } = await supabase
-    .from("wave_payouts")
-    .select("*", { count: "exact", head: true });
-
-  const { count: completedPayouts } = await supabase
-    .from("wave_payouts")
-    .select("*", { count: "exact", head: true })
+  const { count: totalWavePayouts } = await supabase
+    .from("wave_payouts").select("*", { count: "exact", head: true });
+  const { count: completedWavePayouts } = await supabase
+    .from("wave_payouts").select("*", { count: "exact", head: true })
     .eq("payout_status", "completed");
-
   const { count: processingPayouts } = await supabase
-    .from("wave_payouts")
-    .select("*", { count: "exact", head: true })
+    .from("wave_payouts").select("*", { count: "exact", head: true })
     .eq("payout_status", "processing");
-
   const { count: failedPayouts } = await supabase
-    .from("wave_payouts")
-    .select("*", { count: "exact", head: true })
+    .from("wave_payouts").select("*", { count: "exact", head: true })
     .in("payout_status", ["failed", "reversed"]);
+
+  // Stats — Legacy
+  const { count: totalPayments } = await supabase
+    .from("payments").select("*", { count: "exact", head: true });
+  const { count: completedPayments } = await supabase
+    .from("payments").select("*", { count: "exact", head: true })
+    .eq("status", "completed");
+  const { count: pendingPayments } = await supabase
+    .from("payments").select("*", { count: "exact", head: true })
+    .eq("status", "pending");
+  const { count: totalLegacyPayouts } = await supabase
+    .from("payouts").select("*", { count: "exact", head: true });
+  const { count: sentPayouts } = await supabase
+    .from("payouts").select("*", { count: "exact", head: true })
+    .eq("status", "sent");
+  const { count: pendingLegacyPayouts } = await supabase
+    .from("payouts").select("*", { count: "exact", head: true })
+    .eq("status", "pending");
 
   return NextResponse.json({
     checkouts: checkouts || [],
-    payouts: payouts || [],
+    wavePayouts: wavePayouts || [],
+    payments: payments || [],
+    legacyPayouts: legacyPayouts || [],
     pendingEvents: pendingEvents || [],
     stats: {
+      // Wave
       totalCheckouts: totalCheckouts || 0,
       completedCheckouts: completedCheckouts || 0,
-      totalPayouts: totalPayouts || 0,
-      completedPayouts: completedPayouts || 0,
+      totalWavePayouts: totalWavePayouts || 0,
+      completedWavePayouts: completedWavePayouts || 0,
       processingPayouts: processingPayouts || 0,
       failedPayouts: failedPayouts || 0,
+      // Legacy
+      totalPayments: totalPayments || 0,
+      completedPayments: completedPayments || 0,
+      pendingPayments: pendingPayments || 0,
+      totalLegacyPayouts: totalLegacyPayouts || 0,
+      sentPayouts: sentPayouts || 0,
+      pendingLegacyPayouts: pendingLegacyPayouts || 0,
     },
   });
 }

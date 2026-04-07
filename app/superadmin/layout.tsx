@@ -42,10 +42,9 @@ const toolsGroup = {
     { label: "Challenges", href: "/superadmin/challenges", emoji: "🥚", permKey: "challenges" },
     { label: "Ambassadors", href: "/superadmin/ambassadors", emoji: "🤝", permKey: "ambassadors" },
     { label: "Roadmap", href: "/superadmin/roadmap", emoji: "🗺️", permKey: "roadmap" },
-    { label: "Reconciliation", href: "/superadmin/reconciliation", emoji: "⚖️", superadminOnly: true },
+    { label: "Reconciliation", href: "/superadmin/wave-reconciliation", emoji: "⚖️", superadminOnly: true },
     { label: "Data Lab", href: "/superadmin/datalab", emoji: "🔬", superadminOnly: true },
     { label: "Email Campaigns", href: "/superadmin/email-campaigns", emoji: "✉️", superadminOnly: true },
-    { label: "Wave Recon", href: "/superadmin/wave-reconciliation", emoji: "🌊", superadminOnly: true },
   ] as NavItem[],
 };
 
