@@ -14,12 +14,6 @@ function getWaveApiKey(): string {
   return key;
 }
 
-function getWaveWebhookSecret(): string {
-  const secret = process.env.WAVE_WEBHOOK_SECRET;
-  if (!secret) throw new Error("WAVE_WEBHOOK_SECRET is not set");
-  return secret;
-}
-
 function getWaveSigningSecret(): string | null {
   return process.env.WAVE_SIGNING_SECRET || null;
 }
@@ -47,21 +41,43 @@ export function signRequest(body: string): string {
 
 // ---------------------------------------------------------------------------
 // Webhook signature verification
+// Wave signs with HMAC-SHA256 using the webhook/signing secret
 // ---------------------------------------------------------------------------
 
 export function verifyWebhookSignature(
   payload: string,
   signature: string
 ): boolean {
-  const secret = getWaveWebhookSecret();
-  const expected = crypto
-    .createHmac("sha256", secret)
-    .update(payload)
-    .digest("hex");
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expected)
-  );
+  // Strip any prefix like "sha256=" or "hmac-sha256="
+  const rawSignature = signature.replace(/^(sha256=|hmac-sha256=)/i, "");
+
+  // Try WAVE_WEBHOOK_SECRET first, then WAVE_SIGNING_SECRET as fallback
+  const secrets = [
+    process.env.WAVE_WEBHOOK_SECRET,
+    process.env.WAVE_SIGNING_SECRET,
+  ].filter(Boolean) as string[];
+
+  for (const secret of secrets) {
+    const expected = crypto
+      .createHmac("sha256", secret)
+      .update(payload)
+      .digest("hex");
+
+    // Safe comparison — handle different lengths gracefully
+    if (expected.length === rawSignature.length) {
+      try {
+        if (crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(rawSignature))) {
+          return true;
+        }
+      } catch {
+        // Length mismatch or other error — try next secret
+      }
+    } else if (expected === rawSignature) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 // ---------------------------------------------------------------------------
