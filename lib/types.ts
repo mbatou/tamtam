@@ -81,8 +81,9 @@ export interface Payout {
   echo_id: string;
   amount: number;
   provider: "wave" | "orange_money" | null;
-  status: "pending" | "sent" | "failed";
+  status: "pending" | "processing" | "sent" | "failed";
   created_at: string;
+  completed_at?: string | null;
 }
 
 export interface BlockedIP {
