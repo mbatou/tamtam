@@ -44,6 +44,7 @@ const toolsGroup = {
     { label: "Roadmap", href: "/superadmin/roadmap", emoji: "🗺️", permKey: "roadmap" },
     { label: "Reconciliation", href: "/superadmin/reconciliation", emoji: "⚖️", superadminOnly: true },
     { label: "Data Lab", href: "/superadmin/datalab", emoji: "🔬", superadminOnly: true },
+    { label: "Email Campaigns", href: "/superadmin/email-campaigns", emoji: "✉️", superadminOnly: true },
   ] as NavItem[],
 };
 
