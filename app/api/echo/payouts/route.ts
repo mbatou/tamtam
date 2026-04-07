@@ -153,23 +153,33 @@ export async function POST(request: NextRequest) {
         name: user.name || undefined,
       });
 
-      // Update our record with Wave's response
+      console.log("Wave Payout response:", JSON.stringify(wavePayout));
+
+      // Wave payouts are synchronous — if we got a success response,
+      // the money has been sent. Mark as completed immediately.
+      const isCompleted = wavePayout.payout_status === "completed"
+        || !!wavePayout.transaction_id;
+
+      // Update our wave_payouts record
       await supabase
         .from("wave_payouts")
         .update({
           wave_payout_id: wavePayout.id,
-          payout_status: wavePayout.payout_status === "completed" ? "completed" : "processing",
+          payout_status: isCompleted ? "completed" : "processing",
           wave_transaction_id: wavePayout.transaction_id,
           receipt_url: wavePayout.receipt_url,
-          completed_at: wavePayout.when_completed,
+          completed_at: isCompleted ? new Date().toISOString() : null,
         })
         .eq("idempotency_key", idempotencyKey);
 
-      // If Wave says immediately completed, update legacy payout too
-      if (wavePayout.payout_status === "completed" && payoutRecord) {
+      // Update legacy payout record — mark as "sent" since Wave confirmed
+      if (payoutRecord) {
         await supabase
           .from("payouts")
-          .update({ status: "sent", completed_at: new Date().toISOString() })
+          .update({
+            status: isCompleted ? "sent" : "pending",
+            completed_at: isCompleted ? new Date().toISOString() : null,
+          })
           .eq("id", payoutRecord.id);
       }
 
@@ -183,6 +193,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         ...payoutRecord,
+        status: isCompleted ? "sent" : "pending",
         wave_status: wavePayout.payout_status,
         fee,
         net_amount: netAmount,
