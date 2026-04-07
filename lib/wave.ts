@@ -38,25 +38,40 @@ function waveHeaders(body?: string, idempotencyKey?: string): Record<string, str
 
 // ---------------------------------------------------------------------------
 // HMAC-SHA256 request signing
+// Format: t=<unix_timestamp>,v1=<hmac_hex>
+// Payload: timestamp concatenated with request body
 // ---------------------------------------------------------------------------
 
 export function signRequest(body: string): string {
   const secret = getWaveSigningSecret();
   if (!secret) return "";
-  return crypto.createHmac("sha256", secret).update(body).digest("hex");
+  const timestamp = Math.floor(Date.now() / 1000);
+  const payload = `${timestamp}${body}`;
+  const hmac = crypto.createHmac("sha256", secret).update(payload).digest("hex");
+  return `t=${timestamp},v1=${hmac}`;
 }
 
 // ---------------------------------------------------------------------------
 // Webhook signature verification
-// Wave signs with HMAC-SHA256 using the webhook/signing secret
+// Wave sends: Wave-Signature: t=<timestamp>,v1=<hmac_hex>
+// Verify by computing HMAC-SHA256 over timestamp + body
 // ---------------------------------------------------------------------------
 
 export function verifyWebhookSignature(
   payload: string,
-  signature: string
+  signatureHeader: string
 ): boolean {
-  // Strip any prefix like "sha256=" or "hmac-sha256="
-  const rawSignature = signature.replace(/^(sha256=|hmac-sha256=)/i, "");
+  // Parse "t=<timestamp>,v1=<hex>" format
+  const parts: Record<string, string> = {};
+  for (const part of signatureHeader.split(",")) {
+    const [key, ...valueParts] = part.split("=");
+    if (key && valueParts.length) {
+      parts[key.trim()] = valueParts.join("=").trim();
+    }
+  }
+
+  const timestamp = parts["t"];
+  const v1Signature = parts["v1"];
 
   // Try WAVE_WEBHOOK_SECRET first, then WAVE_SIGNING_SECRET as fallback
   const secrets = [
@@ -64,23 +79,40 @@ export function verifyWebhookSignature(
     process.env.WAVE_SIGNING_SECRET,
   ].filter(Boolean) as string[];
 
-  for (const secret of secrets) {
-    const expected = crypto
-      .createHmac("sha256", secret)
-      .update(payload)
-      .digest("hex");
+  if (timestamp && v1Signature) {
+    // Wave format: t=timestamp,v1=hmac
+    // Reject timestamps older than 5 minutes
+    const ts = parseInt(timestamp);
+    const age = Math.abs(Math.floor(Date.now() / 1000) - ts);
+    if (age > 300) {
+      console.error("Wave webhook: signature timestamp too old:", age, "seconds");
+      return false;
+    }
 
-    // Safe comparison — handle different lengths gracefully
+    const sigPayload = `${timestamp}${payload}`;
+    for (const secret of secrets) {
+      const expected = crypto.createHmac("sha256", secret).update(sigPayload).digest("hex");
+      if (expected.length === v1Signature.length) {
+        try {
+          if (crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(v1Signature))) {
+            return true;
+          }
+        } catch { /* try next */ }
+      }
+    }
+    return false;
+  }
+
+  // Fallback: raw signature (no t=,v1= format)
+  const rawSignature = signatureHeader.replace(/^(sha256=|hmac-sha256=)/i, "");
+  for (const secret of secrets) {
+    const expected = crypto.createHmac("sha256", secret).update(payload).digest("hex");
     if (expected.length === rawSignature.length) {
       try {
         if (crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(rawSignature))) {
           return true;
         }
-      } catch {
-        // Length mismatch or other error — try next secret
-      }
-    } else if (expected === rawSignature) {
-      return true;
+      } catch { /* try next */ }
     }
   }
 
