@@ -7,20 +7,40 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
-  const signature = request.headers.get("wave-signature") || "";
+
+  // Wave sends signature in different possible headers
+  const signature =
+    request.headers.get("wave-signature") ||
+    request.headers.get("x-wave-signature") ||
+    request.headers.get("wave-webhook-signature") ||
+    "";
 
   // Verify webhook signature
-  try {
-    if (!verifyWebhookSignature(rawBody, signature)) {
-      console.error("Wave webhook: invalid signature");
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  if (signature) {
+    try {
+      if (!verifyWebhookSignature(rawBody, signature)) {
+        console.error("Wave webhook: invalid signature");
+        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+      }
+    } catch (err) {
+      console.error("Wave webhook: signature verification error", err);
+      return NextResponse.json({ error: "Signature error" }, { status: 401 });
     }
-  } catch (err) {
-    console.error("Wave webhook: signature verification error", err);
-    return NextResponse.json({ error: "Signature error" }, { status: 401 });
+  } else {
+    // No signature header — check if webhook secret is configured
+    if (process.env.WAVE_WEBHOOK_SECRET) {
+      console.error("Wave webhook: missing signature header");
+      return NextResponse.json({ error: "Missing signature" }, { status: 401 });
+    }
   }
 
-  const event = JSON.parse(rawBody);
+  let event;
+  try {
+    event = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
   const supabase = createServiceClient();
 
   // Idempotency: check if we already processed this event
@@ -45,18 +65,31 @@ export async function POST(request: NextRequest) {
 
   try {
     switch (event.type) {
+      // Checkout completed — credit brand wallet
       case "checkout.session.completed":
         await handleCheckoutCompleted(supabase, event.data);
         break;
-      case "payout.completed":
+
+      // Checkout payment failed
+      case "checkout.session.payment_failed":
+        await handleCheckoutFailed(supabase, event.data);
+        break;
+
+      // B2B payment received — payout was delivered to recipient
+      case "b2b.payment_received":
         await handlePayoutCompleted(supabase, event.data);
         break;
-      case "payout.failed":
+
+      // B2B payment failed — payout failed
+      case "b2b.payment_failed":
         await handlePayoutFailed(supabase, event.data);
         break;
-      case "payout.reversed":
-        await handlePayoutReversed(supabase, event.data);
+
+      // Merchant received payment (alternative checkout confirmation)
+      case "merchant.payment_received":
+        await handleMerchantPaymentReceived(supabase, event.data);
         break;
+
       default:
         console.log(`Wave webhook: unhandled event type ${event.type}`);
     }
@@ -79,19 +112,24 @@ export async function POST(request: NextRequest) {
 // ---------------------------------------------------------------------------
 async function handleCheckoutCompleted(
   supabase: ReturnType<typeof createServiceClient>,
-  data: { id: string; amount: string; client_reference?: string; payment_status?: string }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any
 ) {
-  if (data.payment_status !== "succeeded") return;
+  const checkoutId = data.id || data.checkout_session_id;
+  if (!checkoutId) {
+    console.error("Wave webhook: checkout completed but no ID in payload");
+    return;
+  }
 
   // Find the checkout record
   const { data: checkout } = await supabase
     .from("wave_checkouts")
     .select("*")
-    .eq("wave_checkout_id", data.id)
+    .eq("wave_checkout_id", checkoutId)
     .single();
 
   if (!checkout) {
-    console.error(`Wave webhook: checkout not found for ${data.id}`);
+    console.error(`Wave webhook: checkout not found for ${checkoutId}`);
     return;
   }
 
@@ -105,7 +143,7 @@ async function handleCheckoutCompleted(
   const { data: credited } = await supabase.rpc("credit_wallet_from_checkout", {
     p_user_id: checkout.user_id,
     p_amount: amount,
-    p_wave_checkout_id: data.id,
+    p_wave_checkout_id: checkoutId,
     p_payment_id: checkout.payment_id,
   });
 
@@ -123,18 +161,50 @@ async function handleCheckoutCompleted(
 }
 
 // ---------------------------------------------------------------------------
-// Payout completed — mark as done
+// Checkout payment failed — mark checkout as failed
+// ---------------------------------------------------------------------------
+async function handleCheckoutFailed(
+  supabase: ReturnType<typeof createServiceClient>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any
+) {
+  const checkoutId = data.id || data.checkout_session_id;
+  if (!checkoutId) return;
+
+  await supabase
+    .from("wave_checkouts")
+    .update({
+      checkout_status: "expired",
+      payment_status: "failed",
+      error_message: data.last_payment_error || data.error_message || "Payment failed",
+    })
+    .eq("wave_checkout_id", checkoutId);
+
+  // Also mark the payment record as failed
+  const { data: checkout } = await supabase
+    .from("wave_checkouts")
+    .select("payment_id")
+    .eq("wave_checkout_id", checkoutId)
+    .single();
+
+  if (checkout?.payment_id) {
+    await supabase
+      .from("payments")
+      .update({ status: "failed" })
+      .eq("id", checkout.payment_id);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// B2B payment received — payout completed
 // ---------------------------------------------------------------------------
 async function handlePayoutCompleted(
   supabase: ReturnType<typeof createServiceClient>,
-  data: { id: string; transaction_id?: string; receipt_url?: string }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any
 ) {
-  const { data: wavePayout } = await supabase
-    .from("wave_payouts")
-    .select("*")
-    .eq("wave_payout_id", data.id)
-    .single();
-
+  // Try to find by wave_payout_id or client_reference
+  const wavePayout = await findWavePayout(supabase, data);
   if (!wavePayout) return;
   if (wavePayout.payout_status === "completed") return;
 
@@ -142,11 +212,12 @@ async function handlePayoutCompleted(
     .from("wave_payouts")
     .update({
       payout_status: "completed",
+      wave_payout_id: data.id || wavePayout.wave_payout_id,
       wave_transaction_id: data.transaction_id || null,
       receipt_url: data.receipt_url || null,
       completed_at: new Date().toISOString(),
     })
-    .eq("wave_payout_id", data.id);
+    .eq("id", wavePayout.id);
 
   // Also mark the legacy payout record as sent
   if (wavePayout.payout_id) {
@@ -158,18 +229,14 @@ async function handlePayoutCompleted(
 }
 
 // ---------------------------------------------------------------------------
-// Payout failed — refund wallet
+// B2B payment failed — refund wallet
 // ---------------------------------------------------------------------------
 async function handlePayoutFailed(
   supabase: ReturnType<typeof createServiceClient>,
-  data: { id: string; error_code?: string; error_message?: string }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any
 ) {
-  const { data: wavePayout } = await supabase
-    .from("wave_payouts")
-    .select("*")
-    .eq("wave_payout_id", data.id)
-    .single();
-
+  const wavePayout = await findWavePayout(supabase, data);
   if (!wavePayout) return;
   if (wavePayout.payout_status === "failed") return;
 
@@ -178,9 +245,9 @@ async function handlePayoutFailed(
     .update({
       payout_status: "failed",
       error_code: data.error_code || null,
-      error_message: data.error_message || null,
+      error_message: data.error_message || data.failure_reason || null,
     })
-    .eq("wave_payout_id", data.id);
+    .eq("id", wavePayout.id);
 
   // Refund the wallet
   const { data: refunded } = await supabase.rpc("refund_wallet_from_payout", {
@@ -211,55 +278,76 @@ async function handlePayoutFailed(
 }
 
 // ---------------------------------------------------------------------------
-// Payout reversed — refund wallet (same logic as failed)
+// Merchant payment received — alternative checkout confirmation
 // ---------------------------------------------------------------------------
-async function handlePayoutReversed(
+async function handleMerchantPaymentReceived(
   supabase: ReturnType<typeof createServiceClient>,
-  data: { id: string; error_code?: string; error_message?: string }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any
 ) {
-  const { data: wavePayout } = await supabase
-    .from("wave_payouts")
+  // This can serve as a backup confirmation for checkout payments
+  // Try to match by client_reference or amount
+  const clientRef = data.client_reference;
+  if (!clientRef) return;
+
+  const { data: checkout } = await supabase
+    .from("wave_checkouts")
     .select("*")
-    .eq("wave_payout_id", data.id)
+    .eq("client_reference", clientRef)
     .single();
 
-  if (!wavePayout) return;
-  if (wavePayout.payout_status === "reversed") return;
+  if (!checkout || checkout.checkout_status === "complete") return;
 
-  await supabase
-    .from("wave_payouts")
-    .update({
-      payout_status: "reversed",
-      error_code: data.error_code || null,
-      error_message: data.error_message || null,
-    })
-    .eq("wave_payout_id", data.id);
+  // Credit the wallet
+  const amount = parseInt(data.amount) || checkout.amount;
+  const { data: credited } = await supabase.rpc("credit_wallet_from_checkout", {
+    p_user_id: checkout.user_id,
+    p_amount: amount,
+    p_wave_checkout_id: checkout.wave_checkout_id,
+    p_payment_id: checkout.payment_id,
+  });
 
-  // Refund if not already refunded from a failed state
-  if (wavePayout.payout_status !== "failed") {
-    const { data: refunded } = await supabase.rpc("refund_wallet_from_payout", {
-      p_user_id: wavePayout.user_id,
-      p_amount: wavePayout.amount,
-      p_idempotency_key: wavePayout.idempotency_key,
+  if (credited) {
+    await logWalletTransaction({
+      supabase,
+      userId: checkout.user_id,
+      amount,
+      type: "wallet_recharge",
+      description: `Recharge via Wave (merchant) — ${amount} FCFA`,
+      sourceId: checkout.payment_id,
+      sourceType: "wave_checkout",
     });
+  }
+}
 
-    if (refunded) {
-      await logWalletTransaction({
-        supabase,
-        userId: wavePayout.user_id,
-        amount: wavePayout.amount,
-        type: "withdrawal_refund",
-        description: `Retrait annulé — remboursement ${wavePayout.amount} FCFA`,
-        sourceId: wavePayout.payout_id,
-        sourceType: "wave_payout",
-      });
-    }
+// ---------------------------------------------------------------------------
+// Helper: find wave_payout record from webhook data
+// ---------------------------------------------------------------------------
+async function findWavePayout(
+  supabase: ReturnType<typeof createServiceClient>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any
+) {
+  // Try by wave_payout_id first
+  if (data.id) {
+    const { data: payout } = await supabase
+      .from("wave_payouts")
+      .select("*")
+      .eq("wave_payout_id", data.id)
+      .single();
+    if (payout) return payout;
   }
 
-  if (wavePayout.payout_id) {
-    await supabase
-      .from("payouts")
-      .update({ status: "failed" })
-      .eq("id", wavePayout.payout_id);
+  // Try by client_reference
+  if (data.client_reference) {
+    const { data: payout } = await supabase
+      .from("wave_payouts")
+      .select("*")
+      .eq("client_reference", data.client_reference)
+      .single();
+    if (payout) return payout;
   }
+
+  console.error("Wave webhook: could not find matching wave_payout for", data);
+  return null;
 }
