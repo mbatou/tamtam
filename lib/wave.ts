@@ -223,7 +223,7 @@ export async function createPayout(
 ): Promise<WavePayout> {
   const body = JSON.stringify({
     mobile: params.mobile,
-    amount: params.amount,
+    receive_amount: params.amount,
     currency: params.currency,
     client_reference: params.client_reference,
     name: params.name,
