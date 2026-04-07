@@ -18,13 +18,20 @@ function getWaveSigningSecret(): string | null {
   return process.env.WAVE_SIGNING_SECRET || null;
 }
 
-function waveHeaders(idempotencyKey?: string): Record<string, string> {
+function waveHeaders(body?: string, idempotencyKey?: string): Record<string, string> {
   const headers: Record<string, string> = {
     Authorization: `Bearer ${getWaveApiKey()}`,
     "Content-Type": "application/json",
   };
   if (idempotencyKey) {
     headers["Idempotency-Key"] = idempotencyKey;
+  }
+  // Wave requires HMAC-SHA256 signature on every request
+  if (body) {
+    const sig = signRequest(body);
+    if (sig) {
+      headers["Wave-Signature"] = sig;
+    }
   }
   return headers;
 }
@@ -114,7 +121,7 @@ export async function createCheckoutSession(
   const body = JSON.stringify(params);
   const res = await fetch(`${WAVE_API_BASE}/checkout/sessions`, {
     method: "POST",
-    headers: waveHeaders(),
+    headers: waveHeaders(body),
     body,
   });
 
@@ -129,9 +136,10 @@ export async function createCheckoutSession(
 export async function getCheckoutSession(
   sessionId: string
 ): Promise<WaveCheckoutSession> {
+  const emptyBody = "";
   const res = await fetch(`${WAVE_API_BASE}/checkout/sessions/${sessionId}`, {
     method: "GET",
-    headers: waveHeaders(),
+    headers: waveHeaders(emptyBody),
   });
 
   if (!res.ok) {
@@ -191,7 +199,7 @@ export async function createPayout(
 
   const res = await fetch(`${WAVE_API_BASE}/payout`, {
     method: "POST",
-    headers: waveHeaders(params.idempotency_key),
+    headers: waveHeaders(body, params.idempotency_key),
     body,
   });
 
@@ -206,7 +214,7 @@ export async function createPayout(
 export async function getPayout(payoutId: string): Promise<WavePayout> {
   const res = await fetch(`${WAVE_API_BASE}/payout/${payoutId}`, {
     method: "GET",
-    headers: waveHeaders(),
+    headers: waveHeaders(""),
   });
 
   if (!res.ok) {
@@ -234,7 +242,7 @@ export async function verifyRecipient(
     `${WAVE_API_BASE}/payout/eligibility?mobile=${encodeURIComponent(mobile)}`,
     {
       method: "GET",
-      headers: waveHeaders(),
+      headers: waveHeaders(""),
     }
   );
 
