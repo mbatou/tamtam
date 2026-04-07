@@ -11,6 +11,14 @@
     {
       "path": "/api/cron/echo-weekly-summary",
       "schedule": "0 10 * * 1"
+    },
+    {
+      "path": "/api/cron/reconciliation",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/financial-snapshot",
+      "schedule": "55 23 * * *"
     }
   ]
 }
