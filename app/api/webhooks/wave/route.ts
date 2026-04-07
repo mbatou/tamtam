@@ -8,28 +8,38 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
 
-  // Wave sends signature in different possible headers
+  // Log all headers for debugging (remove after webhook is confirmed working)
+  const headerEntries: string[] = [];
+  request.headers.forEach((value, key) => {
+    if (key.toLowerCase().includes("wave") || key.toLowerCase().includes("signature") || key.toLowerCase().includes("hmac")) {
+      headerEntries.push(`${key}: ${value}`);
+    }
+  });
+  if (headerEntries.length > 0) {
+    console.log("Wave webhook headers:", headerEntries.join(", "));
+  }
+
+  // Wave sends signature in various possible headers
   const signature =
     request.headers.get("wave-signature") ||
     request.headers.get("x-wave-signature") ||
     request.headers.get("wave-webhook-signature") ||
+    request.headers.get("x-webhook-signature") ||
+    request.headers.get("signature") ||
+    request.headers.get("x-signature") ||
     "";
 
   // Verify webhook signature
   if (signature) {
-    try {
-      if (!verifyWebhookSignature(rawBody, signature)) {
-        console.error("Wave webhook: invalid signature");
-        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-      }
-    } catch (err) {
-      console.error("Wave webhook: signature verification error", err);
-      return NextResponse.json({ error: "Signature error" }, { status: 401 });
+    if (!verifyWebhookSignature(rawBody, signature)) {
+      console.error("Wave webhook: invalid signature. Received:", signature.slice(0, 20) + "...");
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
   } else {
-    // No signature header — check if webhook secret is configured
-    if (process.env.WAVE_WEBHOOK_SECRET) {
-      console.error("Wave webhook: missing signature header");
+    // No recognized signature header — accept if no secret is configured,
+    // otherwise reject
+    if (process.env.WAVE_WEBHOOK_SECRET || process.env.WAVE_SIGNING_SECRET) {
+      console.error("Wave webhook: no signature header found. All headers:", Array.from(request.headers.keys()).join(", "));
       return NextResponse.json({ error: "Missing signature" }, { status: 401 });
     }
   }

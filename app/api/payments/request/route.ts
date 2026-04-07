@@ -82,6 +82,8 @@ export async function POST(req: NextRequest) {
     if (process.env.WAVE_API_KEY) {
       try {
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.tamma.me";
+        console.log("Wave Checkout: creating session for", amount, "FCFA");
+
         const checkoutSession = await createCheckoutSession({
           amount: String(amount),
           currency: "XOF",
@@ -90,8 +92,10 @@ export async function POST(req: NextRequest) {
           client_reference: refCommand,
         });
 
-        // Track the checkout session
-        await supabase.from("wave_checkouts").insert({
+        console.log("Wave Checkout: session created", checkoutSession.id, checkoutSession.wave_launch_url);
+
+        // Track the checkout session (non-blocking — don't let DB errors prevent redirect)
+        supabase.from("wave_checkouts").insert({
           user_id: session.user.id,
           payment_id: paymentRecord.id,
           wave_checkout_id: checkoutSession.id,
@@ -101,6 +105,8 @@ export async function POST(req: NextRequest) {
           checkout_status: checkoutSession.checkout_status,
           wave_launch_url: checkoutSession.wave_launch_url,
           expires_at: checkoutSession.when_expires,
+        }).then(({ error: insertErr }) => {
+          if (insertErr) console.error("Wave Checkout: failed to track session in DB:", insertErr.message);
         });
 
         return NextResponse.json({
@@ -113,6 +119,8 @@ export async function POST(req: NextRequest) {
         console.error("Wave Checkout API error, falling back to legacy:", err);
         // Fall through to legacy link below
       }
+    } else {
+      console.log("Wave Checkout: WAVE_API_KEY not set, using legacy link");
     }
 
     // ---- Fallback: legacy static Wave payment link ----
