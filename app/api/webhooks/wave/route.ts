@@ -8,37 +8,20 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
 
-  // Log ALL headers for debugging
-  const allHeaders: Record<string, string> = {};
-  request.headers.forEach((value, key) => {
-    allHeaders[key] = key.toLowerCase().includes("secret") ? "[REDACTED]" : value;
-  });
-  console.log("Wave webhook: ALL headers:", JSON.stringify(allHeaders));
-  console.log("Wave webhook: body preview:", rawBody.slice(0, 200));
-
-  // Wave sends signature in various possible headers
-  const signature =
-    request.headers.get("wave-signature") ||
-    request.headers.get("x-wave-signature") ||
-    request.headers.get("wave-webhook-signature") ||
-    request.headers.get("x-webhook-signature") ||
-    request.headers.get("signature") ||
-    request.headers.get("x-signature") ||
-    request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ||
-    "";
-
-  console.log("Wave webhook: found signature:", signature ? `${signature.slice(0, 30)}... (len=${signature.length})` : "NONE");
+  // Wave sends signature in "Wave-Signature" header with format "t=timestamp,v1=hmac"
+  const signature = request.headers.get("wave-signature") || "";
 
   // Verify webhook signature
   if (signature) {
     if (!verifyWebhookSignature(rawBody, signature)) {
-      console.error("Wave webhook: invalid signature");
-      // Return 200 anyway temporarily to see the payload and debug
-      // TODO: revert to 401 once signature is working
-      console.log("Wave webhook: BYPASSING signature check for debugging");
+      console.error("Wave webhook: invalid signature:", signature.slice(0, 40));
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
   } else {
-    console.log("Wave webhook: no signature header found, proceeding without verification");
+    if (process.env.WAVE_WEBHOOK_SECRET || process.env.WAVE_SIGNING_SECRET) {
+      console.error("Wave webhook: missing Wave-Signature header");
+      return NextResponse.json({ error: "Missing signature" }, { status: 401 });
+    }
   }
 
   let event;
