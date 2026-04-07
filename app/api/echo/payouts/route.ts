@@ -4,6 +4,8 @@ import { payoutRequestSchema } from "@/lib/validations";
 import { rateLimit } from "@/lib/rate-limit";
 import { sendPayoutRequestNotification } from "@/lib/email";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
+import { createPayout, calculatePayoutFee } from "@/lib/wave";
+import { randomUUID } from "crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -73,10 +75,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `Montant minimum: ${minPayout} FCFA` }, { status: 400 });
   }
 
-  // Verify user balance
+  // Verify user balance and get phone
   const { data: user } = await supabase
     .from("users")
-    .select("balance")
+    .select("balance, phone, name")
     .eq("id", session.user.id)
     .single();
 
@@ -84,6 +86,140 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Solde insuffisant" }, { status: 400 });
   }
 
+  const provider = parsed.data.provider || "wave";
+  const useWaveApi = provider === "wave" && !!process.env.WAVE_API_KEY && !!user.phone;
+
+  if (useWaveApi) {
+    // ---- Wave API Payout Flow ----
+    // 1. Generate idempotency key BEFORE anything
+    const idempotencyKey = randomUUID();
+    const { fee, netAmount } = calculatePayoutFee(parsed.data.amount);
+
+    // 2. Atomic debit via RPC (prevents race conditions)
+    const { data: debited } = await supabase.rpc("debit_wallet_for_payout", {
+      p_user_id: session.user.id,
+      p_amount: parsed.data.amount,
+      p_idempotency_key: idempotencyKey,
+    });
+
+    if (!debited) {
+      return NextResponse.json({ error: "Solde insuffisant ou retrait en cours" }, { status: 400 });
+    }
+
+    // 3. Log the debit transaction
+    await logWalletTransaction({
+      supabase,
+      userId: session.user.id,
+      amount: -parsed.data.amount,
+      type: "withdrawal",
+      description: `Retrait Wave — ${parsed.data.amount} FCFA (frais: ${fee} FCFA)`,
+      sourceType: "wave_payout",
+    });
+
+    // 4. Create payout record in our DB
+    const { data: payoutRecord } = await supabase.from("payouts").insert({
+      echo_id: session.user.id,
+      amount: parsed.data.amount,
+      provider: "wave",
+      status: "pending",
+    }).select().single();
+
+    // Format phone to E.164
+    const mobile = user.phone!.startsWith("+") ? user.phone! : `+221${user.phone}`;
+    const clientRef = `TAMTAM_PAYOUT_${session.user.id.slice(0, 8)}_${Date.now()}`;
+
+    // 5. Store wave_payout BEFORE calling API (idempotency key is our safety net)
+    await supabase.from("wave_payouts").insert({
+      payout_id: payoutRecord?.id,
+      user_id: session.user.id,
+      idempotency_key: idempotencyKey,
+      amount: parsed.data.amount,
+      fee,
+      net_amount: netAmount,
+      currency: "XOF",
+      mobile,
+      client_reference: clientRef,
+      payout_status: "processing",
+    });
+
+    // 6. Call Wave Payout API
+    try {
+      const wavePayout = await createPayout({
+        idempotency_key: idempotencyKey,
+        mobile,
+        amount: String(netAmount),
+        currency: "XOF",
+        client_reference: clientRef,
+        name: user.name || undefined,
+      });
+
+      // Update our record with Wave's response
+      await supabase
+        .from("wave_payouts")
+        .update({
+          wave_payout_id: wavePayout.id,
+          payout_status: wavePayout.payout_status === "completed" ? "completed" : "processing",
+          wave_transaction_id: wavePayout.transaction_id,
+          receipt_url: wavePayout.receipt_url,
+          completed_at: wavePayout.when_completed,
+        })
+        .eq("idempotency_key", idempotencyKey);
+
+      // If Wave says immediately completed, update legacy payout too
+      if (wavePayout.payout_status === "completed" && payoutRecord) {
+        await supabase
+          .from("payouts")
+          .update({ status: "sent", completed_at: new Date().toISOString() })
+          .eq("id", payoutRecord.id);
+      }
+
+      // Notify admin
+      sendPayoutRequestNotification({
+        echoName: user.name || "Inconnu",
+        echoPhone: user.phone || "",
+        amount: parsed.data.amount,
+        provider: "wave",
+      }).catch(() => {});
+
+      return NextResponse.json({
+        ...payoutRecord,
+        wave_status: wavePayout.payout_status,
+        fee,
+        net_amount: netAmount,
+      }, { status: 201 });
+
+    } catch (err) {
+      // Network error or Wave API error — do NOT auto-refund
+      // Mark as "processing" for manual reconciliation
+      console.error("Wave Payout API error:", err);
+
+      await supabase
+        .from("wave_payouts")
+        .update({
+          payout_status: "processing",
+          error_message: err instanceof Error ? err.message : "Unknown error",
+        })
+        .eq("idempotency_key", idempotencyKey);
+
+      // Still notify admin of the situation
+      sendPayoutRequestNotification({
+        echoName: user.name || "Inconnu",
+        echoPhone: user.phone || "",
+        amount: parsed.data.amount,
+        provider: "wave",
+      }).catch(() => {});
+
+      return NextResponse.json({
+        ...payoutRecord,
+        wave_status: "processing",
+        fee,
+        net_amount: netAmount,
+        note: "Paiement en cours de traitement",
+      }, { status: 201 });
+    }
+  }
+
+  // ---- Legacy Flow (Orange Money or no Wave API key) ----
   // Debit balance immediately
   const newBalance = user.balance - parsed.data.amount;
   const { error: balanceError } = await supabase
@@ -100,14 +236,14 @@ export async function POST(request: NextRequest) {
     userId: session.user.id,
     amount: -parsed.data.amount,
     type: "withdrawal",
-    description: `Demande de retrait — ${parsed.data.provider || "mobile money"}`,
+    description: `Demande de retrait — ${provider}`,
     sourceType: "payout",
   });
 
   const { data, error } = await supabase.from("payouts").insert({
     echo_id: session.user.id,
     amount: parsed.data.amount,
-    provider: parsed.data.provider,
+    provider,
   }).select().single();
 
   if (error) {
@@ -120,17 +256,11 @@ export async function POST(request: NextRequest) {
   }
 
   // Notify admin by email
-  const { data: echoUser } = await supabase
-    .from("users")
-    .select("name, phone")
-    .eq("id", session.user.id)
-    .single();
-
   sendPayoutRequestNotification({
-    echoName: echoUser?.name || "Inconnu",
-    echoPhone: echoUser?.phone || "",
+    echoName: user.name || "Inconnu",
+    echoPhone: user.phone || "",
     amount: parsed.data.amount,
-    provider: parsed.data.provider || "wave",
+    provider: provider,
   }).catch(() => {});
 
   return NextResponse.json(data, { status: 201 });

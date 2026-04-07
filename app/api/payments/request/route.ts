@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-// import { paytechConfig, paytechHeaders } from "@/lib/paytech";
 import { paymentRequestSchema } from "@/lib/validations";
 import { rateLimit } from "@/lib/rate-limit";
 import { sendRechargeRequestNotification } from "@/lib/email";
+import { createCheckoutSession } from "@/lib/wave";
 
-// Wave payment link configuration
+// Fallback: legacy Wave payment link (used when WAVE_API_KEY is not set)
 const WAVE_PAYMENT_BASE_URL = "https://pay.wave.com/m/M_sn_hawWuMtnv3Ad/c/sn/";
 
 export async function POST(req: NextRequest) {
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     // Generate unique reference
     const refCommand = `TAMTAM_WALLET_${session.user.id.slice(0, 8)}_${Date.now()}`;
 
-    // Create payment record with pending_wave status (needs superadmin validation)
+    // Create payment record
     const { data: paymentRecord, error: insertError } = await supabase
       .from("payments")
       .insert({
@@ -78,7 +78,44 @@ export async function POST(req: NextRequest) {
       refCommand,
     }).catch(() => {});
 
-    // Generate Wave payment link with dynamic amount
+    // ---- Wave Checkout API (preferred) ----
+    if (process.env.WAVE_API_KEY) {
+      try {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.tamma.me";
+        const checkoutSession = await createCheckoutSession({
+          amount: String(amount),
+          currency: "XOF",
+          error_url: `${appUrl}/admin/wallet?payment=error&ref=${refCommand}`,
+          success_url: `${appUrl}/admin/wallet?payment=success&ref=${refCommand}`,
+          client_reference: refCommand,
+        });
+
+        // Track the checkout session
+        await supabase.from("wave_checkouts").insert({
+          user_id: session.user.id,
+          payment_id: paymentRecord.id,
+          wave_checkout_id: checkoutSession.id,
+          amount,
+          currency: "XOF",
+          client_reference: refCommand,
+          checkout_status: checkoutSession.checkout_status,
+          wave_launch_url: checkoutSession.wave_launch_url,
+          expires_at: checkoutSession.when_expires,
+        });
+
+        return NextResponse.json({
+          success: true,
+          redirect_url: checkoutSession.wave_launch_url,
+          payment_id: paymentRecord.id,
+          wave_checkout_id: checkoutSession.id,
+        });
+      } catch (err) {
+        console.error("Wave Checkout API error, falling back to legacy:", err);
+        // Fall through to legacy link below
+      }
+    }
+
+    // ---- Fallback: legacy static Wave payment link ----
     const waveUrl = `${WAVE_PAYMENT_BASE_URL}?amount=${amount}`;
 
     return NextResponse.json({
@@ -86,81 +123,6 @@ export async function POST(req: NextRequest) {
       redirect_url: waveUrl,
       payment_id: paymentRecord.id,
     });
-
-    /* ===== PAYTECH INTEGRATION (commented out - waiting for prod approval) =====
-    // Get user profile for autofill
-    const { data: profile } = await supabase
-      .from("users")
-      .select("name, phone")
-      .eq("id", session.user.id)
-      .single();
-
-    // Call PayTech API
-    const paymentData = {
-      item_name: "Recharge portefeuille Tamtam",
-      item_price: amount,
-      currency: "XOF",
-      ref_command: refCommand,
-      command_name: `Tamtam - Recharge portefeuille`,
-      env: paytechConfig.env,
-      ipn_url: `${paytechConfig.appUrl}/api/payments/ipn`,
-      success_url: `${paytechConfig.appUrl}/admin/wallet?payment=success`,
-      cancel_url: `${paytechConfig.appUrl}/admin/wallet?payment=cancelled`,
-      custom_field: JSON.stringify({
-        payment_id: paymentRecord.id,
-        user_id: session.user.id,
-        type: "wallet_recharge",
-      }),
-    };
-
-    const response = await fetch(
-      `${paytechConfig.baseUrl}/payment/request-payment`,
-      {
-        method: "POST",
-        headers: paytechHeaders,
-        body: JSON.stringify(paymentData),
-      }
-    );
-
-    const result = await response.json();
-
-    if (result.success === 1) {
-      let redirectUrl = result.redirect_url;
-
-      if (profile?.phone) {
-        const phone = profile.phone.startsWith("+221")
-          ? profile.phone
-          : `+221${profile.phone}`;
-        const params = new URLSearchParams({
-          pn: phone,
-          nn: phone.slice(4),
-          fn: profile.name || "",
-        });
-        redirectUrl += "?" + params.toString();
-      }
-
-      await supabase
-        .from("payments")
-        .update({ paytech_token: result.token })
-        .eq("id", paymentRecord.id);
-
-      return NextResponse.json({
-        success: true,
-        redirect_url: redirectUrl,
-        token: result.token,
-      });
-    } else {
-      await supabase
-        .from("payments")
-        .update({ status: "failed" })
-        .eq("id", paymentRecord.id);
-
-      return NextResponse.json(
-        { error: result.message || "Erreur PayTech" },
-        { status: 400 }
-      );
-    }
-    ===== END PAYTECH INTEGRATION ===== */
   } catch (error) {
     console.error("Payment request error:", error);
     return NextResponse.json(
