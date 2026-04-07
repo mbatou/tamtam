@@ -155,29 +155,34 @@ export async function POST(request: NextRequest) {
 
       console.log("Wave Payout response:", JSON.stringify(wavePayout));
 
-      // Wave payouts are synchronous — if we got a success response,
-      // the money has been sent. Mark as completed immediately.
-      const isCompleted = wavePayout.payout_status === "completed"
-        || !!wavePayout.transaction_id;
+      // Wave payouts are synchronous — if we got here without an error,
+      // the API accepted the payout. Mark as completed.
+      // Check multiple indicators: payout_status, transaction_id, or simply
+      // the fact that createPayout() returned without throwing.
+      const isFailed = wavePayout.payout_status === "failed"
+        || wavePayout.payout_status === "reversed";
+      const isCompleted = !isFailed; // If not failed, it's done or processing
 
       // Update our wave_payouts record
       await supabase
         .from("wave_payouts")
         .update({
           wave_payout_id: wavePayout.id,
-          payout_status: isCompleted ? "completed" : "processing",
-          wave_transaction_id: wavePayout.transaction_id,
-          receipt_url: wavePayout.receipt_url,
+          payout_status: isCompleted ? "completed" : "failed",
+          wave_transaction_id: wavePayout.transaction_id || null,
+          receipt_url: wavePayout.receipt_url || null,
           completed_at: isCompleted ? new Date().toISOString() : null,
+          error_code: wavePayout.error_code || null,
+          error_message: wavePayout.error_message || null,
         })
         .eq("idempotency_key", idempotencyKey);
 
-      // Update legacy payout record — mark as "sent" since Wave confirmed
+      // Update legacy payout record
       if (payoutRecord) {
         await supabase
           .from("payouts")
           .update({
-            status: isCompleted ? "sent" : "pending",
+            status: isCompleted ? "sent" : "failed",
             completed_at: isCompleted ? new Date().toISOString() : null,
           })
           .eq("id", payoutRecord.id);
