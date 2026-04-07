@@ -72,15 +72,27 @@ function AdminWalletPage() {
   useEffect(() => {
     loadWallet();
 
-    // Handle redirect params (legacy PayTech / future use)
+    // Handle redirect params from Wave checkout
     const paymentStatus = searchParams.get("payment");
     if (paymentStatus === "success") {
       setSuccessMsg(t("admin.wallet.paymentRegistered"));
       window.history.replaceState({}, "", "/admin/wallet");
-    } else if (paymentStatus === "cancelled") {
+      // Poll for balance update — Wave webhook may take a few seconds
+      const interval = setInterval(() => loadWallet(), 5000);
+      setTimeout(() => clearInterval(interval), 60000);
+    } else if (paymentStatus === "cancelled" || paymentStatus === "error") {
       setPayError(t("admin.wallet.paymentCancelled"));
       window.history.replaceState({}, "", "/admin/wallet");
     }
+
+    // Auto-refresh balance when user returns to this tab (from Wave payment)
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        loadWallet();
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [searchParams]);
 
   async function loadWallet() {

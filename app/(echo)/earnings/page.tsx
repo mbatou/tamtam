@@ -86,25 +86,31 @@ export default function EarningsPage() {
     setRequesting(true);
     setWithdrawError("");
 
-    const res = await fetch("/api/echo/payouts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        amount,
-        provider: user?.mobile_money_provider,
-      }),
-    });
+    try {
+      const res = await fetch("/api/echo/payouts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount,
+          provider: user?.mobile_money_provider || "wave",
+        }),
+      });
 
-    if (res.ok) {
-      trackEvent.echoWithdraw(amount);
-      setLastWithdrawn(amount);
-      setWithdrawSuccess(true);
-      setShowWithdrawForm(false);
-      setWithdrawAmount("");
-      await loadData();
-    } else {
       const data = await res.json().catch(() => ({}));
-      showToast(data.error || t("echo.earnings.requestError"), "error");
+
+      if (res.ok) {
+        trackEvent.echoWithdraw(amount);
+        setLastWithdrawn(data.fee ? amount - data.fee : amount);
+        setWithdrawSuccess(true);
+        setShowWithdrawForm(false);
+        setWithdrawAmount("");
+        await loadData();
+      } else {
+        setWithdrawError(data.error || t("echo.earnings.requestError"));
+        showToast(data.error || t("echo.earnings.requestError"), "error");
+      }
+    } catch {
+      setWithdrawError(t("common.networkRetry"));
     }
     setRequesting(false);
   }
@@ -128,7 +134,7 @@ export default function EarningsPage() {
   }
 
   const canWithdraw = (user?.balance || 0) >= minPayout;
-  const hasPendingPayout = payouts.some((p) => p.status === "pending");
+  const hasPendingPayout = payouts.some((p) => p.status === "pending" || p.status === "processing");
   const totalEarned = user?.total_earned || 0;
   const balance = user?.balance || 0;
 
@@ -390,10 +396,10 @@ export default function EarningsPage() {
               <div className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs shrink-0 ${
                   payout.status === "sent" ? "bg-accent/10 text-accent" :
-                  payout.status === "pending" ? "bg-primary-light/10 text-primary-light" :
+                  (payout.status === "pending" || payout.status === "processing") ? "bg-primary-light/10 text-primary-light" :
                   "bg-red-500/10 text-red-400"
                 }`}>
-                  {payout.status === "sent" ? "✓" : payout.status === "pending" ? "⏳" : "✕"}
+                  {payout.status === "sent" ? "✓" : (payout.status === "pending" || payout.status === "processing") ? "⏳" : "✕"}
                 </div>
                 <div>
                   <p className="text-sm font-bold">{formatFCFA(payout.amount)}</p>
@@ -402,8 +408,8 @@ export default function EarningsPage() {
                   </p>
                 </div>
               </div>
-              <span className={`badge-${payout.status} text-[10px]`}>
-                {payout.status === "pending"
+              <span className={`badge-${payout.status === "processing" ? "pending" : payout.status} text-[10px]`}>
+                {(payout.status === "pending" || payout.status === "processing")
                   ? t("common.pending")
                   : payout.status === "sent"
                   ? t("common.sent")
