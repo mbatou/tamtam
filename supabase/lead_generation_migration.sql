@@ -139,6 +139,22 @@ CREATE INDEX IF NOT EXISTS idx_ai_usage_brand_month ON ai_usage(brand_id, month)
 -- 7. RPC: Atomic lead debit (mirrors increment_click pattern)
 -- =====================================================================
 
+CREATE OR REPLACE FUNCTION increment_ai_usage_count(
+  p_brand_id UUID,
+  p_month TEXT
+) RETURNS VOID AS $$
+BEGIN
+  UPDATE ai_usage
+    SET call_count = call_count + 1
+    WHERE brand_id = p_brand_id
+      AND month = p_month;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =====================================================================
+-- 8. RPC: Atomic lead debit (mirrors increment_click pattern)
+-- =====================================================================
+
 CREATE OR REPLACE FUNCTION debit_campaign_for_lead(
   p_campaign_id UUID,
   p_cpl INTEGER,
