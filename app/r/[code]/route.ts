@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { ECHO_SHARE_PERCENT } from "@/lib/constants";
+import { ECHO_SHARE_PERCENT, SITE_URL } from "@/lib/constants";
 import { rateLimit } from "@/lib/rate-limit";
 import { validateClick } from "@/lib/click-validator";
 import { processGamification } from "@/lib/gamification";
@@ -85,9 +85,22 @@ export async function GET(
 
   const campaign = link.campaigns;
 
+  // Resolve destination: for lead_gen campaigns, redirect to landing page
+  let destinationUrl = campaign.destination_url;
+  if (campaign.objective === "lead_generation" && campaign.landing_page_id) {
+    const { data: lp } = await supabase
+      .from("landing_pages")
+      .select("slug")
+      .eq("id", campaign.landing_page_id)
+      .single();
+    if (lp?.slug) {
+      destinationUrl = `${SITE_URL}/l/${lp.slug}?ref=${code}`;
+    }
+  }
+
   // If campaign not active, redirect anyway
   if (campaign.status !== "active") {
-    return NextResponse.redirect(campaign.destination_url);
+    return NextResponse.redirect(destinationUrl);
   }
 
   // Gather visitor data
@@ -98,7 +111,7 @@ export async function GET(
 
   // Social preview bots (WhatsApp, Snapchat, etc.) just redirect — don't record as a click
   if (reason === "social_preview") {
-    return NextResponse.redirect(campaign.destination_url);
+    return NextResponse.redirect(destinationUrl);
   }
 
   // Insert click record with rejection reason for analytics
@@ -159,7 +172,7 @@ export async function GET(
         }
       }
 
-      return NextResponse.redirect(campaign.destination_url);
+      return NextResponse.redirect(destinationUrl);
     }
 
     // Apply tier bonus to echo earnings
