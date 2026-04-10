@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS landing_pages (
   description TEXT,
   cta_text TEXT NOT NULL,
   brand_color TEXT NOT NULL,
+  brand_accent_color TEXT,
   logo_url TEXT,
   form_fields JSONB NOT NULL DEFAULT '[]',
   notification_phone TEXT,

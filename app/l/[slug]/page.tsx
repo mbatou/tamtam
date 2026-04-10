@@ -51,12 +51,13 @@ export default async function LandingPage({ params, searchParams }: PageProps) {
   }
 
   const formFields: LandingPageFormField[] = page.form_fields || [];
+  const accentColor = page.brand_accent_color || "#1a1a2e";
 
   return (
     <div
       className="min-h-screen flex flex-col"
       style={{
-        background: `linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)`,
+        background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}e6 50%, ${accentColor}cc 100%)`,
       }}
     >
       {/* Header with brand color accent */}

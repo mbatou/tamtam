@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatFCFA, timeAgo } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import type { Campaign } from "@/lib/types";
-import { ECHO_SHARE_PERCENT } from "@/lib/constants";
+import { ECHO_SHARE_PERCENT, SITE_URL, LEAD_GEN_SETUP_FEE_FCFA } from "@/lib/constants";
 import { SENEGAL_CITIES } from "@/lib/cities";
 import { trackEvent } from "@/lib/analytics";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -46,6 +46,11 @@ export default function AdminCampaignsPage() {
   const [perfLoading, setPerfLoading] = useState(false);
   // Per-campaign real click + echo counts from stats API
   const [campaignStats, setCampaignStats] = useState<Record<string, { realClicks: number; realValidClicks: number; echoCount: number }>>({});
+  // Lead gen: leads tab data
+  const [detailTab, setDetailTab] = useState<"overview" | "leads">("overview");
+  const [leads, setLeads] = useState<{ id: string; name: string; phone: string; email: string | null; status: string; created_at: string; echo_id: string | null }[]>([]);
+  const [leadsLoading, setLeadsLoading] = useState(false);
+  const [landingSlug, setLandingSlug] = useState<string | null>(null);
   const supabase = createClient();
 
   useEffect(() => { loadCampaigns(); }, []);
@@ -74,6 +79,31 @@ export default function AdminCampaignsPage() {
         .then((r) => r.ok ? r.json() : null)
         .then((data) => { setPerf(data); setPerfLoading(false); })
         .catch(() => setPerfLoading(false));
+    }
+  }, [view, selectedCampaign?.id]);
+
+  // Fetch leads and landing page slug for lead gen campaigns
+  useEffect(() => {
+    if (view === "detail" && selectedCampaign && (selectedCampaign.objective || "traffic") === "lead_generation") {
+      setDetailTab("overview");
+      // Fetch leads
+      setLeadsLoading(true);
+      fetch(`/api/admin/campaigns/leads?campaign_id=${selectedCampaign.id}`)
+        .then((r) => r.ok ? r.json() : { leads: [] })
+        .then((data) => { setLeads(Array.isArray(data?.leads) ? data.leads : []); setLeadsLoading(false); })
+        .catch(() => { setLeads([]); setLeadsLoading(false); });
+      // Fetch landing page slug
+      if (selectedCampaign.landing_page_id) {
+        fetch(`/api/landing-pages`)
+          .then((r) => r.ok ? r.json() : [])
+          .then((pages: { id: string; slug: string }[]) => {
+            const match = Array.isArray(pages) ? pages.find((p) => p.id === selectedCampaign.landing_page_id) : null;
+            setLandingSlug(match?.slug || null);
+          })
+          .catch(() => setLandingSlug(null));
+      } else {
+        setLandingSlug(null);
+      }
     }
   }, [view, selectedCampaign?.id]);
 
@@ -424,7 +454,7 @@ export default function AdminCampaignsPage() {
         )}
 
         {/* Stats cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className={`grid grid-cols-2 ${(c.objective || "traffic") === "lead_generation" ? "lg:grid-cols-3" : "lg:grid-cols-4"} gap-4 mb-4`}>
           <div className="glass-card p-4">
             <p className="text-xs text-white/40 font-semibold mb-1">{t("common.budget")}</p>
             <p className="text-xl font-bold">{formatFCFA(c.budget)}</p>
@@ -439,16 +469,55 @@ export default function AdminCampaignsPage() {
               {budgetConsumed ? t("admin.campaigns.fullyConsumed") : formatFCFA(remaining)}
             </p>
           </div>
-          <div className="glass-card p-4">
-            <p className="text-xs text-white/40 font-semibold mb-1">CPC</p>
-            <p className="text-xl font-bold">{formatFCFA(c.cpc)}</p>
-          </div>
+          {(c.objective || "traffic") !== "lead_generation" && (
+            <div className="glass-card p-4">
+              <p className="text-xs text-white/40 font-semibold mb-1">CPC</p>
+              <p className="text-xl font-bold">{formatFCFA(c.cpc)}</p>
+            </div>
+          )}
         </div>
+
+        {/* Lead gen specific stats */}
+        {(c.objective || "traffic") === "lead_generation" && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div className="glass-card p-4">
+              <p className="text-xs text-white/40 font-semibold mb-1">CPC</p>
+              <p className="text-xl font-bold">{formatFCFA(c.cpc)}</p>
+            </div>
+            <div className="glass-card p-4">
+              <p className="text-xs text-white/40 font-semibold mb-1">CPL</p>
+              <p className="text-xl font-bold">{formatFCFA(c.cost_per_lead_fcfa || 0)}</p>
+            </div>
+            <div className="glass-card p-4">
+              <p className="text-xs text-white/40 font-semibold mb-1">Leads captures</p>
+              <p className="text-xl font-bold text-purple-400">{c.leads_captured_count || 0}</p>
+            </div>
+            <div className="glass-card p-4">
+              <p className="text-xs text-white/40 font-semibold mb-1">Frais landing page</p>
+              <p className="text-xl font-bold">{formatFCFA(LEAD_GEN_SETUP_FEE_FCFA)}</p>
+              <p className="text-[10px] text-white/20">{c.setup_fee_paid ? "Paye" : "Non paye"}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Landing page URL for lead gen */}
+        {(c.objective || "traffic") === "lead_generation" && landingSlug && (
+          <div className="glass-card p-4 mb-4">
+            <p className="text-xs text-white/40 font-semibold mb-1">Landing page</p>
+            <a href={`${SITE_URL}/l/${landingSlug}`} target="_blank" rel="noopener noreferrer" className="text-sm font-mono text-primary hover:underline break-all">
+              {SITE_URL}/l/{landingSlug}
+            </a>
+          </div>
+        )}
 
         {/* Objective context */}
         {(c.objective || "traffic") === "awareness" ? (
           <p className="text-sm text-white/40 mb-4">
             Chaque clic signifie qu&apos;une personne a vu votre visuel ET a cliqué.
+          </p>
+        ) : (c.objective || "traffic") === "lead_generation" ? (
+          <p className="text-sm text-white/40 mb-4">
+            Le budget couvre les clics (CPC) et les leads verifies (CPL). Les Echos recoivent 75% du CPL pour chaque lead valide.
           </p>
         ) : (
           <p className="text-sm text-white/40 mb-4">
@@ -456,6 +525,78 @@ export default function AdminCampaignsPage() {
           </p>
         )}
 
+        {/* Tab bar for lead gen campaigns */}
+        {(c.objective || "traffic") === "lead_generation" && (
+          <div className="flex gap-1 mb-6 bg-white/5 rounded-xl p-1 w-fit">
+            <button onClick={() => setDetailTab("overview")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${detailTab === "overview" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"}`}>
+              Apercu
+            </button>
+            <button onClick={() => setDetailTab("leads")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${detailTab === "leads" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"}`}>
+              Leads ({leads.length})
+            </button>
+          </div>
+        )}
+
+        {/* Leads Tab */}
+        {(c.objective || "traffic") === "lead_generation" && detailTab === "leads" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold">Leads ({leads.length})</p>
+              {leads.length > 0 && (
+                <a
+                  href={`/api/admin/campaigns/leads?campaign_id=${c.id}&format=csv`}
+                  download
+                  className="px-4 py-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold hover:bg-purple-500/20 transition flex items-center gap-2"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Telecharger CSV
+                </a>
+              )}
+            </div>
+            {leadsLoading ? (
+              <div className="glass-card p-8 text-center text-white/30 text-sm">Chargement...</div>
+            ) : leads.length === 0 ? (
+              <div className="glass-card p-8 text-center text-white/30 text-sm">Aucun lead pour le moment</div>
+            ) : (
+              <div className="glass-card overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/10 text-left">
+                      <th className="px-4 py-3 text-xs text-white/40 font-semibold">Nom</th>
+                      <th className="px-4 py-3 text-xs text-white/40 font-semibold">Telephone</th>
+                      <th className="px-4 py-3 text-xs text-white/40 font-semibold">Email</th>
+                      <th className="px-4 py-3 text-xs text-white/40 font-semibold">Statut</th>
+                      <th className="px-4 py-3 text-xs text-white/40 font-semibold">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leads.map((lead) => (
+                      <tr key={lead.id} className="border-b border-white/5 hover:bg-white/5 transition">
+                        <td className="px-4 py-3">{lead.name}</td>
+                        <td className="px-4 py-3 font-mono text-xs">{lead.phone}</td>
+                        <td className="px-4 py-3 text-xs text-white/60">{lead.email || "—"}</td>
+                        <td className="px-4 py-3">
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                            lead.status === "verified" ? "bg-emerald-500/20 text-emerald-300" :
+                            lead.status === "rejected" ? "bg-red-500/20 text-red-300" :
+                            lead.status === "flagged" ? "bg-yellow-500/20 text-yellow-300" :
+                            "bg-white/10 text-white/60"
+                          }`}>
+                            {lead.status === "verified" ? "Verifie" : lead.status === "rejected" ? "Rejete" : lead.status === "flagged" ? "Suspect" : "En attente"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-white/40">{new Date(lead.created_at).toLocaleDateString("fr-FR")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Overview tab content (always show for non-lead-gen, or when overview tab is active) */}
+        {((c.objective || "traffic") !== "lead_generation" || detailTab === "overview") && <>
         {/* Progress bar */}
         <div className="glass-card p-5 mb-8">
           <div className="flex items-center justify-between mb-3">
@@ -690,6 +831,7 @@ export default function AdminCampaignsPage() {
             )}
           </div>
         </div>
+        </>}
       </div>
     );
   }

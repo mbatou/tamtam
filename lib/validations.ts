@@ -129,6 +129,7 @@ export const createLeadCampaignSchema = z.object({
   brand_name: z.string().min(2, "Nom de marque requis").max(100).trim(),
   brand_industry: z.enum(BRAND_INDUSTRIES),
   brand_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Couleur hexadecimale invalide"),
+  brand_accent_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Couleur secondaire invalide").optional().nullable(),
   logo_url: z.string().url().optional().nullable(),
   target_audience: z.string().min(10, "Decrivez votre audience cible").max(500).trim(),
   campaign_description_for_ai: z.string().min(20, "Description trop courte").max(1000).trim(),
