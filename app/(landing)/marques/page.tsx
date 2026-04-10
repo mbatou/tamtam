@@ -75,6 +75,7 @@ export default function BrandLanding() {
     { q: t("brandPage.faq3q"), a: t("brandPage.faq3a") },
     { q: t("brandPage.faq4q"), a: t("brandPage.faq4a") },
     { q: t("brandPage.faq5q"), a: t("brandPage.faq5a") },
+    { q: t("brandPage.faq6q"), a: t("brandPage.faq6a") },
   ];
 
   const useCases = [
@@ -202,6 +203,106 @@ export default function BrandLanding() {
           <div>
             <p className="text-4xl md:text-5xl font-black text-orange-500">24h</p>
             <p className="text-white/50 text-sm mt-1">{t("brandPage.metricResults")}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* 3 Campaign Objectives */}
+      <section className="px-6 py-20 max-w-5xl mx-auto">
+        <h2 className="text-3xl font-black text-center mb-3">
+          {t("brandPage.objectivesTitle")}
+        </h2>
+        <p className="text-center text-white/50 mb-12 text-sm">
+          {t("brandPage.objectivesSubtitle")}
+        </p>
+        <div className="grid md:grid-cols-3 gap-6">
+          {/* Traffic */}
+          <div className="relative bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-teal-500/40 transition-all group">
+            <div className="w-14 h-14 bg-teal-500/10 border border-teal-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <svg className="w-7 h-7 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+              </svg>
+            </div>
+            <span className="inline-block text-[10px] font-bold uppercase tracking-wider bg-teal-500/10 text-teal-400 px-2.5 py-1 rounded-full mb-3">
+              {t("brandPage.objTrafficTag")}
+            </span>
+            <h3 className="text-xl font-bold mb-2">{t("brandPage.objTrafficTitle")}</h3>
+            <p className="text-white/50 text-sm leading-relaxed">{t("brandPage.objTrafficDesc")}</p>
+          </div>
+
+          {/* Awareness */}
+          <div className="relative bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-blue-500/40 transition-all group">
+            <div className="w-14 h-14 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <svg className="w-7 h-7 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <span className="inline-block text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-full mb-3">
+              {t("brandPage.objAwarenessTag")}
+            </span>
+            <h3 className="text-xl font-bold mb-2">{t("brandPage.objAwarenessTitle")}</h3>
+            <p className="text-white/50 text-sm leading-relaxed">{t("brandPage.objAwarenessDesc")}</p>
+          </div>
+
+          {/* Lead Generation */}
+          <div className="relative bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/30 rounded-2xl p-6 hover:border-purple-500/50 transition-all group">
+            <div className="absolute top-4 right-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-purple-500 text-white px-2.5 py-1 rounded-full animate-pulse">
+                {t("brandPage.objLeadGenTag")}
+              </span>
+            </div>
+            <div className="w-14 h-14 bg-purple-500/10 border border-purple-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <svg className="w-7 h-7 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold mb-2">{t("brandPage.objLeadGenTitle")}</h3>
+            <p className="text-white/50 text-sm leading-relaxed">{t("brandPage.objLeadGenDesc")}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* AI Landing Page Feature */}
+      <section className="px-6 py-20 bg-gradient-to-b from-purple-500/5 to-transparent">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <span className="inline-block text-xs font-bold uppercase tracking-wider bg-purple-500/10 text-purple-400 px-4 py-1.5 rounded-full mb-4 border border-purple-500/20">
+              AI-Powered
+            </span>
+            <h2 className="text-3xl font-black mb-3">
+              {t("brandPage.aiTitle")}
+            </h2>
+            <p className="text-white/50 max-w-xl mx-auto">
+              {t("brandPage.aiSubtitle")}
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {[
+              { icon: "🎨", key: "aiFeature1" },
+              { icon: "📋", key: "aiFeature2" },
+              { icon: "🔔", key: "aiFeature3" },
+              { icon: "🛡️", key: "aiFeature4" },
+            ].map((f) => (
+              <div key={f.key} className="flex gap-4 bg-white/5 border border-white/10 rounded-xl p-5 hover:border-purple-500/20 transition-colors">
+                <span className="text-2xl flex-shrink-0 mt-0.5">{f.icon}</span>
+                <div>
+                  <h3 className="font-bold mb-1">{t(`brandPage.${f.key}`)}</h3>
+                  <p className="text-white/50 text-sm leading-relaxed">{t(`brandPage.${f.key}Desc`)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="text-center mt-10">
+            <Link
+              href="/signup/brand"
+              onClick={() => trackEvent.landingCTA("marques", "ai_section_signup")}
+              className="inline-flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white font-bold px-8 py-4 rounded-full text-lg transition-all hover:scale-105"
+            >
+              Essayer la generation de leads →
+            </Link>
           </div>
         </div>
       </section>

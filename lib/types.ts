@@ -83,6 +83,7 @@ export interface LandingPage {
   description: string | null;
   cta_text: string;
   brand_color: string;
+  brand_accent_color: string | null;
   logo_url: string | null;
   form_fields: LandingPageFormField[];
   notification_phone: string | null;

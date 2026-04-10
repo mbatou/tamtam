@@ -12,6 +12,7 @@ import Modal from "@/components/ui/Modal";
 import Pagination, { paginate } from "@/components/ui/Pagination";
 import ProgressBar from "@/components/ui/ProgressBar";
 import { useToast } from "@/components/ui/Toast";
+import { SITE_URL } from "@/lib/constants";
 
 interface Campaign {
   id: string;
@@ -30,6 +31,12 @@ interface Campaign {
   total_clicks: number;
   target_cities: string[] | null;
   users: { name: string; phone: string } | null;
+  // Lead generation fields
+  cost_per_lead_fcfa?: number | null;
+  leads_captured_count?: number;
+  setup_fee_paid?: boolean;
+  setup_fee_amount_fcfa?: number | null;
+  landing_page_id?: string | null;
 }
 
 interface Batteur {
@@ -94,6 +101,9 @@ function CampaignModerationPageContent() {
   const [echoData, setEchoData] = useState<EchoData | null>(null);
   const [loadingEchos, setLoadingEchos] = useState(false);
 
+  // Landing page slug for lead gen campaigns
+  const [landingPageSlug, setLandingPageSlug] = useState<string | null>(null);
+
   // Create campaign state
   const [showCreate, setShowCreate] = useState(false);
   const [showTemplateMenu, setShowTemplateMenu] = useState(false);
@@ -115,6 +125,18 @@ function CampaignModerationPageContent() {
   }, []);
 
   useEffect(() => { loadData(); }, []);
+
+  // Fetch landing page slug for lead gen campaigns
+  useEffect(() => {
+    if (selected && (selected.objective || "traffic") === "lead_generation" && selected.landing_page_id) {
+      fetch(`/api/superadmin/landing-pages?id=${selected.landing_page_id}`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => setLandingPageSlug(data?.slug || null))
+        .catch(() => setLandingPageSlug(null));
+    } else {
+      setLandingPageSlug(null);
+    }
+  }, [selected?.id]);
 
   // Fetch echo data when detail tab switches to echos or clicks
   useEffect(() => {
@@ -377,9 +399,11 @@ function CampaignModerationPageContent() {
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                       (campaign.objective || "traffic") === "awareness"
                         ? "bg-blue-500/20 text-blue-300"
-                        : "bg-teal-500/20 text-teal-300"
+                        : (campaign.objective || "traffic") === "lead_generation"
+                          ? "bg-purple-500/20 text-purple-300"
+                          : "bg-teal-500/20 text-teal-300"
                     }`}>
-                      {(campaign.objective || "traffic") === "awareness" ? "Awareness" : "Traffic"}
+                      {(campaign.objective || "traffic") === "awareness" ? "Awareness" : (campaign.objective || "traffic") === "lead_generation" ? "Lead Gen" : "Traffic"}
                     </span>
                   </div>
                   <div className="text-xs text-white/30">{campaign.users ? getBrandDisplayName({ ...campaign.users, role: "batteur" }) : "—"}</div>
@@ -481,7 +505,7 @@ function CampaignModerationPageContent() {
                   <div className="col-span-2">
                     <span className="text-xs text-white/40 block">Objective</span>
                     <span className="text-white font-medium">
-                      {(selected.objective || "traffic") === "awareness" ? "Awareness (visual required)" : "Traffic (clicks)"}
+                      {(selected.objective || "traffic") === "awareness" ? "Awareness (visual required)" : (selected.objective || "traffic") === "lead_generation" ? "Lead Generation (landing page)" : "Traffic (clicks)"}
                     </span>
                   </div>
                   <div>
@@ -492,6 +516,36 @@ function CampaignModerationPageContent() {
                     <span className="text-xs text-white/40 block">{t("common.cpc")}</span>
                     <span>{selected.cpc} FCFA</span>
                   </div>
+                  {(selected.objective || "traffic") === "lead_generation" && (
+                    <>
+                      <div>
+                        <span className="text-xs text-white/40 block">CPL</span>
+                        <span>{selected.cost_per_lead_fcfa || "—"} FCFA</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-white/40 block">Leads captures</span>
+                        <span>{selected.leads_captured_count || 0}</span>
+                      </div>
+                      {selected.landing_page_id && (
+                        <div className="col-span-2">
+                          <span className="text-xs text-white/40 block">Landing Page</span>
+                          {landingPageSlug ? (
+                            <a href={`${SITE_URL}/l/${landingPageSlug}`} target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-primary break-all hover:underline">
+                              {SITE_URL}/l/{landingPageSlug}
+                            </a>
+                          ) : (
+                            <span className="text-xs font-mono text-white/30">Chargement...</span>
+                          )}
+                        </div>
+                      )}
+                      {selected.setup_fee_paid && (
+                        <div>
+                          <span className="text-xs text-white/40 block">Frais landing page</span>
+                          <span>{formatFCFA(selected.setup_fee_amount_fcfa || 0)} (paye)</span>
+                        </div>
+                      )}
+                    </>
+                  )}
                   <div>
                     <span className="text-xs text-white/40 block">{t("superadmin.campaigns.engagedEchos")}</span>
                     <span>{selected.echo_count}</span>

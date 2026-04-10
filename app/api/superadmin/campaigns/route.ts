@@ -255,7 +255,7 @@ export async function POST(request: NextRequest) {
   // Get current campaign state
   const { data: campaign, error: fetchErr } = await supabase
     .from("campaigns")
-    .select("id, title, status, moderation_status, budget, spent, cpc, batteur_id")
+    .select("id, title, status, moderation_status, budget, spent, cpc, batteur_id, objective, setup_fee_paid, setup_fee_amount_fcfa, landing_page_id")
     .eq("id", campaign_id)
     .single();
 
@@ -309,6 +309,14 @@ export async function POST(request: NextRequest) {
           sourceType: "campaign",
           createdBy: session.user.id,
         });
+      }
+
+      // Activate landing page for lead gen campaigns
+      if (campaign.objective === "lead_generation" && campaign.landing_page_id) {
+        await supabase
+          .from("landing_pages")
+          .update({ status: "active" })
+          .eq("id", campaign.landing_page_id);
       }
       break;
     }
@@ -364,6 +372,35 @@ export async function POST(request: NextRequest) {
         // else: no debit found = draft never submitted = no refund needed
       }
       // else: refund already issued, skip (idempotent)
+
+      // Refund setup fee for lead gen campaigns
+      if (campaign.objective === "lead_generation" && campaign.setup_fee_paid && campaign.setup_fee_amount_fcfa) {
+        const { data: existingSetupRefund } = await supabase
+          .from("wallet_transactions")
+          .select("id")
+          .eq("source_id", campaign_id)
+          .eq("source_type", "campaign_setup_fee")
+          .eq("type", "campaign_budget_refund")
+          .limit(1);
+
+        if (!existingSetupRefund || existingSetupRefund.length === 0) {
+          await supabase.rpc("increment_balance", {
+            p_user_id: campaign.batteur_id,
+            p_amount: campaign.setup_fee_amount_fcfa,
+          });
+
+          await logWalletTransaction({
+            supabase,
+            userId: campaign.batteur_id,
+            amount: campaign.setup_fee_amount_fcfa,
+            type: "campaign_budget_refund",
+            description: `Remboursement frais landing page (campagne rejetee)`,
+            sourceId: campaign_id,
+            sourceType: "campaign_setup_fee",
+            createdBy: session.user.id,
+          });
+        }
+      }
       break;
     }
     case "pause": {

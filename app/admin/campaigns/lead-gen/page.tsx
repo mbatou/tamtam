@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { BRAND_INDUSTRIES } from "@/lib/validations";
 import { LEAD_GEN_SETUP_FEE_FCFA, LEAD_GEN_MIN_BUDGET_FCFA } from "@/lib/constants";
@@ -42,9 +42,15 @@ export default function LeadGenCampaignPage() {
   const [brandName, setBrandName] = useState("");
   const [brandIndustry, setBrandIndustry] = useState<string>("commerce");
   const [brandColor, setBrandColor] = useState("#D35400");
+  const [brandAccentColor, setBrandAccentColor] = useState("#1a1a2e");
   const [logoUrl, setLogoUrl] = useState("");
   const [targetAudience, setTargetAudience] = useState("");
   const [campaignDescForAi, setCampaignDescForAi] = useState("");
+
+  // Creative uploads (campaign banner)
+  const [creativeUrls, setCreativeUrls] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form fields
   const [formFields, setFormFields] = useState<LandingPageFormField[]>([
@@ -76,6 +82,25 @@ export default function LeadGenCampaignPage() {
     setFormFields(formFields.map((f, i) => i === index ? { ...f, ...updates } : f));
   }
 
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    for (let i = 0; i < files.length; i++) {
+      const formData = new FormData();
+      formData.append("file", files[i]);
+      const res = await fetch("/api/campaigns/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setCreativeUrls((prev) => [...prev, data.url]);
+      } else {
+        setError(data.error || "Erreur lors du telechargement");
+      }
+    }
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
   async function handleSubmit(draft = false) {
     setSubmitting(true);
     setError(null);
@@ -92,12 +117,14 @@ export default function LeadGenCampaignPage() {
         brand_name: brandName,
         brand_industry: brandIndustry,
         brand_color: brandColor,
+        brand_accent_color: brandAccentColor,
         logo_url: logoUrl || null,
         target_audience: targetAudience,
         campaign_description_for_ai: campaignDescForAi,
         form_fields: formFields.filter((f) => f.label.trim()),
         notification_phone: notifPhone || null,
         notification_email: notifEmail || null,
+        creative_urls: creativeUrls,
         save_as_draft: draft,
       };
 
@@ -185,10 +212,26 @@ export default function LeadGenCampaignPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-white/40 mb-2">Couleur de marque *</label>
+              <label className="block text-xs font-semibold text-white/40 mb-2">Couleur principale *</label>
               <div className="flex items-center gap-3">
                 <input type="color" value={brandColor} onChange={(e) => setBrandColor(e.target.value)} className="w-10 h-10 rounded-lg cursor-pointer border-0" />
                 <input type="text" value={brandColor} onChange={(e) => setBrandColor(e.target.value)} className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition font-mono" placeholder="#D35400" />
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-white/40 mb-2">Couleur secondaire *</label>
+              <div className="flex items-center gap-3">
+                <input type="color" value={brandAccentColor} onChange={(e) => setBrandAccentColor(e.target.value)} className="w-10 h-10 rounded-lg cursor-pointer border-0" />
+                <input type="text" value={brandAccentColor} onChange={(e) => setBrandAccentColor(e.target.value)} className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition font-mono" placeholder="#1a1a2e" />
+              </div>
+              <p className="text-xs text-white/30 mt-1">Fond de la landing page</p>
+            </div>
+            <div className="flex items-end">
+              <div className="w-full h-12 rounded-xl border border-white/10 overflow-hidden flex">
+                <div className="flex-1" style={{ backgroundColor: brandColor }} />
+                <div className="flex-1" style={{ backgroundColor: brandAccentColor }} />
               </div>
             </div>
           </div>
@@ -199,6 +242,30 @@ export default function LeadGenCampaignPage() {
           <div>
             <label className="block text-xs font-semibold text-white/40 mb-2">URL du logo (optionnel)</label>
             <input type="url" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://..." className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
+          </div>
+          {/* Campaign banner upload */}
+          <div>
+            <label className="block text-xs font-semibold text-white/40 mb-2">Banniere de campagne (pour la promotion)</label>
+            <div className="flex flex-wrap gap-3 mb-2">
+              {creativeUrls.map((url, i) => (
+                <div key={i} className="relative group">
+                  <img src={url} alt={`Banner ${i + 1}`} className="w-24 h-24 object-cover rounded-xl border border-white/10" />
+                  <button onClick={() => setCreativeUrls((prev) => prev.filter((_, idx) => idx !== i))} className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition">x</button>
+                </div>
+              ))}
+              <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="w-24 h-24 rounded-xl border-2 border-dashed border-white/20 flex flex-col items-center justify-center gap-1 text-white/30 hover:text-white/50 hover:border-white/40 transition cursor-pointer">
+                {uploading ? (
+                  <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span className="text-[10px]">Ajouter</span>
+                  </>
+                )}
+              </button>
+            </div>
+            <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple onChange={handleUpload} className="hidden" />
+            <p className="text-xs text-white/30">Image utilisee par les Echos pour promouvoir votre campagne sur WhatsApp Status</p>
           </div>
           <div>
             <label className="block text-xs font-semibold text-white/40 mb-2">Audience cible *</label>
@@ -313,14 +380,20 @@ export default function LeadGenCampaignPage() {
 
           <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4 mt-4">
             <p className="text-sm font-semibold text-purple-300 mb-2">Resume des couts</p>
-            <div className="space-y-1 text-xs text-white/60">
-              <div className="flex justify-between"><span>Budget campagne</span><span>{formatFCFA(Number(budget))}</span></div>
-              <div className="flex justify-between"><span>Frais de mise en place</span><span>{formatFCFA(LEAD_GEN_SETUP_FEE_FCFA)}</span></div>
-              <div className="flex justify-between border-t border-white/10 pt-1 mt-1 font-semibold text-white">
-                <span>Total a debiter</span><span>{formatFCFA(totalCost)}</span>
+            <div className="space-y-1.5 text-xs text-white/60">
+              <div className="flex justify-between"><span>Budget campagne (clics + leads)</span><span>{formatFCFA(Number(budget))}</span></div>
+              <div className="flex justify-between items-center">
+                <div>
+                  <span>Frais de creation landing page</span>
+                  <span className="block text-[10px] text-white/30">Page IA generee automatiquement, unique, non-modifiable</span>
+                </div>
+                <span>{formatFCFA(LEAD_GEN_SETUP_FEE_FCFA)}</span>
+              </div>
+              <div className="flex justify-between border-t border-white/10 pt-1.5 mt-1 font-semibold text-white">
+                <span>Total debite de votre solde</span><span>{formatFCFA(totalCost)}</span>
               </div>
             </div>
-            <p className="text-xs text-white/30 mt-2">Echo recoit 75% du CPC et 75% du CPL sur les leads verifies.</p>
+            <p className="text-xs text-white/30 mt-3">Echo recoit 75% du CPC et 75% du CPL sur les leads verifies. Les {formatFCFA(LEAD_GEN_SETUP_FEE_FCFA)} de creation couvrent la generation IA du contenu de votre landing page.</p>
           </div>
 
           <div className="flex justify-between pt-2">
@@ -342,9 +415,11 @@ export default function LeadGenCampaignPage() {
             <div className="flex justify-between"><span className="text-white/40">CPC</span><span>{cpc} FCFA</span></div>
             <div className="flex justify-between"><span className="text-white/40">CPL</span><span>{cpl} FCFA</span></div>
             <div className="flex justify-between"><span className="text-white/40">Budget</span><span>{formatFCFA(Number(budget))}</span></div>
-            <div className="flex justify-between"><span className="text-white/40">Frais setup</span><span>{formatFCFA(LEAD_GEN_SETUP_FEE_FCFA)}</span></div>
+            <div className="flex justify-between"><span className="text-white/40">Frais landing page IA</span><span>{formatFCFA(LEAD_GEN_SETUP_FEE_FCFA)}</span></div>
             <div className="flex justify-between font-bold border-t border-white/10 pt-2"><span>Total</span><span>{formatFCFA(totalCost)}</span></div>
             <div className="flex justify-between"><span className="text-white/40">Champs formulaire</span><span>{formFields.filter((f) => f.label).length} champs</span></div>
+            <div className="flex justify-between"><span className="text-white/40">Banniere(s)</span><span>{creativeUrls.length} image(s)</span></div>
+            <div className="flex justify-between items-center"><span className="text-white/40">Couleurs</span><span className="flex gap-1"><span className="w-4 h-4 rounded" style={{ backgroundColor: brandColor }} /><span className="w-4 h-4 rounded" style={{ backgroundColor: brandAccentColor }} /></span></div>
             <div className="flex justify-between"><span className="text-white/40">Notification</span><span>{notifEmail || notifPhone || "Non configure"}</span></div>
           </div>
 
