@@ -127,21 +127,21 @@ describe("Lead Fraud Scoring — Factor Calculations", () => {
 
   describe("Country check (route-level)", () => {
     it("adds +15 for non-SN country", () => {
-      const country = "FR";
+      const country: string = "FR";
       let score = 20; // e.g. from bot_ua
       if (country && country !== "SN") score += 15;
       expect(score).toBe(35);
     });
 
     it("no penalty for SN country", () => {
-      const country = "SN";
+      const country: string = "SN";
       let score = 20;
       if (country && country !== "SN") score += 15;
       expect(score).toBe(20);
     });
 
     it("no penalty for empty country header", () => {
-      const country = "";
+      const country: string = "";
       let score = 20;
       if (country && country !== "SN") score += 15;
       expect(score).toBe(20);
