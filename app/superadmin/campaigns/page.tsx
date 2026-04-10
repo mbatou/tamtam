@@ -37,6 +37,7 @@ interface Campaign {
   setup_fee_paid?: boolean;
   setup_fee_amount_fcfa?: number | null;
   landing_page_id?: string | null;
+  creative_urls?: string[] | null;
 }
 
 interface Batteur {
@@ -577,6 +578,22 @@ function CampaignModerationPageContent() {
                       <span className="text-xs text-red-400">{selected.moderation_reason}</span>
                     </div>
                   )}
+                  {selected.creative_urls && selected.creative_urls.length > 0 && (
+                    <div className="col-span-2">
+                      <span className="text-xs text-white/40 block mb-2">Visuels / Bannieres</span>
+                      <div className="grid grid-cols-3 gap-2">
+                        {selected.creative_urls.map((url, i) => (
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="aspect-square rounded-xl overflow-hidden border border-white/10 hover:border-primary/40 transition">
+                            {url.match(/\.(mp4|webm)/) ? (
+                              <video src={url} className="w-full h-full object-cover" controls />
+                            ) : (
+                              <img src={url} alt={`Visuel ${i + 1}`} className="w-full h-full object-cover" />
+                            )}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {(selected.moderation_status || "pending") === "pending" && (
@@ -597,8 +614,7 @@ function CampaignModerationPageContent() {
                       </button>
                       <button
                         onClick={() => {
-                          if (!rejectReason.trim()) { showToast(t("common.error"), "error"); return; }
-                          moderateCampaign(selected.id, "reject", rejectReason);
+                          moderateCampaign(selected.id, "reject", rejectReason.trim() || undefined);
                         }}
                         disabled={moderating}
                         className={`flex-1 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-bold text-sm ${moderating ? "opacity-50 cursor-not-allowed" : ""}`}
