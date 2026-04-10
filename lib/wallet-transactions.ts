@@ -16,7 +16,8 @@ export type WalletTransactionType =
   | "balance_reset"
   | "legacy_reconciliation"
   | "account_deletion"
-  | "interest_reward";
+  | "interest_reward"
+  | "lead_earning";
 
 interface LogTransactionParams {
   supabase: SupabaseClient;

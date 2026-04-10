@@ -33,7 +33,7 @@ export interface User {
   created_at: string;
 }
 
-export type CampaignObjective = "awareness" | "traffic";
+export type CampaignObjective = "awareness" | "traffic" | "lead_generation";
 
 export interface Campaign {
   id: string;
@@ -55,6 +55,68 @@ export interface Campaign {
   ends_at: string | null;
   target_cities: string[] | null;
   created_at: string;
+  // Lead generation fields (only for objective === 'lead_generation')
+  cost_per_lead_fcfa?: number | null;
+  leads_captured_count?: number;
+  setup_fee_paid?: boolean;
+  setup_fee_amount_fcfa?: number | null;
+  landing_page_id?: string | null;
+  low_conversion_flagged?: boolean;
+}
+
+export type LandingPageStatus = "draft" | "active" | "archived";
+
+export interface LandingPageFormField {
+  label: string;
+  type: "text" | "phone" | "email" | "select";
+  required: boolean;
+  options?: string[]; // for select type
+}
+
+export interface LandingPage {
+  id: string;
+  campaign_id: string;
+  batteur_id: string;
+  slug: string;
+  headline: string;
+  subheadline: string | null;
+  description: string | null;
+  cta_text: string;
+  brand_color: string;
+  logo_url: string | null;
+  form_fields: LandingPageFormField[];
+  notification_phone: string | null;
+  notification_email: string | null;
+  ai_generation_id: string | null;
+  status: LandingPageStatus;
+  created_at: string;
+  deleted_at: string | null;
+}
+
+export type LeadStatus = "pending" | "verified" | "rejected" | "flagged";
+export type LeadPayoutStatus = "pending" | "paid" | "failed";
+
+export interface Lead {
+  id: string;
+  landing_page_id: string;
+  campaign_id: string;
+  tracked_link_id: string | null;
+  echo_id: string | null;
+  name: string;
+  phone: string;
+  email: string | null;
+  custom_fields: Record<string, string> | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  consent_given: boolean;
+  fraud_score: number;
+  status: LeadStatus;
+  rejection_reason: string | null;
+  verified_at: string | null;
+  payout_amount: number | null;
+  payout_status: LeadPayoutStatus | null;
+  created_at: string;
+  deleted_at: string | null;
 }
 
 export interface TrackedLink {

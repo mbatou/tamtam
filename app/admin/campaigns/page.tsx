@@ -352,9 +352,11 @@ export default function AdminCampaignsPage() {
               <span className={`text-xs px-2 py-0.5 rounded-full ${
                 (c.objective || "traffic") === "awareness"
                   ? "bg-blue-500/20 text-blue-300"
-                  : "bg-teal-500/20 text-teal-300"
+                  : (c.objective || "traffic") === "lead_generation"
+                    ? "bg-purple-500/20 text-purple-300"
+                    : "bg-teal-500/20 text-teal-300"
               }`}>
-                {(c.objective || "traffic") === "awareness" ? "Notoriété" : "Trafic"}
+                {(c.objective || "traffic") === "awareness" ? "Notoriété" : (c.objective || "traffic") === "lead_generation" ? "Lead Gen" : "Trafic"}
               </span>
             </div>
             {c.description && <p className="text-white/40 text-sm max-w-xl">{c.description}</p>}
@@ -712,12 +714,12 @@ export default function AdminCampaignsPage() {
         disabled: false,
       },
       {
-        id: "conversion" as const,
-        label: "Conversion",
-        description: "Suivez les actions sur votre site",
-        detail: "Bientôt disponible — Tamtam Pixel",
-        icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
-        disabled: true,
+        id: "lead_generation" as const,
+        label: "Génération de leads",
+        description: "Collectez des prospects qualifiés",
+        detail: "Landing page IA + formulaire. Payez par lead vérifié.",
+        icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+        disabled: false,
       },
     ];
 
@@ -764,12 +766,21 @@ export default function AdminCampaignsPage() {
         </div>
 
         <div className="flex justify-end">
-          <button
-            onClick={() => setView("form")}
-            className="btn-primary px-8 py-3"
-          >
-            Continuer
-          </button>
+          {objective === "lead_generation" ? (
+            <a
+              href="/admin/campaigns/lead-gen"
+              className="btn-primary px-8 py-3 inline-block text-center no-underline"
+            >
+              Configurer la campagne Lead Gen
+            </a>
+          ) : (
+            <button
+              onClick={() => setView("form")}
+              className="btn-primary px-8 py-3"
+            >
+              Continuer
+            </button>
+          )}
         </div>
       </div>
     );
@@ -791,9 +802,11 @@ export default function AdminCampaignsPage() {
           <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
             objective === "awareness"
               ? "bg-blue-500/20 text-blue-300"
-              : "bg-teal-500/20 text-teal-300"
+              : objective === "lead_generation"
+                ? "bg-purple-500/20 text-purple-300"
+                : "bg-teal-500/20 text-teal-300"
           }`}>
-            {objective === "awareness" ? "Notoriété" : "Trafic"}
+            {objective === "awareness" ? "Notoriété" : objective === "lead_generation" ? "Lead Gen" : "Trafic"}
           </span>
           {!editingId && (
             <button onClick={() => setView("objective")} className="text-xs text-white/30 hover:text-white/50 transition">
