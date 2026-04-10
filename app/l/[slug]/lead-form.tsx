@@ -13,10 +13,11 @@ interface LeadFormProps {
   formFields: LandingPageFormField[];
   ctaText: string;
   brandColor: string;
+  accentColor: string;
   ref: string | null;
 }
 
-export default function LeadForm({ landingPageId, formFields, ctaText, brandColor, ref }: LeadFormProps) {
+export default function LeadForm({ landingPageId, formFields, ctaText, brandColor, accentColor, ref }: LeadFormProps) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -85,16 +86,23 @@ export default function LeadForm({ landingPageId, formFields, ctaText, brandColo
     }
   }
 
+  const inputClasses = "w-full px-4 py-3 rounded-xl text-white placeholder-white/30 focus:outline-none transition-all duration-200";
+
   if (submitted) {
     return (
       <div className="text-center py-8">
-        <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: brandColor + "20" }}>
-          <svg className="w-8 h-8" style={{ color: brandColor }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        <div
+          className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5"
+          style={{ backgroundColor: `${brandColor}20`, border: `2px solid ${brandColor}40` }}
+        >
+          <svg className="w-10 h-10" style={{ color: brandColor }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Merci!</h2>
-        <p className="text-gray-300 text-sm">Votre demande a ete envoyee avec succes. Nous vous contacterons bientot.</p>
+        <h2 className="text-2xl font-bold text-white mb-3">Merci!</h2>
+        <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.6)" }}>
+          Votre demande a ete envoyee avec succes.<br />Nous vous contacterons bientot.
+        </p>
       </div>
     );
   }
@@ -103,7 +111,7 @@ export default function LeadForm({ landingPageId, formFields, ctaText, brandColo
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Name field (always required) */}
       <div>
-        <label className="block text-gray-300 text-sm mb-1.5">Nom complet *</label>
+        <label className="block text-sm mb-1.5 font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>Nom complet *</label>
         <input
           type="text"
           value={name}
@@ -111,21 +119,32 @@ export default function LeadForm({ landingPageId, formFields, ctaText, brandColo
           required
           minLength={2}
           maxLength={200}
-          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-opacity-100 transition-colors"
-          style={{ focusBorderColor: brandColor } as React.CSSProperties}
+          className={inputClasses}
+          style={{
+            backgroundColor: "rgba(255,255,255,0.06)",
+            border: `1.5px solid rgba(255,255,255,0.12)`,
+          }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = `${brandColor}80`; e.currentTarget.style.boxShadow = `0 0 0 3px ${brandColor}15`; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; e.currentTarget.style.boxShadow = "none"; }}
           placeholder="Votre nom"
         />
       </div>
 
       {/* Phone field (always required) */}
       <div>
-        <label className="block text-gray-300 text-sm mb-1.5">Telephone *</label>
+        <label className="block text-sm mb-1.5 font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>Telephone *</label>
         <input
           type="tel"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           required
-          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-opacity-100 transition-colors"
+          className={inputClasses}
+          style={{
+            backgroundColor: "rgba(255,255,255,0.06)",
+            border: `1.5px solid rgba(255,255,255,0.12)`,
+          }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = `${brandColor}80`; e.currentTarget.style.boxShadow = `0 0 0 3px ${brandColor}15`; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; e.currentTarget.style.boxShadow = "none"; }}
           placeholder="77 123 45 67"
         />
       </div>
@@ -136,7 +155,7 @@ export default function LeadForm({ landingPageId, formFields, ctaText, brandColo
         if (field.type === "email") {
           return (
             <div key={field.label}>
-              <label className="block text-gray-300 text-sm mb-1.5">
+              <label className="block text-sm mb-1.5 font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>
                 {field.label} {field.required && "*"}
               </label>
               <input
@@ -144,7 +163,13 @@ export default function LeadForm({ landingPageId, formFields, ctaText, brandColo
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required={field.required}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-opacity-100 transition-colors"
+                className={inputClasses}
+                style={{
+                  backgroundColor: "rgba(255,255,255,0.06)",
+                  border: `1.5px solid rgba(255,255,255,0.12)`,
+                }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = `${brandColor}80`; e.currentTarget.style.boxShadow = `0 0 0 3px ${brandColor}15`; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; e.currentTarget.style.boxShadow = "none"; }}
                 placeholder="email@exemple.com"
               />
             </div>
@@ -153,18 +178,24 @@ export default function LeadForm({ landingPageId, formFields, ctaText, brandColo
         if (field.type === "select" && field.options) {
           return (
             <div key={field.label}>
-              <label className="block text-gray-300 text-sm mb-1.5">
+              <label className="block text-sm mb-1.5 font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>
                 {field.label} {field.required && "*"}
               </label>
               <select
                 value={customFields[field.label] || ""}
                 onChange={(e) => setCustomFields((prev) => ({ ...prev, [field.label]: e.target.value }))}
                 required={field.required}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-opacity-100 transition-colors"
+                className={inputClasses}
+                style={{
+                  backgroundColor: "rgba(255,255,255,0.06)",
+                  border: `1.5px solid rgba(255,255,255,0.12)`,
+                }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = `${brandColor}80`; e.currentTarget.style.boxShadow = `0 0 0 3px ${brandColor}15`; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; e.currentTarget.style.boxShadow = "none"; }}
               >
-                <option value="" className="bg-gray-800">Choisir...</option>
+                <option value="" style={{ backgroundColor: accentColor }}>Choisir...</option>
                 {field.options.map((opt) => (
-                  <option key={opt} value={opt} className="bg-gray-800">{opt}</option>
+                  <option key={opt} value={opt} style={{ backgroundColor: accentColor }}>{opt}</option>
                 ))}
               </select>
             </div>
@@ -173,7 +204,7 @@ export default function LeadForm({ landingPageId, formFields, ctaText, brandColo
         // text field
         return (
           <div key={field.label}>
-            <label className="block text-gray-300 text-sm mb-1.5">
+            <label className="block text-sm mb-1.5 font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>
               {field.label} {field.required && "*"}
             </label>
             <input
@@ -182,41 +213,72 @@ export default function LeadForm({ landingPageId, formFields, ctaText, brandColo
               onChange={(e) => setCustomFields((prev) => ({ ...prev, [field.label]: e.target.value }))}
               required={field.required}
               maxLength={500}
-              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-opacity-100 transition-colors"
+              className={inputClasses}
+              style={{
+                backgroundColor: "rgba(255,255,255,0.06)",
+                border: `1.5px solid rgba(255,255,255,0.12)`,
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = `${brandColor}80`; e.currentTarget.style.boxShadow = `0 0 0 3px ${brandColor}15`; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; e.currentTarget.style.boxShadow = "none"; }}
             />
           </div>
         );
       })}
 
       {/* Consent */}
-      <label className="flex items-start gap-3 cursor-pointer group">
-        <input
-          type="checkbox"
-          checked={consent}
-          onChange={(e) => setConsent(e.target.checked)}
-          className="mt-0.5 w-4 h-4 rounded border-white/30 bg-white/10"
-        />
-        <span className="text-gray-400 text-xs leading-relaxed">
+      <label className="flex items-start gap-3 cursor-pointer group pt-1">
+        <div className="relative mt-0.5">
+          <input
+            type="checkbox"
+            checked={consent}
+            onChange={(e) => setConsent(e.target.checked)}
+            className="sr-only"
+          />
+          <div
+            className="w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200"
+            style={{
+              borderColor: consent ? brandColor : "rgba(255,255,255,0.2)",
+              backgroundColor: consent ? brandColor : "transparent",
+            }}
+          >
+            {consent && (
+              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+          </div>
+        </div>
+        <span className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>
           J&apos;accepte que mes informations soient utilisees pour etre contacte au sujet de cette offre. *
         </span>
       </label>
 
       {/* Error */}
       {error && (
-        <p className="text-red-400 text-sm text-center">{error}</p>
+        <div className="p-3 rounded-xl text-sm text-center" style={{ backgroundColor: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }}>
+          {error}
+        </div>
       )}
 
       {/* Submit */}
       <button
         type="submit"
         disabled={submitting}
-        className="w-full py-3.5 rounded-lg font-semibold text-white transition-all duration-200 disabled:opacity-50"
+        className="w-full py-4 rounded-xl font-bold text-white text-base transition-all duration-200 disabled:opacity-50 active:scale-[0.98]"
         style={{
-          backgroundColor: brandColor,
-          boxShadow: `0 4px 14px ${brandColor}40`,
+          background: `linear-gradient(135deg, ${brandColor}, ${brandColor}cc)`,
+          boxShadow: `0 6px 20px ${brandColor}30`,
         }}
       >
-        {submitting ? "Envoi en cours..." : ctaText}
+        {submitting ? (
+          <span className="flex items-center justify-center gap-2">
+            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            Envoi en cours...
+          </span>
+        ) : ctaText}
       </button>
     </form>
   );
