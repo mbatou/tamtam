@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { ECHO_SHARE_PERCENT, SITE_URL } from "@/lib/constants";
 import { rateLimit } from "@/lib/rate-limit";
 import { validateClick } from "@/lib/click-validator";
+import * as Sentry from "@sentry/nextjs";
 import { processGamification } from "@/lib/gamification";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 
@@ -191,6 +192,12 @@ export async function GET(
     const echoEarnings = baseShare + tierBonus;
 
     // increment_click returns false if budget would be exceeded
+    Sentry.addBreadcrumb({
+      category: "wallet",
+      message: "CPC debit attempted",
+      level: "info",
+      data: { campaign_id: campaign.id, cpc: campaign.cpc, echo_id: link.echo_id, echo_earnings: echoEarnings },
+    });
     const { data: budgetOk } = await supabase.rpc("increment_click", {
       p_link_id: link.id,
       p_campaign_id: campaign.id,

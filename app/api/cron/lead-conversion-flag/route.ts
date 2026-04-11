@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import * as Sentry from "@sentry/nextjs";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,13 @@ export async function GET() {
       }
     }
 
+    Sentry.addBreadcrumb({
+      category: "cron",
+      message: "Lead conversion flag job completed",
+      level: "info",
+      data: { checked: (campaigns || []).length, flagged: flaggedCount },
+    });
+
     return NextResponse.json({
       success: true,
       checked: (campaigns || []).length,
@@ -63,6 +71,7 @@ export async function GET() {
       timestamp: new Date().toISOString(),
     });
   } catch (err) {
+    Sentry.captureException(err);
     console.error("Cron lead-conversion-flag error:", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
