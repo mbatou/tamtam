@@ -32,6 +32,8 @@ export default function AdminCampaignsPage() {
   const [error, setError] = useState<string | null>(null);
   const [showRechargePrompt, setShowRechargePrompt] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [avgCpc, setAvgCpc] = useState<number>(0);
   const [imageFormatHint, setImageFormatHint] = useState<{ type: "warning" | "success"; message: string } | null>(null);
@@ -257,44 +259,64 @@ export default function AdminCampaignsPage() {
   }
 
   async function handleAction(campaignId: string, action: "pause" | "activate" | "complete" | "delete") {
+    if (action === "delete") {
+      setDeleteTargetId(campaignId);
+      setShowDeleteConfirm(true);
+      return;
+    }
     setActionLoading(action);
     try {
-      if (action === "delete") {
-        if (!confirm(t("admin.campaigns.deleteConfirm"))) {
-          setActionLoading(null);
-          return;
-        }
-        const res = await fetch("/api/campaigns", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: campaignId }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          alert(data.error || t("common.error"));
+      const statusMap = { pause: "paused", activate: "active", complete: "completed" } as const;
+      const res = await fetch("/api/campaigns", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: campaignId, status: statusMap[action] }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        if (data.code === "INSUFFICIENT_BALANCE") {
+          alert(t("admin.campaigns.insufficientBalance"));
         } else {
-          setSelectedCampaign(null);
-          setView("list");
-        }
-      } else {
-        const statusMap = { pause: "paused", activate: "active", complete: "completed" } as const;
-        const res = await fetch("/api/campaigns", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: campaignId, status: statusMap[action] }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          if (data.code === "INSUFFICIENT_BALANCE") {
-            alert(t("admin.campaigns.insufficientBalance"));
-          } else {
-            alert(data.error || t("common.error"));
-          }
+          alert(data.error || t("common.error"));
         }
       }
       await loadCampaigns();
     } finally {
       setActionLoading(null);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTargetId) return;
+    setActionLoading("delete");
+    setShowDeleteConfirm(false);
+    try {
+      const res = await fetch("/api/campaigns", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: deleteTargetId }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || t("common.error"));
+      } else {
+        const data = await res.json();
+        const refundMsg = data.refunded
+          ? ` (+${formatFCFA(data.refunded)} remboursé)`
+          : "";
+        setError(null);
+        setSelectedCampaign(null);
+        setView("list");
+        await loadCampaigns();
+        // Brief success toast via error state (green would be ideal, but reuse existing pattern)
+        setError(`✓ Campagne supprimée${refundMsg}`);
+        setTimeout(() => setError(null), 4000);
+      }
+    } catch {
+      setError(t("common.networkRetry"));
+    } finally {
+      setActionLoading(null);
+      setDeleteTargetId(null);
     }
   }
 
@@ -832,6 +854,39 @@ export default function AdminCampaignsPage() {
           </div>
         </div>
         </>}
+
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+            <div className="bg-gray-900 border border-red-500/20 rounded-xl p-6 max-w-md w-full">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <h3 className="text-white font-bold text-lg">{t("admin.campaigns.deleteTitle")}</h3>
+              </div>
+              <p className="text-white/60 text-sm mb-6">
+                {t("admin.campaigns.deleteMessage")}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowDeleteConfirm(false); setDeleteTargetId(null); }}
+                  className="flex-1 py-2.5 rounded-lg bg-white/5 text-white/60 text-sm hover:bg-white/10 transition"
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={actionLoading === "delete"}
+                  className="flex-1 py-2.5 rounded-lg bg-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/30 transition disabled:opacity-50"
+                >
+                  {actionLoading === "delete" ? t("common.saving") : t("admin.campaigns.confirmDelete")}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1210,6 +1265,39 @@ export default function AdminCampaignsPage() {
                     className="flex-1 py-2.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30 transition"
                   >
                     {t("admin.campaigns.quitWithout")}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showDeleteConfirm && (
+            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+              <div className="bg-gray-900 border border-red-500/20 rounded-xl p-6 max-w-md w-full">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </div>
+                  <h3 className="text-white font-bold text-lg">{t("admin.campaigns.deleteTitle")}</h3>
+                </div>
+                <p className="text-white/60 text-sm mb-6">
+                  {t("admin.campaigns.deleteMessage")}
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setShowDeleteConfirm(false); setDeleteTargetId(null); }}
+                    className="flex-1 py-2.5 rounded-lg bg-white/5 text-white/60 text-sm hover:bg-white/10 transition"
+                  >
+                    {t("common.cancel")}
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    disabled={actionLoading === "delete"}
+                    className="flex-1 py-2.5 rounded-lg bg-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/30 transition disabled:opacity-50"
+                  >
+                    {actionLoading === "delete" ? t("common.saving") : t("admin.campaigns.confirmDelete")}
                   </button>
                 </div>
               </div>

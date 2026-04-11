@@ -38,6 +38,7 @@ interface Campaign {
   setup_fee_amount_fcfa?: number | null;
   landing_page_id?: string | null;
   creative_urls?: string[] | null;
+  deleted_at?: string | null;
 }
 
 interface Batteur {
@@ -437,6 +438,9 @@ function CampaignModerationPageContent() {
                     {campaign.status !== campaign.moderation_status && (
                       <Badge status={campaign.status} />
                     )}
+                    {campaign.deleted_at && (
+                      <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20">Supprimée</span>
+                    )}
                     {campaign.status === "active" && (() => {
                       const remaining = campaign.budget - (campaign.spent || 0);
                       if (remaining < campaign.cpc) {
@@ -501,7 +505,12 @@ function CampaignModerationPageContent() {
                   </div>
                   <div>
                     <span className="text-xs text-white/40 block">{t("common.status")}</span>
-                    <Badge status={selected.moderation_status || "pending"} />
+                    <div className="flex items-center gap-2">
+                      <Badge status={selected.moderation_status || "pending"} />
+                      {selected.deleted_at && (
+                        <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20">Supprimée</span>
+                      )}
+                    </div>
                   </div>
                   <div className="col-span-2">
                     <span className="text-xs text-white/40 block">Objective</span>

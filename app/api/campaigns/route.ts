@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
     ? await getEffectiveBrandId(supabase, batteurId)
     : null;
 
-  let query = supabase.from("campaigns").select("*").order("created_at", { ascending: false }).limit(500);
+  let query = supabase.from("campaigns").select("*").is("deleted_at", null).order("created_at", { ascending: false }).limit(500);
 
   if (effectiveId) {
     query = query.eq("batteur_id", effectiveId);
@@ -448,35 +448,57 @@ export async function DELETE(request: NextRequest) {
   const brandId = await getEffectiveBrandId(supabase, session.user.id);
 
   // Verify ownership and get campaign data for refund
-  const { data: existing } = await supabase.from("campaigns").select("batteur_id, budget, spent, status, moderation_status").eq("id", id).single();
+  const { data: existing } = await supabase.from("campaigns").select("batteur_id, budget, spent, status, moderation_status, objective, setup_fee_paid, setup_fee_amount_fcfa").eq("id", id).is("deleted_at", null).single();
   if (!existing || existing.batteur_id !== brandId) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 
-  // Refund unspent budget if campaign was active or paused
-  if (existing.status === "active" || existing.status === "paused") {
-    const unspent = existing.budget - existing.spent;
-    if (unspent > 0) {
-      await supabase.rpc("increment_balance", { p_user_id: brandId, p_amount: unspent });
+  // Refund unspent budget
+  let refunded = 0;
+  if (["active", "paused", "draft"].includes(existing.status)) {
+    // Check if budget was actually deducted
+    const wasBudgetDeducted = existing.status !== "draft" || existing.moderation_status === "pending";
+    if (wasBudgetDeducted) {
+      const unspent = existing.budget - existing.spent;
+      if (unspent > 0) {
+        await supabase.rpc("increment_balance", { p_user_id: brandId, p_amount: unspent });
+        await logWalletTransaction({
+          supabase,
+          userId: brandId,
+          amount: unspent,
+          type: "campaign_budget_refund",
+          description: `Remboursement suppression campagne`,
+          sourceId: id,
+          sourceType: "campaign",
+        });
+        refunded += unspent;
+      }
+    }
 
+    // Refund setup fee for lead gen campaigns
+    if (existing.objective === "lead_generation" && existing.setup_fee_paid && existing.setup_fee_amount_fcfa) {
+      await supabase.rpc("increment_balance", { p_user_id: brandId, p_amount: existing.setup_fee_amount_fcfa });
       await logWalletTransaction({
         supabase,
         userId: brandId,
-        amount: unspent,
+        amount: existing.setup_fee_amount_fcfa,
         type: "campaign_budget_refund",
-        description: `Remboursement suppression campagne`,
+        description: `Remboursement frais landing page (campagne supprimee)`,
         sourceId: id,
-        sourceType: "campaign",
+        sourceType: "campaign_setup_fee",
       });
+      refunded += existing.setup_fee_amount_fcfa;
     }
   }
 
-  // Delete related tracked_links first, then the campaign
-  await supabase.from("tracked_links").delete().eq("campaign_id", id);
-  const { error } = await supabase.from("campaigns").delete().eq("id", id);
+  // Soft delete: keep campaign for superadmin tracking
+  const { error } = await supabase
+    .from("campaigns")
+    .update({ deleted_at: new Date().toISOString(), status: "completed" })
+    .eq("id", id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, refunded });
 }
