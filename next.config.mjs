@@ -31,16 +31,11 @@ const nextConfig = {
 };
 
 export default withSentryConfig(nextConfig, {
-  // Suppresses source map upload logs during build
   silent: true,
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-  // Upload source maps for better stack traces
+  org: "lupandu",
+  project: "javascript-nextjs",
   widenClientFileUpload: true,
-  // Hide source maps from client bundles
   hideSourceMaps: true,
-  // Tree-shake Sentry logger statements for smaller bundle
   disableLogger: true,
-  // Automatically instrument API routes and server components
   automaticVercelMonitors: true,
 });
