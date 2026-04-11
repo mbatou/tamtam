@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
     ? await getEffectiveBrandId(supabase, batteurId)
     : null;
 
-  let query = supabase.from("campaigns").select("*").is("deleted_at", null).order("created_at", { ascending: false }).limit(500);
+  let query = supabase.from("campaigns").select("*").order("created_at", { ascending: false }).limit(500);
 
   if (effectiveId) {
     query = query.eq("batteur_id", effectiveId);
@@ -86,7 +86,9 @@ export async function GET(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-  return NextResponse.json(data);
+  // Filter out soft-deleted campaigns (safe even if deleted_at column doesn't exist yet)
+  const filtered = (data || []).filter((c: Record<string, unknown>) => !c.deleted_at);
+  return NextResponse.json(filtered);
 }
 
 export async function POST(request: NextRequest) {
@@ -448,7 +450,7 @@ export async function DELETE(request: NextRequest) {
   const brandId = await getEffectiveBrandId(supabase, session.user.id);
 
   // Verify ownership and get campaign data for refund
-  const { data: existing } = await supabase.from("campaigns").select("batteur_id, budget, spent, status, moderation_status, objective, setup_fee_paid, setup_fee_amount_fcfa").eq("id", id).is("deleted_at", null).single();
+  const { data: existing } = await supabase.from("campaigns").select("batteur_id, budget, spent, status, moderation_status, objective, setup_fee_paid, setup_fee_amount_fcfa").eq("id", id).single();
   if (!existing || existing.batteur_id !== brandId) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
@@ -492,13 +494,22 @@ export async function DELETE(request: NextRequest) {
   }
 
   // Soft delete: keep campaign for superadmin tracking
-  const { error } = await supabase
+  // Try with deleted_at first; fall back to status-only if column doesn't exist yet
+  let deleteResult = await supabase
     .from("campaigns")
     .update({ deleted_at: new Date().toISOString(), status: "completed" })
     .eq("id", id);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (deleteResult.error) {
+    // Column may not exist yet — fall back to status change only
+    deleteResult = await supabase
+      .from("campaigns")
+      .update({ status: "completed" })
+      .eq("id", id);
+  }
+
+  if (deleteResult.error) {
+    return NextResponse.json({ error: deleteResult.error.message }, { status: 500 });
   }
   return NextResponse.json({ success: true, refunded });
 }
