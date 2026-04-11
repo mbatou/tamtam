@@ -6,6 +6,7 @@ import { scoreLead } from "@/lib/lead-fraud-scorer";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { notifyNewLead } from "@/lib/notifications/lead-notification";
 import { ECHO_LEAD_SHARE_PERCENT } from "@/lib/constants";
+import * as Sentry from "@sentry/nextjs";
 
 export const dynamic = "force-dynamic";
 
@@ -111,6 +112,14 @@ export async function POST(req: NextRequest) {
     factors.push(`country:${country}`);
   }
 
+  // Tag Sentry with fraud decision context
+  Sentry.setContext("lead_fraud", {
+    score: finalScore,
+    factors,
+    campaign_id: campaign.id,
+    landing_page_id,
+  });
+
   // Determine final decision
   let status: "pending" | "verified" | "rejected" | "flagged";
   if (finalScore >= 70) {
@@ -152,6 +161,13 @@ export async function POST(req: NextRequest) {
   if (status === "verified" && echoId && campaign.cost_per_lead_fcfa) {
     const cpl = campaign.cost_per_lead_fcfa;
     const echoEarnings = Math.floor(cpl * ECHO_LEAD_SHARE_PERCENT / 100);
+
+    Sentry.addBreadcrumb({
+      category: "wallet",
+      message: "CPL debit attempted",
+      level: "info",
+      data: { campaign_id: campaign.id, amount_fcfa: cpl, echo_id: echoId },
+    });
 
     const { data: debitSuccess } = await supabaseAdmin.rpc("debit_campaign_for_lead", {
       p_campaign_id: campaign.id,

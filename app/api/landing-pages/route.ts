@@ -6,6 +6,7 @@ import { getEffectiveBrandId } from "@/lib/brand-utils";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { sendEmail } from "@/lib/email";
 import { LEAD_GEN_SETUP_FEE_FCFA } from "@/lib/constants";
+import * as Sentry from "@sentry/nextjs";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +36,13 @@ export async function POST(request: NextRequest) {
   const data = parsed.data;
   const supabase = createServiceClient();
   const brandId = await getEffectiveBrandId(supabase, session.user.id);
+
+  Sentry.setContext("ai_generation", {
+    brand_id: brandId,
+    budget: data.budget,
+    setup_fee: LEAD_GEN_SETUP_FEE_FCFA,
+    save_as_draft: data.save_as_draft || false,
+  });
 
   // Total cost = budget + setup fee
   const totalCost = data.budget + LEAD_GEN_SETUP_FEE_FCFA;
