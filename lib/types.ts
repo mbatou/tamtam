@@ -62,6 +62,7 @@ export interface Campaign {
   setup_fee_amount_fcfa?: number | null;
   landing_page_id?: string | null;
   low_conversion_flagged?: boolean;
+  deleted_at?: string | null;
 }
 
 export type LandingPageStatus = "draft" | "active" | "archived";

@@ -19,6 +19,7 @@ ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS leads_captured_count INTEGER DEFA
 ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS setup_fee_paid BOOLEAN DEFAULT false;
 ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS setup_fee_amount_fcfa INTEGER;
 ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS low_conversion_flagged BOOLEAN DEFAULT false;
+ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 
 -- =====================================================================
 -- 2. Create ai_generation_cache table
