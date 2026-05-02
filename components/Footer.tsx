@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import SoundWave from "@/components/ui/SoundWave";
 import { useTranslation } from "@/lib/i18n";
 
@@ -28,7 +29,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="col-span-2 sm:col-span-1">
             <div className="flex items-center gap-3 mb-3">
-              <span className="text-xl font-black gradient-text">Tamtam</span>
+              <Image src="/brand/tamtam-horizontal-orange.png" alt="Tamtam" width={120} height={32} className="h-8 w-auto" />
               <SoundWave bars={3} className="h-3 opacity-40" />
             </div>
             <p className="text-xs text-white/30 leading-relaxed mb-3">

@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import SoundWave from "@/components/ui/SoundWave";
 import { trackEvent } from "@/lib/analytics";
 
@@ -105,7 +106,7 @@ function BrandSignupContent() {
     <div className="min-h-screen flex items-center justify-center px-6 bg-gradient-mesh">
       <div className="w-full max-w-md">
         <Link href="/" className="flex items-center justify-center gap-3 mb-10">
-          <span className="text-3xl font-black gradient-text">Tamtam</span>
+          <Image src="/brand/tamtam-horizontal-orange.png" alt="Tamtam" width={180} height={48} priority className="h-12 w-auto" />
           <SoundWave bars={5} className="h-5 opacity-60" />
         </Link>
 

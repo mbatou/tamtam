@@ -1,3 +1,4 @@
+import Image from "next/image";
 import EchoBottomNav from "@/components/EchoBottomNav";
 import SoundWave from "@/components/ui/SoundWave";
 import { InstallPrompt } from "@/components/InstallPrompt";
@@ -26,7 +27,7 @@ export default function EchoLayout({ children }: { children: React.ReactNode }) 
       )}
       <header className="sticky top-0 z-40 flex items-center justify-between px-4 py-3 border-b border-white/5 bg-background/95 backdrop-blur-md">
         <div className="flex items-center gap-2">
-          <span className="text-lg font-black gradient-text">Tamtam</span>
+          <Image src="/brand/tamtam-horizontal-orange.png" alt="Tamtam" width={120} height={32} priority className="h-7 w-auto" />
           <SoundWave bars={4} className="h-3.5 opacity-50" />
         </div>
       </header>

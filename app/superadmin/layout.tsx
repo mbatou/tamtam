@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect, useCallback } from "react";
 import SuperadminSearch from "@/components/SuperadminSearch";
@@ -265,9 +266,11 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
       >
         <div className="p-4 border-b border-white/5">
           <Link href="/superadmin" className="flex items-center gap-2">
-            <span className="text-xl font-black gradient-text">
-              {collapsed ? "T" : "Tamtam"}
-            </span>
+            {collapsed ? (
+              <Image src="/brand/tamtam-favicon.png" alt="Tamtam" width={28} height={28} priority className="h-7 w-7" />
+            ) : (
+              <Image src="/brand/tamtam-horizontal-orange.png" alt="Tamtam" width={120} height={32} priority className="h-7 w-auto" />
+            )}
             {!collapsed && (
               <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${isSuperadmin ? "bg-red-500/20 text-red-400" : "bg-primary/20 text-primary"}`}>
                 {isSuperadmin ? "SUPER" : positionBadge}
@@ -303,7 +306,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         {/* Top bar */}
         <header className="flex items-center justify-between gap-4 px-6 py-3 border-b border-white/5">
           <div className="flex items-center gap-4 shrink-0">
-            <span className="lg:hidden text-xl font-black gradient-text">Tamtam</span>
+            <Image src="/brand/tamtam-horizontal-orange.png" alt="Tamtam" width={120} height={32} priority className="lg:hidden h-7 w-auto" />
             <span className="hidden lg:block text-xs text-white/30 font-medium">{today}</span>
           </div>
           <div className="hidden sm:block flex-1 max-w-md">
