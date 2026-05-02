@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useTranslation } from "@/lib/i18n";
@@ -31,7 +32,7 @@ export default function AdminSidebar() {
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex flex-col w-64 min-h-screen border-r border-white/5 bg-background p-6">
         <Link href="/admin/dashboard" className="flex items-center gap-2 mb-10">
-          <span className="text-2xl font-black gradient-text">Tamtam</span>
+          <Image src="/brand/tamtam-horizontal-orange.png" alt="Tamtam" width={120} height={32} priority className="h-8 w-auto" />
           <span className="text-[10px] font-semibold bg-secondary/20 text-secondary px-2 py-0.5 rounded-full">
             {t("nav.admin")}
           </span>
@@ -81,7 +82,7 @@ export default function AdminSidebar() {
 
       {/* Mobile top bar */}
       <div className="lg:hidden flex items-center justify-between p-4 border-b border-white/5">
-        <span className="text-xl font-black gradient-text">Tamtam</span>
+        <Image src="/brand/tamtam-horizontal-orange.png" alt="Tamtam" width={120} height={32} priority className="h-8 w-auto" />
         <div className="flex items-center gap-3">
           <span className="text-[10px] font-semibold bg-secondary/20 text-secondary px-2 py-0.5 rounded-full">
             {t("nav.admin")}

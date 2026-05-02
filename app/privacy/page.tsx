@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import Footer from "@/components/Footer";
 import SoundWave from "@/components/ui/SoundWave";
 
@@ -12,7 +13,7 @@ export default function PrivacyPage() {
     <div className="min-h-screen bg-background">
       <header className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 max-w-7xl mx-auto">
         <Link href="/" className="flex items-center gap-2 sm:gap-3">
-          <span className="text-xl sm:text-2xl font-black gradient-text">Tamtam</span>
+          <Image src="/brand/tamtam-horizontal-orange.png" alt="Tamtam" width={120} height={32} priority className="h-7 w-auto" />
           <SoundWave bars={4} className="h-4 sm:h-5 opacity-60" />
         </Link>
         <Link href="/login" className="text-xs sm:text-sm font-semibold text-white/60 hover:text-white transition">

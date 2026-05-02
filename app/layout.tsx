@@ -7,11 +7,11 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: {
-    default: "Tamtam — Le bouche-à-oreille digital au Sénégal",
+    default: "Tamtam — La publicité WhatsApp Status, débloquée.",
     template: "%s | Tamtam",
   },
   description:
-    "Lancez des campagnes CPC sur WhatsApp (marques) ou gagnez de l'argent en partageant des liens (échos). La plateforme de micro-influence #1 au Sénégal. 552+ Échos, 27+ Marques.",
+    "Touchez vos clients là où ils sont vraiment : WhatsApp. 5 à 10× moins cher que Facebook Ads.",
   keywords: [
     "Tamtam", "micro-influence", "WhatsApp", "Sénégal", "gagner argent",
     "partage liens", "CPC", "influence marketing", "Dakar", "Wave", "Orange Money",
@@ -28,6 +28,16 @@ export const metadata: Metadata = {
     viewportFit: "cover",
   },
   themeColor: "#D35400",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "32x32" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -38,29 +48,28 @@ export const metadata: Metadata = {
     locale: "fr_SN",
     url: "https://tamma.me",
     siteName: "Tamtam",
-    title: "Tamtam — Le bouche-à-oreille digital au Sénégal",
+    title: "Tamtam — La publicité WhatsApp Status, débloquée.",
     description:
-      "Marques: touchez des milliers de personnes via WhatsApp dès 20 FCFA/clic. Échos: gagnez de l'argent en partageant des liens. tamma.me",    images: [
+      "Touchez vos clients là où ils sont vraiment : WhatsApp. 5 à 10× moins cher que Facebook Ads.",
+    images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Tamtam — Le bouche-à-oreille digital au Sénégal",
+        alt: "Tamtam — La publicité WhatsApp Status, débloquée.",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Tamtam — Le bouche-à-oreille digital au Sénégal",
+    title: "Tamtam — La publicité WhatsApp Status, débloquée.",
     description:
-      "Marques: touchez des milliers de personnes via WhatsApp dès 20 FCFA/clic. Échos: gagnez de l'argent en partageant des liens. tamma.me",    images: ["/og-image.png"],
+      "Touchez vos clients là où ils sont vraiment : WhatsApp. 5 à 10× moins cher que Facebook Ads.",
+    images: ["/og-image.png"],
   },
   robots: {
     index: true,
     follow: true,
-  },
-  other: {
-    "apple-touch-icon": "/icons/icon-192.png",
   },
 };
 
@@ -72,7 +81,9 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <head>
-        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
       </head>
       <body className="font-outfit antialiased bg-background text-foreground min-h-screen">
         <script

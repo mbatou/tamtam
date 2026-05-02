@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useTranslation } from "@/lib/i18n";
 
 export default function LandingNav() {
@@ -9,8 +10,7 @@ export default function LandingNav() {
   return (
     <nav className="flex items-center justify-between px-6 py-4 absolute top-0 left-0 right-0 z-20">
       <Link href="/" className="flex items-center gap-2">
-        <span className="text-orange-500 font-black text-xl">←</span>
-        <span className="text-white font-bold">Tamtam</span>
+        <Image src="/brand/tamtam-horizontal-orange.png" alt="Tamtam" width={120} height={32} priority className="h-7 w-auto" />
       </Link>
       <div className="flex items-center gap-4">
         <button
