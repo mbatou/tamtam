@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
@@ -8,8 +8,10 @@ import { createClient } from "@/lib/supabase/client";
 import SoundWave from "@/components/ui/SoundWave";
 import ProgressBar from "@/components/ui/ProgressBar";
 import CitySelect from "@/components/ui/CitySelect";
+import GoogleButton from "@/components/ui/GoogleButton";
 import { useTranslation } from "@/lib/i18n";
 import { trackEvent } from "@/lib/analytics";
+import { validateEmailDomain, type EmailValidationResult } from "@/lib/email-validation";
 
 export default function RegisterPage() {
   return <Suspense><RegisterPageContent /></Suspense>;
@@ -29,7 +31,29 @@ function RegisterPageContent() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [emailCheck, setEmailCheck] = useState<EmailValidationResult | null>(null);
+  const emailDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const supabase = createClient();
+
+  useEffect(() => {
+    if (emailDebounceRef.current) clearTimeout(emailDebounceRef.current);
+    const atIdx = email.indexOf("@");
+    if (atIdx === -1 || email.length - atIdx < 4) {
+      setEmailCheck(null);
+      return;
+    }
+    emailDebounceRef.current = setTimeout(() => {
+      setEmailCheck(validateEmailDomain(email));
+    }, 300);
+    return () => { if (emailDebounceRef.current) clearTimeout(emailDebounceRef.current); };
+  }, [email]);
+
+  function applyEmailSuggestion() {
+    if (!emailCheck?.suggestion) return;
+    const localPart = email.split("@")[0];
+    setEmail(`${localPart}@${emailCheck.suggestion}`);
+    setEmailCheck({ valid: true });
+  }
 
   async function handleStep1() {
     if (!name.trim() || !email.trim() || !password.trim()) {
@@ -38,6 +62,11 @@ function RegisterPageContent() {
     }
     if (password.length < 6) {
       setError(t("auth.registerPasswordMin"));
+      return;
+    }
+    const check = validateEmailDomain(email);
+    if (!check.valid) {
+      setError(check.error || "Adresse email invalide.");
       return;
     }
     setError("");
@@ -147,6 +176,14 @@ function RegisterPageContent() {
 
           {step === 1 ? (
             <div className="space-y-4">
+              <GoogleButton role="echo" label="S'inscrire avec Google" className="mb-1" />
+
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-white/10" />
+                <span className="text-xs text-white/30">ou</span>
+                <div className="flex-1 h-px bg-white/10" />
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-white/40 mb-2">
                   {t("auth.registerName")}
@@ -168,8 +205,27 @@ function RegisterPageContent() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder={t("auth.registerEmailPlaceholder")}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+                  className={`w-full bg-white/5 border rounded-xl px-4 py-3 text-sm focus:outline-none transition ${
+                    emailCheck === null ? "border-white/10 focus:border-primary" :
+                    emailCheck.valid ? "border-green-500/30" :
+                    emailCheck.suggestion ? "border-orange-500/30" : "border-red-500/30"
+                  }`}
                 />
+                {emailCheck && !emailCheck.valid && emailCheck.suggestion && (
+                  <button
+                    type="button"
+                    onClick={applyEmailSuggestion}
+                    className="mt-1.5 text-xs text-orange-400 hover:text-orange-300 transition animate-fade-in"
+                  >
+                    Vouliez-vous dire <span className="font-bold underline">@{emailCheck.suggestion}</span> ?
+                  </button>
+                )}
+                {emailCheck && !emailCheck.valid && !emailCheck.suggestion && (
+                  <p className="mt-1.5 text-xs text-red-400 animate-fade-in">{emailCheck.error}</p>
+                )}
+                {emailCheck?.valid && (
+                  <p className="mt-1.5 text-xs text-green-400 animate-fade-in">✓</p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-semibold text-white/40 mb-2">
