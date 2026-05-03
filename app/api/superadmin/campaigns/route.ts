@@ -9,12 +9,23 @@ async function notifyEchosNewCampaign(supabase: ReturnType<typeof createServiceC
   try {
     const { data: echos } = await supabase
       .from("users")
-      .select("id, name")
-      .eq("role", "echo");
+      .select("id, name, phone")
+      .eq("role", "echo")
+      .is("deleted_at", null);
     if (!echos?.length) return;
 
-    const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-    const emailMap = new Map(authUsers?.map((u) => [u.id, u.email]) || []);
+    // Paginate through all auth users to build email map
+    const emailMap = new Map<string, string>();
+    let page = 1;
+    while (true) {
+      const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ page, perPage: 500 });
+      if (!authUsers || authUsers.length === 0) break;
+      for (const u of authUsers) {
+        if (u.email) emailMap.set(u.id, u.email);
+      }
+      if (authUsers.length < 500) break;
+      page++;
+    }
 
     for (const echo of echos) {
       const email = emailMap.get(echo.id);

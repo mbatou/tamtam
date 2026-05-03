@@ -95,6 +95,14 @@ function CampaignModerationPageContent() {
 
   const [moderating, setModerating] = useState(false);
   const [notifying, setNotifying] = useState(false);
+  const [notifyResult, setNotifyResult] = useState<{
+    total: number;
+    emailSent: number;
+    emailFailed: number;
+    whatsappReady: number;
+    unreachable: number;
+    whatsappLinks: { name: string; phone: string; link: string }[];
+  } | null>(null);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 30;
 
@@ -229,11 +237,11 @@ function CampaignModerationPageContent() {
         body: JSON.stringify({ campaign_id: campaignId }),
       });
       const data = await res.json();
-      if (res.ok && data.sent > 0) {
-        showToast(t("superadmin.campaigns.notifySent", { count: data.sent }), "success");
-      } else if (res.ok && data.sent === 0) {
-        const errMsg = data.errors?.[0] || t("common.error");
-        showToast(`0 emails sent: ${errMsg}`, "error");
+      if (res.ok) {
+        setNotifyResult(data);
+        if (data.emailSent > 0) {
+          showToast(`${data.emailSent} emails envoyés, ${data.whatsappReady} WhatsApp prêts`, "success");
+        }
       } else {
         showToast(data.error || t("common.error"), "error");
       }
@@ -980,6 +988,89 @@ function CampaignModerationPageContent() {
           </button>
         </div>
       </Modal>
+
+      {/* Notification Result Modal */}
+      {notifyResult && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-900 border border-white/10 rounded-xl p-6 max-w-2xl w-full max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-white font-bold text-lg">Résultat des notifications</h3>
+              <button onClick={() => setNotifyResult(null)} className="text-white/40 hover:text-white text-xl">&times;</button>
+            </div>
+
+            {/* Summary cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+              <div className="bg-white/5 rounded-xl p-3 text-center">
+                <div className="text-2xl font-bold text-white">{notifyResult.total}</div>
+                <div className="text-xs text-white/40">Total Échos</div>
+              </div>
+              <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-3 text-center">
+                <div className="text-2xl font-bold text-green-400">{notifyResult.emailSent}</div>
+                <div className="text-xs text-green-400/60">Emails envoyés</div>
+              </div>
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-center">
+                <div className="text-2xl font-bold text-emerald-400">{notifyResult.whatsappReady}</div>
+                <div className="text-xs text-emerald-400/60">WhatsApp prêts</div>
+              </div>
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-center">
+                <div className="text-2xl font-bold text-red-400">{notifyResult.unreachable}</div>
+                <div className="text-xs text-red-400/60">Injoignables</div>
+              </div>
+            </div>
+
+            {notifyResult.emailFailed > 0 && (
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 mb-4 text-xs text-yellow-400">
+                ⚠️ {notifyResult.emailFailed} emails ont échoué
+              </div>
+            )}
+
+            {/* WhatsApp links list */}
+            {notifyResult.whatsappLinks.length > 0 && (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-bold text-white/60">
+                    📱 Liens WhatsApp ({notifyResult.whatsappLinks.length})
+                  </h4>
+                  <span className="text-[10px] text-white/30">Cliquez pour ouvrir WhatsApp</span>
+                </div>
+                <div className="overflow-y-auto flex-1 space-y-1.5 pr-1">
+                  {notifyResult.whatsappLinks.map((wa, i) => (
+                    <a
+                      key={i}
+                      href={wa.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-2.5 rounded-lg bg-white/5 hover:bg-emerald-500/10 border border-transparent hover:border-emerald-500/20 transition group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
+                          <span className="text-sm">📱</span>
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm text-white font-medium truncate">{wa.name}</div>
+                          <div className="text-xs text-white/30">{wa.phone}</div>
+                        </div>
+                      </div>
+                      <span className="text-xs text-emerald-400 opacity-0 group-hover:opacity-100 transition shrink-0 ml-2">
+                        Ouvrir →
+                      </span>
+                    </a>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <div className="mt-4 pt-4 border-t border-white/5 flex justify-end">
+              <button
+                onClick={() => setNotifyResult(null)}
+                className="px-6 py-2 rounded-lg bg-white/5 text-white/60 text-sm hover:bg-white/10 transition"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
