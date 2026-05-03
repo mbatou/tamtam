@@ -1,11 +1,13 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import SoundWave from "@/components/ui/SoundWave";
+import GoogleButton from "@/components/ui/GoogleButton";
 import { trackEvent } from "@/lib/analytics";
+import { validateEmailDomain, type EmailValidationResult } from "@/lib/email-validation";
 
 export default function BrandSignupPage() {
   return (
@@ -31,6 +33,21 @@ function BrandSignupContent() {
   const [refCode, setRefCode] = useState<string | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [teamInviteId, setTeamInviteId] = useState<string | null>(null);
+  const [emailCheck, setEmailCheck] = useState<EmailValidationResult | null>(null);
+  const emailDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (emailDebounceRef.current) clearTimeout(emailDebounceRef.current);
+    const atIdx = form.email.indexOf("@");
+    if (atIdx === -1 || form.email.length - atIdx < 4) {
+      setEmailCheck(null);
+      return;
+    }
+    emailDebounceRef.current = setTimeout(() => {
+      setEmailCheck(validateEmailDomain(form.email));
+    }, 300);
+    return () => { if (emailDebounceRef.current) clearTimeout(emailDebounceRef.current); };
+  }, [form.email]);
 
   useEffect(() => {
     const ref = searchParams.get("ref");
@@ -75,6 +92,11 @@ function BrandSignupContent() {
     }
     if (form.password !== form.confirmPassword) {
       setError("Les mots de passe ne correspondent pas.");
+      return;
+    }
+    const domainCheck = validateEmailDomain(form.email);
+    if (!domainCheck.valid) {
+      setError(domainCheck.error || "Adresse email invalide.");
       return;
     }
 
@@ -131,6 +153,14 @@ function BrandSignupContent() {
             </div>
           )}
 
+          <GoogleButton role="batteur" label="S'inscrire avec Google" className="mb-4" />
+
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-1 h-px bg-white/10" />
+            <span className="text-xs text-white/30">ou</span>
+            <div className="flex-1 h-px bg-white/10" />
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-white/40 mb-2">Nom de l&apos;entreprise</label>
@@ -161,8 +191,31 @@ function BrandSignupContent() {
                 value={form.email}
                 onChange={(e) => update("email", e.target.value)}
                 placeholder="contact@entreprise.sn"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-secondary transition"
+                className={`w-full bg-white/5 border rounded-xl px-4 py-3 text-sm focus:outline-none transition ${
+                  emailCheck === null ? "border-white/10 focus:border-secondary" :
+                  emailCheck.valid ? "border-green-500/30" :
+                  emailCheck.suggestion ? "border-orange-500/30" : "border-red-500/30"
+                }`}
               />
+              {emailCheck && !emailCheck.valid && emailCheck.suggestion && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const localPart = form.email.split("@")[0];
+                    update("email", `${localPart}@${emailCheck.suggestion}`);
+                    setEmailCheck({ valid: true });
+                  }}
+                  className="mt-1.5 text-xs text-orange-400 hover:text-orange-300 transition"
+                >
+                  Vouliez-vous dire <span className="font-bold underline">@{emailCheck.suggestion}</span> ?
+                </button>
+              )}
+              {emailCheck && !emailCheck.valid && !emailCheck.suggestion && (
+                <p className="mt-1.5 text-xs text-red-400">{emailCheck.error}</p>
+              )}
+              {emailCheck?.valid && (
+                <p className="mt-1.5 text-xs text-green-400">✓</p>
+              )}
             </div>
 
             <div>

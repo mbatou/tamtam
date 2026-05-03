@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import SoundWave from "@/components/ui/SoundWave";
+import GoogleButton from "@/components/ui/GoogleButton";
 import { useTranslation } from "@/lib/i18n";
 
 export default function LoginPage() {
@@ -146,6 +147,14 @@ function LoginContent() {
                 </div>
               )}
 
+              <GoogleButton role="echo" label="Se connecter avec Google" className="mb-4" />
+
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 h-px bg-white/10" />
+                <span className="text-xs text-white/30">ou</span>
+                <div className="flex-1 h-px bg-white/10" />
+              </div>
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-white/40 mb-2">{t("common.email")}</label>
@@ -205,6 +214,14 @@ function LoginContent() {
                   {error}
                 </div>
               )}
+
+              <GoogleButton role="batteur" label="Se connecter avec Google" className="mb-4" />
+
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 h-px bg-white/10" />
+                <span className="text-xs text-white/30">ou</span>
+                <div className="flex-1 h-px bg-white/10" />
+              </div>
 
               <div className="space-y-4">
                 <div>
