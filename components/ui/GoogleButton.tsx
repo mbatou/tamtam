@@ -12,12 +12,16 @@ export default function GoogleButton({ role, label = "Continuer avec Google", cl
   const supabase = createClient();
 
   async function handleClick() {
-    await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback?role=${role}`,
       },
     });
+    if (error) {
+      console.error("Google OAuth error:", error);
+      alert("Erreur Google: " + error.message);
+    }
   }
 
   return (
