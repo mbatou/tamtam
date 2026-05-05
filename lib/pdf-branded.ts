@@ -195,7 +195,7 @@ export function drawFooter(
   doc.line(15, footerTop, w - 15, footerTop);
 
   // Left: company info
-  let y = footerTop + 6;
+  const y = footerTop + 6;
   doc.setFontSize(8);
   doc.setTextColor(...COLORS.textSecondary);
   doc.setFont("helvetica", "bold");
