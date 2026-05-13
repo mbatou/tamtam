@@ -124,6 +124,7 @@ export default function PixelDashboardPage() {
       });
       const data = await res.json();
       setTestResult({ pixelId, success: data.success, latency: data.latency_ms });
+      await loadPixels();
     } catch {
       setTestResult({ pixelId, success: false });
     } finally {
