@@ -6,6 +6,7 @@ import { validateClick } from "@/lib/click-validator";
 import * as Sentry from "@sentry/nextjs";
 import { processGamification } from "@/lib/gamification";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
+import { generateShortCode } from "@/lib/utils";
 
 async function updateChallengeParticipation(supabase: ReturnType<typeof getSupabase>, echoId: string) {
   const now = new Date().toISOString();
@@ -39,6 +40,19 @@ async function updateChallengeParticipation(supabase: ReturnType<typeof getSupab
         echo_id: echoId,
         valid_clicks: 1,
       });
+  }
+}
+
+function appendTmRef(url: string, tmRef: string): string {
+  try {
+    if (url.includes("play.google.com")) {
+      const sep = url.includes("?") ? "&" : "?";
+      return `${url}${sep}referrer=${encodeURIComponent(`tm_ref=${tmRef}`)}`;
+    }
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}tm_ref=${tmRef}`;
+  } catch {
+    return url;
   }
 }
 
@@ -86,6 +100,13 @@ export async function GET(
 
   const campaign = link.campaigns;
 
+  // Generate or reuse tm_ref for conversion attribution
+  let tmRef = link.tm_ref;
+  if (!tmRef) {
+    tmRef = `tm_${generateShortCode()}${generateShortCode()}`;
+    supabase.from("tracked_links").update({ tm_ref: tmRef }).eq("id", link.id).then(() => {});
+  }
+
   // Resolve destination: for lead_gen campaigns, redirect to landing page
   let destinationUrl = campaign.destination_url;
   if (campaign.objective === "lead_generation" && campaign.landing_page_id) {
@@ -101,7 +122,7 @@ export async function GET(
 
   // If campaign not active, redirect anyway
   if (campaign.status !== "active") {
-    return NextResponse.redirect(destinationUrl);
+    return NextResponse.redirect(appendTmRef(destinationUrl, tmRef));
   }
 
   // Gather visitor data
@@ -112,7 +133,7 @@ export async function GET(
 
   // Social preview bots (WhatsApp, Snapchat, etc.) just redirect — don't record as a click
   if (reason === "social_preview") {
-    return NextResponse.redirect(destinationUrl);
+    return NextResponse.redirect(appendTmRef(destinationUrl, tmRef));
   }
 
   // Insert click record with rejection reason for analytics
@@ -279,6 +300,6 @@ export async function GET(
     }
   }
 
-  // Redirect to destination
-  return NextResponse.redirect(campaign.destination_url);
+  // Redirect to destination with tm_ref for conversion attribution
+  return NextResponse.redirect(appendTmRef(destinationUrl, tmRef));
 }
