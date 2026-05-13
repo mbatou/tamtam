@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls, target_cities, save_as_draft, objective } = parsed.data;
+  const { title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls, target_cities, save_as_draft, objective, pixel_id } = parsed.data;
 
   const supabase = createServiceClient();
   const brandId = await getEffectiveBrandId(supabase, session.user.id);
@@ -130,6 +130,7 @@ export async function POST(request: NextRequest) {
       ends_at: ends_at || null,
       target_cities: target_cities && target_cities.length > 0 ? target_cities : null,
       objective: objective || "traffic",
+      ...(pixel_id ? { pixel_id } : {}),
     }).select().single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -173,6 +174,7 @@ export async function POST(request: NextRequest) {
     ends_at: ends_at || null,
     target_cities: target_cities && target_cities.length > 0 ? target_cities : null,
     objective: objective || "traffic",
+    ...(pixel_id ? { pixel_id } : {}),
   }).select().single();
 
   if (error) {
@@ -241,7 +243,7 @@ export async function PUT(request: NextRequest) {
     );
   }
 
-  const { id, title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls, target_cities, status, moderation_status, objective } = parsed.data;
+  const { id, title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls, target_cities, status, moderation_status, objective, pixel_id } = parsed.data;
 
   const supabase = createServiceClient();
   const brandId = await getEffectiveBrandId(supabase, session.user.id);
@@ -264,6 +266,7 @@ export async function PUT(request: NextRequest) {
   if (status !== undefined) updates.status = status;
   if (moderation_status !== undefined) updates.moderation_status = moderation_status;
   if (objective !== undefined) updates.objective = objective;
+  if (pixel_id !== undefined) updates.pixel_id = pixel_id;
 
   // Debit balance when submitting a draft for moderation review
   if (moderation_status === "pending" && existing.status === "draft" && existing.moderation_status !== "pending") {

@@ -49,13 +49,21 @@ export default function AdminCampaignsPage() {
   // Per-campaign real click + echo counts from stats API
   const [campaignStats, setCampaignStats] = useState<Record<string, { realClicks: number; realValidClicks: number; echoCount: number }>>({});
   // Lead gen: leads tab data
-  const [detailTab, setDetailTab] = useState<"overview" | "leads">("overview");
+  const [detailTab, setDetailTab] = useState<"overview" | "leads" | "conversions">("overview");
   const [leads, setLeads] = useState<{ id: string; name: string; phone: string; email: string | null; status: string; created_at: string; echo_id: string | null }[]>([]);
   const [leadsLoading, setLeadsLoading] = useState(false);
   const [landingSlug, setLandingSlug] = useState<string | null>(null);
+  const [brandPixels, setBrandPixels] = useState<{ pixel_id: string; name: string; platform: string; is_active: boolean }[]>([]);
+  const [selectedPixelId, setSelectedPixelId] = useState<string | null>(null);
+  const [showPixelSection, setShowPixelSection] = useState(false);
   const supabase = createClient();
 
   useEffect(() => { loadCampaigns(); }, []);
+  useEffect(() => {
+    fetch("/api/brand/pixels")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => data?.pixels && setBrandPixels(data.pixels));
+  }, []);
   useEffect(() => {
     fetch("/api/campaigns/avg-cpc")
       .then((r) => r.ok ? r.json() : null)
@@ -223,6 +231,7 @@ export default function AdminCampaignsPage() {
         creative_urls: creativeUrls,
         target_cities: targetCities,
         objective,
+        ...(selectedPixelId ? { pixel_id: selectedPixelId } : {}),
         ...(!editingId && asDraft ? { save_as_draft: true } : {}),
       };
       const res = await fetch("/api/campaigns", {
@@ -547,15 +556,22 @@ export default function AdminCampaignsPage() {
           </p>
         )}
 
-        {/* Tab bar for lead gen campaigns */}
-        {(c.objective || "traffic") === "lead_generation" && (
+        {/* Tab bar for lead gen campaigns or campaigns with pixel */}
+        {((c.objective || "traffic") === "lead_generation" || c.pixel_id) && (
           <div className="flex gap-1 mb-6 bg-white/5 rounded-xl p-1 w-fit">
             <button onClick={() => setDetailTab("overview")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${detailTab === "overview" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"}`}>
               Apercu
             </button>
-            <button onClick={() => setDetailTab("leads")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${detailTab === "leads" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"}`}>
-              Leads ({leads.length})
-            </button>
+            {(c.objective || "traffic") === "lead_generation" && (
+              <button onClick={() => setDetailTab("leads")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${detailTab === "leads" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"}`}>
+                Leads ({leads.length})
+              </button>
+            )}
+            {c.pixel_id && (
+              <button onClick={() => setDetailTab("conversions")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${detailTab === "conversions" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"}`}>
+                Conversions
+              </button>
+            )}
           </div>
         )}
 
@@ -617,8 +633,22 @@ export default function AdminCampaignsPage() {
           </div>
         )}
 
+        {/* Conversions tab placeholder */}
+        {detailTab === "conversions" && c.pixel_id && (
+          <div className="text-center py-12 glass-card">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto text-white/20 mb-4"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <h3 className="text-lg font-bold text-white/50">Conversions</h3>
+            <p className="text-sm text-white/30 mt-2 max-w-md mx-auto">
+              Les conversions attribuées à cette campagne via le Pixel apparaîtront ici.
+            </p>
+            <a href="/admin/pixel" className="inline-block mt-4 text-sm font-semibold text-primary hover:underline">
+              Voir le tableau de bord Pixel
+            </a>
+          </div>
+        )}
+
         {/* Overview tab content (always show for non-lead-gen, or when overview tab is active) */}
-        {((c.objective || "traffic") !== "lead_generation" || detailTab === "overview") && <>
+        {((c.objective || "traffic") !== "lead_generation" || detailTab === "overview") && detailTab !== "conversions" && <>
         {/* Progress bar */}
         <div className="glass-card p-5 mb-8">
           <div className="flex items-center justify-between mb-3">
@@ -1161,6 +1191,45 @@ export default function AdminCampaignsPage() {
               )}
             </div>
           </div>
+
+          {/* Pixel Linking (collapsible) */}
+          {brandPixels.length > 0 && (
+            <div className="mt-5">
+              <button
+                type="button"
+                onClick={() => setShowPixelSection(!showPixelSection)}
+                className="flex items-center gap-2 text-sm font-semibold text-white/50 hover:text-white/80 transition"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                Suivi de conversions (Pixel)
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${showPixelSection ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              {showPixelSection && (
+                <div className="mt-3 p-4 rounded-xl bg-white/[0.03] border border-white/10">
+                  <p className="text-xs text-white/30 mb-3">
+                    Associez un pixel pour tracker les conversions de cette campagne.
+                  </p>
+                  <select
+                    value={selectedPixelId || ""}
+                    onChange={(e) => setSelectedPixelId(e.target.value || null)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+                  >
+                    <option value="">Aucun pixel</option>
+                    {brandPixels.filter((p) => p.is_active).map((p) => (
+                      <option key={p.pixel_id} value={p.pixel_id}>
+                        {p.name} ({p.platform}) — {p.pixel_id}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedPixelId && (
+                    <p className="text-xs text-emerald-400 mt-2">
+                      Les conversions seront automatiquement attribuées à cette campagne.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Estimation section */}
           {Number(form.cpc) > 0 && Number(form.budget) > 0 && (() => {

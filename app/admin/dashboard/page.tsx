@@ -35,6 +35,10 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(1);
+  const [showPixelBanner, setShowPixelBanner] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return !localStorage.getItem("tamtam_pixel_banner_dismissed");
+  });
 
   useEffect(() => {
     loadData();
@@ -300,6 +304,28 @@ export default function AdminDashboard() {
           {t("snapchat.comingSoonBrand")}
         </span>
       </div>
+
+      {/* ── Pixel Announcement Banner ── */}
+      {showPixelBanner && (
+        <div className="bg-gradient-to-r from-blue-500/10 to-teal-500/10 border border-blue-400/20 rounded-xl p-4 mb-4 flex items-center gap-4">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400 shrink-0"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          <div className="flex-1">
+            <h4 className="text-white font-bold text-sm">Tamtam Pixel — Suivi de conversions</h4>
+            <p className="text-gray-400 text-sm mt-0.5">
+              Mesurez l&apos;impact réel de vos campagnes : installations, achats, inscriptions. Intégration en 5 minutes.
+            </p>
+          </div>
+          <a href="/admin/pixel" className="bg-blue-500/20 text-blue-300 text-xs px-4 py-2 rounded-full font-bold shrink-0 hover:bg-blue-500/30 transition">
+            Configurer
+          </a>
+          <button
+            onClick={() => { setShowPixelBanner(false); localStorage.setItem("tamtam_pixel_banner_dismissed", "1"); }}
+            className="text-white/20 hover:text-white/50 transition shrink-0"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      )}
 
       {/* ── Campaign Status Banner ── */}
       {activeCampaigns.length === 0 ? (
