@@ -62,6 +62,8 @@ export interface Campaign {
   setup_fee_amount_fcfa?: number | null;
   landing_page_id?: string | null;
   low_conversion_flagged?: boolean;
+  pixel_id?: string | null;
+  tracked_events?: string[];
   deleted_at?: string | null;
 }
 
