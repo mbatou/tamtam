@@ -235,3 +235,43 @@ export interface PayoutWithEcho extends Payout {
 export interface CampaignWithBatteur extends Campaign {
   users: User;
 }
+
+export interface Pixel {
+  id: string;
+  brand_id: string;
+  name: string;
+  pixel_id: string;
+  platform: "app" | "web" | "both";
+  allowed_events: string[];
+  webhook_url: string | null;
+  is_active: boolean;
+  total_conversions: number;
+  last_conversion_at: string | null;
+  last_test_at: string | null;
+  test_status: "pending" | "success" | "failed";
+  test_count: number;
+  last_test_error: string | null;
+  last_test_latency_ms: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Conversion {
+  id: string;
+  pixel_id: string;
+  brand_id: string;
+  campaign_id: string | null;
+  echo_id: string | null;
+  tracked_link_id: string | null;
+  event: string;
+  event_name: string | null;
+  value_amount: number | null;
+  value_currency: string;
+  tm_ref: string | null;
+  attributed: boolean;
+  attribution_type: "direct" | "assisted" | "unattributed" | null;
+  click_to_conversion_seconds: number | null;
+  external_id: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
