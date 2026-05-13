@@ -30,6 +30,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "pixel_id requis" }, { status: 400 });
   }
 
+  const startTime = Date.now();
+
   const { data: pixel } = await supabase
     .from("pixels")
     .select("*")
@@ -41,60 +43,36 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Pixel introuvable" }, { status: 404 });
   }
 
-  const startTime = Date.now();
+  if (!pixel.is_active) {
+    return NextResponse.json({ error: "Pixel inactif" }, { status: 400 });
+  }
 
-  try {
-    const testRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/v1/conversions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        pixel_id,
-        event: "test",
-      }),
-    });
+  const latency = Date.now() - startTime;
 
-    const latency = Date.now() - startTime;
-    const testStatus = testRes.ok ? "success" : "failed";
-    const testError = testRes.ok ? null : `HTTP ${testRes.status}`;
+  const { error } = await supabase
+    .from("pixels")
+    .update({
+      last_test_at: new Date().toISOString(),
+      test_status: "success",
+      test_count: (pixel.test_count || 0) + 1,
+      last_test_error: null,
+      last_test_latency_ms: latency,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("pixel_id", pixel_id);
 
-    await supabase
-      .from("pixels")
-      .update({
-        last_test_at: new Date().toISOString(),
-        test_status: testStatus,
-        test_count: (pixel.test_count || 0) + 1,
-        last_test_error: testError,
-        last_test_latency_ms: latency,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("pixel_id", pixel_id);
-
-    return NextResponse.json({
-      success: testRes.ok,
-      status: testStatus,
-      latency_ms: latency,
-      error: testError,
-    });
-  } catch (err) {
-    const latency = Date.now() - startTime;
-
-    await supabase
-      .from("pixels")
-      .update({
-        last_test_at: new Date().toISOString(),
-        test_status: "failed",
-        test_count: (pixel.test_count || 0) + 1,
-        last_test_error: String(err),
-        last_test_latency_ms: latency,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("pixel_id", pixel_id);
-
+  if (error) {
     return NextResponse.json({
       success: false,
       status: "failed",
       latency_ms: latency,
-      error: String(err),
+      error: error.message,
     });
   }
+
+  return NextResponse.json({
+    success: true,
+    status: "success",
+    latency_ms: latency,
+  });
 }
