@@ -30,6 +30,7 @@ export interface User {
   interests_completed_at?: string | null;
   is_founding_echo?: boolean;
   interests_prompt_dismissed_at?: string | null;
+  signup_tm_ref?: string | null;
   created_at: string;
 }
 

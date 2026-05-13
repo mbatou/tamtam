@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { trackConversion } from "@/lib/tracking/track-conversion";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const role = searchParams.get("role") as "echo" | "batteur" | null;
   const next = searchParams.get("next");
+  const tmRef = searchParams.get("tm_ref");
 
   if (!code) {
     return NextResponse.redirect(new URL("/login?error=auth_failed", request.url));
@@ -68,7 +70,18 @@ export async function GET(request: NextRequest) {
     name: userName,
     terms_accepted_at: new Date().toISOString(),
     referral_code: referralCode,
+    ...(tmRef ? { signup_tm_ref: tmRef } : {}),
   });
+
+  // Fire signup conversion via the PUBLIC Pixel API (non-blocking, echo only)
+  if (assignedRole === "echo") {
+    trackConversion({
+      event: "signup",
+      tmRef: tmRef || null,
+      externalId: `echo_signup_${userId}`,
+      metadata: { name: userName },
+    }).catch(() => {});
+  }
 
   if (assignedRole === "batteur") {
     return NextResponse.redirect(new URL("/admin/dashboard", request.url));

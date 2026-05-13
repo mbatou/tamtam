@@ -6,16 +6,19 @@ interface GoogleButtonProps {
   role: "echo" | "batteur";
   label?: string;
   className?: string;
+  tmRef?: string;
 }
 
-export default function GoogleButton({ role, label = "Continuer avec Google", className = "" }: GoogleButtonProps) {
+export default function GoogleButton({ role, label = "Continuer avec Google", className = "", tmRef }: GoogleButtonProps) {
   const supabase = createClient();
 
   async function handleClick() {
+    let redirectUrl = `${window.location.origin}/auth/callback?role=${role}`;
+    if (tmRef) redirectUrl += `&tm_ref=${encodeURIComponent(tmRef)}`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?role=${role}`,
+        redirectTo: redirectUrl,
       },
     });
     if (error) {

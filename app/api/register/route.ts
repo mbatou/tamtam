@@ -3,6 +3,7 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { rateLimit } from "@/lib/rate-limit";
 import { normalizeCity } from "@/lib/cities";
+import { trackConversion } from "@/lib/tracking/track-conversion";
 
 const REFERRAL_BONUS_FCFA = 150;
 
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { userId, name, phone, mobile_money_provider, referral_code } = body;
+  const { userId, name, phone, mobile_money_provider, referral_code, tm_ref } = body;
   const city = normalizeCity(body.city);
 
   if (userId !== session.user.id) {
@@ -105,6 +106,7 @@ export async function POST(req: NextRequest) {
         terms_accepted_at: new Date().toISOString(),
         referral_code: newUserReferralCode,
         ...(referrerId ? { referred_by: referrerId } : {}),
+        ...(tm_ref ? { signup_tm_ref: tm_ref } : {}),
       }).eq("id", userId)
     : await supabase.from("users").insert({
         id: userId,
@@ -116,11 +118,23 @@ export async function POST(req: NextRequest) {
         terms_accepted_at: new Date().toISOString(),
         referral_code: newUserReferralCode,
         ...(referrerId ? { referred_by: referrerId } : {}),
+        ...(tm_ref ? { signup_tm_ref: tm_ref } : {}),
       });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Fire signup conversion via the PUBLIC Pixel API (non-blocking)
+  trackConversion({
+    event: "signup",
+    tmRef: tm_ref || null,
+    externalId: `echo_signup_${userId}`,
+    metadata: {
+      name,
+      city: city || null,
+    },
+  }).catch(() => {});
 
   // If referred by someone, increment their referral_count and credit bonus
   if (referrerId) {

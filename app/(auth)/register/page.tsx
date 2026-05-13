@@ -21,6 +21,7 @@ function RegisterPageContent() {
   const { t } = useTranslation();
   const searchParams = useSearchParams();
   const referralCode = searchParams.get("ref") || "";
+  const tmRef = searchParams.get("tm_ref") || "";
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -119,6 +120,7 @@ function RegisterPageContent() {
           city: city || null,
           mobile_money_provider: provider,
           referral_code: referralCode || undefined,
+          tm_ref: tmRef || undefined,
         }),
       });
       if (!res.ok) {
@@ -176,7 +178,7 @@ function RegisterPageContent() {
 
           {step === 1 ? (
             <div className="space-y-4">
-              <GoogleButton role="echo" label="S'inscrire avec Google" className="mb-1" />
+              <GoogleButton role="echo" label="S'inscrire avec Google" className="mb-1" tmRef={tmRef || undefined} />
 
               <div className="flex items-center gap-3">
                 <div className="flex-1 h-px bg-white/10" />
