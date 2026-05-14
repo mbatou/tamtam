@@ -58,7 +58,7 @@ async function checkGamificationCaps(echoId: string, amount: number): Promise<bo
     .eq("echo_id", echoId)
     .gte("credited_at", today);
 
-  const todayTotal = (dailySpend || []).reduce((sum: number, r: any) => sum + r.reward_fcfa, 0);
+  const todayTotal = (dailySpend || []).reduce((sum: number, r: { reward_fcfa: number }) => sum + r.reward_fcfa, 0);
 
   if (todayTotal + amount > dailyMax) {
     console.warn(`[GAMIFICATION CAP] Daily limit for echo ${echoId}: ${todayTotal}F / ${dailyMax}F`);
@@ -83,7 +83,7 @@ async function checkGamificationCaps(echoId: string, amount: number): Promise<bo
     .select("reward_fcfa")
     .gte("credited_at", monthStart.toISOString());
 
-  const monthTotal = (monthlySpend || []).reduce((sum: number, r: any) => sum + r.reward_fcfa, 0);
+  const monthTotal = (monthlySpend || []).reduce((sum: number, r: { reward_fcfa: number }) => sum + r.reward_fcfa, 0);
 
   if (monthTotal + amount > monthlyMax) {
     console.warn(`[GAMIFICATION CAP] Monthly platform limit: ${monthTotal}F / ${monthlyMax}F`);
@@ -407,19 +407,22 @@ export async function getWeeklyLeaderboardData() {
 
   if (!rankings || rankings.length === 0) return [];
 
-  const echoIds = rankings.map((r: any) => r.echo_id);
+  interface RankingRow { echo_id: string; total_clicks: number }
+  interface UserRow { id: string; name: string; phone: string; leaderboard_notify: boolean }
+
+  const echoIds = (rankings as RankingRow[]).map((r) => r.echo_id);
   const { data: users } = await supabaseAdmin
     .from("users")
     .select("id, name, phone, leaderboard_notify")
     .in("id", echoIds)
     .eq("leaderboard_notify", true);
 
-  const userMap = new Map<string, any>((users || []).map((u: any) => [u.id, u]));
+  const userMap = new Map((users || []).map((u: UserRow) => [u.id, u]));
 
-  return rankings.map((r: any, i: number) => {
+  return (rankings as RankingRow[]).map((r, i: number) => {
     const user = userMap.get(r.echo_id);
     if (!user) return null;
-    const nextRank = i > 0 ? rankings[i - 1] : null;
+    const nextRank = i > 0 ? (rankings as RankingRow[])[i - 1] : null;
     return {
       echoId: r.echo_id,
       name: user.name,
