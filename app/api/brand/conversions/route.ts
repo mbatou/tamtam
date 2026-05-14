@@ -34,8 +34,14 @@ export async function GET(request: NextRequest) {
     .is("deleted_at", null)
     .single();
 
-  if (!campaign || campaign.batteur_id !== brandId) {
+  if (!campaign) {
+    console.error("[conversions] campaign not found", { campaignId, brandId });
     return NextResponse.json({ error: "Campagne introuvable" }, { status: 404 });
+  }
+
+  if (campaign.batteur_id !== brandId) {
+    console.error("[conversions] brand mismatch", { campaignId, batteur_id: campaign.batteur_id, brandId, userId: session.user.id });
+    return NextResponse.json({ error: `Campagne introuvable (brand mismatch: got ${brandId}, expected ${campaign.batteur_id})` }, { status: 404 });
   }
 
   if (!campaign.pixel_id) {
