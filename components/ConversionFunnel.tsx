@@ -137,14 +137,12 @@ export function CostCards({ costs, revenue }: CostCardsProps) {
   if (costs.cpa_purchase) cards.push({ label: "CPA Achat", value: formatFCFA(costs.cpa_purchase), sub: "Coût par achat", color: "text-accent" });
   if (costs.cpl) cards.push({ label: "CPL", value: formatFCFA(costs.cpl), sub: "Coût par lead", color: "text-accent" });
 
-  if (revenue.total_value > 0) {
-    cards.push({
-      label: "ROAS",
-      value: `${revenue.roas}x`,
-      sub: `${formatFCFA(revenue.total_value)} revenus`,
-      color: revenue.roas >= 1 ? "text-emerald-400" : "text-yellow-400",
-    });
-  }
+  cards.push({
+    label: "ROAS",
+    value: `${revenue.roas}x`,
+    sub: revenue.total_value > 0 ? `${formatFCFA(revenue.total_value)} revenus` : "Aucun revenu encore",
+    color: revenue.roas >= 1 ? "text-emerald-400" : revenue.roas > 0 ? "text-yellow-400" : "text-white/50",
+  });
 
   if (cards.length === 0) return null;
 
