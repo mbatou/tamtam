@@ -68,6 +68,7 @@ export default function AdminCampaignsPage() {
     attribution: { direct: number; unattributed: number; total: number };
   } | null>(null);
   const [convLoading, setConvLoading] = useState(false);
+  const [convError, setConvError] = useState<string | null>(null);
   const [convPage, setConvPage] = useState(0);
   const supabase = createClient();
 
@@ -110,10 +111,20 @@ export default function AdminCampaignsPage() {
     if (view === "detail" && selectedCampaign?.pixel_id && detailTab === "conversions") {
       setConvLoading(true);
       setConvData(null);
+      setConvError(null);
       fetch(`/api/brand/conversions?campaign_id=${selectedCampaign.id}`)
-        .then((r) => r.ok ? r.json() : null)
-        .then((data) => { setConvData(data); setConvLoading(false); })
-        .catch(() => setConvLoading(false));
+        .then(async (r) => {
+          if (!r.ok) {
+            const err = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
+            setConvError(err?.error || `Erreur ${r.status}`);
+            setConvLoading(false);
+            return;
+          }
+          const data = await r.json();
+          setConvData(data);
+          setConvLoading(false);
+        })
+        .catch((e) => { setConvError(e.message); setConvLoading(false); });
     }
   }, [view, selectedCampaign?.id, selectedCampaign?.pixel_id, detailTab]);
 
@@ -804,6 +815,11 @@ export default function AdminCampaignsPage() {
                   </div>
                 )}
               </>
+            ) : convError ? (
+              <div className="text-center py-16 glass-card">
+                <p className="text-sm text-red-400 font-semibold">Erreur : {convError}</p>
+                <button onClick={() => setDetailTab("conversions")} className="mt-4 text-sm text-primary hover:underline">Réessayer</button>
+              </div>
             ) : (
               /* Empty state — pixel linked but no conversions yet */
               <div className="text-center py-16 glass-card">

@@ -76,18 +76,34 @@ export async function GET(request: NextRequest) {
   const { count: clickCount } = await clicksQuery;
   const totalClicks = clickCount || 0;
 
-  // Get conversions: attributed to this campaign OR unattributed but through this pixel
-  let conversionsQuery = supabase
+  // Get conversions: attributed to this campaign + unattributed but through this pixel
+  let q1 = supabase
+    .from("conversions")
+    .select("*")
+    .eq("campaign_id", campaignId);
+  let q2 = supabase
     .from("conversions")
     .select("*")
     .eq("pixel_id", campaign.pixel_id)
-    .or(`campaign_id.eq.${campaignId},campaign_id.is.null`);
+    .is("campaign_id", null);
 
-  if (from) conversionsQuery = conversionsQuery.gte("created_at", from);
-  if (to) conversionsQuery = conversionsQuery.lte("created_at", to);
+  if (from) { q1 = q1.gte("created_at", from); q2 = q2.gte("created_at", from); }
+  if (to) { q1 = q1.lte("created_at", to); q2 = q2.lte("created_at", to); }
 
-  const { data: conversions } = await conversionsQuery.order("created_at", { ascending: false });
-  const allConversions = conversions || [];
+  const [{ data: attributed }, { data: unattributed }] = await Promise.all([
+    q1.order("created_at", { ascending: false }),
+    q2.order("created_at", { ascending: false }),
+  ]);
+
+  const seen = new Set<string>();
+  const allConversions: typeof attributed = [];
+  for (const c of [...(attributed || []), ...(unattributed || [])]) {
+    if (!seen.has(c.id)) { seen.add(c.id); allConversions.push(c); }
+  }
+  allConversions.sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+  console.log("[conversions] campaign=%s pixel=%s attributed=%d unattributed=%d total=%d",
+    campaignId, campaign.pixel_id, (attributed || []).length, (unattributed || []).length, allConversions.length);
 
   // CSV export
   if (format === "csv") {
