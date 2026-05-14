@@ -27,21 +27,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "campaign_id requis" }, { status: 400 });
   }
 
-  const { data: campaign } = await supabase
+  const { data: campaign, error: campaignError } = await supabase
     .from("campaigns")
     .select("id, batteur_id, pixel_id, spent, cpc, title")
     .eq("id", campaignId)
-    .is("deleted_at", null)
     .single();
 
   if (!campaign) {
-    console.error("[conversions] campaign not found", { campaignId, brandId });
+    console.error("[conversions] campaign not found", { campaignId, brandId, error: campaignError?.message });
     return NextResponse.json({ error: "Campagne introuvable" }, { status: 404 });
   }
 
   if (campaign.batteur_id !== brandId) {
     console.error("[conversions] brand mismatch", { campaignId, batteur_id: campaign.batteur_id, brandId, userId: session.user.id });
-    return NextResponse.json({ error: `Campagne introuvable (brand mismatch: got ${brandId}, expected ${campaign.batteur_id})` }, { status: 404 });
+    return NextResponse.json({ error: "Campagne introuvable" }, { status: 404 });
   }
 
   if (!campaign.pixel_id) {
