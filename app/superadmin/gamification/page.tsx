@@ -396,6 +396,58 @@ export default function SuperadminGamification() {
               ))}
             </div>
           </div>
+
+          {/* Tier bonus reference */}
+          <div>
+            <p className="text-xs text-white/60 mb-2">Bonus par tier (% du CPC écho)</p>
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { icon: "🔵", name: "Écho", bonus: "0%" },
+                { icon: "🥈", name: "Argent", bonus: "1%" },
+                { icon: "🥇", name: "Or", bonus: "3%" },
+                { icon: "💎", name: "Diamant", bonus: "5%" },
+              ].map((t) => (
+                <div key={t.name} className="bg-white/5 rounded-xl p-2 text-center">
+                  <span className="text-base">{t.icon}</span>
+                  <p className="text-[10px] text-white/50 font-semibold mt-1">{t.name}</p>
+                  <p className="text-xs font-bold text-primary">{t.bonus}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Streak rewards reference */}
+          <div>
+            <p className="text-xs text-white/60 mb-2">Récompenses de série (cycle 90 jours)</p>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { emoji: "🔥", label: "7 jours", reward: "100 F" },
+                { emoji: "💪", label: "30 jours", reward: "500 F" },
+                { emoji: "👑", label: "90 jours", reward: "2 000 F" },
+              ].map((s) => (
+                <div key={s.label} className="bg-white/5 rounded-xl p-2 text-center">
+                  <span className="text-base">{s.emoji}</span>
+                  <p className="text-[10px] text-white/50 font-semibold mt-1">{s.label}</p>
+                  <p className="text-xs font-bold text-accent">{s.reward}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Caps reference */}
+          <div>
+            <p className="text-xs text-white/60 mb-2">Plafonds de sécurité</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-white/5 rounded-xl p-3">
+                <p className="text-[10px] text-white/40 font-semibold">Par écho / jour</p>
+                <p className="text-sm font-bold">500 FCFA</p>
+              </div>
+              <div className="bg-white/5 rounded-xl p-3">
+                <p className="text-[10px] text-white/40 font-semibold">Plateforme / mois</p>
+                <p className="text-sm font-bold">50 000 FCFA</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

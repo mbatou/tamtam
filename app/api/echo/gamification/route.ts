@@ -29,13 +29,13 @@ export async function GET() {
       supabase
         .from("users")
         .select(
-          "tier, tier_bonus_percent, total_valid_clicks, total_campaigns_joined, referral_count"
+          "tier, tier_bonus_percent, tier_perks, total_valid_clicks, total_campaigns_joined, referral_count, successful_referrals"
         )
         .eq("id", echoId)
         .single(),
       supabase
         .from("echo_streaks")
-        .select("current_streak, longest_streak, last_campaign_date")
+        .select("current_streak, longest_streak, last_campaign_date, week_reward_paid, month_reward_paid, quarter_reward_paid")
         .eq("echo_id", echoId)
         .single(),
       supabase
@@ -76,7 +76,7 @@ export async function GET() {
             longest_streak: 1,
             last_campaign_date: lastDate,
           })
-          .select("current_streak, longest_streak, last_campaign_date")
+          .select("current_streak, longest_streak, last_campaign_date, week_reward_paid, month_reward_paid, quarter_reward_paid")
           .single();
         streakData = inserted;
       }
