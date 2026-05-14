@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
 
   if (!campaign.pixel_id) {
     return NextResponse.json({
-      funnel: { clicks: 0, installs: 0, signups: 0, subscriptions: 0, purchases: 0, leads: 0, custom: 0 },
+      funnel: { clicks: 0, installs: 0, signups: 0, activations: 0, subscriptions: 0, purchases: 0, leads: 0, custom: 0 },
       rates: {},
       costs: {},
       revenue: { total_value: 0, currency: "XOF", roas: 0 },
@@ -51,19 +51,24 @@ export async function GET(request: NextRequest) {
   }
 
   // Get click count from clicks table (valid clicks only)
+  const linkIds = (
+    await supabase
+      .from("tracked_links")
+      .select("id")
+      .eq("campaign_id", campaignId)
+  ).data?.map((l) => l.id) || [];
+
   let clicksQuery = supabase
     .from("clicks")
     .select("id", { count: "exact", head: true })
-    .eq("is_valid", true)
-    .in(
-      "link_id",
-      // subquery: get link IDs for this campaign
-      (await supabase
-        .from("tracked_links")
-        .select("id")
-        .eq("campaign_id", campaignId)
-      ).data?.map((l) => l.id) || []
-    );
+    .eq("is_valid", true);
+
+  if (linkIds.length > 0) {
+    clicksQuery = clicksQuery.in("link_id", linkIds);
+  } else {
+    // No tracked links — no clicks possible
+    clicksQuery = clicksQuery.eq("link_id", "00000000-0000-0000-0000-000000000000");
+  }
 
   if (from) clicksQuery = clicksQuery.gte("created_at", from);
   if (to) clicksQuery = clicksQuery.lte("created_at", to);
@@ -71,11 +76,12 @@ export async function GET(request: NextRequest) {
   const { count: clickCount } = await clicksQuery;
   const totalClicks = clickCount || 0;
 
-  // Get conversions grouped by event
+  // Get conversions: attributed to this campaign OR unattributed but through this pixel
   let conversionsQuery = supabase
     .from("conversions")
     .select("*")
-    .eq("campaign_id", campaignId);
+    .eq("pixel_id", campaign.pixel_id)
+    .or(`campaign_id.eq.${campaignId},campaign_id.is.null`);
 
   if (from) conversionsQuery = conversionsQuery.gte("created_at", from);
   if (to) conversionsQuery = conversionsQuery.lte("created_at", to);
@@ -120,6 +126,7 @@ export async function GET(request: NextRequest) {
     clicks: totalClicks,
     installs: eventCounts["install"] || 0,
     signups: eventCounts["signup"] || 0,
+    activations: eventCounts["activation"] || 0,
     subscriptions: eventCounts["subscription"] || 0,
     purchases: eventCounts["purchase"] || 0,
     leads: eventCounts["lead"] || 0,
@@ -134,7 +141,13 @@ export async function GET(request: NextRequest) {
   if (funnel.installs > 0 && funnel.signups > 0) {
     rates.install_to_signup = Math.round((funnel.signups / funnel.installs) * 1000) / 10;
   }
-  if (funnel.signups > 0 && funnel.subscriptions > 0) {
+  if (funnel.signups > 0 && funnel.activations > 0) {
+    rates.signup_to_activation = Math.round((funnel.activations / funnel.signups) * 1000) / 10;
+  }
+  if (funnel.activations > 0 && funnel.subscriptions > 0) {
+    rates.activation_to_subscription = Math.round((funnel.subscriptions / funnel.activations) * 1000) / 10;
+  }
+  if (funnel.signups > 0 && funnel.subscriptions > 0 && funnel.activations === 0) {
     rates.signup_to_subscription = Math.round((funnel.subscriptions / funnel.signups) * 1000) / 10;
   }
 
@@ -144,6 +157,7 @@ export async function GET(request: NextRequest) {
   if (totalClicks > 0) costs.cpc = Math.round(spent / totalClicks);
   if (funnel.installs > 0) costs.cpi = Math.round(spent / funnel.installs);
   if (funnel.signups > 0) costs.cpa_signup = Math.round(spent / funnel.signups);
+  if (funnel.activations > 0) costs.cpa_activation = Math.round(spent / funnel.activations);
   if (funnel.subscriptions > 0) costs.cpa_subscription = Math.round(spent / funnel.subscriptions);
   if (funnel.purchases > 0) costs.cpa_purchase = Math.round(spent / funnel.purchases);
   if (funnel.leads > 0) costs.cpl = Math.round(spent / funnel.leads);
@@ -158,20 +172,13 @@ export async function GET(request: NextRequest) {
   for (const c of nonTestConversions) {
     const date = c.created_at.split("T")[0];
     if (!dailyMap.has(date)) {
-      dailyMap.set(date, { clicks: 0, installs: 0, signups: 0, subscriptions: 0, purchases: 0, leads: 0 });
+      dailyMap.set(date, { clicks: 0, installs: 0, signups: 0, activations: 0, subscriptions: 0, purchases: 0, leads: 0 });
     }
     const day = dailyMap.get(date)!;
     if (day[c.event] !== undefined) day[c.event]++;
   }
 
   // Also get daily clicks
-  const linkIds = (
-    await supabase
-      .from("tracked_links")
-      .select("id")
-      .eq("campaign_id", campaignId)
-  ).data?.map((l) => l.id) || [];
-
   if (linkIds.length > 0) {
     let dailyClicksQuery = supabase
       .from("clicks")
@@ -185,7 +192,7 @@ export async function GET(request: NextRequest) {
     for (const click of clickRows || []) {
       const date = click.created_at.split("T")[0];
       if (!dailyMap.has(date)) {
-        dailyMap.set(date, { clicks: 0, installs: 0, signups: 0, subscriptions: 0, purchases: 0, leads: 0 });
+        dailyMap.set(date, { clicks: 0, installs: 0, signups: 0, activations: 0, subscriptions: 0, purchases: 0, leads: 0 });
       }
       dailyMap.get(date)!.clicks++;
     }

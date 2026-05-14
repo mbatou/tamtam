@@ -7,6 +7,7 @@ interface FunnelData {
   clicks: number;
   installs: number;
   signups: number;
+  activations: number;
   subscriptions: number;
   purchases: number;
   leads: number;
@@ -23,6 +24,7 @@ const STAGE_CONFIG = [
   { key: "clicks", label: "Clics vérifiés", color: "#FFFFFF" },
   { key: "installs", label: "Installations", color: "#D35400" },
   { key: "signups", label: "Inscriptions", color: "#E67E22" },
+  { key: "activations", label: "Activations", color: "#F39C12" },
   { key: "subscriptions", label: "Souscriptions", color: "#1ABC9C" },
   { key: "purchases", label: "Achats", color: "#1ABC9C" },
   { key: "leads", label: "Leads", color: "#1ABC9C" },
@@ -32,6 +34,8 @@ const STAGE_CONFIG = [
 const RATE_MAP: Record<string, string> = {
   "clicks→installs": "click_to_install",
   "installs→signups": "install_to_signup",
+  "signups→activations": "signup_to_activation",
+  "activations→subscriptions": "activation_to_subscription",
   "signups→subscriptions": "signup_to_subscription",
   "subscriptions→purchases": "subscription_to_purchase",
 };
@@ -128,6 +132,7 @@ export function CostCards({ costs, revenue }: CostCardsProps) {
   if (costs.cpc) cards.push({ label: "CPC", value: formatFCFA(costs.cpc), sub: "Coût par clic", color: "text-primary" });
   if (costs.cpi) cards.push({ label: "CPI", value: formatFCFA(costs.cpi), sub: "Coût par installation", color: "text-accent" });
   if (costs.cpa_signup) cards.push({ label: "CPA Inscription", value: formatFCFA(costs.cpa_signup), sub: "Coût par inscription", color: "text-accent" });
+  if (costs.cpa_activation) cards.push({ label: "CPA Activation", value: formatFCFA(costs.cpa_activation), sub: "Coût par activation", color: "text-accent" });
   if (costs.cpa_subscription) cards.push({ label: "CPA Souscription", value: formatFCFA(costs.cpa_subscription), sub: "Coût par souscription", color: "text-accent" });
   if (costs.cpa_purchase) cards.push({ label: "CPA Achat", value: formatFCFA(costs.cpa_purchase), sub: "Coût par achat", color: "text-accent" });
   if (costs.cpl) cards.push({ label: "CPL", value: formatFCFA(costs.cpl), sub: "Coût par lead", color: "text-accent" });

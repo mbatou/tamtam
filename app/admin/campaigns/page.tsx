@@ -59,11 +59,11 @@ export default function AdminCampaignsPage() {
   const [showPixelSection, setShowPixelSection] = useState(false);
   // Conversion analytics state
   const [convData, setConvData] = useState<{
-    funnel: { clicks: number; installs: number; signups: number; subscriptions: number; purchases: number; leads: number; custom: number };
+    funnel: { clicks: number; installs: number; signups: number; activations: number; subscriptions: number; purchases: number; leads: number; custom: number };
     rates: Record<string, number>;
     costs: Record<string, number>;
     revenue: { total_value: number; currency: string; roas: number };
-    daily: { date: string; clicks: number; installs: number; signups: number; subscriptions: number; purchases: number; leads: number }[];
+    daily: { date: string; clicks: number; installs: number; signups: number; activations: number; subscriptions: number; purchases: number; leads: number }[];
     recent: { id: string; event: string; event_name: string | null; value_amount: number | null; value_currency: string; attributed: boolean; attribution_type: string | null; click_to_conversion_seconds: number | null; created_at: string; external_id: string | null }[];
     attribution: { direct: number; unattributed: number; total: number };
   } | null>(null);
@@ -665,7 +665,7 @@ export default function AdminCampaignsPage() {
               <div className="flex items-center justify-center py-16">
                 <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
               </div>
-            ) : convData && (convData.funnel.installs > 0 || convData.funnel.signups > 0 || convData.funnel.subscriptions > 0 || convData.funnel.purchases > 0 || convData.funnel.leads > 0 || convData.funnel.custom > 0) ? (
+            ) : convData && (convData.funnel.installs > 0 || convData.funnel.signups > 0 || convData.funnel.activations > 0 || convData.funnel.subscriptions > 0 || convData.funnel.purchases > 0 || convData.funnel.leads > 0 || convData.funnel.custom > 0) ? (
               <>
                 {/* Funnel */}
                 <div className="glass-card p-5">
@@ -698,6 +698,7 @@ export default function AdminCampaignsPage() {
                           />
                           <Bar dataKey="installs" name="Installations" fill="#D35400" radius={[2, 2, 0, 0]} />
                           <Bar dataKey="signups" name="Inscriptions" fill="#E67E22" radius={[2, 2, 0, 0]} />
+                          <Bar dataKey="activations" name="Activations" fill="#F39C12" radius={[2, 2, 0, 0]} />
                           <Bar dataKey="subscriptions" name="Souscriptions" fill="#1ABC9C" radius={[2, 2, 0, 0]} />
                           <Bar dataKey="purchases" name="Achats" fill="#16A085" radius={[2, 2, 0, 0]} />
                           <Bar dataKey="leads" name="Leads" fill="#2ECC71" radius={[2, 2, 0, 0]} />
