@@ -188,7 +188,11 @@ export async function GET(request: NextRequest) {
   const totalValue = nonTestConversions.reduce((sum, c) => sum + (c.value_amount || 0), 0);
   const roas = spent > 0 ? Math.round((totalValue / spent) * 100) / 100 : 0;
 
-  // Daily aggregation
+  // Daily aggregation (event names are singular, map keys are plural)
+  const eventToKey: Record<string, string> = {
+    install: "installs", signup: "signups", activation: "activations",
+    subscription: "subscriptions", purchase: "purchases", lead: "leads",
+  };
   const dailyMap = new Map<string, Record<string, number>>();
   for (const c of nonTestConversions) {
     const date = c.created_at.split("T")[0];
@@ -196,7 +200,8 @@ export async function GET(request: NextRequest) {
       dailyMap.set(date, { clicks: 0, installs: 0, signups: 0, activations: 0, subscriptions: 0, purchases: 0, leads: 0 });
     }
     const day = dailyMap.get(date)!;
-    if (day[c.event] !== undefined) day[c.event]++;
+    const key = eventToKey[c.event];
+    if (key) day[key]++;
   }
 
   // Also get daily clicks
