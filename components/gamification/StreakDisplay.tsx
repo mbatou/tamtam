@@ -13,24 +13,17 @@ interface StreakProps {
   hasActiveCampaigns?: boolean;
 }
 
-const THRESHOLDS = [1, 2, 3, 5, 7, 10];
-
-const REWARDS: Record<number, number> = {
-  3: 100,
-  5: 250,
-  7: 500,
-  10: 1000,
-};
+const STREAK_MILESTONES = [
+  { days: 7,  reward: 100,  label: "Semaine",   emoji: "🔥" },
+  { days: 30, reward: 500,  label: "Mois",      emoji: "💪" },
+  { days: 90, reward: 2000, label: "Trimestre",  emoji: "👑" },
+] as const;
 
 export default function StreakDisplay({ streak, hasActiveCampaigns = true }: StreakProps) {
   const { t } = useTranslation();
   const current = streak.current_streak;
 
-  const nextRewardThreshold = THRESHOLDS.find(
-    (th) => th > current && REWARDS[th] !== undefined
-  );
-
-  // Streak is frozen when there are no active campaigns
+  const nextMilestone = STREAK_MILESTONES.find((m) => m.days > current);
   const isFrozen = !hasActiveCampaigns && current > 0;
 
   return (
@@ -43,22 +36,31 @@ export default function StreakDisplay({ streak, hasActiveCampaigns = true }: Str
 
       {current > 0 && (
         <>
-          {/* Streak dots */}
-          <div className="flex items-center gap-2 mb-4">
-            {THRESHOLDS.map((th) => {
-              const completed = current >= th;
-              const isCurrent = current === th;
+          {/* Milestone progress bar */}
+          <div className="space-y-2 mb-4">
+            {STREAK_MILESTONES.map((milestone) => {
+              const progress = Math.min(current / milestone.days, 1);
+              const completed = current >= milestone.days;
 
               return (
-                <div key={th} className="flex flex-col items-center gap-1">
-                  <div
-                    className={`w-4 h-4 rounded-full border-2 transition-all ${
-                      completed
-                        ? "bg-[#D35400] border-[#D35400]"
-                        : "border-gray-500 bg-transparent"
-                    } ${isCurrent ? "animate-pulse ring-2 ring-[#D35400]/50" : ""}`}
-                  />
-                  <span className="text-[10px] text-gray-400">{th}</span>
+                <div key={milestone.days} className="flex items-center gap-3">
+                  <span className="text-sm w-5 text-center">{milestone.emoji}</span>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`text-[11px] font-semibold ${completed ? "text-[#1ABC9C]" : "text-white/50"}`}>
+                        {milestone.label} ({milestone.days}j)
+                      </span>
+                      <span className={`text-[10px] font-bold ${completed ? "text-[#1ABC9C]" : "text-white/30"}`}>
+                        {completed ? `✓ ${formatFCFA(milestone.reward)}` : formatFCFA(milestone.reward)}
+                      </span>
+                    </div>
+                    <div className="w-full bg-white/10 rounded-full h-1.5">
+                      <div
+                        className={`h-1.5 rounded-full transition-all ${completed ? "bg-[#1ABC9C]" : "bg-[#D35400]"}`}
+                        style={{ width: `${Math.round(progress * 100)}%` }}
+                      />
+                    </div>
+                  </div>
                 </div>
               );
             })}
@@ -74,22 +76,24 @@ export default function StreakDisplay({ streak, hasActiveCampaigns = true }: Str
                 {t("gamification.streakFrozenHint")}
               </p>
             </div>
-          ) : nextRewardThreshold && REWARDS[nextRewardThreshold] !== undefined ? (
+          ) : nextMilestone ? (
             <div>
               <p className="text-sm text-gray-300">
-                {t("gamification.nextBonus", {
-                  count: nextRewardThreshold,
-                  amount: formatFCFA(REWARDS[nextRewardThreshold]),
-                })}
+                {nextMilestone.emoji} Encore {nextMilestone.days - current} jour{nextMilestone.days - current > 1 ? "s" : ""} pour {formatFCFA(nextMilestone.reward)}
               </p>
               <p className="text-xs text-white/30 mt-1">
                 {t("gamification.streakKeepGoing")}
               </p>
             </div>
-          ) : current >= 10 ? (
-            <p className="text-sm text-[#1ABC9C] font-medium">
-              {t("gamification.maxStreak")}
-            </p>
+          ) : current >= 90 ? (
+            <div>
+              <p className="text-sm text-[#1ABC9C] font-medium">
+                👑 Cycle complété ! Les récompenses se renouvellent.
+              </p>
+              <p className="text-xs text-white/30 mt-1">
+                Tu gagnes {formatFCFA(2000)} tous les 90 jours de série.
+              </p>
+            </div>
           ) : null}
         </>
       )}

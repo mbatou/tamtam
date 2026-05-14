@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { acceptCampaignSchema } from "@/lib/validations";
-import { updateStreak, checkMilestones } from "@/lib/gamification";
+import { updateStreak, checkMilestones, processReferralBonus } from "@/lib/gamification";
 import { trackConversion } from "@/lib/tracking/track-conversion";
 
 export const dynamic = "force-dynamic";
@@ -115,11 +115,11 @@ export async function POST(request: NextRequest) {
     await updateStreak(echoId);
     await checkMilestones(echoId);
 
-    // First campaign accepted — fire activation conversion (non-blocking)
+    // First campaign accepted — fire activation conversion and referral bonus (non-blocking)
     if (count === 1) {
       const { data: user } = await supabase
         .from("users")
-        .select("signup_tm_ref")
+        .select("signup_tm_ref, referred_by")
         .eq("id", echoId)
         .single();
 
@@ -128,6 +128,10 @@ export async function POST(request: NextRequest) {
         tmRef: user?.signup_tm_ref || null,
         externalId: `echo_activation_${echoId}`,
       }).catch(() => {});
+
+      if (user?.referred_by) {
+        processReferralBonus(user.referred_by, echoId).catch(() => {});
+      }
     }
   } catch (err) {
     console.error("Gamification update failed:", err);
