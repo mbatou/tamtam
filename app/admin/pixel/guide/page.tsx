@@ -8,6 +8,7 @@ const EXAMPLE_FUNNEL = {
   clicks: 5000,
   installs: 1200,
   signups: 744,
+  activations: 312,
   subscriptions: 89,
   purchases: 0,
   leads: 0,
