@@ -93,9 +93,13 @@ async function checkGamificationCaps(echoId: string, amount: number): Promise<bo
   return true;
 }
 
+// GAMIFICATION SUSPENDED — set to false to re-enable
+const GAMIFICATION_SUSPENDED = true;
+
 // ---- STREAK LOGIC ----
 
 export async function updateStreak(echoId: string) {
+  if (GAMIFICATION_SUSPENDED) return { streak: 0, rewards: [] };
   const today = new Date().toISOString().split("T")[0];
 
   const { data: streak } = await supabaseAdmin
@@ -232,6 +236,7 @@ export async function updateStreak(echoId: string) {
 // ---- MILESTONE CHECKING ----
 
 export async function checkMilestones(echoId: string) {
+  if (GAMIFICATION_SUSPENDED) return [];
   const { data: user } = await supabaseAdmin
     .from("users")
     .select("total_valid_clicks, total_campaigns_joined, referral_count")
@@ -310,6 +315,7 @@ export async function checkMilestones(echoId: string) {
 // ---- TIER UPDATE ----
 
 export async function updateTier(echoId: string) {
+  if (GAMIFICATION_SUSPENDED) return null;
   const { data: user } = await supabaseAdmin
     .from("users")
     .select("total_valid_clicks, tier")
@@ -342,6 +348,7 @@ export async function updateTier(echoId: string) {
 // ---- REFERRAL BONUS ----
 
 export async function processReferralBonus(referrerEchoId: string, newEchoId: string) {
+  if (GAMIFICATION_SUSPENDED) return;
   // 1. Check if new echo has accepted first campaign
   const { count } = await supabaseAdmin
     .from("tracked_links")
@@ -437,6 +444,7 @@ export async function getWeeklyLeaderboardData() {
 // ---- MASTER FUNCTION: Call after every valid click ----
 
 export async function processGamification(echoId: string) {
+  if (GAMIFICATION_SUSPENDED) return { streak: { streak: 0, rewards: [] }, milestones: [], tierChange: null };
   const [streakResult, newMilestones, tierChange] = await Promise.all([
     updateStreak(echoId),
     checkMilestones(echoId),
