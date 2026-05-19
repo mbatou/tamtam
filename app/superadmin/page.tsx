@@ -77,6 +77,12 @@ export default function SuperAdminOverview() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange>(() => getPresetRange("all"));
+  const [treasury, setTreasury] = useState<{
+    total_available: number;
+    total_pending: number;
+    total_owed: number;
+    upcoming_unlocks: { campaign: string; date: string; total: number; echos: number }[];
+  } | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -87,6 +93,10 @@ export default function SuperAdminOverview() {
       .then((r) => r.json())
       .then((data) => { setStats(data); setLoading(false); })
       .catch(() => setLoading(false));
+    fetch("/api/superadmin/treasury")
+      .then((r) => r.json())
+      .then((data) => { if (!data.error) setTreasury(data); })
+      .catch(() => {});
   }, [dateRange]);
 
   if (loading || !stats) {
@@ -265,6 +275,51 @@ export default function SuperAdminOverview() {
           <div className="text-xs text-white/30 mt-1">{formatNumber(stats.validClicks)} valid · {formatNumber(stats.fraudClicks)} filtered</div>
         </div>
       </div>
+
+      {/* Treasury — Dual Balance Overview */}
+      {treasury && (
+        <div className="glass-card p-5">
+          <h3 className="text-sm font-bold mb-4">Trésorerie Échos</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="bg-white/5 rounded-lg p-4">
+              <div className="text-xs text-white/40 mb-1">Solde disponible (total)</div>
+              <div className="text-xl font-bold text-green-400">{formatFCFA(treasury.total_available)}</div>
+              <div className="text-xs text-white/30 mt-1">Retirable par les Échos</div>
+            </div>
+            <div className="bg-white/5 rounded-lg p-4">
+              <div className="text-xs text-white/40 mb-1">Solde en attente (total)</div>
+              <div className="text-xl font-bold text-yellow-400">{formatFCFA(treasury.total_pending)}</div>
+              <div className="text-xs text-white/30 mt-1">Verrouillé par campagne</div>
+            </div>
+            <div className="bg-white/5 rounded-lg p-4">
+              <div className="text-xs text-white/40 mb-1">Total dû aux Échos</div>
+              <div className="text-xl font-bold text-accent">{formatFCFA(treasury.total_owed)}</div>
+              <div className="text-xs text-white/30 mt-1">Disponible + en attente</div>
+            </div>
+          </div>
+          {treasury.upcoming_unlocks.length > 0 && (
+            <div>
+              <h4 className="text-xs font-bold text-white/60 mb-2">Prochains déblocages</h4>
+              <div className="space-y-2">
+                {treasury.upcoming_unlocks.slice(0, 8).map((u, i) => (
+                  <div key={i} className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-2">
+                    <div>
+                      <span className="text-sm font-medium">{u.campaign}</span>
+                      <span className="text-xs text-white/30 ml-2">
+                        {new Date(u.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-bold text-accent">{formatFCFA(u.total)}</span>
+                      <span className="text-xs text-white/30 ml-2">{u.echos} écho{u.echos > 1 ? "s" : ""}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Row 3 — Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

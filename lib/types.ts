@@ -8,6 +8,8 @@ export interface User {
   city: string | null;
   mobile_money_provider: "wave" | "orange_money" | null;
   balance: number;
+  available_balance: number;
+  pending_balance: number;
   total_earned: number;
   status?: "active" | "verified" | "flagged" | "suspended";
   risk_level?: "low" | "medium" | "high";
