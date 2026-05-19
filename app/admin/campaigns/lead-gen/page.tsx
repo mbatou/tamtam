@@ -122,7 +122,7 @@ export default function LeadGenCampaignPage() {
         target_audience: targetAudience,
         campaign_description_for_ai: campaignDescForAi,
         form_fields: formFields.filter((f) => f.label.trim()),
-        notification_phone: notifPhone || null,
+        notification_phone: notifPhone.replace(/[\s.-]/g, "") || null,
         notification_email: notifEmail || null,
         creative_urls: creativeUrls,
         save_as_draft: draft,
@@ -269,11 +269,13 @@ export default function LeadGenCampaignPage() {
           </div>
           <div>
             <label className="block text-xs font-semibold text-white/40 mb-2">Audience cible *</label>
-            <textarea value={targetAudience} onChange={(e) => setTargetAudience(e.target.value)} placeholder="Ex: Jeunes professionnels de Dakar, 25-35 ans, interesses par..." rows={2} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition resize-none" />
+            <textarea value={targetAudience} onChange={(e) => setTargetAudience(e.target.value)} maxLength={500} placeholder="Ex: Jeunes professionnels de Dakar, 25-35 ans, interesses par..." rows={2} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition resize-none" />
+            <p className="text-xs text-white/20 mt-1 text-right">{targetAudience.length}/500</p>
           </div>
           <div>
             <label className="block text-xs font-semibold text-white/40 mb-2">Description pour l&apos;IA (ce que vous offrez) *</label>
-            <textarea value={campaignDescForAi} onChange={(e) => setCampaignDescForAi(e.target.value)} placeholder="Decrivez votre offre, produit ou service en detail pour generer le contenu de la landing page..." rows={3} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition resize-none" />
+            <textarea value={campaignDescForAi} onChange={(e) => setCampaignDescForAi(e.target.value)} maxLength={1000} placeholder="Decrivez votre offre, produit ou service en detail pour generer le contenu de la landing page..." rows={3} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition resize-none" />
+            <p className="text-xs text-white/20 mt-1 text-right">{campaignDescForAi.length}/1000</p>
           </div>
           <div>
             <label className="block text-xs font-semibold text-white/40 mb-2">Description (optionnel)</label>
@@ -298,6 +300,7 @@ export default function LeadGenCampaignPage() {
                   type="text"
                   value={field.label}
                   onChange={(e) => updateField(i, { label: e.target.value })}
+                  maxLength={100}
                   placeholder="Nom du champ"
                   className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary transition"
                 />

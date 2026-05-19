@@ -140,7 +140,10 @@ export const createLeadCampaignSchema = z.object({
   form_fields: z.array(landingPageFormFieldSchema).min(1, "Au moins un champ requis").max(5, "Maximum 5 champs"),
 
   // Notification settings (at least one required)
-  notification_phone: z.string().regex(SENEGALESE_PHONE_REGEX, "Numero senegalais invalide").optional().nullable(),
+  notification_phone: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() ? v.replace(/[\s.-]/g, "") : v),
+    z.string().regex(SENEGALESE_PHONE_REGEX, "Numero senegalais invalide").optional().nullable()
+  ),
   notification_email: z.string().email("Email invalide").optional().nullable(),
 }).refine(
   (data) => data.notification_phone || data.notification_email,
