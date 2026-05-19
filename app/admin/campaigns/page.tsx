@@ -510,6 +510,14 @@ export default function AdminCampaignsPage() {
                 {actionLoading === "complete" ? "..." : t("admin.campaigns.finish")}
               </button>
             )}
+            {c.objective === "lead_generation" && c.landing_page_id && (
+              <button
+                onClick={() => router.push(`/admin/campaigns/${c.id}/preview`)}
+                className="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 text-sm font-semibold hover:bg-purple-500/20 transition"
+              >
+                Apercu LP
+              </button>
+            )}
             {!isEnded && (
               <button
                 onClick={() => c.objective === "lead_generation" ? router.push(`/admin/campaigns/lead-gen?draft=${c.id}`) : openEditForm(c)}

@@ -6,7 +6,25 @@ import { BRAND_INDUSTRIES } from "@/lib/validations";
 import { LEAD_GEN_SETUP_FEE_FCFA, LEAD_GEN_MIN_BUDGET_FCFA } from "@/lib/constants";
 import { formatFCFA } from "@/lib/utils";
 import { trackEvent } from "@/lib/analytics";
-import type { LandingPageFormField } from "@/lib/types";
+import type { LandingPageFormField, LandingPageTemplate } from "@/lib/types";
+import { TEMPLATES } from "@/lib/landing-page-templates";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // ---------------------------------------------------------------------------
 // LUP-113: Lead Generation Campaign Creation Form
@@ -30,6 +48,132 @@ const INDUSTRY_LABELS: Record<string, string> = {
 };
 
 const DRAFT_STORAGE_KEY = "lead_gen_draft_";
+
+// ---------------------------------------------------------------------------
+// Sortable form field row with drag handle + options editor for "select" type
+// ---------------------------------------------------------------------------
+
+function SortableFormFieldRow({
+  field,
+  index,
+  fieldId,
+  onUpdate,
+  onRemove,
+}: {
+  field: LandingPageFormField;
+  index: number;
+  fieldId: string;
+  onUpdate: (index: number, updates: Partial<LandingPageFormField>) => void;
+  onRemove: (index: number) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: fieldId });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="bg-white/5 p-3 rounded-xl space-y-2">
+      <div className="flex items-center gap-3">
+        {/* Drag handle */}
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing text-white/30 hover:text-white/60 transition touch-none"
+          aria-label="Reordonner"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>
+        </button>
+
+        <input
+          type="text"
+          value={field.label}
+          onChange={(e) => onUpdate(index, { label: e.target.value })}
+          maxLength={100}
+          placeholder="Nom du champ"
+          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary transition"
+        />
+        <select
+          value={field.type}
+          onChange={(e) => {
+            const newType = e.target.value as LandingPageFormField["type"];
+            const updates: Partial<LandingPageFormField> = { type: newType };
+            if (newType === "select" && (!field.options || field.options.length === 0)) {
+              updates.options = [""];
+            }
+            if (newType !== "select") {
+              updates.options = undefined;
+            }
+            onUpdate(index, updates);
+          }}
+          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary transition"
+        >
+          <option value="text">Texte</option>
+          <option value="email">Email</option>
+          <option value="phone">Telephone</option>
+          <option value="select">Liste</option>
+        </select>
+        <label className="flex items-center gap-1.5 text-xs text-white/40 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={field.required}
+            onChange={(e) => onUpdate(index, { required: e.target.checked })}
+            className="rounded"
+          />
+          Requis
+        </label>
+        <button onClick={() => onRemove(index)} className="text-red-400 hover:text-red-300 transition p-1">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      {/* Options editor for "select" type */}
+      {field.type === "select" && (
+        <div className="ml-7 space-y-2">
+          <p className="text-xs text-white/30">Options de la liste deroulante (max 20)</p>
+          {(field.options || []).map((opt, oi) => (
+            <div key={oi} className="flex items-center gap-2">
+              <span className="text-xs text-white/20 w-5 text-right">{oi + 1}.</span>
+              <input
+                type="text"
+                value={opt}
+                onChange={(e) => {
+                  const newOptions = [...(field.options || [])];
+                  newOptions[oi] = e.target.value;
+                  onUpdate(index, { options: newOptions });
+                }}
+                maxLength={100}
+                placeholder={`Option ${oi + 1}`}
+                className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-primary transition"
+              />
+              <button
+                onClick={() => {
+                  const newOptions = (field.options || []).filter((_, i) => i !== oi);
+                  onUpdate(index, { options: newOptions.length > 0 ? newOptions : [""] });
+                }}
+                className="text-red-400/60 hover:text-red-300 transition p-0.5"
+                aria-label="Supprimer option"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+          ))}
+          {(field.options || []).length < 20 && (
+            <button
+              onClick={() => onUpdate(index, { options: [...(field.options || []), ""] })}
+              className="text-xs text-purple-400 hover:text-purple-300 transition font-semibold"
+            >
+              + Ajouter une option
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function LeadGenCampaignPageWrapper() {
   return (
@@ -79,6 +223,7 @@ function LeadGenCampaignPage() {
   // Notifications
   const [notifPhone, setNotifPhone] = useState("");
   const [notifEmail, setNotifEmail] = useState("");
+  const [template, setTemplate] = useState<LandingPageTemplate>("simple");
 
   // Save as draft flag
   const [asDraft, setAsDraft] = useState(false);
@@ -111,6 +256,7 @@ function LeadGenCampaignPage() {
         if (d.notifPhone) setNotifPhone(d.notifPhone);
         if (d.notifEmail) setNotifEmail(d.notifEmail);
         if (d.creativeUrls) setCreativeUrls(d.creativeUrls);
+        if (d.template) setTemplate(d.template);
       }
     } catch {
       // localStorage unavailable or corrupted — continue with empty form
@@ -134,17 +280,60 @@ function LeadGenCampaignPage() {
       .catch(() => {});
   }, [draftId, draftLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function addField() {
-    if (formFields.length >= 5) return;
-    setFormFields([...formFields, { label: "", type: "text", required: false }]);
-  }
-
-  function removeField(index: number) {
-    setFormFields(formFields.filter((_, i) => i !== index));
-  }
-
   function updateField(index: number, updates: Partial<LandingPageFormField>) {
     setFormFields(formFields.map((f, i) => i === index ? { ...f, ...updates } : f));
+  }
+
+  // Stable IDs for sortable — keyed by insertion order
+  const [fieldIds, setFieldIds] = useState<string[]>(() => formFields.map((_, i) => `field-${i}`));
+  const nextFieldIdRef = useRef(formFields.length);
+
+  // Keep fieldIds in sync when formFields length changes from external sources (draft load)
+  useEffect(() => {
+    if (fieldIds.length !== formFields.length) {
+      const newIds: string[] = [];
+      for (let i = 0; i < formFields.length; i++) {
+        newIds.push(fieldIds[i] || `field-${nextFieldIdRef.current++}`);
+      }
+      setFieldIds(newIds);
+    }
+  }, [formFields.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function addFieldWithId() {
+    if (formFields.length >= 5) return;
+    setFormFields([...formFields, { label: "", type: "text", required: false }]);
+    setFieldIds([...fieldIds, `field-${nextFieldIdRef.current++}`]);
+  }
+
+  function removeFieldWithId(index: number) {
+    setFormFields(formFields.filter((_, i) => i !== index));
+    setFieldIds(fieldIds.filter((_, i) => i !== index));
+  }
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = fieldIds.indexOf(active.id as string);
+    const newIndex = fieldIds.indexOf(over.id as string);
+    setFormFields(arrayMove(formFields, oldIndex, newIndex));
+    setFieldIds(arrayMove(fieldIds, oldIndex, newIndex));
+  }
+
+  function cleanFormFields(fields: LandingPageFormField[]): LandingPageFormField[] {
+    return fields
+      .filter((f) => f.label.trim())
+      .map((f) => {
+        if (f.type === "select") {
+          const cleanOptions = (f.options || []).filter((o) => o.trim());
+          return { ...f, options: cleanOptions.length > 0 ? cleanOptions : undefined };
+        }
+        return { label: f.label, type: f.type, required: f.required };
+      });
   }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -170,7 +359,7 @@ function LeadGenCampaignPage() {
     return {
       title, description, destinationUrl, brandName, brandIndustry,
       brandColor, brandAccentColor, logoUrl, targetAudience, campaignDescForAi,
-      formFields, cpc, cpl, budget, notifPhone, notifEmail, creativeUrls,
+      formFields, cpc, cpl, budget, notifPhone, notifEmail, creativeUrls, template,
     };
   }
 
@@ -202,12 +391,13 @@ function LeadGenCampaignPage() {
           logo_url: logoUrl || null,
           target_audience: targetAudience || undefined,
           campaign_description_for_ai: campaignDescForAi || undefined,
-          form_fields: formFields.filter((f) => f.label.trim()).length > 0
-            ? formFields.filter((f) => f.label.trim())
+          form_fields: cleanFormFields(formFields).length > 0
+            ? cleanFormFields(formFields)
             : undefined,
           notification_phone: notifPhone.replace(/[\s.-]/g, "") || null,
           notification_email: notifEmail || null,
           creative_urls: creativeUrls,
+          template,
           save_as_draft: true,
         };
 
@@ -279,10 +469,11 @@ function LeadGenCampaignPage() {
         logo_url: logoUrl || null,
         target_audience: targetAudience,
         campaign_description_for_ai: campaignDescForAi,
-        form_fields: formFields.filter((f) => f.label.trim()),
+        form_fields: cleanFormFields(formFields),
         notification_phone: notifPhone.replace(/[\s.-]/g, "") || null,
         notification_email: notifEmail || null,
         creative_urls: creativeUrls,
+        template,
         save_as_draft: false,
         ...(editingDraftId ? { existing_campaign_id: editingDraftId } : {}),
       };
@@ -314,7 +505,12 @@ function LeadGenCampaignPage() {
       }
 
       trackEvent.brandCreateCampaign(Number(budget), Number(cpc));
-      router.push("/admin/campaigns");
+      const newCampaignId = data.campaign?.id;
+      if (newCampaignId) {
+        router.push(`/admin/campaigns/${newCampaignId}/preview`);
+      } else {
+        router.push("/admin/campaigns");
+      }
     } catch {
       setError("Erreur de connexion. Verifiez votre internet.");
     } finally {
@@ -451,48 +647,50 @@ function LeadGenCampaignPage() {
       {/* STEP 2: Form Fields */}
       {step === "form" && (
         <div className="glass-card p-6 space-y-4">
-          <h2 className="text-lg font-semibold mb-2">Configuration du formulaire</h2>
-          <p className="text-white/40 text-xs mb-4">Les champs Nom et Telephone sont inclus automatiquement. Ajoutez jusqu&apos;a 5 champs supplementaires.</p>
-
-          <div className="space-y-3">
-            {formFields.map((field, i) => (
-              <div key={i} className="flex items-center gap-3 bg-white/5 p-3 rounded-xl">
-                <input
-                  type="text"
-                  value={field.label}
-                  onChange={(e) => updateField(i, { label: e.target.value })}
-                  maxLength={100}
-                  placeholder="Nom du champ"
-                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary transition"
-                />
-                <select
-                  value={field.type}
-                  onChange={(e) => updateField(i, { type: e.target.value as LandingPageFormField["type"] })}
-                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary transition"
+          {/* Template picker */}
+          <div>
+            <h2 className="text-lg font-semibold mb-2">Modele de landing page</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6">
+              {TEMPLATES.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setTemplate(t.id)}
+                  className={`p-4 rounded-xl text-center transition border ${
+                    template === t.id
+                      ? "bg-purple-500/20 border-purple-500/50 ring-1 ring-purple-500/30"
+                      : "bg-white/5 border-white/10 hover:bg-white/10"
+                  }`}
                 >
-                  <option value="text">Texte</option>
-                  <option value="email">Email</option>
-                  <option value="phone">Telephone</option>
-                  <option value="select">Liste</option>
-                </select>
-                <label className="flex items-center gap-1.5 text-xs text-white/40 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={field.required}
-                    onChange={(e) => updateField(i, { required: e.target.checked })}
-                    className="rounded"
-                  />
-                  Requis
-                </label>
-                <button onClick={() => removeField(i)} className="text-red-400 hover:text-red-300 transition p-1">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  <span className="text-2xl block mb-1">{t.icon}</span>
+                  <p className="text-xs font-semibold">{t.name}</p>
+                  <p className="text-[10px] text-white/30 mt-0.5">{t.description}</p>
                 </button>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
+          <h3 className="text-sm font-semibold mb-1">Champs du formulaire</h3>
+          <p className="text-white/40 text-xs mb-4">Les champs Nom et Telephone sont inclus automatiquement. Ajoutez jusqu&apos;a 5 champs supplementaires.</p>
+
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={fieldIds} strategy={verticalListSortingStrategy}>
+              <div className="space-y-3">
+                {formFields.map((field, i) => (
+                  <SortableFormFieldRow
+                    key={fieldIds[i]}
+                    fieldId={fieldIds[i]}
+                    field={field}
+                    index={i}
+                    onUpdate={updateField}
+                    onRemove={removeFieldWithId}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+
           {formFields.length < 5 && (
-            <button onClick={addField} className="text-sm text-primary hover:text-primary/80 transition font-semibold">
+            <button onClick={addFieldWithId} className="text-sm text-primary hover:text-primary/80 transition font-semibold">
               + Ajouter un champ
             </button>
           )}

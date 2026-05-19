@@ -77,6 +77,8 @@ export interface LandingPageFormField {
   options?: string[]; // for select type
 }
 
+export type LandingPageTemplate = "simple" | "product" | "event" | "app" | "contact";
+
 export interface LandingPage {
   id: string;
   campaign_id: string;
@@ -89,10 +91,13 @@ export interface LandingPage {
   brand_color: string;
   brand_accent_color: string | null;
   logo_url: string | null;
+  hero_image_url: string | null;
   form_fields: LandingPageFormField[];
   notification_phone: string | null;
   notification_email: string | null;
   ai_generation_id: string | null;
+  template: LandingPageTemplate;
+  landing_page_approved: boolean;
   status: LandingPageStatus;
   created_at: string;
   deleted_at: string | null;
