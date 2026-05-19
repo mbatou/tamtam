@@ -277,11 +277,12 @@ BEGIN
   END LOOP;
 END $$;
 ALTER TABLE gamification_caps ADD CONSTRAINT gamification_caps_cap_type_check
-  CHECK (cap_type IN ('daily_per_echo', 'monthly_platform', 'min_withdrawal'));
+  CHECK (cap_type IN ('daily_per_echo', 'monthly_platform'));
 
 INSERT INTO gamification_caps (cap_type, max_amount_fcfa)
 VALUES
   ('daily_per_echo', 500),
-  ('monthly_platform', 50000),
-  ('min_withdrawal', 500)
+  ('monthly_platform', 50000)
 ON CONFLICT (cap_type) DO NOTHING;
+
+-- min_withdrawal is managed via platform_settings.min_payout_fcfa (superadmin settings page)
