@@ -263,6 +263,11 @@ CREATE TABLE IF NOT EXISTS gamification_caps (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- If table already exists, widen the CHECK constraint to include 'min_withdrawal'
+ALTER TABLE gamification_caps DROP CONSTRAINT IF EXISTS gamification_caps_cap_type_check;
+ALTER TABLE gamification_caps ADD CONSTRAINT gamification_caps_cap_type_check
+  CHECK (cap_type IN ('daily_per_echo', 'monthly_platform', 'min_withdrawal'));
+
 INSERT INTO gamification_caps (cap_type, max_amount_fcfa)
 VALUES
   ('daily_per_echo', 500),
