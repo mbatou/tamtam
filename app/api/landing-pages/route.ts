@@ -218,10 +218,13 @@ export async function POST(request: NextRequest) {
       cta_text: aiResult.result.cta_text,
       brand_color: data.brand_color,
       logo_url: data.logo_url || null,
+      hero_image_url: data.hero_image_url || null,
       form_fields: data.form_fields,
       notification_phone: data.notification_phone || null,
       notification_email: data.notification_email || null,
       ai_generation_id: aiResult.cacheId,
+      template: data.template || "simple",
+      landing_page_approved: false,
       status: "active",
     })
     .select()
@@ -313,6 +316,79 @@ export async function GET() {
   }
 
   return NextResponse.json(data);
+}
+
+// ---------------------------------------------------------------------------
+// PATCH /api/landing-pages — Update landing page content (inline editor)
+// ---------------------------------------------------------------------------
+
+export async function PATCH(request: NextRequest) {
+  const authClient = createClient();
+  const { data: { session } } = await authClient.auth.getSession();
+
+  if (!session) {
+    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const { landing_page_id, ...updates } = body;
+
+  if (!landing_page_id || typeof landing_page_id !== "string") {
+    return NextResponse.json({ error: "landing_page_id requis" }, { status: 400 });
+  }
+
+  const supabase = createServiceClient();
+  const brandId = await getEffectiveBrandId(supabase, session.user.id);
+
+  const { data: existing } = await supabase
+    .from("landing_pages")
+    .select("id, batteur_id")
+    .eq("id", landing_page_id)
+    .eq("batteur_id", brandId)
+    .is("deleted_at", null)
+    .single();
+
+  if (!existing) {
+    return NextResponse.json({ error: "Landing page introuvable" }, { status: 404 });
+  }
+
+  const allowedFields: Record<string, boolean> = {
+    headline: true,
+    subheadline: true,
+    description: true,
+    cta_text: true,
+    brand_color: true,
+    brand_accent_color: true,
+    logo_url: true,
+    hero_image_url: true,
+    form_fields: true,
+    template: true,
+    landing_page_approved: true,
+  };
+
+  const safeUpdates: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(updates)) {
+    if (allowedFields[key]) {
+      safeUpdates[key] = value;
+    }
+  }
+
+  if (Object.keys(safeUpdates).length === 0) {
+    return NextResponse.json({ error: "Aucune modification" }, { status: 400 });
+  }
+
+  const { data: updated, error: updateErr } = await supabase
+    .from("landing_pages")
+    .update(safeUpdates)
+    .eq("id", landing_page_id)
+    .select()
+    .single();
+
+  if (updateErr) {
+    return NextResponse.json({ error: updateErr.message }, { status: 500 });
+  }
+
+  return NextResponse.json(updated);
 }
 
 // ---------------------------------------------------------------------------

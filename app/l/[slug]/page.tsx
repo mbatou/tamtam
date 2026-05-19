@@ -91,6 +91,18 @@ export default async function LandingPage({ params, searchParams }: PageProps) {
             </div>
           )}
 
+          {/* Hero image */}
+          {page.hero_image_url && (
+            <div className="mb-6 rounded-2xl overflow-hidden border border-white/10">
+              <img
+                src={page.hero_image_url}
+                alt=""
+                className="w-full h-48 sm:h-56 object-cover"
+                loading="eager"
+              />
+            </div>
+          )}
+
           {/* Main Card */}
           <div
             className="rounded-3xl p-6 sm:p-8 shadow-2xl border"
