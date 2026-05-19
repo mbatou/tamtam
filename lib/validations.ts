@@ -150,6 +150,32 @@ export const createLeadCampaignSchema = z.object({
   { message: "Au moins un moyen de notification requis (telephone ou email)", path: ["notification_email"] }
 );
 
+export const createLeadCampaignDraftSchema = z.object({
+  title: z.string().min(3, "Titre trop court").max(200).trim(),
+  description: z.string().max(1000).optional().nullable(),
+  destination_url: z.string().url("URL invalide").optional().or(z.literal("")),
+  cpc: z.coerce.number().int().min(10).max(50).optional(),
+  cost_per_lead_fcfa: z.coerce.number().int().min(200).max(5000).optional(),
+  budget: z.coerce.number().int().min(1000).max(10000000).optional(),
+  creative_urls: z.array(z.string().url()).optional(),
+  starts_at: z.string().optional().nullable(),
+  ends_at: z.string().optional().nullable(),
+  target_cities: z.array(z.string()).optional(),
+  brand_name: z.string().max(100).optional().or(z.literal("")),
+  brand_industry: z.enum(BRAND_INDUSTRIES).optional(),
+  brand_color: z.string().optional().or(z.literal("")),
+  brand_accent_color: z.string().optional().nullable(),
+  logo_url: z.string().optional().nullable().or(z.literal("")),
+  target_audience: z.string().max(500).optional().or(z.literal("")),
+  campaign_description_for_ai: z.string().max(1000).optional().or(z.literal("")),
+  form_fields: z.array(landingPageFormFieldSchema).max(5).optional(),
+  notification_phone: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() ? v.replace(/[\s.-]/g, "") : v),
+    z.string().regex(SENEGALESE_PHONE_REGEX, "Numero senegalais invalide").optional().nullable()
+  ),
+  notification_email: z.string().email("Email invalide").optional().nullable(),
+});
+
 export const submitLeadSchema = z.object({
   landing_page_id: z.string().uuid(),
   name: z.string().min(2, "Nom requis").max(200).trim(),

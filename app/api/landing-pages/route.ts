@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { createLeadCampaignSchema } from "@/lib/validations";
+import { createLeadCampaignSchema, createLeadCampaignDraftSchema } from "@/lib/validations";
 import { generateLandingPageContent } from "@/lib/ai/landing-page-generator";
 import { getEffectiveBrandId } from "@/lib/brand-utils";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
@@ -25,6 +25,50 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
+  const isDraft = body.save_as_draft === true;
+
+  const supabase = createServiceClient();
+  const brandId = await getEffectiveBrandId(supabase, session.user.id);
+
+  // Draft mode: relaxed validation, skip AI generation and landing page
+  if (isDraft) {
+    const parsed = createLeadCampaignDraftSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Donnees invalides", details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const data = parsed.data;
+    const { data: campaign, error: campaignError } = await supabase
+      .from("campaigns")
+      .insert({
+        batteur_id: brandId,
+        title: data.title,
+        description: data.description || null,
+        destination_url: data.destination_url || "",
+        creative_urls: data.creative_urls || [],
+        cpc: data.cpc || 25,
+        cost_per_lead_fcfa: data.cost_per_lead_fcfa || null,
+        budget: data.budget || 15000,
+        status: "draft",
+        objective: "lead_generation",
+        starts_at: data.starts_at || null,
+        ends_at: data.ends_at || null,
+        target_cities: data.target_cities?.length ? data.target_cities : null,
+      })
+      .select()
+      .single();
+
+    if (campaignError) {
+      return NextResponse.json({ error: campaignError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ campaign, landing_page: null }, { status: 201 });
+  }
+
+  // Active mode: full validation
   const parsed = createLeadCampaignSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
@@ -34,97 +78,15 @@ export async function POST(request: NextRequest) {
   }
 
   const data = parsed.data;
-  const supabase = createServiceClient();
-  const brandId = await getEffectiveBrandId(supabase, session.user.id);
 
   Sentry.setContext("ai_generation", {
     brand_id: brandId,
     budget: data.budget,
     setup_fee: LEAD_GEN_SETUP_FEE_FCFA,
-    save_as_draft: data.save_as_draft || false,
   });
 
   // Total cost = budget + setup fee
   const totalCost = data.budget + LEAD_GEN_SETUP_FEE_FCFA;
-
-  // Draft mode: skip balance check
-  if (data.save_as_draft) {
-    // Generate AI content (even for drafts, so they can preview)
-    const aiResult = await generateLandingPageContent(
-      {
-        brand_name: data.brand_name,
-        brand_industry: data.brand_industry,
-        campaign_description: data.campaign_description_for_ai,
-        target_audience: data.target_audience,
-        brand_color: data.brand_color,
-        form_field_labels: data.form_fields.map((f) => f.label),
-      },
-      brandId
-    );
-
-    // Create campaign
-    const { data: campaign, error: campaignError } = await supabase
-      .from("campaigns")
-      .insert({
-        batteur_id: brandId,
-        title: data.title,
-        description: data.description || null,
-        destination_url: data.destination_url,
-        creative_urls: data.creative_urls || [],
-        cpc: data.cpc,
-        cost_per_lead_fcfa: data.cost_per_lead_fcfa,
-        budget: data.budget,
-        status: "draft",
-        objective: "lead_generation",
-        starts_at: data.starts_at || null,
-        ends_at: data.ends_at || null,
-        target_cities: data.target_cities?.length ? data.target_cities : null,
-        setup_fee_amount_fcfa: LEAD_GEN_SETUP_FEE_FCFA,
-      })
-      .select()
-      .single();
-
-    if (campaignError) {
-      return NextResponse.json({ error: campaignError.message }, { status: 500 });
-    }
-
-    // Create landing page
-    const slug = generateSlug(data.brand_name);
-    const { data: landingPage, error: lpError } = await supabase
-      .from("landing_pages")
-      .insert({
-        campaign_id: campaign.id,
-        batteur_id: brandId,
-        slug,
-        headline: aiResult.result.headline,
-        subheadline: aiResult.result.subheadline,
-        description: aiResult.result.description,
-        cta_text: aiResult.result.cta_text,
-        brand_color: data.brand_color,
-        logo_url: data.logo_url || null,
-        form_fields: data.form_fields,
-        notification_phone: data.notification_phone || null,
-        notification_email: data.notification_email || null,
-        ai_generation_id: aiResult.cacheId,
-        status: "draft",
-      })
-      .select()
-      .single();
-
-    if (lpError) {
-      // Cleanup campaign
-      await supabase.from("campaigns").delete().eq("id", campaign.id);
-      return NextResponse.json({ error: lpError.message }, { status: 500 });
-    }
-
-    // Link campaign to landing page
-    await supabase
-      .from("campaigns")
-      .update({ landing_page_id: landingPage.id })
-      .eq("id", campaign.id);
-
-    return NextResponse.json({ campaign, landing_page: landingPage }, { status: 201 });
-  }
 
   // Active mode: check balance covers budget + setup fee
   const { data: batteur } = await supabase
@@ -163,37 +125,83 @@ export async function POST(request: NextRequest) {
     brandId
   );
 
-  // Create campaign
-  const { data: campaign, error: campaignError } = await supabase
-    .from("campaigns")
-    .insert({
-      batteur_id: brandId,
-      title: data.title,
-      description: data.description || null,
-      destination_url: data.destination_url,
-      creative_urls: data.creative_urls || [],
-      cpc: data.cpc,
-      cost_per_lead_fcfa: data.cost_per_lead_fcfa,
-      budget: data.budget,
-      status: "draft",
-      moderation_status: "pending",
-      objective: "lead_generation",
-      starts_at: data.starts_at || null,
-      ends_at: data.ends_at || null,
-      target_cities: data.target_cities?.length ? data.target_cities : null,
-      setup_fee_paid: true,
-      setup_fee_amount_fcfa: LEAD_GEN_SETUP_FEE_FCFA,
-    })
-    .select()
-    .single();
+  // Create or update campaign (if launching from a draft)
+  const existingCampaignId = body.existing_campaign_id;
+  let campaign: { id: string; [key: string]: unknown };
 
-  if (campaignError) {
-    // Rollback: restore balance
-    await supabase
-      .from("users")
-      .update({ balance: batteur.balance })
-      .eq("id", brandId);
-    return NextResponse.json({ error: campaignError.message }, { status: 500 });
+  if (existingCampaignId) {
+    // Launching an existing draft — update it
+    const { data: existing } = await supabase
+      .from("campaigns")
+      .select("id, batteur_id, status")
+      .eq("id", existingCampaignId)
+      .eq("batteur_id", brandId)
+      .eq("status", "draft")
+      .single();
+
+    if (!existing) {
+      await supabase.from("users").update({ balance: batteur.balance }).eq("id", brandId);
+      return NextResponse.json({ error: "Brouillon introuvable" }, { status: 404 });
+    }
+
+    const { data: updated, error: updateErr } = await supabase
+      .from("campaigns")
+      .update({
+        title: data.title,
+        description: data.description || null,
+        destination_url: data.destination_url,
+        creative_urls: data.creative_urls || [],
+        cpc: data.cpc,
+        cost_per_lead_fcfa: data.cost_per_lead_fcfa,
+        budget: data.budget,
+        moderation_status: "pending",
+        starts_at: data.starts_at || null,
+        ends_at: data.ends_at || null,
+        target_cities: data.target_cities?.length ? data.target_cities : null,
+        setup_fee_paid: true,
+        setup_fee_amount_fcfa: LEAD_GEN_SETUP_FEE_FCFA,
+      })
+      .eq("id", existingCampaignId)
+      .select()
+      .single();
+
+    if (updateErr) {
+      await supabase.from("users").update({ balance: batteur.balance }).eq("id", brandId);
+      return NextResponse.json({ error: updateErr.message }, { status: 500 });
+    }
+
+    campaign = updated!;
+  } else {
+    // New campaign
+    const { data: newCampaign, error: campaignError } = await supabase
+      .from("campaigns")
+      .insert({
+        batteur_id: brandId,
+        title: data.title,
+        description: data.description || null,
+        destination_url: data.destination_url,
+        creative_urls: data.creative_urls || [],
+        cpc: data.cpc,
+        cost_per_lead_fcfa: data.cost_per_lead_fcfa,
+        budget: data.budget,
+        status: "draft",
+        moderation_status: "pending",
+        objective: "lead_generation",
+        starts_at: data.starts_at || null,
+        ends_at: data.ends_at || null,
+        target_cities: data.target_cities?.length ? data.target_cities : null,
+        setup_fee_paid: true,
+        setup_fee_amount_fcfa: LEAD_GEN_SETUP_FEE_FCFA,
+      })
+      .select()
+      .single();
+
+    if (campaignError) {
+      await supabase.from("users").update({ balance: batteur.balance }).eq("id", brandId);
+      return NextResponse.json({ error: campaignError.message }, { status: 500 });
+    }
+
+    campaign = newCampaign!;
   }
 
   // Create landing page
@@ -220,8 +228,10 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (lpError) {
-    // Rollback: delete campaign, restore balance
-    await supabase.from("campaigns").delete().eq("id", campaign.id);
+    // Rollback: restore balance; only delete campaign if we created it
+    if (!existingCampaignId) {
+      await supabase.from("campaigns").delete().eq("id", campaign.id);
+    }
     await supabase.from("users").update({ balance: batteur.balance }).eq("id", brandId);
     return NextResponse.json({ error: lpError.message }, { status: 500 });
   }

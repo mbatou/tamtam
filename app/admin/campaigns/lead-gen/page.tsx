@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useRef, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { BRAND_INDUSTRIES } from "@/lib/validations";
 import { LEAD_GEN_SETUP_FEE_FCFA, LEAD_GEN_MIN_BUDGET_FCFA } from "@/lib/constants";
 import { formatFCFA } from "@/lib/utils";
@@ -29,11 +29,25 @@ const INDUSTRY_LABELS: Record<string, string> = {
   autre: "Autre",
 };
 
-export default function LeadGenCampaignPage() {
+const DRAFT_STORAGE_KEY = "lead_gen_draft_";
+
+export default function LeadGenCampaignPageWrapper() {
+  return (
+    <Suspense fallback={<div className="p-6"><div className="skeleton h-8 w-48 rounded-xl" /></div>}>
+      <LeadGenCampaignPage />
+    </Suspense>
+  );
+}
+
+function LeadGenCampaignPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const draftId = searchParams.get("draft");
+  const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
   const [step, setStep] = useState<Step>("brand");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [draftLoaded, setDraftLoaded] = useState(false);
 
   // Brand info
   const [title, setTitle] = useState("");
@@ -69,6 +83,57 @@ export default function LeadGenCampaignPage() {
   // Save as draft flag
   const [asDraft, setAsDraft] = useState(false);
 
+  // Load draft data from localStorage + DB when ?draft=<id> is present
+  useEffect(() => {
+    if (!draftId || draftLoaded) return;
+    setDraftLoaded(true);
+    setEditingDraftId(draftId);
+
+    // Load from localStorage
+    try {
+      const saved = localStorage.getItem(DRAFT_STORAGE_KEY + draftId);
+      if (saved) {
+        const d = JSON.parse(saved);
+        if (d.title) setTitle(d.title);
+        if (d.description) setDescription(d.description);
+        if (d.destinationUrl) setDestinationUrl(d.destinationUrl);
+        if (d.brandName) setBrandName(d.brandName);
+        if (d.brandIndustry) setBrandIndustry(d.brandIndustry);
+        if (d.brandColor) setBrandColor(d.brandColor);
+        if (d.brandAccentColor) setBrandAccentColor(d.brandAccentColor);
+        if (d.logoUrl) setLogoUrl(d.logoUrl);
+        if (d.targetAudience) setTargetAudience(d.targetAudience);
+        if (d.campaignDescForAi) setCampaignDescForAi(d.campaignDescForAi);
+        if (d.formFields) setFormFields(d.formFields);
+        if (d.cpc) setCpc(d.cpc);
+        if (d.cpl) setCpl(d.cpl);
+        if (d.budget) setBudget(d.budget);
+        if (d.notifPhone) setNotifPhone(d.notifPhone);
+        if (d.notifEmail) setNotifEmail(d.notifEmail);
+        if (d.creativeUrls) setCreativeUrls(d.creativeUrls);
+      }
+    } catch {
+      // localStorage unavailable or corrupted — continue with empty form
+    }
+
+    // Also load campaign-level fields from DB
+    fetch(`/api/campaigns?campaign_id=${draftId}`)
+      .then((r) => r.json())
+      .then((campaigns) => {
+        const c = Array.isArray(campaigns) ? campaigns.find((x: { id: string }) => x.id === draftId) : null;
+        if (c) {
+          if (c.title && !title) setTitle(c.title);
+          if (c.cpc) setCpc(String(c.cpc));
+          if (c.budget) setBudget(String(c.budget));
+          if (c.cost_per_lead_fcfa) setCpl(String(c.cost_per_lead_fcfa));
+          if (c.destination_url) setDestinationUrl(c.destination_url);
+          if (c.description) setDescription(c.description);
+          if (c.creative_urls?.length) setCreativeUrls(c.creative_urls);
+        }
+      })
+      .catch(() => {});
+  }, [draftId, draftLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
   function addField() {
     if (formFields.length >= 5) return;
     setFormFields([...formFields, { label: "", type: "text", required: false }]);
@@ -101,12 +166,105 @@ export default function LeadGenCampaignPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
+  function getFormState() {
+    return {
+      title, description, destinationUrl, brandName, brandIndustry,
+      brandColor, brandAccentColor, logoUrl, targetAudience, campaignDescForAi,
+      formFields, cpc, cpl, budget, notifPhone, notifEmail, creativeUrls,
+    };
+  }
+
   async function handleSubmit(draft = false) {
     setSubmitting(true);
     setError(null);
     setAsDraft(draft);
 
     try {
+      if (draft) {
+        // Draft save: minimal validation, save to DB + localStorage
+        if (!title.trim()) {
+          setError("Le titre est requis pour sauvegarder un brouillon.");
+          setSubmitting(false);
+          return;
+        }
+
+        const payload = {
+          title,
+          description: description || null,
+          destination_url: destinationUrl || undefined,
+          cpc: cpc ? Number(cpc) : undefined,
+          cost_per_lead_fcfa: cpl ? Number(cpl) : undefined,
+          budget: budget ? Number(budget) : undefined,
+          brand_name: brandName || undefined,
+          brand_industry: brandIndustry || undefined,
+          brand_color: brandColor || undefined,
+          brand_accent_color: brandAccentColor || undefined,
+          logo_url: logoUrl || null,
+          target_audience: targetAudience || undefined,
+          campaign_description_for_ai: campaignDescForAi || undefined,
+          form_fields: formFields.filter((f) => f.label.trim()).length > 0
+            ? formFields.filter((f) => f.label.trim())
+            : undefined,
+          notification_phone: notifPhone.replace(/[\s.-]/g, "") || null,
+          notification_email: notifEmail || null,
+          creative_urls: creativeUrls,
+          save_as_draft: true,
+        };
+
+        let res: Response;
+        if (editingDraftId) {
+          // Update existing draft
+          res = await fetch("/api/campaigns", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: editingDraftId,
+              title,
+              description: description || null,
+              destination_url: destinationUrl || undefined,
+              cpc: cpc ? Number(cpc) : undefined,
+              budget: budget ? Number(budget) : undefined,
+              creative_urls: creativeUrls,
+            }),
+          });
+        } else {
+          res = await fetch("/api/landing-pages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+        }
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          let errMsg = data.error || "Erreur lors de la sauvegarde";
+          if (data.details) {
+            const fields = Object.entries(data.details)
+              .map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`)
+              .join("; ");
+            if (fields) errMsg += ` (${fields})`;
+          }
+          setError(errMsg);
+          setSubmitting(false);
+          return;
+        }
+
+        // Save full form state to localStorage
+        const campaignId = editingDraftId || data.campaign?.id;
+        if (campaignId) {
+          try {
+            localStorage.setItem(DRAFT_STORAGE_KEY + campaignId, JSON.stringify(getFormState()));
+          } catch {
+            // localStorage full or unavailable
+          }
+        }
+
+        router.push("/admin/campaigns");
+        return;
+      }
+
+      // Launch mode: full validation on the server
       const payload = {
         title,
         description: description || null,
@@ -125,7 +283,8 @@ export default function LeadGenCampaignPage() {
         notification_phone: notifPhone.replace(/[\s.-]/g, "") || null,
         notification_email: notifEmail || null,
         creative_urls: creativeUrls,
-        save_as_draft: draft,
+        save_as_draft: false,
+        ...(editingDraftId ? { existing_campaign_id: editingDraftId } : {}),
       };
 
       const res = await fetch("/api/landing-pages", {
@@ -149,10 +308,12 @@ export default function LeadGenCampaignPage() {
         return;
       }
 
-      if (!draft) {
-        trackEvent.brandCreateCampaign(Number(budget), Number(cpc));
+      // Clean up localStorage draft
+      if (editingDraftId) {
+        try { localStorage.removeItem(DRAFT_STORAGE_KEY + editingDraftId); } catch {}
       }
 
+      trackEvent.brandCreateCampaign(Number(budget), Number(cpc));
       router.push("/admin/campaigns");
     } catch {
       setError("Erreur de connexion. Verifiez votre internet.");
