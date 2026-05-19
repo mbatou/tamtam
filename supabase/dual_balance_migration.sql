@@ -263,8 +263,19 @@ CREATE TABLE IF NOT EXISTS gamification_caps (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- If table already exists, widen the CHECK constraint to include 'min_withdrawal'
-ALTER TABLE gamification_caps DROP CONSTRAINT IF EXISTS gamification_caps_cap_type_check;
+-- If table already exists, drop ALL check constraints and re-add with min_withdrawal
+DO $$
+DECLARE _cname TEXT;
+BEGIN
+  FOR _cname IN
+    SELECT con.conname FROM pg_constraint con
+    JOIN pg_class rel ON rel.oid = con.conrelid
+    JOIN pg_namespace ns ON ns.oid = rel.relnamespace
+    WHERE rel.relname = 'gamification_caps' AND con.contype = 'c' AND ns.nspname = 'public'
+  LOOP
+    EXECUTE format('ALTER TABLE public.gamification_caps DROP CONSTRAINT %I', _cname);
+  END LOOP;
+END $$;
 ALTER TABLE gamification_caps ADD CONSTRAINT gamification_caps_cap_type_check
   CHECK (cap_type IN ('daily_per_echo', 'monthly_platform', 'min_withdrawal'));
 
