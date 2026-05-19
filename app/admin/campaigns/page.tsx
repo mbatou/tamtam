@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { formatFCFA, timeAgo } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
@@ -17,6 +18,7 @@ type View = "list" | "detail" | "objective" | "form";
 
 export default function AdminCampaignsPage() {
   const { t } = useTranslation();
+  const router = useRouter();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>("list");
@@ -390,7 +392,10 @@ export default function AdminCampaignsPage() {
   }
 
   function getStatusLabel(campaign: Campaign) {
-    if (campaign.status === "draft" && campaign.moderation_status === "pending") return t("admin.campaigns.pendingValidation");
+    if (campaign.status === "draft" && campaign.moderation_status === "pending" &&
+      !(campaign.objective === "lead_generation" && !campaign.landing_page_id)) {
+      return t("admin.campaigns.pendingValidation");
+    }
     const map: Record<string, string> = {
       active: t("common.active"), paused: t("common.paused"), completed: t("common.finished"), draft: t("admin.campaigns.draft"), rejected: t("common.rejected"),
     };
@@ -416,8 +421,9 @@ export default function AdminCampaignsPage() {
     const budgetConsumed = c.spent >= c.budget;
     const isActive = c.status === "active";
     const isPaused = c.status === "paused";
-    const isDraft = c.status === "draft" && c.moderation_status !== "pending";
-    const isPendingReview = c.status === "draft" && c.moderation_status === "pending";
+    const isLeadGenDraftWithoutLP = c.objective === "lead_generation" && !c.landing_page_id;
+    const isDraft = c.status === "draft" && (c.moderation_status !== "pending" || isLeadGenDraftWithoutLP);
+    const isPendingReview = c.status === "draft" && c.moderation_status === "pending" && !isLeadGenDraftWithoutLP;
     const isEnded = c.status === "completed" || c.status === "rejected";
 
     return (
@@ -434,9 +440,20 @@ export default function AdminCampaignsPage() {
               <p className="text-sm font-semibold text-yellow-400">{t("admin.campaigns.draft")}</p>
               <p className="text-xs text-white/40">{t("admin.campaigns.draftNotice")}</p>
             </div>
-            <button onClick={() => handleSubmitDraft(c.id)} disabled={actionLoading !== null} className="px-5 py-2.5 rounded-xl bg-accent text-dark text-sm font-bold hover:bg-accent/90 transition disabled:opacity-40">
-              {actionLoading === "submitDraft" ? "..." : t("admin.campaigns.launchDraft")}
-            </button>
+            <div className="flex gap-2">
+              {c.objective === "lead_generation" && (
+                <button onClick={() => router.push(`/admin/campaigns/lead-gen?draft=${c.id}`)} className="px-5 py-2.5 rounded-xl bg-primary/10 text-primary text-sm font-bold hover:bg-primary/20 transition">
+                  {t("common.edit")}
+                </button>
+              )}
+              <button
+                onClick={() => c.objective === "lead_generation" ? router.push(`/admin/campaigns/lead-gen?draft=${c.id}`) : handleSubmitDraft(c.id)}
+                disabled={actionLoading !== null}
+                className="px-5 py-2.5 rounded-xl bg-accent text-dark text-sm font-bold hover:bg-accent/90 transition disabled:opacity-40"
+              >
+                {actionLoading === "submitDraft" ? "..." : t("admin.campaigns.launchDraft")}
+              </button>
+            </div>
           </div>
         )}
 
@@ -445,7 +462,7 @@ export default function AdminCampaignsPage() {
           <div>
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-2xl font-bold">{c.title}</h1>
-              <span className={`badge-${c.status === "draft" && c.moderation_status === "pending" ? "pending" : c.status}`}>{getStatusLabel(c)}</span>
+              <span className={`badge-${c.status === "draft" && c.moderation_status === "pending" && !isLeadGenDraftWithoutLP ? "pending" : c.status}`}>{getStatusLabel(c)}</span>
               <span className={`text-xs px-2 py-0.5 rounded-full ${
                 (c.objective || "traffic") === "awareness"
                   ? "bg-blue-500/20 text-blue-300"
@@ -470,7 +487,11 @@ export default function AdminCampaignsPage() {
 
           <div className="flex flex-wrap gap-2">
             {isDraft && (
-              <button onClick={() => handleSubmitDraft(c.id)} disabled={actionLoading !== null} className="px-4 py-2 rounded-xl bg-accent/10 text-accent text-sm font-semibold hover:bg-accent/20 transition disabled:opacity-40">
+              <button
+                onClick={() => c.objective === "lead_generation" ? router.push(`/admin/campaigns/lead-gen?draft=${c.id}`) : handleSubmitDraft(c.id)}
+                disabled={actionLoading !== null}
+                className="px-4 py-2 rounded-xl bg-accent/10 text-accent text-sm font-semibold hover:bg-accent/20 transition disabled:opacity-40"
+              >
                 {actionLoading === "submitDraft" ? "..." : t("admin.campaigns.launchDraft")}
               </button>
             )}
@@ -490,7 +511,10 @@ export default function AdminCampaignsPage() {
               </button>
             )}
             {!isEnded && (
-              <button onClick={() => openEditForm(c)} className="px-4 py-2 rounded-xl bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/20 transition">
+              <button
+                onClick={() => c.objective === "lead_generation" ? router.push(`/admin/campaigns/lead-gen?draft=${c.id}`) : openEditForm(c)}
+                className="px-4 py-2 rounded-xl bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/20 transition"
+              >
                 {t("common.edit")}
               </button>
             )}
@@ -1638,11 +1662,13 @@ export default function AdminCampaignsPage() {
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                         (campaign.objective || "traffic") === "awareness"
                           ? "bg-blue-500/20 text-blue-300"
-                          : "bg-teal-500/20 text-teal-300"
+                          : (campaign.objective || "traffic") === "lead_generation"
+                            ? "bg-purple-500/20 text-purple-300"
+                            : "bg-teal-500/20 text-teal-300"
                       }`}>
-                        {(campaign.objective || "traffic") === "awareness" ? "Notoriété" : "Trafic"}
+                        {(campaign.objective || "traffic") === "awareness" ? "Notoriété" : (campaign.objective || "traffic") === "lead_generation" ? "Lead Gen" : "Trafic"}
                       </span>
-                      <span className={`badge-${campaign.status === "draft" && campaign.moderation_status === "pending" ? "pending" : campaign.status} shrink-0`}>{getStatusLabel(campaign)}</span>
+                      <span className={`badge-${campaign.status === "draft" && campaign.moderation_status === "pending" && !(campaign.objective === "lead_generation" && !campaign.landing_page_id) ? "pending" : campaign.status} shrink-0`}>{getStatusLabel(campaign)}</span>
                     </div>
                   </div>
 
@@ -1677,16 +1703,30 @@ export default function AdminCampaignsPage() {
                 </div>
 
                 {/* Draft actions */}
-                {campaign.status === "draft" && campaign.moderation_status !== "pending" && (
+                {campaign.status === "draft" && (campaign.moderation_status !== "pending" || (campaign.objective === "lead_generation" && !campaign.landing_page_id)) && (
                   <div className="flex gap-2 mt-2">
                     <button
-                      onClick={(e) => { e.stopPropagation(); openEditForm(campaign); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (campaign.objective === "lead_generation") {
+                          router.push(`/admin/campaigns/lead-gen?draft=${campaign.id}`);
+                        } else {
+                          openEditForm(campaign);
+                        }
+                      }}
                       className="flex-1 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-bold hover:bg-primary/20 transition"
                     >
                       {t("common.edit")}
                     </button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleSubmitDraft(campaign.id); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (campaign.objective === "lead_generation") {
+                          router.push(`/admin/campaigns/lead-gen?draft=${campaign.id}`);
+                        } else {
+                          handleSubmitDraft(campaign.id);
+                        }
+                      }}
                       disabled={actionLoading !== null}
                       className="flex-1 py-2 rounded-xl bg-accent/10 border border-accent/20 text-accent text-xs font-bold hover:bg-accent/20 transition disabled:opacity-40"
                     >

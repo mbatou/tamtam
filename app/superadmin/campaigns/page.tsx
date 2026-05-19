@@ -278,10 +278,14 @@ function CampaignModerationPageContent() {
     setCreating(false);
   }
 
-  const pendingCount = campaigns.filter((c) => (c.moderation_status || "pending") === "pending").length;
+  const isReallyPending = (c: Campaign) =>
+    (c.moderation_status || "pending") === "pending" &&
+    !(c.objective === "lead_generation" && !c.landing_page_id);
+
+  const pendingCount = campaigns.filter(isReallyPending).length;
   const filtered = campaigns.filter((c) => {
     const ms = c.moderation_status || "pending";
-    if (filter === "pending") return ms === "pending";
+    if (filter === "pending") return isReallyPending(c);
     if (filter === "approved") return ms === "approved";
     if (filter === "rejected") return ms === "rejected";
     return true;
