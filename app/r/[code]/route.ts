@@ -6,6 +6,7 @@ import { validateClick } from "@/lib/click-validator";
 import * as Sentry from "@sentry/nextjs";
 import { processGamification } from "@/lib/gamification";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
+import { unlockCampaignEarnings } from "@/lib/unlock-earnings";
 import { generateShortCode } from "@/lib/utils";
 
 async function updateChallengeParticipation(supabase: ReturnType<typeof getSupabase>, echoId: string) {
@@ -166,6 +167,8 @@ export async function GET(
         .eq("id", campaign.id)
         .eq("status", "active");
 
+      unlockCampaignEarnings(campaign.id, campaign.title || campaign.id).catch(console.error);
+
       // Refund remaining balance to brand (if any)
       if (preRemaining > 0 && campaign.batteur_id) {
         const { data: existingRefund } = await supabase
@@ -237,6 +240,48 @@ export async function GET(
         .order("created_at", { ascending: false })
         .limit(1);
     } else {
+      // Upsert pending_earnings record for this echo+campaign
+      const campaignEnd = campaign.ends_at ? new Date(campaign.ends_at) : null;
+      const thirtyDaysFromNow = new Date();
+      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+      const unlockDate = (campaignEnd && campaignEnd <= thirtyDaysFromNow)
+        ? campaignEnd.toISOString().split("T")[0]
+        : thirtyDaysFromNow.toISOString().split("T")[0];
+
+      (async () => {
+        try {
+          const { data: existing } = await supabase
+            .from("pending_earnings")
+            .select("id, amount_fcfa, click_count")
+            .eq("echo_id", link.echo_id)
+            .eq("campaign_id", campaign.id)
+            .eq("status", "pending")
+            .maybeSingle();
+
+          if (existing) {
+            await supabase
+              .from("pending_earnings")
+              .update({
+                amount_fcfa: existing.amount_fcfa + echoEarnings,
+                click_count: existing.click_count + 1,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", existing.id);
+          } else {
+            await supabase
+              .from("pending_earnings")
+              .insert({
+                echo_id: link.echo_id,
+                campaign_id: campaign.id,
+                campaign_name: campaign.title,
+                amount_fcfa: echoEarnings,
+                click_count: 1,
+                unlock_date: unlockDate,
+              });
+          }
+        } catch (e) { console.error(e); }
+      })();
+
       // Log click earning transaction + update click counter + gamification (async, don't block redirect)
       Promise.all([
         logWalletTransaction({
@@ -267,6 +312,8 @@ export async function GET(
               .update({ status: "completed" })
               .eq("id", campaign.id)
               .eq("status", "active");
+
+            unlockCampaignEarnings(campaign.id, campaign.title || campaign.id).catch(console.error);
 
             // Refund the small remaining balance (idempotent)
             const { data: existingRefund } = await supabase

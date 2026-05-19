@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { sendNewCampaignNotification, sendCampaignLiveToBrand } from "@/lib/email";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
+import { unlockCampaignEarnings } from "@/lib/unlock-earnings";
 
 export const dynamic = "force-dynamic";
 
@@ -419,6 +420,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `Cannot pause — status: ${campaign.status}` }, { status: 400 });
       }
       updates.status = "paused";
+      unlockCampaignEarnings(campaign_id, campaign.title || campaign_id).catch(console.error);
       break;
     }
     case "resume": {
@@ -439,6 +441,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `Cannot stop — status: ${campaign.status}` }, { status: 400 });
       }
       updates.status = "completed";
+      unlockCampaignEarnings(campaign_id, campaign.title || campaign_id).catch(console.error);
 
       const stopRemaining = campaign.budget - (campaign.spent || 0);
 

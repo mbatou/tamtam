@@ -161,7 +161,8 @@ export default function EchoDashboard() {
     (sum, l) => sum + Math.floor(l.click_count * (l.campaigns?.cpc || 0) * ECHO_SHARE_PERCENT / 100), 0
   );
   const hasActiveCampaigns = availableCampaigns.length > 0 || activeLinks.some((l) => l.campaigns?.status === "active");
-  const balance = user?.balance || 0;
+  const balance = user?.available_balance ?? user?.balance ?? 0;
+  const pendingBalance = user?.pending_balance ?? 0;
   const totalEarned = user?.total_earned || 0;
 
   return (
@@ -221,7 +222,12 @@ export default function EchoDashboard() {
           <div>
             <p className="text-[10px] text-white/40 font-semibold uppercase tracking-wider mb-0.5">{t("echo.dashboard.availableBalance")}</p>
             <p className="text-3xl font-black tracking-tight">{formatFCFA(balance)}</p>
-            <p className="text-[10px] text-white/30 mt-1">
+            {pendingBalance > 0 && (
+              <p className="text-[10px] text-primary/70 mt-0.5 font-semibold">
+                +{formatFCFA(pendingBalance)} en cours
+              </p>
+            )}
+            <p className="text-[10px] text-white/30 mt-0.5">
               {t("echo.dashboard.totalEarned")} {formatFCFA(totalEarned)}
             </p>
           </div>

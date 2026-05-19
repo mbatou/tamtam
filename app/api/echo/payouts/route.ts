@@ -75,15 +75,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `Montant minimum: ${minPayout} FCFA` }, { status: 400 });
   }
 
-  // Verify user balance and get phone
+  // Verify user available balance and get phone
   const { data: user } = await supabase
     .from("users")
-    .select("balance, phone, name")
+    .select("balance, available_balance, phone, name")
     .eq("id", session.user.id)
     .single();
 
-  if (!user || user.balance < parsed.data.amount) {
-    return NextResponse.json({ error: "Solde insuffisant" }, { status: 400 });
+  const effectiveBalance = user?.available_balance ?? user?.balance ?? 0;
+
+  if (!user || effectiveBalance < parsed.data.amount) {
+    return NextResponse.json({ error: "Solde disponible insuffisant" }, { status: 400 });
   }
 
   const provider = parsed.data.provider || "wave";
@@ -236,11 +238,11 @@ export async function POST(request: NextRequest) {
   }
 
   // ---- Legacy Flow (Orange Money or no Wave API key) ----
-  // Debit balance immediately
-  const newBalance = user.balance - parsed.data.amount;
+  // Debit available_balance immediately
+  const newBalance = effectiveBalance - parsed.data.amount;
   const { error: balanceError } = await supabase
     .from("users")
-    .update({ balance: newBalance })
+    .update({ available_balance: newBalance })
     .eq("id", session.user.id);
 
   if (balanceError) {
@@ -263,10 +265,10 @@ export async function POST(request: NextRequest) {
   }).select().single();
 
   if (error) {
-    // Rollback balance if payout creation fails
+    // Rollback available_balance if payout creation fails
     await supabase
       .from("users")
-      .update({ balance: user.balance })
+      .update({ available_balance: effectiveBalance })
       .eq("id", session.user.id);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

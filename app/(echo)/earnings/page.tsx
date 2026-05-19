@@ -25,6 +25,11 @@ export default function EarningsPage() {
   const [bonusEarnings, setBonusEarnings] = useState<{ streaks: number; badges: number; referrals: number }>({ streaks: 0, badges: 0, referrals: 0 });
   const [avgCpc, setAvgCpc] = useState(25);
   const [topEchoEarnings, setTopEchoEarnings] = useState(0);
+  const [balanceData, setBalanceData] = useState<{
+    available: number; pending: number; total: number; min_withdrawal: number;
+    pending_campaigns: { campaign_name: string; amount_fcfa: number; click_count: number; unlock_date: string }[];
+  } | null>(null);
+  const [showExplanation, setShowExplanation] = useState(false);
   const { showToast, ToastComponent } = useToast();
   const { t } = useTranslation();
 
@@ -33,11 +38,12 @@ export default function EarningsPage() {
   }, []);
 
   async function loadData() {
-    const [userRes, payoutsRes, settingsRes, breakdownRes] = await Promise.all([
+    const [userRes, payoutsRes, settingsRes, breakdownRes, balanceRes] = await Promise.all([
       fetch("/api/echo/user"),
       fetch("/api/echo/payouts"),
       fetch("/api/echo/settings"),
       fetch("/api/echo/earnings-breakdown"),
+      fetch("/api/echo/balance"),
     ]);
 
     if (userRes.ok) {
@@ -58,6 +64,11 @@ export default function EarningsPage() {
       setBonusEarnings(breakdownData.bonusEarnings || { streaks: 0, badges: 0, referrals: 0 });
       setAvgCpc(breakdownData.avgCpc || 25);
       setTopEchoEarnings(breakdownData.topEchoEarnings || 0);
+    }
+    if (balanceRes.ok) {
+      const bd = await balanceRes.json();
+      setBalanceData(bd);
+      if (bd.min_withdrawal) setMinPayout(bd.min_withdrawal);
     }
     setLoading(false);
   }
@@ -133,10 +144,12 @@ export default function EarningsPage() {
     );
   }
 
-  const canWithdraw = (user?.balance || 0) >= minPayout;
+  const availableBalance = balanceData?.available ?? user?.available_balance ?? user?.balance ?? 0;
+  const pendingBalance = balanceData?.pending ?? user?.pending_balance ?? 0;
+  const canWithdraw = availableBalance >= minPayout;
   const hasPendingPayout = payouts.some((p) => p.status === "pending" || p.status === "processing");
   const totalEarned = user?.total_earned || 0;
-  const balance = user?.balance || 0;
+  const balance = availableBalance;
 
   return (
     <div className="px-4 py-5 max-w-lg mx-auto">
@@ -302,6 +315,70 @@ export default function EarningsPage() {
           </p>
         )}
       </div>
+
+      {/* Pending balance card */}
+      {pendingBalance > 0 && (
+        <div className="glass-card p-5 mb-5 border border-primary/20">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-[10px] text-white/40 font-semibold uppercase tracking-wider mb-0.5">Gains en cours</p>
+              <p className="text-2xl font-black text-primary">{formatFCFA(pendingBalance)}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] text-white/30">Gains totaux</p>
+              <p className="text-sm font-bold text-white/60">{formatFCFA(availableBalance + pendingBalance)}</p>
+            </div>
+          </div>
+
+          {/* Breakdown by campaign */}
+          {balanceData && balanceData.pending_campaigns.length > 0 && (
+            <div className="space-y-2 mt-3">
+              {balanceData.pending_campaigns.map((pe) => (
+                <div key={pe.campaign_name} className="flex justify-between items-center text-sm py-1.5 border-t border-white/5 first:border-0">
+                  <div>
+                    <span className="text-white/60 text-xs">{pe.campaign_name}</span>
+                    <span className="text-white/20 text-[10px] ml-1.5">{pe.click_count} clics</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-white font-semibold text-xs">{formatFCFA(pe.amount_fcfa)}</span>
+                    <p className="text-white/20 text-[10px]">
+                      {new Date(pe.unlock_date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {pendingBalance > 0 && balanceData?.pending_campaigns.length === 0 && (
+            <p className="text-xs text-white/30 mt-2">Acceptez une campagne pour commencer</p>
+          )}
+        </div>
+      )}
+
+      {/* Explanation toggle */}
+      <button
+        onClick={() => setShowExplanation(!showExplanation)}
+        className="text-xs text-white/30 hover:text-white/50 transition w-full text-center mb-4"
+      >
+        {showExplanation ? "Masquer l'explication" : "Pourquoi mes gains sont en attente ?"}
+      </button>
+
+      {showExplanation && (
+        <div className="glass-card p-4 mb-5 border-l-4 border-primary text-xs text-white/50 space-y-2">
+          <p>
+            Vos gains de chaque campagne sont débloqués à la fin de celle-ci.
+            Cela nous permet de vérifier que tous vos clics sont valides.
+          </p>
+          <p>
+            Maximum 30 jours d&apos;attente. Si une campagne est longue, vos gains
+            sont débloqués tous les 30 jours automatiquement.
+          </p>
+          <p className="text-accent">
+            Les bonus (séries, badges, parrainages) sont toujours disponibles immédiatement.
+          </p>
+        </div>
+      )}
 
       {/* Earning breakdown by source */}
       {(campaignEarnings.length > 0 || bonusEarnings.streaks > 0 || bonusEarnings.badges > 0 || bonusEarnings.referrals > 0) && (
