@@ -30,21 +30,13 @@ export async function GET() {
     .gt("amount_fcfa", 0)
     .order("unlock_date", { ascending: true });
 
-  const { data: minConfig } = await supabase
-    .from("gamification_caps")
-    .select("max_amount_fcfa")
-    .eq("cap_type", "min_withdrawal")
-    .maybeSingle();
-
   const { data: minPayoutSetting } = await supabase
     .from("platform_settings")
     .select("value")
     .eq("key", "min_payout_fcfa")
     .maybeSingle();
 
-  const minWithdrawal = minConfig?.max_amount_fcfa
-    || parseInt(minPayoutSetting?.value || "500")
-    || 500;
+  const minWithdrawal = parseInt(minPayoutSetting?.value || "500") || 500;
 
   return NextResponse.json({
     available,
