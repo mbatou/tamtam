@@ -392,7 +392,10 @@ export default function AdminCampaignsPage() {
   }
 
   function getStatusLabel(campaign: Campaign) {
-    if (campaign.status === "draft" && campaign.moderation_status === "pending") return t("admin.campaigns.pendingValidation");
+    if (campaign.status === "draft" && campaign.moderation_status === "pending" &&
+      !(campaign.objective === "lead_generation" && !campaign.landing_page_id)) {
+      return t("admin.campaigns.pendingValidation");
+    }
     const map: Record<string, string> = {
       active: t("common.active"), paused: t("common.paused"), completed: t("common.finished"), draft: t("admin.campaigns.draft"), rejected: t("common.rejected"),
     };
@@ -418,8 +421,9 @@ export default function AdminCampaignsPage() {
     const budgetConsumed = c.spent >= c.budget;
     const isActive = c.status === "active";
     const isPaused = c.status === "paused";
-    const isDraft = c.status === "draft" && c.moderation_status !== "pending";
-    const isPendingReview = c.status === "draft" && c.moderation_status === "pending";
+    const isLeadGenDraftWithoutLP = c.objective === "lead_generation" && !c.landing_page_id;
+    const isDraft = c.status === "draft" && (c.moderation_status !== "pending" || isLeadGenDraftWithoutLP);
+    const isPendingReview = c.status === "draft" && c.moderation_status === "pending" && !isLeadGenDraftWithoutLP;
     const isEnded = c.status === "completed" || c.status === "rejected";
 
     return (
@@ -458,7 +462,7 @@ export default function AdminCampaignsPage() {
           <div>
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-2xl font-bold">{c.title}</h1>
-              <span className={`badge-${c.status === "draft" && c.moderation_status === "pending" ? "pending" : c.status}`}>{getStatusLabel(c)}</span>
+              <span className={`badge-${c.status === "draft" && c.moderation_status === "pending" && !isLeadGenDraftWithoutLP ? "pending" : c.status}`}>{getStatusLabel(c)}</span>
               <span className={`text-xs px-2 py-0.5 rounded-full ${
                 (c.objective || "traffic") === "awareness"
                   ? "bg-blue-500/20 text-blue-300"
@@ -1658,11 +1662,13 @@ export default function AdminCampaignsPage() {
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                         (campaign.objective || "traffic") === "awareness"
                           ? "bg-blue-500/20 text-blue-300"
-                          : "bg-teal-500/20 text-teal-300"
+                          : (campaign.objective || "traffic") === "lead_generation"
+                            ? "bg-purple-500/20 text-purple-300"
+                            : "bg-teal-500/20 text-teal-300"
                       }`}>
-                        {(campaign.objective || "traffic") === "awareness" ? "Notoriété" : "Trafic"}
+                        {(campaign.objective || "traffic") === "awareness" ? "Notoriété" : (campaign.objective || "traffic") === "lead_generation" ? "Lead Gen" : "Trafic"}
                       </span>
-                      <span className={`badge-${campaign.status === "draft" && campaign.moderation_status === "pending" ? "pending" : campaign.status} shrink-0`}>{getStatusLabel(campaign)}</span>
+                      <span className={`badge-${campaign.status === "draft" && campaign.moderation_status === "pending" && !(campaign.objective === "lead_generation" && !campaign.landing_page_id) ? "pending" : campaign.status} shrink-0`}>{getStatusLabel(campaign)}</span>
                     </div>
                   </div>
 
@@ -1697,7 +1703,7 @@ export default function AdminCampaignsPage() {
                 </div>
 
                 {/* Draft actions */}
-                {campaign.status === "draft" && campaign.moderation_status !== "pending" && (
+                {campaign.status === "draft" && (campaign.moderation_status !== "pending" || (campaign.objective === "lead_generation" && !campaign.landing_page_id)) && (
                   <div className="flex gap-2 mt-2">
                     <button
                       onClick={(e) => {
