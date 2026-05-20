@@ -13,12 +13,16 @@ ADD COLUMN IF NOT EXISTS hero_image_url text;
 ALTER TABLE landing_pages
 ADD COLUMN IF NOT EXISTS landing_page_approved boolean NOT NULL DEFAULT false;
 
+-- Add brand_accent_color (background color for landing page)
+ALTER TABLE landing_pages
+ADD COLUMN IF NOT EXISTS brand_accent_color text;
+
 -- Backfill: mark all existing active landing pages as approved
 UPDATE landing_pages
 SET landing_page_approved = true
 WHERE status = 'active' AND landing_page_approved = false;
 
--- Add constraint for valid template values
-ALTER TABLE landing_pages
-ADD CONSTRAINT landing_pages_template_check
-CHECK (template IN ('simple', 'product', 'event', 'app', 'contact'));
+-- Ensure constraint for valid template values
+ALTER TABLE landing_pages DROP CONSTRAINT IF EXISTS landing_pages_template_check;
+ALTER TABLE landing_pages ADD CONSTRAINT landing_pages_template_check
+  CHECK (template IN ('simple', 'product', 'event', 'app', 'contact'));
