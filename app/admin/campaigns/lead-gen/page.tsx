@@ -281,7 +281,7 @@ function LeadGenCampaignPage() {
   }, [draftId, draftLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function updateField(index: number, updates: Partial<LandingPageFormField>) {
-    setFormFields(formFields.map((f, i) => i === index ? { ...f, ...updates } : f));
+    setFormFields(prev => prev.map((f, i) => i === index ? { ...f, ...updates } : f));
   }
 
   // Stable IDs for sortable — keyed by insertion order
@@ -301,13 +301,13 @@ function LeadGenCampaignPage() {
 
   function addFieldWithId() {
     if (formFields.length >= 5) return;
-    setFormFields([...formFields, { label: "", type: "text", required: false }]);
-    setFieldIds([...fieldIds, `field-${nextFieldIdRef.current++}`]);
+    setFormFields(prev => [...prev, { label: "", type: "text", required: false }]);
+    setFieldIds(prev => [...prev, `field-${nextFieldIdRef.current++}`]);
   }
 
   function removeFieldWithId(index: number) {
-    setFormFields(formFields.filter((_, i) => i !== index));
-    setFieldIds(fieldIds.filter((_, i) => i !== index));
+    setFormFields(prev => prev.filter((_, i) => i !== index));
+    setFieldIds(prev => prev.filter((_, i) => i !== index));
   }
 
   const sensors = useSensors(
@@ -320,8 +320,8 @@ function LeadGenCampaignPage() {
     if (!over || active.id === over.id) return;
     const oldIndex = fieldIds.indexOf(active.id as string);
     const newIndex = fieldIds.indexOf(over.id as string);
-    setFormFields(arrayMove(formFields, oldIndex, newIndex));
-    setFieldIds(arrayMove(fieldIds, oldIndex, newIndex));
+    setFormFields(prev => arrayMove(prev, oldIndex, newIndex));
+    setFieldIds(prev => arrayMove(prev, oldIndex, newIndex));
   }
 
   function cleanFormFields(fields: LandingPageFormField[]): LandingPageFormField[] {
