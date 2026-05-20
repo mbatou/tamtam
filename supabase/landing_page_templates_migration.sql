@@ -22,14 +22,7 @@ UPDATE landing_pages
 SET landing_page_approved = true
 WHERE status = 'active' AND landing_page_approved = false;
 
--- Add constraint for valid template values (skip if exists)
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'landing_pages_template_check'
-  ) THEN
-    ALTER TABLE landing_pages
-    ADD CONSTRAINT landing_pages_template_check
-    CHECK (template IN ('simple', 'product', 'event', 'app', 'contact'));
-  END IF;
-END $$;
+-- Ensure constraint for valid template values
+ALTER TABLE landing_pages DROP CONSTRAINT IF EXISTS landing_pages_template_check;
+ALTER TABLE landing_pages ADD CONSTRAINT landing_pages_template_check
+  CHECK (template IN ('simple', 'product', 'event', 'app', 'contact'));
