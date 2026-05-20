@@ -217,6 +217,7 @@ export async function POST(request: NextRequest) {
       description: aiResult.result.description,
       cta_text: aiResult.result.cta_text,
       brand_color: data.brand_color,
+      brand_accent_color: data.brand_accent_color || null,
       logo_url: data.logo_url || null,
       hero_image_url: data.hero_image_url || null,
       form_fields: data.form_fields,
