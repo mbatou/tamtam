@@ -126,6 +126,7 @@ export async function POST(request: NextRequest) {
       cpc,
       budget,
       status: "draft",
+      moderation_status: null,
       starts_at: starts_at || null,
       ends_at: ends_at || null,
       target_cities: target_cities && target_cities.length > 0 ? target_cities : null,
