@@ -196,6 +196,24 @@ export async function POST(request: NextRequest) {
     sourceType: "campaign",
   });
 
+  // Check if approval is required
+  const { data: approvalSetting } = await supabase
+    .from("platform_settings")
+    .select("value")
+    .eq("key", "require_campaign_approval")
+    .maybeSingle();
+
+  const requireApproval = approvalSetting?.value !== "false";
+
+  if (!requireApproval) {
+    await supabase
+      .from("campaigns")
+      .update({ moderation_status: "approved", status: "active" })
+      .eq("id", data.id);
+    data.moderation_status = "approved";
+    data.status = "active";
+  }
+
   // Get brand name for notification
   const { data: brand } = await supabase
     .from("users")
@@ -203,23 +221,25 @@ export async function POST(request: NextRequest) {
     .eq("id", brandId)
     .single();
 
-  // Notify superadmin about new campaign pending review
-  sendEmail({
-    to: "support@tamma.me",
-    subject: `Nouvelle campagne soumise: ${title}`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px;">
-        <h2 style="color: #D35400;">Nouvelle campagne à valider</h2>
-        <p><strong>Marque:</strong> ${brand?.name || "—"}</p>
-        <p><strong>Campagne:</strong> ${title}</p>
-        <p><strong>Budget:</strong> ${budget.toLocaleString()} FCFA</p>
-        <p><strong>CPC:</strong> ${cpc} FCFA</p>
-        <p style="margin-top: 20px;">
-          <a href="https://www.tamma.me/superadmin/campaigns" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Valider maintenant →</a>
-        </p>
-      </div>
-    `,
-  }).catch(() => {});
+  if (requireApproval) {
+    // Notify superadmin about new campaign pending review
+    sendEmail({
+      to: "support@tamma.me",
+      subject: `Nouvelle campagne soumise: ${title}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px;">
+          <h2 style="color: #D35400;">Nouvelle campagne à valider</h2>
+          <p><strong>Marque:</strong> ${brand?.name || "—"}</p>
+          <p><strong>Campagne:</strong> ${title}</p>
+          <p><strong>Budget:</strong> ${budget.toLocaleString()} FCFA</p>
+          <p><strong>CPC:</strong> ${cpc} FCFA</p>
+          <p style="margin-top: 20px;">
+            <a href="https://www.tamma.me/superadmin/campaigns" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Valider maintenant →</a>
+          </p>
+        </div>
+      `,
+    }).catch(() => {});
+  }
 
   return NextResponse.json(data, { status: 201 });
 }
@@ -268,36 +288,65 @@ export async function PUT(request: NextRequest) {
   if (objective !== undefined) updates.objective = objective;
   if (pixel_id !== undefined) updates.pixel_id = pixel_id;
 
-  // Debit balance when submitting a draft for moderation review
-  if (moderation_status === "pending" && existing.status === "draft" && existing.moderation_status !== "pending") {
+  // Allow rejected campaigns to be resubmitted
+  const isResubmission = moderation_status === "pending" && existing.status === "rejected";
+  if (isResubmission) {
+    updates.status = "draft";
+    updates.moderation_status = "pending";
+    updates.moderation_reason = null;
+  }
+
+  // Debit balance when submitting a draft/rejected campaign for moderation review
+  const isNewSubmission = moderation_status === "pending" &&
+    (existing.status === "draft" || existing.status === "rejected") &&
+    existing.moderation_status !== "pending";
+
+  if (isNewSubmission) {
     // Idempotency: check if budget was already deducted for this campaign
-    const { data: existingDebit } = await supabase
+    // (rejected campaigns get refunded, so they need re-debit)
+    const { data: txns } = await supabase
       .from("wallet_transactions")
-      .select("id")
+      .select("amount")
       .eq("source_id", id)
-      .eq("type", "campaign_budget_debit")
-      .limit(1);
+      .in("type", ["campaign_budget_debit", "campaign_budget_refund"]);
 
-    if (!existingDebit || existingDebit.length === 0) {
-      const campaignBudget = budget !== undefined ? budget : existing.budget;
-      const { data: batteur } = await supabase.from("users").select("balance").eq("id", brandId).single();
-      if (!batteur || (batteur.balance || 0) < campaignBudget) {
-        return NextResponse.json(
-          { error: "Solde insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
-          { status: 400 }
-        );
+    const netDeducted = (txns || []).reduce((sum, t) => sum + t.amount, 0);
+    const campaignBudget = budget !== undefined ? budget : existing.budget;
+
+    if (netDeducted > -campaignBudget) {
+      const toDebit = campaignBudget + netDeducted;
+      if (toDebit > 0) {
+        const { data: batteur } = await supabase.from("users").select("balance").eq("id", brandId).single();
+        if (!batteur || (batteur.balance || 0) < toDebit) {
+          return NextResponse.json(
+            { error: "Solde insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
+            { status: 400 }
+          );
+        }
+        await supabase.from("users").update({ balance: batteur.balance - toDebit }).eq("id", brandId);
+
+        await logWalletTransaction({
+          supabase,
+          userId: brandId,
+          amount: -toDebit,
+          type: "campaign_budget_debit",
+          description: `Soumission campagne pour validation`,
+          sourceId: id,
+          sourceType: "campaign",
+        });
       }
-      await supabase.from("users").update({ balance: batteur.balance - campaignBudget }).eq("id", brandId);
+    }
 
-      await logWalletTransaction({
-        supabase,
-        userId: brandId,
-        amount: -campaignBudget,
-        type: "campaign_budget_debit",
-        description: `Soumission campagne pour validation`,
-        sourceId: id,
-        sourceType: "campaign",
-      });
+    // Check if approval is required — auto-approve if not
+    const { data: approvalSetting } = await supabase
+      .from("platform_settings")
+      .select("value")
+      .eq("key", "require_campaign_approval")
+      .maybeSingle();
+
+    if (approvalSetting?.value === "false") {
+      updates.moderation_status = "approved";
+      updates.status = "active";
     }
   }
 

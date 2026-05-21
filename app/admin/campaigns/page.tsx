@@ -305,7 +305,7 @@ export default function AdminCampaignsPage() {
     }
   }
 
-  async function handleAction(campaignId: string, action: "pause" | "activate" | "complete" | "delete") {
+  async function handleAction(campaignId: string, action: "pause" | "activate" | "complete" | "delete" | "resubmit") {
     if (action === "delete") {
       setDeleteTargetId(campaignId);
       setShowDeleteConfirm(true);
@@ -313,11 +313,17 @@ export default function AdminCampaignsPage() {
     }
     setActionLoading(action);
     try {
-      const statusMap = { pause: "paused", activate: "active", complete: "completed" } as const;
+      const body: Record<string, unknown> = { id: campaignId };
+      if (action === "resubmit") {
+        body.moderation_status = "pending";
+      } else {
+        const statusMap = { pause: "paused", activate: "active", complete: "completed" } as const;
+        body.status = statusMap[action];
+      }
       const res = await fetch("/api/campaigns", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: campaignId, status: statusMap[action] }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -424,7 +430,8 @@ export default function AdminCampaignsPage() {
     const isLeadGenDraftWithoutLP = c.objective === "lead_generation" && !c.landing_page_id;
     const isDraft = c.status === "draft" && (c.moderation_status !== "pending" || isLeadGenDraftWithoutLP);
     const isPendingReview = c.status === "draft" && c.moderation_status === "pending" && !isLeadGenDraftWithoutLP;
-    const isEnded = c.status === "completed" || c.status === "rejected";
+    const isRejected = c.status === "rejected";
+    const isEnded = c.status === "completed";
 
     return (
       <div className="p-6 max-w-5xl">
@@ -543,12 +550,31 @@ export default function AdminCampaignsPage() {
         )}
 
         {/* Rejected banner */}
-        {c.status === "rejected" && (
+        {isRejected && (
           <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-8">
-            <span className="text-red-400 font-bold">❌ {t("admin.campaigns.modificationsRequired")}</span>
-            {c.moderation_reason && (
-              <p className="text-gray-400 text-sm mt-1">{c.moderation_reason}</p>
-            )}
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <span className="text-red-400 font-bold">❌ {t("admin.campaigns.modificationsRequired")}</span>
+                {c.moderation_reason && (
+                  <p className="text-gray-400 text-sm mt-1">{c.moderation_reason}</p>
+                )}
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={() => c.objective === "lead_generation" ? router.push(`/admin/campaigns/lead-gen?draft=${c.id}`) : openEditForm(c)}
+                  className="px-4 py-2 rounded-xl bg-primary/10 text-primary text-sm font-bold hover:bg-primary/20 transition"
+                >
+                  {t("common.edit")}
+                </button>
+                <button
+                  onClick={() => handleAction(c.id, "resubmit")}
+                  disabled={actionLoading !== null}
+                  className="px-4 py-2 rounded-xl bg-accent text-dark text-sm font-bold hover:bg-accent/90 transition disabled:opacity-40"
+                >
+                  {actionLoading === "resubmit" ? "..." : "Resoumettre"}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1739,6 +1765,35 @@ export default function AdminCampaignsPage() {
                       className="flex-1 py-2 rounded-xl bg-accent/10 border border-accent/20 text-accent text-xs font-bold hover:bg-accent/20 transition disabled:opacity-40"
                     >
                       {actionLoading === "submitDraft" ? "..." : t("admin.campaigns.launchDraft")}
+                    </button>
+                  </div>
+                )}
+
+                {/* Edit & resubmit for rejected campaigns */}
+                {campaign.status === "rejected" && (
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (campaign.objective === "lead_generation") {
+                          router.push(`/admin/campaigns/lead-gen?draft=${campaign.id}`);
+                        } else {
+                          openEditForm(campaign);
+                        }
+                      }}
+                      className="flex-1 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-bold hover:bg-primary/20 transition"
+                    >
+                      {t("common.edit")}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAction(campaign.id, "resubmit");
+                      }}
+                      disabled={actionLoading !== null}
+                      className="flex-1 py-2 rounded-xl bg-accent/10 border border-accent/20 text-accent text-xs font-bold hover:bg-accent/20 transition disabled:opacity-40"
+                    >
+                      {actionLoading === "resubmit" ? "..." : "Resoumettre"}
                     </button>
                   </div>
                 )}
