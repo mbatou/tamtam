@@ -389,6 +389,22 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: updateErr.message }, { status: 500 });
   }
 
+  // When LP is approved, auto-activate campaign if approval is not required
+  if (safeUpdates.landing_page_approved === true && updated.campaign_id) {
+    const { data: approvalSetting } = await supabase
+      .from("platform_settings")
+      .select("value")
+      .eq("key", "require_campaign_approval")
+      .maybeSingle();
+
+    if (approvalSetting?.value === "false") {
+      await supabase
+        .from("campaigns")
+        .update({ moderation_status: "approved", status: "active" })
+        .eq("id", updated.campaign_id);
+    }
+  }
+
   return NextResponse.json(updated);
 }
 
