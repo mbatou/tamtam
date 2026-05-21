@@ -522,7 +522,7 @@ export default function AdminCampaignsPage() {
                 onClick={() => router.push(`/admin/campaigns/${c.id}/preview`)}
                 className="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 text-sm font-semibold hover:bg-purple-500/20 transition"
               >
-                Apercu LP
+                Voir la page
               </button>
             )}
             {!isEnded && (

@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
   }
 
   const data = parsed.data;
+  const isPreviewMode = body.preview_mode === true;
 
   Sentry.setContext("ai_generation", {
     brand_id: brandId,
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
   // Total cost = budget + setup fee
   const totalCost = data.budget + LEAD_GEN_SETUP_FEE_FCFA;
 
-  // Active mode: check balance covers budget + setup fee
+  // Check balance covers budget + setup fee (even in preview mode, verify they can afford it)
   const { data: batteur } = await supabase
     .from("users")
     .select("balance, name")
@@ -102,14 +103,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Debit balance (budget + setup fee)
-  const { error: debitError } = await supabase
-    .from("users")
-    .update({ balance: batteur.balance - totalCost })
-    .eq("id", brandId);
+  // Debit balance only if NOT preview mode (preview = draft with AI gen, no charge yet)
+  if (!isPreviewMode) {
+    const { error: debitError } = await supabase
+      .from("users")
+      .update({ balance: batteur.balance - totalCost })
+      .eq("id", brandId);
 
-  if (debitError) {
-    return NextResponse.json({ error: debitError.message }, { status: 500 });
+    if (debitError) {
+      return NextResponse.json({ error: debitError.message }, { status: 500 });
+    }
   }
 
   // Generate AI content
@@ -136,11 +139,11 @@ export async function POST(request: NextRequest) {
       .select("id, batteur_id, status")
       .eq("id", existingCampaignId)
       .eq("batteur_id", brandId)
-      .eq("status", "draft")
+      .in("status", ["draft", "rejected"])
       .single();
 
     if (!existing) {
-      await supabase.from("users").update({ balance: batteur.balance }).eq("id", brandId);
+      if (!isPreviewMode) await supabase.from("users").update({ balance: batteur.balance }).eq("id", brandId);
       return NextResponse.json({ error: "Brouillon introuvable" }, { status: 404 });
     }
 
@@ -154,11 +157,12 @@ export async function POST(request: NextRequest) {
         cpc: data.cpc,
         cost_per_lead_fcfa: data.cost_per_lead_fcfa,
         budget: data.budget,
-        moderation_status: "pending",
+        moderation_status: isPreviewMode ? null : "pending",
+        status: "draft",
         starts_at: data.starts_at || null,
         ends_at: data.ends_at || null,
         target_cities: data.target_cities?.length ? data.target_cities : null,
-        setup_fee_paid: true,
+        setup_fee_paid: isPreviewMode ? false : true,
         setup_fee_amount_fcfa: LEAD_GEN_SETUP_FEE_FCFA,
       })
       .eq("id", existingCampaignId)
@@ -185,19 +189,19 @@ export async function POST(request: NextRequest) {
         cost_per_lead_fcfa: data.cost_per_lead_fcfa,
         budget: data.budget,
         status: "draft",
-        moderation_status: "pending",
+        moderation_status: isPreviewMode ? null : "pending",
         objective: "lead_generation",
         starts_at: data.starts_at || null,
         ends_at: data.ends_at || null,
         target_cities: data.target_cities?.length ? data.target_cities : null,
-        setup_fee_paid: true,
+        setup_fee_paid: isPreviewMode ? false : true,
         setup_fee_amount_fcfa: LEAD_GEN_SETUP_FEE_FCFA,
       })
       .select()
       .single();
 
     if (campaignError) {
-      await supabase.from("users").update({ balance: batteur.balance }).eq("id", brandId);
+      if (!isPreviewMode) await supabase.from("users").update({ balance: batteur.balance }).eq("id", brandId);
       return NextResponse.json({ error: campaignError.message }, { status: 500 });
     }
 
@@ -236,7 +240,9 @@ export async function POST(request: NextRequest) {
     if (!existingCampaignId) {
       await supabase.from("campaigns").delete().eq("id", campaign.id);
     }
-    await supabase.from("users").update({ balance: batteur.balance }).eq("id", brandId);
+    if (!isPreviewMode) {
+      await supabase.from("users").update({ balance: batteur.balance }).eq("id", brandId);
+    }
     return NextResponse.json({ error: lpError.message }, { status: 500 });
   }
 
@@ -246,46 +252,47 @@ export async function POST(request: NextRequest) {
     .update({ landing_page_id: landingPage.id })
     .eq("id", campaign.id);
 
-  // Log wallet transactions
-  await logWalletTransaction({
-    supabase,
-    userId: brandId,
-    amount: -data.budget,
-    type: "campaign_budget_debit",
-    description: `Campagne lead gen: ${data.title}`,
-    sourceId: campaign.id,
-    sourceType: "campaign",
-  });
+  // Log wallet transactions + notify only when actually launching (not preview)
+  if (!isPreviewMode) {
+    await logWalletTransaction({
+      supabase,
+      userId: brandId,
+      amount: -data.budget,
+      type: "campaign_budget_debit",
+      description: `Campagne lead gen: ${data.title}`,
+      sourceId: campaign.id,
+      sourceType: "campaign",
+    });
 
-  await logWalletTransaction({
-    supabase,
-    userId: brandId,
-    amount: -LEAD_GEN_SETUP_FEE_FCFA,
-    type: "campaign_budget_debit",
-    description: `Frais de mise en place lead gen`,
-    sourceId: campaign.id,
-    sourceType: "campaign_setup_fee",
-  });
+    await logWalletTransaction({
+      supabase,
+      userId: brandId,
+      amount: -LEAD_GEN_SETUP_FEE_FCFA,
+      type: "campaign_budget_debit",
+      description: `Frais de mise en place lead gen`,
+      sourceId: campaign.id,
+      sourceType: "campaign_setup_fee",
+    });
 
-  // Notify superadmin
-  sendEmail({
-    to: "support@tamma.me",
-    subject: `Nouvelle campagne Lead Gen: ${data.title}`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px;">
-        <h2 style="color: #D35400;">Nouvelle campagne Lead Generation</h2>
-        <p><strong>Marque:</strong> ${batteur.name || data.brand_name}</p>
-        <p><strong>Campagne:</strong> ${data.title}</p>
-        <p><strong>Budget:</strong> ${data.budget.toLocaleString()} FCFA</p>
-        <p><strong>CPL:</strong> ${data.cost_per_lead_fcfa} FCFA</p>
-        <p><strong>CPC:</strong> ${data.cpc} FCFA</p>
-        <p><strong>Landing page:</strong> /l/${landingPage.slug}</p>
-        <p style="margin-top: 20px;">
-          <a href="https://www.tamma.me/superadmin/campaigns" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Valider maintenant</a>
-        </p>
-      </div>
-    `,
-  }).catch(() => {});
+    sendEmail({
+      to: "support@tamma.me",
+      subject: `Nouvelle campagne Lead Gen: ${data.title}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px;">
+          <h2 style="color: #D35400;">Nouvelle campagne Lead Generation</h2>
+          <p><strong>Marque:</strong> ${batteur.name || data.brand_name}</p>
+          <p><strong>Campagne:</strong> ${data.title}</p>
+          <p><strong>Budget:</strong> ${data.budget.toLocaleString()} FCFA</p>
+          <p><strong>CPL:</strong> ${data.cost_per_lead_fcfa} FCFA</p>
+          <p><strong>CPC:</strong> ${data.cpc} FCFA</p>
+          <p><strong>Landing page:</strong> /l/${landingPage.slug}</p>
+          <p style="margin-top: 20px;">
+            <a href="https://www.tamma.me/superadmin/campaigns" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Valider maintenant</a>
+          </p>
+        </div>
+      `,
+    }).catch(() => {});
+  }
 
   return NextResponse.json({ campaign, landing_page: landingPage }, { status: 201 });
 }

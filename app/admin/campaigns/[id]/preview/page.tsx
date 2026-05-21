@@ -110,26 +110,26 @@ export default function LandingPagePreviewPage() {
     }
   }
 
-  async function handleApprove() {
+  async function handleLaunch() {
     if (!landingPage) return;
     setSaving(true);
+    setError(null);
 
     try {
-      const res = await fetch("/api/landing-pages", {
-        method: "PATCH",
+      const res = await fetch("/api/landing-pages/launch", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          landing_page_id: landingPage.id,
-          landing_page_approved: true,
-        }),
+        body: JSON.stringify({ campaign_id: campaignId }),
       });
 
-      if (!res.ok) throw new Error("Erreur");
-      const updated = await res.json();
-      setLandingPage(updated);
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Erreur lors du lancement");
+      }
+
       router.push("/admin/campaigns");
-    } catch {
-      setError("Erreur lors de la validation");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur lors du lancement");
     } finally {
       setSaving(false);
     }
@@ -191,7 +191,7 @@ export default function LandingPagePreviewPage() {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             Retour
           </button>
-          <h1 className="text-xl font-bold">Apercu de la landing page</h1>
+          <h1 className="text-xl font-bold">Apercu de la page</h1>
           {isApproved && (
             <span className="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400 font-semibold">Approuvee</span>
           )}
@@ -207,11 +207,11 @@ export default function LandingPagePreviewPage() {
               </button>
               {!isApproved && (
                 <button
-                  onClick={handleApprove}
+                  onClick={handleLaunch}
                   disabled={saving}
                   className="px-4 py-2 text-sm rounded-xl bg-green-500 text-white font-bold hover:bg-green-600 transition disabled:opacity-40"
                 >
-                  {saving ? "..." : "Valider et lancer"}
+                  {saving ? "Lancement..." : "Confirmer et lancer"}
                 </button>
               )}
             </>
@@ -564,14 +564,14 @@ export default function LandingPagePreviewPage() {
       {/* Approval banner */}
       {!isApproved && !editMode && (
         <div className="mt-6 bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 text-center">
-          <p className="text-sm text-yellow-300 font-semibold mb-2">Cette landing page n&apos;est pas encore validee</p>
-          <p className="text-xs text-white/40 mb-3">Verifiez le contenu genere par l&apos;IA, modifiez si necessaire, puis cliquez sur &quot;Valider et lancer&quot;.</p>
+          <p className="text-sm text-yellow-300 font-semibold mb-2">Verifiez votre page avant de lancer</p>
+          <p className="text-xs text-white/40 mb-3">Verifiez le contenu genere par l&apos;IA, modifiez si necessaire, puis confirmez le lancement.</p>
           <button
-            onClick={handleApprove}
+            onClick={handleLaunch}
             disabled={saving}
             className="px-6 py-2.5 rounded-xl bg-green-500 text-white text-sm font-bold hover:bg-green-600 transition disabled:opacity-40"
           >
-            {saving ? "..." : "Valider et lancer"}
+            {saving ? "Lancement..." : "Confirmer et lancer"}
           </button>
         </div>
       )}

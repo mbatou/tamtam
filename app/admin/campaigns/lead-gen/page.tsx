@@ -454,7 +454,7 @@ function LeadGenCampaignPage() {
         return;
       }
 
-      // Launch mode: full validation on the server
+      // Preview mode: full validation + AI gen, but no budget deduction yet
       const payload = {
         title,
         description: description || null,
@@ -475,6 +475,7 @@ function LeadGenCampaignPage() {
         creative_urls: creativeUrls,
         template,
         save_as_draft: false,
+        preview_mode: true,
         ...(editingDraftId ? { existing_campaign_id: editingDraftId } : {}),
       };
 
@@ -812,7 +813,7 @@ function LeadGenCampaignPage() {
                 disabled={submitting}
                 className="px-5 py-2.5 rounded-xl bg-purple-500 text-white text-sm font-bold hover:bg-purple-600 transition disabled:opacity-40"
               >
-                {submitting && !asDraft ? "Creation en cours..." : "Lancer la campagne"}
+                {submitting && !asDraft ? "Generation en cours..." : "Apercu et lancement"}
               </button>
             </div>
           </div>
