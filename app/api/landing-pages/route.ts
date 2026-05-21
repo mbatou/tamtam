@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
         cost_per_lead_fcfa: data.cost_per_lead_fcfa || null,
         budget: data.budget || 15000,
         status: "draft",
+        moderation_status: null,
         objective: "lead_generation",
         starts_at: data.starts_at || null,
         ends_at: data.ends_at || null,
