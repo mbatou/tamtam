@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
 
 :root {
   --background: #0F0F1F;
@@ -12,12 +12,26 @@
   --tamtam-purple: #6C3483;
   --tamtam-teal: #1ABC9C;
   --tamtam-surface: #1A1A2E;
+  --tt-orange: #D35400;
+  --tt-orange-light: #FEF0E7;
+  --tt-orange-mid: #F0997B;
+  --tt-orange-dark: #9A3D08;
+  --tt-night: #0A0A1A;
+  --tt-night-2: #111128;
+  --tt-night-3: #141420;
+  --tt-teal: #1D9E75;
+  --tt-teal-light: #E1F5EE;
+  --tt-teal-mid: #5DCAA5;
+  --tt-white: #FFFFFF;
+  --tt-ivory: #F5F3EE;
+  --tt-muted: rgba(255,255,255,0.4);
+  --tt-border: rgba(255,255,255,0.07);
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: 'Outfit', sans-serif;
+  font-family: 'DM Sans', sans-serif;
 }
 
 /* Scrollbar */
@@ -384,3 +398,28 @@ h1, h2, h3 {
   100% { transform: scale(1); opacity: 1; }
 }
 .animate-scale-in { animation: scale-in 0.5s ease-out; }
+
+/* ========== DASHBOARD REDESIGN ========== */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fadeUp 0.4s ease-out forwards;
+  opacity: 0;
+}
+.animate-fade-up-1 { animation-delay: 0ms; }
+.animate-fade-up-2 { animation-delay: 80ms; }
+.animate-fade-up-3 { animation-delay: 160ms; }
+.animate-fade-up-4 { animation-delay: 240ms; }
+
+@keyframes pixelPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+.animate-pixel-pulse {
+  animation: pixelPulse 2s ease-in-out infinite;
+}
+
+.font-syne { font-family: 'Syne', sans-serif; }
+.font-dm { font-family: 'DM Sans', sans-serif; }

@@ -1,40 +1,53 @@
+import type { LucideIcon } from "lucide-react";
+
 interface StatCardProps {
   label: string;
   value: string;
   sub?: string;
-  icon?: React.ReactNode;
-  accent?: "orange" | "teal" | "purple" | "red";
+  Icon?: LucideIcon;
+  accent?: "orange" | "teal" | "purple" | "blue" | "red";
 }
 
-const accentColors = {
-  orange: "from-primary to-primary-light",
-  teal: "from-accent to-emerald-400",
-  purple: "from-secondary to-purple-400",
-  red: "from-red-500 to-red-400",
+const ACCENT_CONFIG: Record<string, { iconBg: string; iconColor: string; subColor: string }> = {
+  orange: { iconBg: "rgba(211,84,0,0.12)", iconColor: "#D35400", subColor: "rgba(255,255,255,0.4)" },
+  teal:   { iconBg: "rgba(29,158,117,0.12)", iconColor: "#1D9E75", subColor: "#5DCAA5" },
+  purple: { iconBg: "rgba(139,92,246,0.12)", iconColor: "#8B5CF6", subColor: "rgba(255,255,255,0.4)" },
+  blue:   { iconBg: "rgba(59,130,246,0.12)", iconColor: "#3B82F6", subColor: "rgba(255,255,255,0.4)" },
+  red:    { iconBg: "rgba(239,68,68,0.12)", iconColor: "#EF4444", subColor: "rgba(255,255,255,0.4)" },
 };
 
-const borderColors = {
-  orange: "border-l-primary",
-  teal: "border-l-accent",
-  purple: "border-l-secondary",
-  red: "border-l-[#E74C3C]",
-};
+export default function StatCard({ label, value, sub, Icon, accent = "orange" }: StatCardProps) {
+  const config = ACCENT_CONFIG[accent] || ACCENT_CONFIG.orange;
 
-export default function StatCard({ label, value, sub, icon, accent = "orange" }: StatCardProps) {
   return (
-    <div className={`glass-card p-5 flex flex-col gap-2 border-l-4 ${borderColors[accent]} animate-slide-up`} style={{ opacity: 0 }}>
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">
+    <div
+      className="rounded-2xl p-5 flex items-center gap-4 transition-all hover:scale-[1.02] cursor-default"
+      style={{
+        background: "#111128",
+        border: "0.5px solid rgba(255,255,255,0.06)",
+      }}
+    >
+      {Icon && (
+        <div
+          className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center"
+          style={{ background: config.iconBg }}
+        >
+          <Icon size={20} style={{ color: config.iconColor }} />
+        </div>
+      )}
+      <div className="min-w-0">
+        <p className="text-[11px] font-medium font-dm mb-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
           {label}
-        </span>
-        {icon && (
-          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${accentColors[accent]} flex items-center justify-center`}>
-            {icon}
-          </div>
+        </p>
+        <p className="text-xl font-bold font-syne text-white leading-none">
+          {value}
+        </p>
+        {sub && (
+          <p className="text-[10px] font-dm mt-1" style={{ color: config.subColor }}>
+            {sub}
+          </p>
         )}
       </div>
-      <span className="text-2xl font-black">{value}</span>
-      {sub && <span className="text-xs text-white/40">{sub}</span>}
     </div>
   );
 }
