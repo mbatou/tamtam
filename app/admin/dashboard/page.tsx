@@ -303,28 +303,9 @@ export default function AdminDashboard() {
 
       {/* Row 2: Campaign table (2/3) + Wallet + Top Echos stacked (1/3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Left: Campaigns (collapsible) + Performance highlights */}
+        {/* Left: Performance highlights + Campaigns (collapsible) */}
         <div className="lg:col-span-2 space-y-5">
-          {campaignRows.length > 0 ? (
-            <CampaignList campaigns={campaignRows} defaultVisible={4} />
-          ) : (
-            <div
-              className="rounded-2xl p-10 text-center"
-              style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}
-            >
-              <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "rgba(211,84,0,0.1)" }}>
-                <Plus size={20} style={{ color: "#D35400" }} />
-              </div>
-              <p className="text-sm font-medium text-white mb-1">{t("admin.dashboard.noCampaign")}</p>
-              <p className="text-xs mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.dashboard.launchPrompt")}</p>
-              <a href="/admin/campaigns" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold text-white" style={{ background: "#D35400" }}>
-                <Plus size={13} />
-                {t("admin.dashboard.launchRythme")}
-              </a>
-            </div>
-          )}
-
-          {/* Performance highlights — fills the gap under campaigns */}
+          {/* Performance highlights */}
           {allCampaigns.length > 0 && (
             <div
               className="rounded-2xl p-5"
@@ -332,7 +313,6 @@ export default function AdminDashboard() {
             >
               <h3 className="text-sm font-semibold font-syne text-white mb-4">{t("admin.dashboard.performanceHighlights")}</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {/* Best campaign */}
                 <div className="flex items-start gap-2.5">
                   <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(29,158,117,0.1)" }}>
                     <Trophy size={14} style={{ color: "#1D9E75" }} />
@@ -349,8 +329,6 @@ export default function AdminDashboard() {
                     )}
                   </div>
                 </div>
-
-                {/* Total campaigns */}
                 <div className="flex items-start gap-2.5">
                   <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(211,84,0,0.1)" }}>
                     <Target size={14} style={{ color: "#D35400" }} />
@@ -363,8 +341,6 @@ export default function AdminDashboard() {
                     </p>
                   </div>
                 </div>
-
-                {/* Echos engaged */}
                 <div className="flex items-start gap-2.5">
                   <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(139,92,246,0.1)" }}>
                     <Users size={14} style={{ color: "#8B5CF6" }} />
@@ -377,8 +353,6 @@ export default function AdminDashboard() {
                     </p>
                   </div>
                 </div>
-
-                {/* Avg clicks per campaign */}
                 <div className="flex items-start gap-2.5">
                   <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(59,130,246,0.1)" }}>
                     <Zap size={14} style={{ color: "#3B82F6" }} />
@@ -394,6 +368,25 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {campaignRows.length > 0 ? (
+            <CampaignList campaigns={campaignRows} defaultVisible={4} />
+          ) : (
+            <div
+              className="rounded-2xl p-10 text-center"
+              style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}
+            >
+              <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "rgba(211,84,0,0.1)" }}>
+                <Plus size={20} style={{ color: "#D35400" }} />
+              </div>
+              <p className="text-sm font-medium text-white mb-1">{t("admin.dashboard.noCampaign")}</p>
+              <p className="text-xs mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.dashboard.launchPrompt")}</p>
+              <a href="/admin/campaigns" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold text-white" style={{ background: "#D35400" }}>
+                <Plus size={13} />
+                {t("admin.dashboard.launchRythme")}
+              </a>
             </div>
           )}
         </div>
