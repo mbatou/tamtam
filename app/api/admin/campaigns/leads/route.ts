@@ -210,12 +210,16 @@ export async function PUT(request: NextRequest) {
 
     // Refund CPL to campaign budget if lead was already paid out
     if (wasVerified && wasPaid && campaign?.cost_per_lead_fcfa) {
-      await supabase.rpc("refund_campaign_for_lead", {
+      const rpcResult = await supabase.rpc("refund_campaign_for_lead", {
         p_campaign_id: lead.campaign_id,
         p_cpl: campaign.cost_per_lead_fcfa,
         p_echo_id: lead.echo_id,
         p_echo_earnings: lead.payout_amount,
       });
+
+      if (rpcResult.error) {
+        console.error("Refund RPC error:", rpcResult.error.message);
+      }
 
       const { logWalletTransaction } = await import("@/lib/wallet-transactions");
       if (lead.echo_id) {
@@ -231,14 +235,18 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    await supabase
+    const { error: updateError } = await supabase
       .from("leads")
       .update({
         status: "rejected",
         rejection_reason: reason || "manual_rejection",
-        payout_status: wasPaid ? "refunded" : lead.payout_status,
+        payout_status: wasPaid ? "failed" : lead.payout_status,
       })
       .eq("id", lead_id);
+
+    if (updateError) {
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true, action: "rejected", refunded: wasVerified && wasPaid });
   }

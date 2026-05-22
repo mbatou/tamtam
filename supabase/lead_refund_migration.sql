@@ -1,7 +1,12 @@
--- Migration: Add refund_campaign_for_lead RPC
+-- Migration: Add refund_campaign_for_lead RPC + fix payout_status constraint
 -- Reverses debit_campaign_for_lead: returns CPL to campaign budget,
 -- decrements leads_captured_count, claws back echo earnings.
 -- Run after lead_generation_migration.sql
+
+-- Fix payout_status CHECK to include 'refunded'
+ALTER TABLE leads DROP CONSTRAINT IF EXISTS leads_payout_status_check;
+ALTER TABLE leads ADD CONSTRAINT leads_payout_status_check
+  CHECK (payout_status IS NULL OR payout_status IN ('pending', 'paid', 'failed', 'refunded'));
 
 CREATE OR REPLACE FUNCTION refund_campaign_for_lead(
   p_campaign_id UUID,
