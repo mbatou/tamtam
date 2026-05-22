@@ -7,7 +7,7 @@ import StatCard from "@/components/StatCard";
 import InsightBar from "@/components/dashboard/InsightBar";
 import CampaignList from "@/components/dashboard/CampaignList";
 import ClicksChart from "@/components/dashboard/ClicksChart";
-import { Eye, UserCheck, Banknote, TrendingDown, ShieldCheck, Download, Plus } from "lucide-react";
+import { Eye, UserCheck, Banknote, TrendingDown, ShieldCheck, Plus } from "lucide-react";
 
 interface Campaign {
   id: string;
