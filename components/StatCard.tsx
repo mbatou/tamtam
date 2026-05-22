@@ -1,40 +1,65 @@
+import type { LucideIcon } from "lucide-react";
+
 interface StatCardProps {
   label: string;
   value: string;
   sub?: string;
   icon?: React.ReactNode;
+  Icon?: LucideIcon;
   accent?: "orange" | "teal" | "purple" | "red";
+  highlight?: boolean;
+  benchmarkIcon?: React.ReactNode;
 }
 
-const accentColors = {
-  orange: "from-primary to-primary-light",
-  teal: "from-accent to-emerald-400",
-  purple: "from-secondary to-purple-400",
-  red: "from-red-500 to-red-400",
-};
+export default function StatCard({ label, value, sub, icon, Icon, accent = "orange", highlight = false, benchmarkIcon }: StatCardProps) {
+  const bg = highlight ? "#160E08" : "#111128";
+  const borderColor = highlight ? "rgba(211,84,0,0.3)" : "rgba(255,255,255,0.07)";
+  const valueColor = highlight ? "#D35400" : "#FFFFFF";
 
-const borderColors = {
-  orange: "border-l-primary",
-  teal: "border-l-accent",
-  purple: "border-l-secondary",
-  red: "border-l-[#E74C3C]",
-};
+  const subColors: Record<string, string> = {
+    orange: "rgba(255,255,255,0.35)",
+    teal: "#5DCAA5",
+    purple: "rgba(255,255,255,0.35)",
+    red: "rgba(255,255,255,0.35)",
+  };
 
-export default function StatCard({ label, value, sub, icon, accent = "orange" }: StatCardProps) {
   return (
-    <div className={`glass-card p-5 flex flex-col gap-2 border-l-4 ${borderColors[accent]} animate-slide-up`} style={{ opacity: 0 }}>
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">
+    <div
+      className="rounded-xl p-4"
+      style={{
+        background: bg,
+        border: `0.5px solid ${borderColor}`,
+      }}
+    >
+      <div className="flex items-center gap-1.5 mb-2">
+        {Icon && <Icon size={13} style={{ color: "rgba(255,255,255,0.35)" }} />}
+        {icon}
+        <span
+          className="text-[11px] font-medium font-dm"
+          style={{ color: "rgba(255,255,255,0.35)" }}
+        >
           {label}
         </span>
-        {icon && (
-          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${accentColors[accent]} flex items-center justify-center`}>
-            {icon}
-          </div>
-        )}
       </div>
-      <span className="text-2xl font-black">{value}</span>
-      {sub && <span className="text-xs text-white/40">{sub}</span>}
+
+      <p
+        className="text-2xl font-bold font-syne"
+        style={{ color: valueColor }}
+      >
+        {value}
+      </p>
+
+      {sub && (
+        <div className="flex items-center gap-1 mt-1">
+          {benchmarkIcon}
+          <span
+            className="text-xs font-dm"
+            style={{ color: subColors[accent] || subColors.orange }}
+          >
+            {sub}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

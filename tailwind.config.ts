@@ -31,6 +31,7 @@ const config: Config = {
       },
       fontFamily: {
         outfit: ["Outfit", "sans-serif"],
+        syne: ["Syne", "sans-serif"],
         dm: ["DM Sans", "sans-serif"],
       },
       borderRadius: {
