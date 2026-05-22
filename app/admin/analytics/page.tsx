@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { formatFCFA, formatNumber } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import {
-  BarChart, Bar, AreaChart, Area,
+  BarChart, Bar,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   LineChart, Line,
 } from "recharts";
@@ -274,9 +274,6 @@ export default function AdminAnalyticsPage() {
       </div>
     );
   }
-
-  const progress = selected ? (selected.budget > 0 ? Math.round((selected.spent / selected.budget) * 100) : 0) : 0;
-  const selectedCPC = selected && selected.validClicks > 0 ? Math.round(selected.spent / selected.validClicks) : 0;
 
   return (
     <div className="p-4 lg:p-6" style={{ maxWidth: "100%" }}>
