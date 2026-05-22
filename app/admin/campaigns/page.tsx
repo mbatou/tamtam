@@ -399,6 +399,12 @@ export default function AdminCampaignsPage() {
   }
 
   async function handleLeadAction(leadId: string, action: "verify" | "reject") {
+    const lead = leads.find(l => l.id === leadId);
+    if (action === "reject" && lead?.status === "verified") {
+      if (!confirm("Ce lead a deja ete accepte et paye. Le rejeter remboursera le CPL au budget de la campagne. Continuer ?")) {
+        return;
+      }
+    }
     setLeadActionLoading(leadId);
     try {
       const res = await fetch("/api/admin/campaigns/leads", {
@@ -769,7 +775,15 @@ export default function AdminCampaignsPage() {
                                   </button>
                                 </div>
                               )}
-                              {lead.status === "verified" && <span className="text-[11px] text-emerald-400/50">Accepte</span>}
+                              {lead.status === "verified" && (
+                                <button
+                                  onClick={() => handleLeadAction(lead.id, "reject")}
+                                  disabled={leadActionLoading === lead.id}
+                                  className="px-2.5 py-1 rounded-lg bg-red-500/10 text-red-400 text-[11px] font-semibold hover:bg-red-500/20 transition disabled:opacity-40"
+                                >
+                                  {leadActionLoading === lead.id ? "..." : "Rejeter"}
+                                </button>
+                              )}
                               {lead.status === "rejected" && <span className="text-[11px] text-red-400/50">Rejete</span>}
                             </td>
                           </tr>

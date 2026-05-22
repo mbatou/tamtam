@@ -137,7 +137,7 @@ export async function PUT(request: NextRequest) {
   // Get lead with campaign info
   const { data: lead } = await supabase
     .from("leads")
-    .select("id, campaign_id, echo_id, status, payout_status")
+    .select("id, campaign_id, echo_id, status, payout_status, payout_amount")
     .eq("id", lead_id)
     .single();
 
@@ -204,15 +204,43 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ success: true, action: "verified" });
   }
 
-  if (action === "reject" && lead.status !== "verified") {
+  if (action === "reject") {
+    const wasVerified = lead.status === "verified";
+    const wasPaid = lead.payout_status === "paid" && lead.payout_amount && lead.payout_amount > 0;
+
+    // Refund CPL to campaign budget if lead was already paid out
+    if (wasVerified && wasPaid && campaign?.cost_per_lead_fcfa) {
+      await supabase.rpc("refund_campaign_for_lead", {
+        p_campaign_id: lead.campaign_id,
+        p_cpl: campaign.cost_per_lead_fcfa,
+        p_echo_id: lead.echo_id,
+        p_echo_earnings: lead.payout_amount,
+      });
+
+      const { logWalletTransaction } = await import("@/lib/wallet-transactions");
+      if (lead.echo_id) {
+        await logWalletTransaction({
+          supabase,
+          userId: lead.echo_id,
+          amount: -lead.payout_amount,
+          type: "lead_earning",
+          description: `Lead rejete par la marque — remboursement`,
+          sourceId: lead.id,
+          sourceType: "lead",
+        });
+      }
+    }
+
     await supabase
       .from("leads")
       .update({
         status: "rejected",
         rejection_reason: reason || "manual_rejection",
+        payout_status: wasPaid ? "refunded" : lead.payout_status,
       })
       .eq("id", lead_id);
-    return NextResponse.json({ success: true, action: "rejected" });
+
+    return NextResponse.json({ success: true, action: "rejected", refunded: wasVerified && wasPaid });
   }
 
   return NextResponse.json({ error: "Action non applicable pour ce statut" }, { status: 400 });
