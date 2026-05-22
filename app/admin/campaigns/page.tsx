@@ -53,7 +53,8 @@ export default function AdminCampaignsPage() {
   const [campaignStats, setCampaignStats] = useState<Record<string, { realClicks: number; realValidClicks: number; echoCount: number }>>({});
   // Lead gen: leads tab data
   const [detailTab, setDetailTab] = useState<"overview" | "leads" | "conversions">("overview");
-  const [leads, setLeads] = useState<{ id: string; name: string; phone: string; email: string | null; status: string; created_at: string; echo_id: string | null }[]>([]);
+  const [leads, setLeads] = useState<{ id: string; name: string; phone: string; email: string | null; custom_fields: Record<string, string> | null; status: string; created_at: string; echo_id: string | null }[]>([]);
+  const [leadActionLoading, setLeadActionLoading] = useState<string | null>(null);
   const [leadsLoading, setLeadsLoading] = useState(false);
   const [landingSlug, setLandingSlug] = useState<string | null>(null);
   const [brandPixels, setBrandPixels] = useState<{ pixel_id: string; name: string; platform: string; is_active: boolean }[]>([]);
@@ -397,6 +398,27 @@ export default function AdminCampaignsPage() {
     }
   }
 
+  async function handleLeadAction(leadId: string, action: "verify" | "reject") {
+    setLeadActionLoading(leadId);
+    try {
+      const res = await fetch("/api/admin/campaigns/leads", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lead_id: leadId, action }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || "Erreur");
+      } else {
+        setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: action === "verify" ? "verified" : "rejected" } : l));
+      }
+    } catch {
+      alert("Erreur de connexion");
+    } finally {
+      setLeadActionLoading(null);
+    }
+  }
+
   function getStatusLabel(campaign: Campaign) {
     if (campaign.status === "draft" && campaign.moderation_status === "pending" &&
       !(campaign.objective === "lead_generation" && !campaign.landing_page_id)) {
@@ -691,37 +713,71 @@ export default function AdminCampaignsPage() {
               <div className="glass-card p-8 text-center text-white/30 text-sm">Aucun lead pour le moment</div>
             ) : (
               <div className="glass-card overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-white/10 text-left">
-                      <th className="px-4 py-3 text-xs text-white/40 font-semibold">Nom</th>
-                      <th className="px-4 py-3 text-xs text-white/40 font-semibold">Telephone</th>
-                      <th className="px-4 py-3 text-xs text-white/40 font-semibold">Email</th>
-                      <th className="px-4 py-3 text-xs text-white/40 font-semibold">Statut</th>
-                      <th className="px-4 py-3 text-xs text-white/40 font-semibold">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {leads.map((lead) => (
-                      <tr key={lead.id} className="border-b border-white/5 hover:bg-white/5 transition">
-                        <td className="px-4 py-3">{lead.name}</td>
-                        <td className="px-4 py-3 font-mono text-xs">{lead.phone}</td>
-                        <td className="px-4 py-3 text-xs text-white/60">{lead.email || "—"}</td>
-                        <td className="px-4 py-3">
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${
-                            lead.status === "verified" ? "bg-emerald-500/20 text-emerald-300" :
-                            lead.status === "rejected" ? "bg-red-500/20 text-red-300" :
-                            lead.status === "flagged" ? "bg-yellow-500/20 text-yellow-300" :
-                            "bg-white/10 text-white/60"
-                          }`}>
-                            {lead.status === "verified" ? "Verifie" : lead.status === "rejected" ? "Rejete" : lead.status === "flagged" ? "Suspect" : "En attente"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-xs text-white/40">{new Date(lead.created_at).toLocaleDateString("fr-FR")}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                {(() => {
+                  const customFieldKeys = Array.from(new Set(leads.flatMap(l => l.custom_fields ? Object.keys(l.custom_fields) : [])));
+                  return (
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-white/10 text-left">
+                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">Nom</th>
+                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">Telephone</th>
+                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">Email</th>
+                          {customFieldKeys.map(key => (
+                            <th key={key} className="px-4 py-3 text-xs text-white/40 font-semibold">{key}</th>
+                          ))}
+                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">Statut</th>
+                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">Date</th>
+                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {leads.map((lead) => (
+                          <tr key={lead.id} className="border-b border-white/5 hover:bg-white/5 transition">
+                            <td className="px-4 py-3">{lead.name}</td>
+                            <td className="px-4 py-3 font-mono text-xs">{lead.phone}</td>
+                            <td className="px-4 py-3 text-xs text-white/60">{lead.email || "—"}</td>
+                            {customFieldKeys.map(key => (
+                              <td key={key} className="px-4 py-3 text-xs text-white/60">{lead.custom_fields?.[key] || "—"}</td>
+                            ))}
+                            <td className="px-4 py-3">
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                lead.status === "verified" ? "bg-emerald-500/20 text-emerald-300" :
+                                lead.status === "rejected" ? "bg-red-500/20 text-red-300" :
+                                lead.status === "flagged" ? "bg-yellow-500/20 text-yellow-300" :
+                                "bg-white/10 text-white/60"
+                              }`}>
+                                {lead.status === "verified" ? "Accepte" : lead.status === "rejected" ? "Rejete" : lead.status === "flagged" ? "Suspect" : "En attente"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-xs text-white/40">{new Date(lead.created_at).toLocaleDateString("fr-FR")}</td>
+                            <td className="px-4 py-3">
+                              {(lead.status === "pending" || lead.status === "flagged") && (
+                                <div className="flex gap-1.5">
+                                  <button
+                                    onClick={() => handleLeadAction(lead.id, "verify")}
+                                    disabled={leadActionLoading === lead.id}
+                                    className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-[11px] font-semibold hover:bg-emerald-500/20 transition disabled:opacity-40"
+                                  >
+                                    {leadActionLoading === lead.id ? "..." : "Accepter"}
+                                  </button>
+                                  <button
+                                    onClick={() => handleLeadAction(lead.id, "reject")}
+                                    disabled={leadActionLoading === lead.id}
+                                    className="px-2.5 py-1 rounded-lg bg-red-500/10 text-red-400 text-[11px] font-semibold hover:bg-red-500/20 transition disabled:opacity-40"
+                                  >
+                                    {leadActionLoading === lead.id ? "..." : "Rejeter"}
+                                  </button>
+                                </div>
+                              )}
+                              {lead.status === "verified" && <span className="text-[11px] text-emerald-400/50">Accepte</span>}
+                              {lead.status === "rejected" && <span className="text-[11px] text-red-400/50">Rejete</span>}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  );
+                })()}
               </div>
             )}
           </div>

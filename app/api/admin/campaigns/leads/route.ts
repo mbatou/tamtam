@@ -70,18 +70,23 @@ export async function GET(request: NextRequest) {
   // CSV export
   if (format === "csv") {
     const rows = leads || [];
-    const headers = ["Nom", "Telephone", "Email", "Statut", "Score Fraude", "Montant Payout", "Date"];
+    const customFieldKeys = Array.from(new Set(rows.flatMap((l) => l.custom_fields ? Object.keys(l.custom_fields as Record<string, string>) : [])));
+    const headers = ["Nom", "Telephone", "Email", ...customFieldKeys, "Statut", "Score Fraude", "Montant Payout", "Date"];
     const csvLines = [
       headers.join(","),
-      ...rows.map((l) => [
-        `"${(l.name || "").replace(/"/g, '""')}"`,
-        `"${l.phone}"`,
-        `"${l.email || ""}"`,
-        l.status,
-        l.fraud_score,
-        l.payout_amount || 0,
-        l.created_at,
-      ].join(",")),
+      ...rows.map((l) => {
+        const cf = (l.custom_fields || {}) as Record<string, string>;
+        return [
+          `"${(l.name || "").replace(/"/g, '""')}"`,
+          `"${l.phone}"`,
+          `"${l.email || ""}"`,
+          ...customFieldKeys.map(k => `"${(cf[k] || "").replace(/"/g, '""')}"`),
+          l.status,
+          l.fraud_score,
+          l.payout_amount || 0,
+          l.created_at,
+        ].join(",");
+      }),
     ];
     const csv = csvLines.join("\n");
 
@@ -158,14 +163,12 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Non autorise" }, { status: 403 });
   }
 
-  if (action === "verify" && lead.status === "flagged") {
-    // Manually verify a flagged lead — trigger CPL payment
+  if (action === "verify" && (lead.status === "flagged" || lead.status === "pending")) {
     const updates: Record<string, unknown> = {
       status: "verified",
       verified_at: new Date().toISOString(),
     };
 
-    // Pay echo if not already paid
     if (lead.echo_id && lead.payout_status !== "paid" && campaign?.cost_per_lead_fcfa) {
       const { ECHO_LEAD_SHARE_PERCENT } = await import("@/lib/constants");
       const echoEarnings = Math.floor(campaign.cost_per_lead_fcfa * ECHO_LEAD_SHARE_PERCENT / 100);
@@ -201,7 +204,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ success: true, action: "verified" });
   }
 
-  if (action === "reject") {
+  if (action === "reject" && lead.status !== "verified") {
     await supabase
       .from("leads")
       .update({
