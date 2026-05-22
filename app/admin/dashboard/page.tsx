@@ -5,11 +5,23 @@ import { formatFCFA, formatNumber } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import StatCard from "@/components/StatCard";
 import InsightBar from "@/components/dashboard/InsightBar";
-import PixelSummary from "@/components/dashboard/PixelSummary";
 import CampaignList from "@/components/dashboard/CampaignList";
-import DashboardFunnel from "@/components/dashboard/DashboardFunnel";
 import ClicksChart from "@/components/dashboard/ClicksChart";
 import { Eye, UserCheck, Banknote, TrendingDown, ShieldCheck, Download, Plus } from "lucide-react";
+
+interface Campaign {
+  id: string;
+  title: string;
+  budget: number;
+  spent: number;
+  status: string;
+  cpc: number;
+  created_at: string;
+  objective?: string;
+  realClicks?: number;
+  realValidClicks?: number;
+  echoCount?: number;
+}
 
 interface Stats {
   totalClicks: number;
@@ -22,8 +34,7 @@ interface Stats {
   totalCampaigns: number;
   topEchos: { id: string; name: string; clicks: number; earned: number }[];
   clicksChart: { date: string; valid: number; fraud: number }[];
-  campaignBudgets: { name: string; budget: number; spent: number }[];
-  campaigns: { id: string; title: string; budget: number; spent: number; status: string; cpc: number; created_at: string; realClicks?: number; realValidClicks?: number }[];
+  campaigns: Campaign[];
 }
 
 export default function AdminDashboard() {
@@ -54,19 +65,14 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map(i => <div key={i} className="skeleton h-[100px] rounded-xl" />)}
         </div>
-        <div className="skeleton h-[90px] rounded-xl" />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <div className="skeleton h-[240px] rounded-xl" />
-          <div className="space-y-5">
-            <div className="skeleton h-[140px] rounded-xl" />
-            <div className="skeleton h-[90px] rounded-xl" />
-          </div>
-        </div>
+        <div className="skeleton h-[240px] rounded-xl" />
+        <div className="skeleton h-[120px] rounded-xl" />
       </div>
     );
   }
 
   const allCampaigns = stats.campaigns || [];
+  const activeCampaigns = allCampaigns.filter(c => c.status === "active");
   const finishedCampaigns = allCampaigns.filter(c => c.status === "completed");
 
   const costPerClick = stats.validClicks > 0
@@ -81,12 +87,11 @@ export default function AdminDashboard() {
   const budgetFullyConsumed = stats.budgetTotal > 0 && remainingBudget === 0;
 
   const campaignsWithCPC = finishedCampaigns
-    .filter(c => c.spent > 0)
-    .map(c => {
-      const estimatedValidClicks = Math.floor(c.spent / c.cpc);
-      const actualCPC = estimatedValidClicks > 0 ? Math.round(c.spent / estimatedValidClicks) : c.cpc;
-      return { ...c, estimatedClicks: estimatedValidClicks, actualCPC };
-    })
+    .filter(c => c.spent > 0 && (c.realValidClicks || 0) > 0)
+    .map(c => ({
+      ...c,
+      actualCPC: Math.round(c.spent / (c.realValidClicks || 1)),
+    }))
     .sort((a, b) => a.actualCPC - b.actualCPC);
 
   const bestCampaign = campaignsWithCPC[0] || null;
@@ -94,16 +99,19 @@ export default function AdminDashboard() {
     ? Math.round(campaignsWithCPC.reduce((s, c) => s + c.actualCPC, 0) / campaignsWithCPC.length)
     : 0;
 
-  const campaignRows = allCampaigns.slice(0, 4).map(c => {
-    const clicks = c.realClicks ?? (c.cpc > 0 ? Math.floor(c.spent / c.cpc) : 0);
-    const cpc = clicks > 0 ? Math.round(c.spent / clicks) : c.cpc;
+  const campaignRows = allCampaigns.map(c => {
+    const clicks = c.realValidClicks ?? c.realClicks ?? 0;
+    const spent = c.spent || 0;
+    const cpc = clicks > 0 ? Math.round(spent / clicks) : c.cpc;
     return {
       id: c.id,
       title: c.title,
       clicks,
       cpc,
       budget: c.budget,
+      spent,
       status: c.status,
+      echoCount: c.echoCount || 0,
       isBest: bestCampaign?.id === c.id && finishedCampaigns.length > 1,
     };
   });
@@ -117,6 +125,8 @@ export default function AdminDashboard() {
         <> — {t("admin.dashboard.cheaperThanAvg", { ratio: String((avgCPC / bestCampaign.actualCPC).toFixed(1)) })}</>
       )}
     </>
+  ) : activeCampaigns.length > 0 ? (
+    <>{t("admin.dashboard.campaignsRunning", { count: String(activeCampaigns.length) })}</>
   ) : (
     <>{t("admin.dashboard.launchPrompt")}</>
   );
@@ -130,7 +140,7 @@ export default function AdminDashboard() {
   if (showOnboarding) {
     const tourSteps = [
       {
-        emoji: "🥁",
+        emoji: "\u{1F941}",
         title: t("admin.onboarding.welcome"),
         desc: t("admin.onboarding.howItWorks"),
         content: (
@@ -144,10 +154,10 @@ export default function AdminDashboard() {
           </div>
         ),
       },
-      { emoji: "📊", title: t("admin.onboarding.tourDashboard"), desc: t("admin.onboarding.tourDashboardDesc"), highlight: "/admin/dashboard" },
-      { emoji: "🎯", title: t("admin.onboarding.tourCampaigns"), desc: t("admin.onboarding.tourCampaignsDesc"), highlight: "/admin/campaigns" },
+      { emoji: "\u{1F4CA}", title: t("admin.onboarding.tourDashboard"), desc: t("admin.onboarding.tourDashboardDesc"), highlight: "/admin/dashboard" },
+      { emoji: "\u{1F3AF}", title: t("admin.onboarding.tourCampaigns"), desc: t("admin.onboarding.tourCampaignsDesc"), highlight: "/admin/campaigns" },
       {
-        emoji: "💰", title: t("admin.onboarding.tourWallet"), desc: t("admin.onboarding.tourWalletDesc"), highlight: "/admin/wallet",
+        emoji: "\u{1F4B0}", title: t("admin.onboarding.tourWallet"), desc: t("admin.onboarding.tourWalletDesc"), highlight: "/admin/wallet",
         content: (
           <div className="flex flex-wrap gap-3 justify-center">
             {[10000, 25000, 50000].map(amount => (
@@ -158,11 +168,11 @@ export default function AdminDashboard() {
           </div>
         ),
       },
-      { emoji: "📈", title: t("admin.onboarding.tourAnalytics"), desc: t("admin.onboarding.tourAnalyticsDesc"), highlight: "/admin/analytics" },
-      { emoji: "👥", title: t("admin.onboarding.tourEchos"), desc: t("admin.onboarding.tourEchosDesc"), highlight: "/admin/echos" },
-      { emoji: "💬", title: t("admin.onboarding.tourSupport"), desc: t("admin.onboarding.tourSupportDesc"), highlight: "/admin/support" },
+      { emoji: "\u{1F4C8}", title: t("admin.onboarding.tourAnalytics"), desc: t("admin.onboarding.tourAnalyticsDesc"), highlight: "/admin/analytics" },
+      { emoji: "\u{1F465}", title: t("admin.onboarding.tourEchos"), desc: t("admin.onboarding.tourEchosDesc"), highlight: "/admin/echos" },
+      { emoji: "\u{1F4AC}", title: t("admin.onboarding.tourSupport"), desc: t("admin.onboarding.tourSupportDesc"), highlight: "/admin/support" },
       {
-        emoji: "🚀", title: t("admin.onboarding.tourReady"), desc: t("admin.onboarding.tourReadyDesc"),
+        emoji: "\u{1F680}", title: t("admin.onboarding.tourReady"), desc: t("admin.onboarding.tourReadyDesc"),
         content: (
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <a href="/admin/wallet" className="px-6 py-3 rounded-lg text-sm font-bold text-white text-center" style={{ background: "#D35400" }}>
@@ -253,16 +263,6 @@ export default function AdminDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition"
-            style={{
-              color: "rgba(255,255,255,0.5)",
-              border: "0.5px solid rgba(255,255,255,0.1)",
-            }}
-          >
-            <Download size={13} />
-            {t("admin.dashboard.export")}
-          </button>
           <a
             href="/admin/campaigns"
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold text-white transition active:scale-[0.98]"
@@ -275,11 +275,13 @@ export default function AdminDashboard() {
       </div>
 
       {/* Smart insight bar */}
-      <InsightBar
-        insight={insightNode}
-        ctaLabel={bestCampaign ? t("admin.dashboard.relaunch") : t("admin.dashboard.launchRythme")}
-        ctaHref="/admin/campaigns"
-      />
+      {allCampaigns.length > 0 && (
+        <InsightBar
+          insight={insightNode}
+          ctaLabel={bestCampaign ? t("admin.dashboard.relaunch") : t("admin.dashboard.launchRythme")}
+          ctaHref="/admin/campaigns"
+        />
+      )}
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -288,7 +290,7 @@ export default function AdminDashboard() {
             label={t("admin.dashboard.totalReach")}
             Icon={Eye}
             value={formatNumber(stats.totalClicks)}
-            sub={t("admin.dashboard.peoplesaw")}
+            sub={`${stats.activeEchos} ${t("admin.dashboard.echosActive")}`}
             accent="orange"
           />
         </div>
@@ -329,75 +331,27 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Pixel summary — only show if there's conversion data */}
-      {stats.validClicks > 0 && (
-        <PixelSummary
-          stats={[
-            { label: t("admin.dashboard.verifiedClicks"), value: stats.validClicks, sub: `100% ${t("admin.dashboard.ofFunnel")}` },
-            { label: t("admin.dashboard.signups"), value: 0, sub: `0% ${t("admin.dashboard.conversion")}` },
-            { label: t("admin.dashboard.activations"), value: 0, sub: `0% ${t("admin.dashboard.ofSignups")}` },
-          ]}
-        />
+      {/* Campaign list */}
+      {campaignRows.length > 0 ? (
+        <CampaignList campaigns={campaignRows} />
+      ) : (
+        <div
+          className="rounded-xl p-8 text-center"
+          style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.07)" }}
+        >
+          <p className="text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>{t("admin.dashboard.noCampaign")}</p>
+          <a href="/admin/campaigns" className="text-xs font-bold mt-3 inline-block" style={{ color: "#D35400" }}>
+            {t("admin.dashboard.launchRythme")}
+          </a>
+        </div>
       )}
 
-      {/* Two-column grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-        {/* Left — Campaign results (wider) */}
-        <div className="lg:col-span-3">
-          {campaignRows.length > 0 ? (
-            <CampaignList campaigns={campaignRows} />
-          ) : (
-            <div
-              className="rounded-xl p-8 text-center"
-              style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.07)" }}
-            >
-              <p className="text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>{t("admin.dashboard.noCampaign")}</p>
-              <a href="/admin/campaigns" className="text-xs font-bold mt-3 inline-block" style={{ color: "#D35400" }}>
-                {t("admin.dashboard.launchRythme")}
-              </a>
-            </div>
-          )}
-        </div>
+      {/* Daily clicks chart */}
+      {stats.clicksChart && stats.clicksChart.length > 0 && (
+        <ClicksChart data={stats.clicksChart} />
+      )}
 
-        {/* Right — stacked */}
-        <div className="lg:col-span-2 space-y-5">
-          {/* Funnel — placeholder until pixel data arrives */}
-          {stats.validClicks > 0 && (
-            <DashboardFunnel
-              campaignName={bestCampaign?.title || allCampaigns[0]?.title || "—"}
-              rows={[
-                { label: t("admin.dashboard.verifiedClicks"), value: stats.validClicks, pct: 100, note: `100% ${t("admin.dashboard.ofFunnel")}` },
-                { label: t("admin.dashboard.signups"), value: 0, pct: 0, note: `0% ${t("admin.dashboard.ofClicksConverted")}` },
-                { label: t("admin.dashboard.activations"), value: 0, pct: 0, note: `0% ${t("admin.dashboard.ofSignupsActivated")}` },
-              ]}
-            />
-          )}
-
-          {/* Clicks chart */}
-          {stats.clicksChart && stats.clicksChart.length > 0 && (
-            <ClicksChart data={stats.clicksChart} />
-          )}
-
-          {/* Empty state when no chart data */}
-          {(!stats.clicksChart || stats.clicksChart.length === 0) && (
-            <div
-              className="rounded-xl p-6 text-center"
-              style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.07)" }}
-            >
-              <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
-                {t("admin.dashboard.noClicks")}
-              </p>
-              {stats.totalCampaigns === 0 && (
-                <a href="/admin/campaigns" className="text-xs font-bold mt-2 inline-block" style={{ color: "#D35400" }}>
-                  {t("admin.dashboard.launchRythme")}
-                </a>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Top Échos */}
+      {/* Top Echos */}
       {stats.topEchos.length > 0 && (
         <div
           className="rounded-xl p-4"

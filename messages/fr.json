@@ -513,7 +513,10 @@
       "relaunch": "Relancer",
       "insightRelaunch": "Relancer avec un budget de {budget} pourrait amener ~{visitors} visiteurs vérifiés.",
       "hasBestCpa": "a le meilleur CPA à",
-      "cheaperThanAvg": "{ratio}x moins cher que votre moyenne."
+      "cheaperThanAvg": "{ratio}x moins cher que votre moyenne.",
+      "echosActive": "échos actifs",
+      "paused": "En pause",
+      "draft": "Brouillon"
     },
     "onboarding": {
       "welcome": "Bienvenue sur Tamtam !",

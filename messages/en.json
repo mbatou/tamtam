@@ -513,7 +513,10 @@
       "relaunch": "Relaunch",
       "insightRelaunch": "Relaunching with a {budget} budget could bring ~{visitors} verified visitors.",
       "hasBestCpa": "has your best CPA at",
-      "cheaperThanAvg": "{ratio}x cheaper than your average."
+      "cheaperThanAvg": "{ratio}x cheaper than your average.",
+      "echosActive": "echos active",
+      "paused": "Paused",
+      "draft": "Draft"
     },
     "onboarding": {
       "welcome": "Welcome to Tamtam!",
