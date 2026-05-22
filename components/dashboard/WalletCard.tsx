@@ -13,7 +13,6 @@ interface WalletCardProps {
 
 export default function WalletCard({ balance, totalSpent, totalBudget }: WalletCardProps) {
   const { t } = useTranslation();
-  const remaining = Math.max(0, totalBudget - totalSpent);
 
   return (
     <div
@@ -51,8 +50,8 @@ export default function WalletCard({ balance, totalSpent, totalBudget }: WalletC
             <p className="text-sm font-semibold text-white mt-0.5">{formatFCFA(totalSpent)}</p>
           </div>
           <div>
-            <p className="text-[10px] text-white/40">{t("admin.dashboard.campaignBudgetLeft")}</p>
-            <p className="text-sm font-semibold text-white mt-0.5">{formatFCFA(remaining)}</p>
+            <p className="text-[10px] text-white/40">{t("admin.dashboard.totalAllocated")}</p>
+            <p className="text-sm font-semibold text-white mt-0.5">{formatFCFA(totalBudget)}</p>
           </div>
         </div>
 

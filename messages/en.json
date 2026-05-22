@@ -524,7 +524,7 @@
       "totalInPeriod": "total clicks this period",
       "walletBalance": "Wallet Balance",
       "totalSpentLabel": "Total Spent",
-      "campaignBudgetLeft": "Budget Left",
+      "totalAllocated": "Total Allocated",
       "addFunds": "Add Funds",
       "searchPlaceholder": "Search campaigns...",
       "showMore": "{count} more campaigns",

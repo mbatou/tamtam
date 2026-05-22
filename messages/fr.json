@@ -524,7 +524,7 @@
       "totalInPeriod": "clics totaux cette période",
       "walletBalance": "Solde du portefeuille",
       "totalSpentLabel": "Total dépensé",
-      "campaignBudgetLeft": "Budget restant",
+      "totalAllocated": "Total alloué",
       "addFunds": "Ajouter des fonds",
       "searchPlaceholder": "Rechercher des campagnes...",
       "showMore": "{count} autres campagnes",
