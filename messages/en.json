@@ -864,6 +864,7 @@
     },
     "settings": {
       "title": "Settings",
+      "securityTab": "Security",
       "accountInfo": "Account information",
       "emailNoChange": "Email cannot be changed",
       "brandName": "Brand name *",
