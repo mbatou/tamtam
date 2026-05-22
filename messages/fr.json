@@ -526,7 +526,10 @@
       "totalSpentLabel": "Total dépensé",
       "campaignBudgetLeft": "Budget restant",
       "addFunds": "Ajouter des fonds",
-      "searchPlaceholder": "Rechercher des campagnes..."
+      "searchPlaceholder": "Rechercher des campagnes...",
+      "showMore": "{count} autres campagnes",
+      "showLess": "Voir moins",
+      "validRate": "taux de validité"
     },
     "onboarding": {
       "welcome": "Bienvenue sur Tamtam !",

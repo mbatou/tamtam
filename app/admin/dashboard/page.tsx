@@ -70,8 +70,11 @@ export default function AdminDashboard() {
           {[1, 2, 3, 4].map(i => <div key={i} className="skeleton h-[90px] rounded-2xl" />)}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="lg:col-span-2 skeleton h-[300px] rounded-2xl" />
-          <div className="skeleton h-[300px] rounded-2xl" />
+          <div className="lg:col-span-2 skeleton h-[260px] rounded-2xl" />
+          <div className="space-y-5">
+            <div className="skeleton h-[200px] rounded-2xl" />
+            <div className="skeleton h-[180px] rounded-2xl" />
+          </div>
         </div>
       </div>
     );
@@ -79,6 +82,10 @@ export default function AdminDashboard() {
 
   const allCampaigns = stats.campaigns || [];
   const finishedCampaigns = allCampaigns.filter(c => c.status === "completed");
+
+  const validityRate = stats.totalClicks > 0
+    ? Math.round((stats.validClicks / stats.totalClicks) * 100)
+    : 0;
 
   const costPerClick = stats.validClicks > 0
     ? Math.round(stats.budgetSpent / stats.validClicks)
@@ -249,7 +256,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Stat cards row — Officex-style with colored icon circles */}
+      {/* Stat cards — each tells a different part of the story */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="animate-fade-up animate-fade-up-1">
           <StatCard
@@ -265,7 +272,7 @@ export default function AdminDashboard() {
             label={t("admin.dashboard.realClicks")}
             Icon={UserCheck}
             value={formatNumber(stats.validClicks)}
-            sub={t("admin.dashboard.verifiedHumans")}
+            sub={validityRate > 0 ? `${validityRate}% ${t("admin.dashboard.validRate")}` : t("admin.dashboard.verifiedHumans")}
             accent="teal"
           />
         </div>
@@ -294,11 +301,12 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Main content: 2/3 campaign table + 1/3 wallet card */}
+      {/* Row 2: Campaign table (2/3) + Wallet + Top Echos stacked (1/3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Left: Campaigns (collapsible) */}
         <div className="lg:col-span-2">
           {campaignRows.length > 0 ? (
-            <CampaignList campaigns={campaignRows} />
+            <CampaignList campaigns={campaignRows} defaultVisible={4} />
           ) : (
             <div
               className="rounded-2xl p-10 text-center"
@@ -317,44 +325,23 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        <div>
+        {/* Right: Wallet card + Top Echos stacked */}
+        <div className="space-y-5">
           <WalletCard
             balance={stats.walletBalance}
             totalSpent={stats.budgetSpent}
             totalBudget={stats.budgetTotal}
           />
-        </div>
-      </div>
-
-      {/* Bottom row: chart + top echos */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2">
-          {stats.clicksChart && stats.clicksChart.length > 0 ? (
-            <ClicksChart data={stats.clicksChart} />
-          ) : (
-            <div
-              className="rounded-2xl p-8 text-center"
-              style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}
-            >
-              <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>{t("admin.dashboard.noClicks")}</p>
-            </div>
-          )}
-        </div>
-
-        <div>
-          {stats.topEchos.length > 0 ? (
-            <TopEchosList echos={stats.topEchos.slice(0, 5)} />
-          ) : (
-            <div
-              className="rounded-2xl p-8 text-center"
-              style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}
-            >
-              <p className="text-sm font-semibold font-syne text-white mb-1">{t("admin.dashboard.topEchos")}</p>
-              <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>{t("admin.dashboard.noEchoEngaged")}</p>
-            </div>
+          {stats.topEchos.length > 0 && (
+            <TopEchosList echos={stats.topEchos.slice(0, 4)} />
           )}
         </div>
       </div>
+
+      {/* Row 3: Clicks chart — full width */}
+      {stats.clicksChart && stats.clicksChart.length > 0 && (
+        <ClicksChart data={stats.clicksChart} />
+      )}
     </div>
   );
 }

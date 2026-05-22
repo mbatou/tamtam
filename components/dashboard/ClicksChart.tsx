@@ -2,6 +2,7 @@
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { useTranslation } from "@/lib/i18n";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 interface ChartDataPoint {
   date: string;
@@ -23,9 +24,23 @@ function formatFullDate(dateStr: string, locale: string) {
   return d.toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", { day: "numeric", month: "short", year: "numeric" });
 }
 
+function computeTrend(data: ChartDataPoint[]): { pct: number; direction: "up" | "down" | "flat" } {
+  const mid = Math.floor(data.length / 2);
+  const firstHalf = data.slice(0, mid).reduce((s, d) => s + d.valid, 0);
+  const secondHalf = data.slice(mid).reduce((s, d) => s + d.valid, 0);
+  if (firstHalf === 0 && secondHalf === 0) return { pct: 0, direction: "flat" };
+  if (firstHalf === 0) return { pct: 100, direction: "up" };
+  const pct = Math.round(((secondHalf - firstHalf) / firstHalf) * 100);
+  return { pct: Math.abs(pct), direction: pct > 0 ? "up" : pct < 0 ? "down" : "flat" };
+}
+
 export default function ClicksChart({ data }: ClicksChartProps) {
   const { t, locale } = useTranslation();
   const total = data.reduce((s, d) => s + d.valid, 0);
+  const trend = computeTrend(data);
+
+  const TrendIcon = trend.direction === "up" ? TrendingUp : trend.direction === "down" ? TrendingDown : Minus;
+  const trendColor = trend.direction === "up" ? "#1D9E75" : trend.direction === "down" ? "#EF4444" : "rgba(255,255,255,0.4)";
 
   return (
     <div
@@ -35,19 +50,32 @@ export default function ClicksChart({ data }: ClicksChartProps) {
         border: "0.5px solid rgba(255,255,255,0.06)",
       }}
     >
-      <div className="flex items-center justify-between mb-1">
-        <h3 className="text-sm font-semibold font-syne text-white">{t("admin.dashboard.clicksOverview")}</h3>
-        <p className="text-[10px] font-medium" style={{ color: "rgba(255,255,255,0.3)" }}>
-          {t("admin.dashboard.last14days")}
-        </p>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-sm font-semibold font-syne text-white">{t("admin.dashboard.clicksOverview")}</h3>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xl font-bold font-syne text-white">{total.toLocaleString()}</span>
+            <span className="text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.dashboard.totalInPeriod")}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {trend.pct > 0 && (
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg" style={{ background: `${trendColor}15` }}>
+              <TrendIcon size={12} style={{ color: trendColor }} />
+              <span className="text-[11px] font-semibold" style={{ color: trendColor }}>
+                {trend.direction === "up" ? "+" : trend.direction === "down" ? "-" : ""}{trend.pct}%
+              </span>
+            </div>
+          )}
+          <span className="text-[10px] font-medium" style={{ color: "rgba(255,255,255,0.3)" }}>
+            {t("admin.dashboard.last14days")}
+          </span>
+        </div>
       </div>
-      <p className="text-[11px] mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>
-        {total.toLocaleString()} {t("admin.dashboard.totalInPeriod")}
-      </p>
 
-      <div className="h-[160px]">
+      <div className="h-[140px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} barSize={16} barGap={4}>
+          <BarChart data={data} barSize={14} barGap={2}>
             <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.04)" />
             <XAxis
               dataKey="date"
@@ -82,13 +110,6 @@ export default function ClicksChart({ data }: ClicksChartProps) {
               radius={[4, 4, 0, 0]}
               fillOpacity={0.85}
             />
-            {data[0]?.fraud !== undefined && (
-              <Bar
-                dataKey="fraud"
-                fill="rgba(255,255,255,0.08)"
-                radius={[4, 4, 0, 0]}
-              />
-            )}
           </BarChart>
         </ResponsiveContainer>
       </div>
