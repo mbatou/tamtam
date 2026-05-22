@@ -212,44 +212,43 @@ function AdminWalletPage() {
       {/* ====== ONPAY-STYLE THREE-ZONE TOP ROW ====== */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-6">
 
-        {/* LEFT: Balance card (like Onpay's card visual) */}
-        <div className="lg:col-span-5 rounded-2xl p-6 relative overflow-hidden" style={C}>
-          {/* Decorative gradient accent */}
-          <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-[0.04]" style={{ background: "#D35400", filter: "blur(40px)" }} />
+        {/* LEFT: Balance card (matches overview WalletCard) */}
+        <div
+          className="lg:col-span-5 rounded-2xl p-5 relative overflow-hidden"
+          style={{ background: "linear-gradient(135deg, #D35400 0%, #B84700 50%, #8B3500 100%)" }}
+        >
+          {/* Decorative circles */}
+          <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }} />
+          <div className="absolute -bottom-4 -left-4 w-16 h-16 rounded-full" style={{ background: "rgba(255,255,255,0.04)" }} />
 
-          <p className="text-[10px] font-dm font-semibold uppercase tracking-wider mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>
-            {t("admin.wallet.availableBalance")}
-          </p>
-          <p className="text-4xl lg:text-[42px] font-black font-syne leading-none mb-6" style={{ color: "#D35400" }}>
-            {formatFCFA(wallet.balance)}
-          </p>
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(255,255,255,0.15)" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 10h20"/></svg>
+              </div>
+              <span className="text-[11px] font-medium font-dm text-white/60">{t("admin.wallet.availableBalance")}</span>
+            </div>
 
-          {/* Sub-stats row + Recharge button */}
-          <div className="flex items-end justify-between gap-4">
-            <div className="flex items-center gap-5">
+            <p className="text-2xl font-bold font-syne text-white mb-4">{formatFCFA(wallet.balance)}</p>
+
+            <div className="grid grid-cols-2 gap-3 pt-3 mb-4" style={{ borderTop: "1px solid rgba(255,255,255,0.12)" }}>
               <div>
-                <p className="text-[9px] font-dm uppercase tracking-wide mb-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>{t("admin.wallet.totalRecharged")}</p>
-                <p className="text-sm font-bold font-syne" style={{ color: "#1D9E75" }}>{formatFCFA(totalRecharged)}</p>
+                <p className="text-[10px] text-white/40 font-dm">{t("admin.wallet.totalSpent")}</p>
+                <p className="text-sm font-semibold font-syne text-white mt-0.5">{formatFCFA(wallet.totalSpent)}</p>
               </div>
-              <div className="w-px h-8" style={{ background: "rgba(255,255,255,0.06)" }} />
               <div>
-                <p className="text-[9px] font-dm uppercase tracking-wide mb-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>{t("admin.wallet.totalSpent")}</p>
-                <p className="text-sm font-bold font-syne text-white">{formatFCFA(wallet.totalSpent)}</p>
-              </div>
-              <div className="w-px h-8" style={{ background: "rgba(255,255,255,0.06)" }} />
-              <div>
-                <p className="text-[9px] font-dm uppercase tracking-wide mb-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>{t("admin.wallet.campaignsFunded")}</p>
-                <p className="text-sm font-bold font-syne text-white">{campaigns.length}</p>
+                <p className="text-[10px] text-white/40 font-dm">{t("admin.wallet.totalRecharged")}</p>
+                <p className="text-sm font-semibold font-syne text-white mt-0.5">{formatFCFA(totalRecharged)}</p>
               </div>
             </div>
 
             <button
               onClick={() => setShowRechargeModal(true)}
-              className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-dm font-semibold text-white transition-all hover:scale-[1.03] active:scale-[0.97]"
-              style={{ background: "#D35400" }}
+              className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold font-dm text-white/90 transition-all hover:brightness-110 active:scale-[0.98]"
+              style={{ background: "rgba(255,255,255,0.12)", border: "0.5px solid rgba(255,255,255,0.15)" }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              {t("admin.wallet.recharge")}
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              {t("admin.wallet.addFunds")}
             </button>
           </div>
         </div>

@@ -744,6 +744,7 @@
       "rechargeTitle": "Recharger le portefeuille",
       "customAmount": "Montant personnalisé",
       "quickRecharge": "Montant rapide",
+      "addFunds": "+ Ajouter des fonds",
       "minAmount": "Montant minimum: 100 FCFA",
       "openingWave": "Ouverture de Wave...",
       "payViaWave": "Payer {amount} via Wave",

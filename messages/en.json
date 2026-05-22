@@ -744,6 +744,7 @@
       "rechargeTitle": "Recharge wallet",
       "customAmount": "Custom amount",
       "quickRecharge": "Quick recharge",
+      "addFunds": "+ Add Funds",
       "minAmount": "Minimum amount: 100 FCFA",
       "openingWave": "Opening Wave...",
       "payViaWave": "Pay {amount} via Wave",
