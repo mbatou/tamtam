@@ -918,7 +918,8 @@
       "whatsappSpent": "FCFA dépensés",
       "whatsappCPV": "FCFA/visiteur",
       "whatsappGenerated": "Généré sur www.tamma.me",
-      "bestCPC": "MEILLEUR CPC"
+      "bestCPC": "MEILLEUR CPC",
+      "downloadPDF": "Télécharger PDF"
     },
     "antifraud": {
       "title": "Anti-fraude",
