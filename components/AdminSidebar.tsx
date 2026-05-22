@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useTranslation } from "@/lib/i18n";
 import {
   LayoutDashboard, Target, BarChart3,
-  Wallet, Zap, Users,
+  Wallet, Zap,
   Settings, MessageCircle, LogOut,
 } from "lucide-react";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
@@ -31,7 +31,6 @@ const NAV_GROUPS = [
     labelKey: "nav.tools",
     items: [
       { labelKey: "nav.pixel", href: "/admin/pixel", Icon: Zap },
-      { labelKey: "nav.echos", href: "/admin/echos", Icon: Users },
     ],
   },
   {
@@ -140,7 +139,6 @@ export default function AdminSidebar() {
             { labelKey: "nav.rythmes", href: "/admin/campaigns", Icon: Target },
             { labelKey: "nav.analytics", href: "/admin/analytics", Icon: BarChart3 },
             { labelKey: "nav.wallet", href: "/admin/wallet", Icon: Wallet },
-            { labelKey: "nav.echos", href: "/admin/echos", Icon: Users },
             { labelKey: "nav.settings", href: "/admin/settings", Icon: Settings },
           ].map((item) => {
             const active = pathname === item.href;
