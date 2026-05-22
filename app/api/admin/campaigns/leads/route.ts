@@ -70,18 +70,23 @@ export async function GET(request: NextRequest) {
   // CSV export
   if (format === "csv") {
     const rows = leads || [];
-    const headers = ["Nom", "Telephone", "Email", "Statut", "Score Fraude", "Montant Payout", "Date"];
+    const customFieldKeys = Array.from(new Set(rows.flatMap((l) => l.custom_fields ? Object.keys(l.custom_fields as Record<string, string>) : [])));
+    const headers = ["Nom", "Telephone", "Email", ...customFieldKeys, "Statut", "Score Fraude", "Montant Payout", "Date"];
     const csvLines = [
       headers.join(","),
-      ...rows.map((l) => [
-        `"${(l.name || "").replace(/"/g, '""')}"`,
-        `"${l.phone}"`,
-        `"${l.email || ""}"`,
-        l.status,
-        l.fraud_score,
-        l.payout_amount || 0,
-        l.created_at,
-      ].join(",")),
+      ...rows.map((l) => {
+        const cf = (l.custom_fields || {}) as Record<string, string>;
+        return [
+          `"${(l.name || "").replace(/"/g, '""')}"`,
+          `"${l.phone}"`,
+          `"${l.email || ""}"`,
+          ...customFieldKeys.map(k => `"${(cf[k] || "").replace(/"/g, '""')}"`),
+          l.status,
+          l.fraud_score,
+          l.payout_amount || 0,
+          l.created_at,
+        ].join(",");
+      }),
     ];
     const csv = csvLines.join("\n");
 
@@ -132,7 +137,7 @@ export async function PUT(request: NextRequest) {
   // Get lead with campaign info
   const { data: lead } = await supabase
     .from("leads")
-    .select("id, campaign_id, echo_id, status, payout_status")
+    .select("id, campaign_id, echo_id, status, payout_status, payout_amount")
     .eq("id", lead_id)
     .single();
 
@@ -158,14 +163,12 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Non autorise" }, { status: 403 });
   }
 
-  if (action === "verify" && lead.status === "flagged") {
-    // Manually verify a flagged lead — trigger CPL payment
+  if (action === "verify" && (lead.status === "flagged" || lead.status === "pending")) {
     const updates: Record<string, unknown> = {
       status: "verified",
       verified_at: new Date().toISOString(),
     };
 
-    // Pay echo if not already paid
     if (lead.echo_id && lead.payout_status !== "paid" && campaign?.cost_per_lead_fcfa) {
       const { ECHO_LEAD_SHARE_PERCENT } = await import("@/lib/constants");
       const echoEarnings = Math.floor(campaign.cost_per_lead_fcfa * ECHO_LEAD_SHARE_PERCENT / 100);
@@ -202,14 +205,42 @@ export async function PUT(request: NextRequest) {
   }
 
   if (action === "reject") {
+    const wasVerified = lead.status === "verified";
+    const wasPaid = lead.payout_status === "paid" && lead.payout_amount && lead.payout_amount > 0;
+
+    // Refund CPL to campaign budget if lead was already paid out
+    if (wasVerified && wasPaid && campaign?.cost_per_lead_fcfa) {
+      await supabase.rpc("refund_campaign_for_lead", {
+        p_campaign_id: lead.campaign_id,
+        p_cpl: campaign.cost_per_lead_fcfa,
+        p_echo_id: lead.echo_id,
+        p_echo_earnings: lead.payout_amount,
+      });
+
+      const { logWalletTransaction } = await import("@/lib/wallet-transactions");
+      if (lead.echo_id) {
+        await logWalletTransaction({
+          supabase,
+          userId: lead.echo_id,
+          amount: -lead.payout_amount,
+          type: "lead_earning",
+          description: `Lead rejete par la marque — remboursement`,
+          sourceId: lead.id,
+          sourceType: "lead",
+        });
+      }
+    }
+
     await supabase
       .from("leads")
       .update({
         status: "rejected",
         rejection_reason: reason || "manual_rejection",
+        payout_status: wasPaid ? "refunded" : lead.payout_status,
       })
       .eq("id", lead_id);
-    return NextResponse.json({ success: true, action: "rejected" });
+
+    return NextResponse.json({ success: true, action: "rejected", refunded: wasVerified && wasPaid });
   }
 
   return NextResponse.json({ error: "Action non applicable pour ce statut" }, { status: 400 });
