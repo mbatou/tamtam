@@ -741,7 +741,7 @@ export default function AdminCampaignsPage() {
                           <tr key={lead.id} className="border-b border-white/5 hover:bg-white/5 transition">
                             <td className="px-4 py-3">{lead.name}</td>
                             <td className="px-4 py-3 font-mono text-xs">{lead.phone}</td>
-                            <td className="px-4 py-3 text-xs text-white/60">{lead.email || "—"}</td>
+                            <td className="px-4 py-3 text-xs text-white/60">{lead.email || (lead.custom_fields && Object.entries(lead.custom_fields).find(([k]) => k.toLowerCase().includes("email"))?.[1]) || "—"}</td>
                             {customFieldKeys.map(key => (
                               <td key={key} className="px-4 py-3 text-xs text-white/60">{lead.custom_fields?.[key] || "—"}</td>
                             ))}

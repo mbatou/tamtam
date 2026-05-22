@@ -65,7 +65,7 @@ export default function LeadForm({ landingPageId, formFields, ctaText, brandColo
           landing_page_id: landingPageId,
           name: name.trim(),
           phone: cleanPhone.startsWith("+221") ? cleanPhone : `+221${cleanPhone}`,
-          email: email.trim() || null,
+          email: email.trim() || Object.entries(customFields).find(([k]) => k.toLowerCase().includes("email"))?.[1]?.trim() || null,
           custom_fields: Object.keys(customFields).length > 0 ? customFields : undefined,
           consent_given: true,
           ref: echoRef || undefined,
