@@ -14,10 +14,10 @@ interface LeadFormProps {
   ctaText: string;
   brandColor: string;
   accentColor: string;
-  ref: string | null;
+  echoRef: string | null;
 }
 
-export default function LeadForm({ landingPageId, formFields, ctaText, brandColor, accentColor, ref }: LeadFormProps) {
+export default function LeadForm({ landingPageId, formFields, ctaText, brandColor, accentColor, echoRef }: LeadFormProps) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -68,7 +68,7 @@ export default function LeadForm({ landingPageId, formFields, ctaText, brandColo
           email: email.trim() || null,
           custom_fields: Object.keys(customFields).length > 0 ? customFields : undefined,
           consent_given: true,
-          ref: ref || undefined,
+          ref: echoRef || undefined,
           page_load_ts: pageLoadTs,
         }),
       });
