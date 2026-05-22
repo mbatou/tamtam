@@ -401,7 +401,7 @@ export default function AdminCampaignsPage() {
   async function handleLeadAction(leadId: string, action: "verify" | "reject") {
     const lead = leads.find(l => l.id === leadId);
     if (action === "reject" && lead?.status === "verified") {
-      if (!confirm("Ce lead a deja ete accepte et paye. Le rejeter remboursera le CPL au budget de la campagne. Continuer ?")) {
+      if (!confirm(t("admin.campaigns.revertLeadConfirm"))) {
         return;
       }
     }
@@ -414,12 +414,12 @@ export default function AdminCampaignsPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        alert(data.error || "Erreur");
+        alert(data.error || t("common.error"));
       } else {
         setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: action === "verify" ? "verified" : "rejected" } : l));
       }
     } catch {
-      alert("Erreur de connexion");
+      alert(t("common.networkError"));
     } finally {
       setLeadActionLoading(null);
     }
@@ -438,10 +438,21 @@ export default function AdminCampaignsPage() {
 
   if (loading) {
     return (
-      <div className="p-6 max-w-6xl space-y-4">
-        <div className="skeleton h-8 w-48 rounded-xl" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => <div key={i} className="skeleton h-48 rounded-2xl" />)}
+      <div className="p-6 lg:p-8 space-y-5" style={{ maxWidth: "100%" }}>
+        <div className="h-8 w-48 rounded-xl animate-pulse" style={{ background: "rgba(255,255,255,0.06)" }} />
+        <div className="h-3 w-32 rounded-lg animate-pulse" style={{ background: "rgba(255,255,255,0.04)" }} />
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mt-4">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="rounded-xl overflow-hidden animate-pulse" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+              <div className="h-24" style={{ background: "rgba(255,255,255,0.03)" }} />
+              <div className="p-2.5 space-y-2">
+                <div className="h-3 w-3/4 rounded" style={{ background: "rgba(255,255,255,0.06)" }} />
+                <div className="h-2 w-1/2 rounded" style={{ background: "rgba(255,255,255,0.04)" }} />
+                <div className="h-[3px] w-full rounded-full" style={{ background: "rgba(255,255,255,0.04)" }} />
+                <div className="h-2 w-2/3 rounded" style={{ background: "rgba(255,255,255,0.04)" }} />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -462,29 +473,30 @@ export default function AdminCampaignsPage() {
     const isEnded = c.status === "completed";
 
     return (
-      <div className="p-6 max-w-5xl">
-        <button onClick={() => { setSelectedCampaign(null); setView("list"); }} className="flex items-center gap-2 text-sm text-white/40 hover:text-white/70 transition mb-6">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      <div className="p-6 lg:p-8" style={{ maxWidth: "100%" }}>
+        <button onClick={() => { setSelectedCampaign(null); setView("list"); }} className="flex items-center gap-2 text-xs font-medium transition mb-6" style={{ color: "rgba(255,255,255,0.35)" }} onMouseEnter={e => e.currentTarget.style.color = "rgba(255,255,255,0.7)"} onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.35)"}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           {t("admin.campaigns.backToRythmes")}
         </button>
 
         {/* Draft banner */}
         {isDraft && (
-          <div className="mb-6 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-between">
+          <div className="mb-6 p-4 rounded-2xl flex items-center justify-between" style={{ background: "rgba(234,179,8,0.06)", border: "0.5px solid rgba(234,179,8,0.15)" }}>
             <div>
-              <p className="text-sm font-semibold text-yellow-400">{t("admin.campaigns.draft")}</p>
-              <p className="text-xs text-white/40">{t("admin.campaigns.draftNotice")}</p>
+              <p className="text-sm font-bold font-syne" style={{ color: "#EAB308" }}>{t("admin.campaigns.draft")}</p>
+              <p className="text-xs font-dm mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.draftNotice")}</p>
             </div>
             <div className="flex gap-2">
               {c.objective === "lead_generation" && (
-                <button onClick={() => router.push(`/admin/campaigns/lead-gen?draft=${c.id}`)} className="px-5 py-2.5 rounded-xl bg-primary/10 text-primary text-sm font-bold hover:bg-primary/20 transition">
+                <button onClick={() => router.push(`/admin/campaigns/lead-gen?draft=${c.id}`)} className="px-5 py-2.5 rounded-xl text-sm font-bold transition" style={{ background: "rgba(211,84,0,0.1)", color: "#D35400" }}>
                   {t("common.edit")}
                 </button>
               )}
               <button
                 onClick={() => c.objective === "lead_generation" ? router.push(`/admin/campaigns/lead-gen?draft=${c.id}`) : handleSubmitDraft(c.id)}
                 disabled={actionLoading !== null}
-                className="px-5 py-2.5 rounded-xl bg-accent text-dark text-sm font-bold hover:bg-accent/90 transition disabled:opacity-40"
+                className="px-5 py-2.5 rounded-xl text-sm font-bold text-white transition disabled:opacity-40"
+                style={{ background: "#D35400" }}
               >
                 {actionLoading === "submitDraft" ? "..." : t("admin.campaigns.launchDraft")}
               </button>
@@ -496,28 +508,46 @@ export default function AdminCampaignsPage() {
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-2xl font-bold">{c.title}</h1>
-              <span className={`badge-${c.status === "draft" && c.moderation_status === "pending" && !isLeadGenDraftWithoutLP ? "pending" : c.status}`}>{getStatusLabel(c)}</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full ${
-                (c.objective || "traffic") === "awareness"
-                  ? "bg-blue-500/20 text-blue-300"
+              <h1 className="text-2xl font-bold font-syne text-white">{c.title}</h1>
+              {(() => {
+                const sc = isActive
+                  ? { dot: "#D35400", label: getStatusLabel(c), bg: "rgba(211,84,0,0.1)" }
+                  : isPaused
+                  ? { dot: "#EAB308", label: getStatusLabel(c), bg: "rgba(234,179,8,0.1)" }
+                  : isEnded
+                  ? { dot: "rgba(255,255,255,0.2)", label: getStatusLabel(c), bg: "rgba(255,255,255,0.04)" }
+                  : isDraft
+                  ? { dot: "rgba(255,255,255,0.15)", label: getStatusLabel(c), bg: "rgba(255,255,255,0.04)" }
+                  : isPendingReview
+                  ? { dot: "#F59E0B", label: getStatusLabel(c), bg: "rgba(245,158,11,0.1)" }
+                  : isRejected
+                  ? { dot: "#EF4444", label: getStatusLabel(c), bg: "rgba(239,68,68,0.1)" }
+                  : { dot: "rgba(255,255,255,0.2)", label: getStatusLabel(c), bg: "rgba(255,255,255,0.04)" };
+                return (
+                  <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full" style={{ background: sc.bg, color: sc.dot === "rgba(255,255,255,0.2)" || sc.dot === "rgba(255,255,255,0.15)" ? "rgba(255,255,255,0.4)" : sc.dot }}>
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: sc.dot }} />
+                    {sc.label}
+                  </span>
+                );
+              })()}
+              {(() => {
+                const oc = (c.objective || "traffic") === "awareness"
+                  ? { label: t("admin.campaigns.objectiveAwareness"), color: "#3B82F6", bg: "rgba(59,130,246,0.1)" }
                   : (c.objective || "traffic") === "lead_generation"
-                    ? "bg-purple-500/20 text-purple-300"
-                    : "bg-teal-500/20 text-teal-300"
-              }`}>
-                {(c.objective || "traffic") === "awareness" ? "Notoriété" : (c.objective || "traffic") === "lead_generation" ? "Lead Gen" : "Trafic"}
-              </span>
+                  ? { label: t("admin.campaigns.objectiveLeadGen"), color: "#8B5CF6", bg: "rgba(139,92,246,0.1)" }
+                  : { label: t("admin.campaigns.objectiveTraffic"), color: "#1D9E75", bg: "rgba(29,158,117,0.1)" };
+                return <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ background: oc.bg, color: oc.color }}>{oc.label}</span>;
+              })()}
             </div>
-            {c.description && <p className="text-white/40 text-sm max-w-xl">{c.description}</p>}
+            {c.description && <p className="text-sm max-w-xl font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{c.description}</p>}
             {c.target_cities && c.target_cities.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">
-                <span className="text-xs text-white/30">📍</span>
                 {c.target_cities.map((city) => (
-                  <span key={city} className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary/80">{city}</span>
+                  <span key={city} className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: "rgba(211,84,0,0.08)", color: "#D35400" }}>{city}</span>
                 ))}
               </div>
             )}
-            <p className="text-white/20 text-xs mt-2">{timeAgo(c.created_at)}</p>
+            <p className="text-[11px] mt-2" style={{ color: "rgba(255,255,255,0.2)" }}>{timeAgo(c.created_at)}</p>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -525,43 +555,46 @@ export default function AdminCampaignsPage() {
               <button
                 onClick={() => c.objective === "lead_generation" ? router.push(`/admin/campaigns/lead-gen?draft=${c.id}`) : handleSubmitDraft(c.id)}
                 disabled={actionLoading !== null}
-                className="px-4 py-2 rounded-xl bg-accent/10 text-accent text-sm font-semibold hover:bg-accent/20 transition disabled:opacity-40"
+                className="px-4 py-2 rounded-xl text-xs font-bold transition disabled:opacity-40"
+                style={{ background: "rgba(211,84,0,0.1)", color: "#D35400" }}
               >
                 {actionLoading === "submitDraft" ? "..." : t("admin.campaigns.launchDraft")}
               </button>
             )}
             {isActive && (
-              <button onClick={() => handleAction(c.id, "pause")} disabled={actionLoading !== null} className="px-4 py-2 rounded-xl bg-yellow-500/10 text-yellow-400 text-sm font-semibold hover:bg-yellow-500/20 transition disabled:opacity-40">
+              <button onClick={() => handleAction(c.id, "pause")} disabled={actionLoading !== null} className="px-4 py-2 rounded-xl text-xs font-bold transition disabled:opacity-40" style={{ background: "rgba(234,179,8,0.08)", color: "#EAB308" }}>
                 {actionLoading === "pause" ? "..." : t("admin.campaigns.pause")}
               </button>
             )}
             {isPaused && (
-              <button onClick={() => handleAction(c.id, "activate")} disabled={actionLoading !== null} className="px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/20 transition disabled:opacity-40">
+              <button onClick={() => handleAction(c.id, "activate")} disabled={actionLoading !== null} className="px-4 py-2 rounded-xl text-xs font-bold transition disabled:opacity-40" style={{ background: "rgba(29,158,117,0.08)", color: "#1D9E75" }}>
                 {actionLoading === "activate" ? "..." : t("admin.campaigns.reactivate")}
               </button>
             )}
             {(isActive || isPaused) && (
-              <button onClick={() => handleAction(c.id, "complete")} disabled={actionLoading !== null} className="px-4 py-2 rounded-xl bg-white/5 text-white/60 text-sm font-semibold hover:bg-white/10 transition disabled:opacity-40">
+              <button onClick={() => handleAction(c.id, "complete")} disabled={actionLoading !== null} className="px-4 py-2 rounded-xl text-xs font-bold transition disabled:opacity-40" style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.5)" }}>
                 {actionLoading === "complete" ? "..." : t("admin.campaigns.finish")}
               </button>
             )}
             {c.objective === "lead_generation" && c.landing_page_id && (
               <button
                 onClick={() => router.push(`/admin/campaigns/${c.id}/preview`)}
-                className="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 text-sm font-semibold hover:bg-purple-500/20 transition"
+                className="px-4 py-2 rounded-xl text-xs font-bold transition"
+                style={{ background: "rgba(139,92,246,0.08)", color: "#8B5CF6" }}
               >
-                Voir la page
+                {t("admin.campaigns.viewPage")}
               </button>
             )}
             {!isEnded && (
               <button
                 onClick={() => c.objective === "lead_generation" ? router.push(`/admin/campaigns/lead-gen?draft=${c.id}`) : openEditForm(c)}
-                className="px-4 py-2 rounded-xl bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/20 transition"
+                className="px-4 py-2 rounded-xl text-xs font-bold transition"
+                style={{ background: "rgba(211,84,0,0.08)", color: "#D35400" }}
               >
                 {t("common.edit")}
               </button>
             )}
-            <button onClick={() => handleAction(c.id, "delete")} disabled={actionLoading !== null} className="px-4 py-2 rounded-xl bg-red-500/10 text-red-400 text-sm font-semibold hover:bg-red-500/20 transition disabled:opacity-40">
+            <button onClick={() => handleAction(c.id, "delete")} disabled={actionLoading !== null} className="px-4 py-2 rounded-xl text-xs font-bold transition disabled:opacity-40" style={{ background: "rgba(239,68,68,0.08)", color: "#EF4444" }}>
               {actionLoading === "delete" ? "..." : t("common.delete")}
             </button>
           </div>
@@ -569,9 +602,9 @@ export default function AdminCampaignsPage() {
 
         {/* Pending review banner */}
         {isPendingReview && (
-          <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4 mb-8">
-            <span className="text-orange-400 font-bold">⏳ {t("admin.campaigns.pendingReview")}</span>
-            <p className="text-gray-400 text-sm mt-1">
+          <div className="rounded-2xl p-4 mb-8" style={{ background: "rgba(245,158,11,0.06)", border: "0.5px solid rgba(245,158,11,0.15)" }}>
+            <span className="text-sm font-bold font-syne" style={{ color: "#F59E0B" }}>{t("admin.campaigns.pendingReview")}</span>
+            <p className="text-xs font-dm mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>
               {t("admin.campaigns.pendingReviewDesc")}
             </p>
           </div>
@@ -579,27 +612,29 @@ export default function AdminCampaignsPage() {
 
         {/* Rejected banner */}
         {isRejected && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-8">
+          <div className="rounded-2xl p-4 mb-8" style={{ background: "rgba(239,68,68,0.06)", border: "0.5px solid rgba(239,68,68,0.15)" }}>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <span className="text-red-400 font-bold">❌ {t("admin.campaigns.modificationsRequired")}</span>
+                <span className="text-sm font-bold font-syne" style={{ color: "#EF4444" }}>{t("admin.campaigns.modificationsRequired")}</span>
                 {c.moderation_reason && (
-                  <p className="text-gray-400 text-sm mt-1">{c.moderation_reason}</p>
+                  <p className="text-xs font-dm mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>{c.moderation_reason}</p>
                 )}
               </div>
               <div className="flex gap-2 shrink-0">
                 <button
                   onClick={() => c.objective === "lead_generation" ? router.push(`/admin/campaigns/lead-gen?draft=${c.id}`) : openEditForm(c)}
-                  className="px-4 py-2 rounded-xl bg-primary/10 text-primary text-sm font-bold hover:bg-primary/20 transition"
+                  className="px-4 py-2 rounded-xl text-xs font-bold transition"
+                  style={{ background: "rgba(211,84,0,0.08)", color: "#D35400" }}
                 >
                   {t("common.edit")}
                 </button>
                 <button
                   onClick={() => handleAction(c.id, "resubmit")}
                   disabled={actionLoading !== null}
-                  className="px-4 py-2 rounded-xl bg-accent text-dark text-sm font-bold hover:bg-accent/90 transition disabled:opacity-40"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white transition disabled:opacity-40"
+                  style={{ background: "#D35400" }}
                 >
-                  {actionLoading === "resubmit" ? "..." : "Resoumettre"}
+                  {actionLoading === "resubmit" ? "..." : t("admin.campaigns.resubmit")}
                 </button>
               </div>
             </div>
@@ -608,24 +643,24 @@ export default function AdminCampaignsPage() {
 
         {/* Stats cards */}
         <div className={`grid grid-cols-2 ${(c.objective || "traffic") === "lead_generation" ? "lg:grid-cols-3" : "lg:grid-cols-4"} gap-4 mb-4`}>
-          <div className="glass-card p-4">
-            <p className="text-xs text-white/40 font-semibold mb-1">{t("common.budget")}</p>
-            <p className="text-xl font-bold">{formatFCFA(c.budget)}</p>
+          <div className="rounded-2xl p-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+            <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>{t("common.budget")}</p>
+            <p className="text-xl font-bold font-syne text-white">{formatFCFA(c.budget)}</p>
           </div>
-          <div className="glass-card p-4">
-            <p className="text-xs text-white/40 font-semibold mb-1">{t("admin.dashboard.spent")}</p>
-            <p className="text-xl font-bold text-accent">{formatFCFA(c.spent)}</p>
+          <div className="rounded-2xl p-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+            <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.dashboard.spent")}</p>
+            <p className="text-xl font-bold font-syne" style={{ color: "#D35400" }}>{formatFCFA(c.spent)}</p>
           </div>
-          <div className="glass-card p-4">
-            <p className="text-xs text-white/40 font-semibold mb-1">{t("admin.campaigns.remaining")}</p>
-            <p className={`text-xl font-bold ${budgetConsumed ? "text-emerald-400" : "text-primary"}`}>
+          <div className="rounded-2xl p-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+            <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.remaining")}</p>
+            <p className="text-xl font-bold font-syne" style={{ color: budgetConsumed ? "#1D9E75" : "#D35400" }}>
               {budgetConsumed ? t("admin.campaigns.fullyConsumed") : formatFCFA(remaining)}
             </p>
           </div>
           {(c.objective || "traffic") !== "lead_generation" && (
-            <div className="glass-card p-4">
-              <p className="text-xs text-white/40 font-semibold mb-1">CPC</p>
-              <p className="text-xl font-bold">{formatFCFA(c.cpc)}</p>
+            <div className="rounded-2xl p-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+              <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>CPC</p>
+              <p className="text-xl font-bold font-syne text-white">{formatFCFA(c.cpc)}</p>
             </div>
           )}
         </div>
@@ -633,31 +668,31 @@ export default function AdminCampaignsPage() {
         {/* Lead gen specific stats */}
         {(c.objective || "traffic") === "lead_generation" && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <div className="glass-card p-4">
-              <p className="text-xs text-white/40 font-semibold mb-1">CPC</p>
-              <p className="text-xl font-bold">{formatFCFA(c.cpc)}</p>
+            <div className="rounded-2xl p-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+              <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>CPC</p>
+              <p className="text-xl font-bold font-syne text-white">{formatFCFA(c.cpc)}</p>
             </div>
-            <div className="glass-card p-4">
-              <p className="text-xs text-white/40 font-semibold mb-1">CPL</p>
-              <p className="text-xl font-bold">{formatFCFA(c.cost_per_lead_fcfa || 0)}</p>
+            <div className="rounded-2xl p-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+              <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>CPL</p>
+              <p className="text-xl font-bold font-syne text-white">{formatFCFA(c.cost_per_lead_fcfa || 0)}</p>
             </div>
-            <div className="glass-card p-4">
-              <p className="text-xs text-white/40 font-semibold mb-1">Leads captures</p>
-              <p className="text-xl font-bold text-purple-400">{c.leads_captured_count || 0}</p>
+            <div className="rounded-2xl p-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+              <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.leadsCaptured")}</p>
+              <p className="text-xl font-bold font-syne" style={{ color: "#8B5CF6" }}>{c.leads_captured_count || 0}</p>
             </div>
-            <div className="glass-card p-4">
-              <p className="text-xs text-white/40 font-semibold mb-1">Frais landing page</p>
-              <p className="text-xl font-bold">{formatFCFA(LEAD_GEN_SETUP_FEE_FCFA)}</p>
-              <p className="text-[10px] text-white/20">{c.setup_fee_paid ? "Paye" : "Non paye"}</p>
+            <div className="rounded-2xl p-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+              <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.landingPageFee")}</p>
+              <p className="text-xl font-bold font-syne text-white">{formatFCFA(LEAD_GEN_SETUP_FEE_FCFA)}</p>
+              <p className="text-[10px] text-white/20">{c.setup_fee_paid ? t("admin.campaigns.paid") : t("admin.campaigns.notPaid")}</p>
             </div>
           </div>
         )}
 
         {/* Landing page URL for lead gen */}
         {(c.objective || "traffic") === "lead_generation" && landingSlug && (
-          <div className="glass-card p-4 mb-4">
-            <p className="text-xs text-white/40 font-semibold mb-1">Landing page</p>
-            <a href={`${SITE_URL}/l/${landingSlug}`} target="_blank" rel="noopener noreferrer" className="text-sm font-mono text-primary hover:underline break-all">
+          <div className="rounded-2xl p-4 mb-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+            <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.landingPage")}</p>
+            <a href={`${SITE_URL}/l/${landingSlug}`} target="_blank" rel="noopener noreferrer" className="text-sm font-mono hover:underline break-all" style={{ color: "#D35400" }}>
               {SITE_URL}/l/{landingSlug}
             </a>
           </div>
@@ -666,32 +701,32 @@ export default function AdminCampaignsPage() {
         {/* Objective context */}
         {(c.objective || "traffic") === "awareness" ? (
           <p className="text-sm text-white/40 mb-4">
-            Chaque clic signifie qu&apos;une personne a vu votre visuel ET a cliqué.
+            {t("admin.campaigns.awarenessContext")}
           </p>
         ) : (c.objective || "traffic") === "lead_generation" ? (
           <p className="text-sm text-white/40 mb-4">
-            Le budget couvre les clics (CPC) et les leads verifies (CPL). Les Echos recoivent 75% du CPL pour chaque lead valide.
+            {t("admin.campaigns.leadGenContext")}
           </p>
         ) : (
           <p className="text-sm text-white/40 mb-4">
-            Chaque clic est un visiteur vérifié sur votre lien.
+            {t("admin.campaigns.trafficContext")}
           </p>
         )}
 
         {/* Tab bar for lead gen campaigns or campaigns with pixel */}
         {((c.objective || "traffic") === "lead_generation" || c.pixel_id) && (
-          <div className="flex gap-1 mb-6 bg-white/5 rounded-xl p-1 w-fit">
+          <div className="flex gap-1 mb-6 rounded-xl p-1 w-fit" style={{ background: "rgba(255,255,255,0.04)" }}>
             <button onClick={() => setDetailTab("overview")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${detailTab === "overview" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"}`}>
-              Apercu
+              {t("admin.campaigns.overview")}
             </button>
             {(c.objective || "traffic") === "lead_generation" && (
               <button onClick={() => setDetailTab("leads")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${detailTab === "leads" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"}`}>
-                Leads ({leads.length})
+                {t("admin.campaigns.leadsTab")} ({leads.length})
               </button>
             )}
             {c.pixel_id && (
               <button onClick={() => setDetailTab("conversions")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${detailTab === "conversions" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"}`}>
-                Conversions
+                {t("admin.campaigns.conversionsTab")}
               </button>
             )}
           </div>
@@ -701,7 +736,7 @@ export default function AdminCampaignsPage() {
         {(c.objective || "traffic") === "lead_generation" && detailTab === "leads" && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold">Leads ({leads.length})</p>
+              <p className="text-sm font-semibold">{t("admin.campaigns.leadsTab")} ({leads.length})</p>
               {leads.length > 0 && (
                 <a
                   href={`/api/admin/campaigns/leads?campaign_id=${c.id}&format=csv`}
@@ -709,31 +744,31 @@ export default function AdminCampaignsPage() {
                   className="px-4 py-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold hover:bg-purple-500/20 transition flex items-center gap-2"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  Telecharger CSV
+                  {t("admin.campaigns.downloadCSV")}
                 </a>
               )}
             </div>
             {leadsLoading ? (
-              <div className="glass-card p-8 text-center text-white/30 text-sm">Chargement...</div>
+              <div className="rounded-2xl p-8 text-center text-white/30 text-sm" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>{t("admin.campaigns.loadingData")}</div>
             ) : leads.length === 0 ? (
-              <div className="glass-card p-8 text-center text-white/30 text-sm">Aucun lead pour le moment</div>
+              <div className="rounded-2xl p-8 text-center text-white/30 text-sm" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>{t("admin.campaigns.noLeads")}</div>
             ) : (
-              <div className="glass-card overflow-x-auto">
+              <div className="rounded-2xl overflow-x-auto" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
                 {(() => {
                   const customFieldKeys = Array.from(new Set(leads.flatMap(l => l.custom_fields ? Object.keys(l.custom_fields) : [])));
                   return (
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-white/10 text-left">
-                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">Nom</th>
-                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">Telephone</th>
-                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">Email</th>
+                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">{t("admin.campaigns.leadName")}</th>
+                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">{t("admin.campaigns.leadPhone")}</th>
+                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">{t("common.email")}</th>
                           {customFieldKeys.map(key => (
                             <th key={key} className="px-4 py-3 text-xs text-white/40 font-semibold">{key}</th>
                           ))}
-                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">Statut</th>
-                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">Date</th>
-                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">Actions</th>
+                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">{t("admin.campaigns.leadStatus")}</th>
+                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">{t("admin.campaigns.leadDate")}</th>
+                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">{t("admin.campaigns.leadActions")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -752,7 +787,7 @@ export default function AdminCampaignsPage() {
                                 lead.status === "flagged" ? "bg-yellow-500/20 text-yellow-300" :
                                 "bg-white/10 text-white/60"
                               }`}>
-                                {lead.status === "verified" ? "Accepte" : lead.status === "rejected" ? "Rejete" : lead.status === "flagged" ? "Suspect" : "En attente"}
+                                {lead.status === "verified" ? t("admin.campaigns.leadAccepted") : lead.status === "rejected" ? t("admin.campaigns.leadRejected") : lead.status === "flagged" ? t("admin.campaigns.leadFlagged") : t("admin.campaigns.leadPending")}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-xs text-white/40">{new Date(lead.created_at).toLocaleDateString("fr-FR")}</td>
@@ -764,14 +799,14 @@ export default function AdminCampaignsPage() {
                                     disabled={leadActionLoading === lead.id}
                                     className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-[11px] font-semibold hover:bg-emerald-500/20 transition disabled:opacity-40"
                                   >
-                                    {leadActionLoading === lead.id ? "..." : "Accepter"}
+                                    {leadActionLoading === lead.id ? "..." : t("admin.campaigns.acceptLead")}
                                   </button>
                                   <button
                                     onClick={() => handleLeadAction(lead.id, "reject")}
                                     disabled={leadActionLoading === lead.id}
                                     className="px-2.5 py-1 rounded-lg bg-red-500/10 text-red-400 text-[11px] font-semibold hover:bg-red-500/20 transition disabled:opacity-40"
                                   >
-                                    {leadActionLoading === lead.id ? "..." : "Rejeter"}
+                                    {leadActionLoading === lead.id ? "..." : t("admin.campaigns.rejectLead")}
                                   </button>
                                 </div>
                               )}
@@ -781,10 +816,10 @@ export default function AdminCampaignsPage() {
                                   disabled={leadActionLoading === lead.id}
                                   className="px-2.5 py-1 rounded-lg bg-red-500/10 text-red-400 text-[11px] font-semibold hover:bg-red-500/20 transition disabled:opacity-40"
                                 >
-                                  {leadActionLoading === lead.id ? "..." : "Rejeter"}
+                                  {leadActionLoading === lead.id ? "..." : t("admin.campaigns.rejectLead")}
                                 </button>
                               )}
-                              {lead.status === "rejected" && <span className="text-[11px] text-red-400/50">Rejete</span>}
+                              {lead.status === "rejected" && <span className="text-[11px] text-red-400/50">{t("admin.campaigns.leadRejected")}</span>}
                             </td>
                           </tr>
                         ))}
@@ -807,8 +842,8 @@ export default function AdminCampaignsPage() {
             ) : convData && (convData.funnel.installs > 0 || convData.funnel.signups > 0 || convData.funnel.activations > 0 || convData.funnel.subscriptions > 0 || convData.funnel.purchases > 0 || convData.funnel.leads > 0 || convData.funnel.custom > 0) ? (
               <>
                 {/* Funnel */}
-                <div className="glass-card p-5">
-                  <h3 className="text-sm font-bold text-white/40 uppercase tracking-wider mb-4">Funnel de conversion</h3>
+                <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+                  <h3 className="text-[10px] font-bold font-dm uppercase tracking-wider mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.conversionFunnel")}</h3>
                   <ConversionFunnel funnel={convData.funnel} rates={convData.rates} />
                 </div>
 
@@ -817,8 +852,8 @@ export default function AdminCampaignsPage() {
 
                 {/* Daily chart */}
                 {convData.daily.length > 1 && (
-                  <div className="glass-card p-5">
-                    <h3 className="text-sm font-bold text-white/40 uppercase tracking-wider mb-4">Conversions par jour</h3>
+                  <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+                    <h3 className="text-[10px] font-bold font-dm uppercase tracking-wider mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.conversionsPerDay")}</h3>
                     <div className="h-64 -ml-2">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={convData.daily}>
@@ -852,23 +887,23 @@ export default function AdminCampaignsPage() {
 
                 {/* Recent conversions table */}
                 {convData.recent.length > 0 && (
-                  <div className="glass-card p-5">
+                  <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-sm font-bold text-white/40 uppercase tracking-wider">Conversions récentes</h3>
+                      <h3 className="text-[10px] font-bold font-dm uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.recentConversions")}</h3>
                       <a
                         href={`/api/brand/conversions?campaign_id=${c.id}&format=csv`}
                         download
                         className="text-xs font-semibold bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg transition flex items-center gap-2"
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        Exporter CSV
+                        {t("admin.campaigns.exportCSV")}
                       </a>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="text-white/30 text-xs border-b border-white/5">
-                            <th className="text-left py-2 px-3 font-semibold">Date</th>
+                            <th className="text-left py-2 px-3 font-semibold">{t("admin.campaigns.leadDate")}</th>
                             <th className="text-left py-2 px-3 font-semibold">Événement</th>
                             <th className="text-left py-2 px-3 font-semibold">Valeur</th>
                             <th className="text-left py-2 px-3 font-semibold">Attribué</th>
@@ -926,7 +961,7 @@ export default function AdminCampaignsPage() {
                           disabled={convPage === 0}
                           className="text-xs font-semibold bg-white/5 px-3 py-1.5 rounded-lg disabled:opacity-30 hover:bg-white/10 transition"
                         >
-                          Précédent
+                          {t("admin.campaigns.previous")}
                         </button>
                         <span className="text-xs text-white/30">
                           {convPage + 1} / {Math.ceil(convData.recent.length / 10)}
@@ -936,7 +971,7 @@ export default function AdminCampaignsPage() {
                           disabled={(convPage + 1) * 10 >= convData.recent.length}
                           className="text-xs font-semibold bg-white/5 px-3 py-1.5 rounded-lg disabled:opacity-30 hover:bg-white/10 transition"
                         >
-                          Suivant
+                          {t("admin.campaigns.nextPage")}
                         </button>
                       </div>
                     )}
@@ -944,15 +979,15 @@ export default function AdminCampaignsPage() {
                 )}
               </>
             ) : convError ? (
-              <div className="text-center py-16 glass-card">
+              <div className="rounded-2xl text-center py-16" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
                 <p className="text-sm text-red-400 font-semibold">Erreur : {convError}</p>
-                <button onClick={() => setDetailTab("conversions")} className="mt-4 text-sm text-primary hover:underline">Réessayer</button>
+                <button onClick={() => setDetailTab("conversions")} className="mt-4 text-sm hover:underline" style={{ color: "#D35400" }}>{t("admin.campaigns.retryLoad")}</button>
               </div>
             ) : (
               /* Empty state — pixel linked but no conversions yet */
-              <div className="text-center py-16 glass-card">
+              <div className="rounded-2xl text-center py-16" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto text-white/15 mb-4"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                <h3 className="text-lg font-bold text-white/50">En attente de conversions</h3>
+                <h3 className="text-lg font-bold text-white/50">{t("admin.campaigns.waitingConversions")}</h3>
                 <p className="text-sm text-white/30 mt-2 max-w-md mx-auto">
                   Votre Pixel est configuré et lié à cette campagne.
                   Les données de conversion apparaîtront ici dès que votre app enverra le premier événement.
@@ -960,7 +995,7 @@ export default function AdminCampaignsPage() {
                 <p className="text-xs text-white/20 mt-3 max-w-sm mx-auto">
                   Pour tester : envoyez un événement test via cURL avec le tm_ref d&apos;un de vos clics.
                 </p>
-                <a href="/admin/pixel/guide" className="inline-block mt-5 text-sm font-semibold text-primary hover:underline">
+                <a href="/admin/pixel/guide" className="inline-block mt-5 text-sm font-semibold hover:underline" style={{ color: "#D35400" }}>
                   Voir le guide d&apos;intégration
                 </a>
               </div>
@@ -971,13 +1006,13 @@ export default function AdminCampaignsPage() {
         {/* Overview tab content (always show for non-lead-gen, or when overview tab is active) */}
         {((c.objective || "traffic") !== "lead_generation" || detailTab === "overview") && detailTab !== "conversions" && <>
         {/* Progress bar */}
-        <div className="glass-card p-5 mb-8">
+        <div className="rounded-2xl p-5 mb-8" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-semibold">{t("admin.campaigns.budgetProgress")}</p>
-            <p className="text-sm font-bold text-primary">{Math.round(progress)}%</p>
+            <p className="text-sm font-bold font-syne" style={{ color: "#D35400" }}>{Math.round(progress)}%</p>
           </div>
-          <div className="h-3 bg-white/5 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-primary rounded-full transition-all duration-500" style={{ width: `${Math.min(progress, 100)}%` }} />
+          <div className="h-3 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+            <div className="h-full rounded-full transition-all duration-500" style={{ background: "#D35400", width: `${Math.min(progress, 100)}%` }} />
           </div>
           <div className="flex justify-between mt-2 text-xs text-white/30">
             <span>{formatFCFA(c.spent)}</span>
@@ -989,7 +1024,7 @@ export default function AdminCampaignsPage() {
         {perfLoading && (
           <div className="space-y-4 mb-8 animate-pulse">
             {/* Metrics skeleton */}
-            <div className="glass-card p-5">
+            <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
               <div className="h-5 w-32 bg-white/10 rounded mb-4" />
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {Array.from({ length: 4 }).map((_, i) => (
@@ -1002,7 +1037,7 @@ export default function AdminCampaignsPage() {
               </div>
             </div>
             {/* Chart skeleton */}
-            <div className="glass-card p-5">
+            <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
               <div className="h-5 w-40 bg-white/10 rounded mb-4" />
               <div className="flex items-end gap-1 h-48">
                 {Array.from({ length: 14 }).map((_, i) => (
@@ -1016,35 +1051,35 @@ export default function AdminCampaignsPage() {
         {perf && (
           <div className="space-y-4 mb-8">
             {/* Summary metrics */}
-            <div className="glass-card p-5">
-              <h3 className="font-bold text-lg mb-4">{t("admin.campaigns.performance")}</h3>
+            <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+              <h3 className="font-bold font-syne text-white text-lg mb-4">{t("admin.campaigns.performance")}</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div>
-                  <p className="text-sm text-white/40">{t("admin.campaigns.totalReach")}</p>
-                  <p className="text-2xl font-bold">{perf.totalClicks.toLocaleString()}</p>
-                  <p className="text-xs text-white/30">{t("admin.campaigns.totalReachSub")}</p>
+                  <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.totalReach")}</p>
+                  <p className="text-2xl font-bold font-syne text-white">{perf.totalClicks.toLocaleString()}</p>
+                  <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.25)" }}>{t("admin.campaigns.totalReachSub")}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-white/40">{t("admin.campaigns.realVisitors")}</p>
-                  <p className="text-2xl font-bold text-accent">{perf.validClicks.toLocaleString()}</p>
-                  <p className="text-xs text-white/30">{t("admin.campaigns.verifiedClicks")}</p>
+                  <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.realVisitors")}</p>
+                  <p className="text-2xl font-bold font-syne" style={{ color: "#D35400" }}>{perf.validClicks.toLocaleString()}</p>
+                  <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.25)" }}>{t("admin.campaigns.verifiedClicks")}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-white/40">{t("admin.campaigns.costPerVisitor")}</p>
-                  <p className="text-2xl font-bold">{perf.costPerVisitor} FCFA</p>
-                  <p className="text-xs text-white/30">{t("admin.campaigns.perVerifiedClick")}</p>
+                  <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.costPerVisitor")}</p>
+                  <p className="text-2xl font-bold font-syne text-white">{perf.costPerVisitor} FCFA</p>
+                  <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.25)" }}>{t("admin.campaigns.perVerifiedClick")}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-white/40">{t("admin.campaigns.activeEchos")}</p>
-                  <p className="text-2xl font-bold">{perf.activeEchos}</p>
-                  <p className="text-xs text-white/30">{t("admin.campaigns.sharingYourLink")}</p>
+                  <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.activeEchos")}</p>
+                  <p className="text-2xl font-bold font-syne text-white">{perf.activeEchos}</p>
+                  <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.25)" }}>{t("admin.campaigns.sharingYourLink")}</p>
                 </div>
               </div>
             </div>
 
             {/* Performance chart */}
-            <div className="glass-card p-5">
-              <h3 className="font-bold mb-4">{t("admin.campaigns.clicksPerDay")}</h3>
+            <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+              <h3 className="font-bold font-syne text-white mb-4">{t("admin.campaigns.clicksPerDay")}</h3>
               {perf.chartData && perf.chartData.length > 0 ? (
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
@@ -1081,8 +1116,8 @@ export default function AdminCampaignsPage() {
             {/* Two-column: Top Échos + Geographic breakdown */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Top Échos leaderboard */}
-              <div className="glass-card p-5">
-                <h3 className="font-bold mb-4">{t("admin.campaigns.topEchos")}</h3>
+              <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+                <h3 className="font-bold font-syne text-white mb-4">{t("admin.campaigns.topEchos")}</h3>
                 {perf.topEchos.length > 0 ? (
                   <div className="space-y-3">
                     {perf.topEchos.map((echo, i) => (
@@ -1097,7 +1132,7 @@ export default function AdminCampaignsPage() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-accent font-bold text-sm">{echo.clicks} {t("common.clicks")}</p>
+                          <p className="font-bold text-sm" style={{ color: "#D35400" }}>{echo.clicks} {t("common.clicks")}</p>
                           <p className="text-xs text-white/30">{echo.earnings.toLocaleString()} FCFA</p>
                         </div>
                       </div>
@@ -1111,8 +1146,8 @@ export default function AdminCampaignsPage() {
               </div>
 
               {/* Geographic breakdown */}
-              <div className="glass-card p-5">
-                <h3 className="font-bold mb-4">{t("admin.campaigns.geoBreakdown")}</h3>
+              <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+                <h3 className="font-bold font-syne text-white mb-4">{t("admin.campaigns.geoBreakdown")}</h3>
                 {perf.geoBreakdown.length > 0 ? (
                   <div className="space-y-3">
                     {perf.geoBreakdown.map((geo, i) => (
@@ -1122,7 +1157,7 @@ export default function AdminCampaignsPage() {
                           <span className="text-sm text-white/40">{geo.percentage}%</span>
                         </div>
                         <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
-                          <div className="h-full bg-accent rounded-full" style={{ width: `${geo.percentage}%` }} />
+                          <div className="h-full rounded-full" style={{ background: "#D35400", width: `${geo.percentage}%` }} />
                         </div>
                       </div>
                     ))}
@@ -1136,21 +1171,21 @@ export default function AdminCampaignsPage() {
             </div>
 
             {/* ROI comparison */}
-            <div className="glass-card p-5">
-              <h3 className="font-bold mb-3">{t("admin.campaigns.roi")}</h3>
+            <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+              <h3 className="font-bold font-syne text-white mb-3">{t("admin.campaigns.roi")}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                <div className="bg-white/5 rounded-lg p-3">
-                  <p className="text-white/40 mb-1">Facebook Ads</p>
-                  <p className="font-bold">200-500 FCFA/clic</p>
+                <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)" }}>
+                  <p className="text-[10px] font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>Facebook Ads</p>
+                  <p className="font-bold font-syne text-white text-sm">200-500 FCFA/clic</p>
                 </div>
-                <div className="bg-white/5 rounded-lg p-3">
-                  <p className="text-white/40 mb-1">Instagram Ads</p>
-                  <p className="font-bold">300-800 FCFA/clic</p>
+                <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)" }}>
+                  <p className="text-[10px] font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>Instagram Ads</p>
+                  <p className="font-bold font-syne text-white text-sm">300-800 FCFA/clic</p>
                 </div>
-                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
-                  <p className="text-emerald-400 mb-1">Tamtam</p>
-                  <p className="text-emerald-400 font-bold">{perf.costPerVisitor} FCFA/clic</p>
-                  <p className="text-emerald-400/60 text-xs">
+                <div className="rounded-xl p-3" style={{ background: "rgba(29,158,117,0.08)", border: "0.5px solid rgba(29,158,117,0.2)" }}>
+                  <p className="text-[10px] font-dm mb-1" style={{ color: "#1D9E75" }}>Tamtam</p>
+                  <p className="font-bold font-syne text-sm" style={{ color: "#1D9E75" }}>{perf.costPerVisitor} FCFA/clic</p>
+                  <p className="text-[10px] font-dm" style={{ color: "rgba(29,158,117,0.6)" }}>
                     {perf.costPerVisitor < 200
                       ? t("admin.campaigns.percentCheaper", { pct: String(Math.round((1 - perf.costPerVisitor / 350) * 100)) })
                       : t("admin.campaigns.competitive")}
@@ -1163,12 +1198,12 @@ export default function AdminCampaignsPage() {
 
         {/* Details grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          <div className="glass-card p-5">
-            <p className="text-xs text-white/40 font-semibold mb-3">{t("admin.campaigns.info")}</p>
+          <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+            <p className="text-[10px] font-medium font-dm mb-3" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.info")}</p>
             <div className="space-y-3">
               <div>
-                <p className="text-xs text-white/30">{t("admin.campaigns.destUrl")}</p>
-                <a href={c.destination_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline break-all">{c.destination_url}</a>
+                <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.25)" }}>{t("admin.campaigns.destUrl")}</p>
+                <a href={c.destination_url} target="_blank" rel="noopener noreferrer" className="text-sm hover:underline break-all" style={{ color: "#D35400" }}>{c.destination_url}</a>
               </div>
               {c.starts_at && (
                 <div>
@@ -1185,8 +1220,8 @@ export default function AdminCampaignsPage() {
             </div>
           </div>
 
-          <div className="glass-card p-5">
-            <p className="text-xs text-white/40 font-semibold mb-3">{t("admin.campaigns.visuals")}</p>
+          <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+            <p className="text-[10px] font-medium font-dm mb-3" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.visuals")}</p>
             {c.creative_urls && c.creative_urls.length > 0 ? (
               <div className="grid grid-cols-3 gap-2">
                 {c.creative_urls.map((url, i) => (
@@ -1208,7 +1243,7 @@ export default function AdminCampaignsPage() {
 
         {showDeleteConfirm && (
           <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-            <div className="bg-gray-900 border border-red-500/20 rounded-xl p-6 max-w-md w-full">
+            <div className="rounded-2xl p-6 max-w-md w-full" style={{ background: "#111128", border: "0.5px solid rgba(239,68,68,0.15)" }}>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
                   <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1247,68 +1282,68 @@ export default function AdminCampaignsPage() {
     const objectives = [
       {
         id: "traffic" as const,
-        label: "Trafic",
-        description: "Maximisez les clics vers votre site ou lien",
-        detail: "Les Échos partagent votre lien. Vous payez par clic vérifié.",
+        label: t("admin.campaigns.objectiveTraffic"),
+        description: t("admin.campaigns.trafficDesc"),
+        detail: t("admin.campaigns.trafficDetail"),
         icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>,
         disabled: false,
       },
       {
         id: "awareness" as const,
-        label: "Notoriété",
-        description: "Maximisez la visibilité de votre marque",
-        detail: "Les Échos partagent votre visuel + lien ensemble. Votre image est vue à chaque partage.",
+        label: t("admin.campaigns.objectiveAwareness"),
+        description: t("admin.campaigns.awarenessDesc"),
+        detail: t("admin.campaigns.awarenessDetail"),
         icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
         disabled: false,
       },
       {
         id: "lead_generation" as const,
-        label: "Génération de leads",
-        description: "Collectez des prospects qualifiés",
-        detail: "Landing page IA + formulaire. Payez par lead vérifié.",
+        label: t("admin.campaigns.leadGenLabel"),
+        description: t("admin.campaigns.leadGenDesc"),
+        detail: t("admin.campaigns.leadGenDetail"),
         icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
         disabled: false,
       },
     ];
 
     return (
-      <div className="p-6 max-w-4xl">
-        <button onClick={() => { resetForm(); setView("list"); }} className="flex items-center gap-2 text-sm text-white/40 hover:text-white/70 transition mb-6">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      <div className="p-6 lg:p-8" style={{ maxWidth: "100%" }}>
+        <button onClick={() => { resetForm(); setView("list"); }} className="flex items-center gap-2 text-xs font-medium transition mb-6" style={{ color: "rgba(255,255,255,0.35)" }} onMouseEnter={e => e.currentTarget.style.color = "rgba(255,255,255,0.7)"} onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.35)"}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           {t("common.back")}
         </button>
 
-        <h1 className="text-2xl font-bold mb-2">{t("admin.campaigns.newRythme")}</h1>
-        <p className="text-white/40 text-sm mb-8">Quel est l&apos;objectif de votre campagne ?</p>
+        <h1 className="text-2xl font-bold font-syne text-white mb-2">{t("admin.campaigns.newRythme")}</h1>
+        <p className="text-xs font-dm mb-8" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.objectiveQuestion")}</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
           {objectives.map((obj) => (
             <button
               key={obj.id}
               onClick={() => !obj.disabled && setObjective(obj.id as CampaignObjective)}
               disabled={obj.disabled}
-              className={`relative text-left p-5 rounded-2xl border-2 transition-all ${
-                obj.disabled
-                  ? "opacity-40 cursor-not-allowed border-white/5 bg-white/[0.02]"
-                  : objective === obj.id
-                    ? "border-primary bg-primary/10"
-                    : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]"
-              }`}
+              className="relative text-left p-5 rounded-2xl transition-all"
+              style={{
+                background: obj.disabled ? "rgba(255,255,255,0.02)" : objective === obj.id ? "rgba(211,84,0,0.08)" : "#111128",
+                border: obj.disabled ? "0.5px solid rgba(255,255,255,0.04)" : objective === obj.id ? "1.5px solid #D35400" : "0.5px solid rgba(255,255,255,0.06)",
+                opacity: obj.disabled ? 0.4 : 1,
+                cursor: obj.disabled ? "not-allowed" : "pointer",
+              }}
             >
               {obj.disabled && (
                 <span className="absolute top-3 right-3 text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/40 font-semibold">
-                  Bientôt
+                  {t("admin.campaigns.comingSoon")}
                 </span>
               )}
               {!obj.disabled && objective === obj.id && (
-                <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                <span className="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "#D35400" }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                 </span>
               )}
-              <div className="text-primary mb-3">{obj.icon}</div>
-              <h3 className="font-bold text-lg mb-1">{obj.label}</h3>
-              <p className="text-sm text-white/60 mb-2">{obj.description}</p>
-              <p className="text-xs text-white/30">{obj.detail}</p>
+              <div className="mb-3" style={{ color: "#D35400" }}>{obj.icon}</div>
+              <h3 className="font-bold font-syne text-white text-lg mb-1">{obj.label}</h3>
+              <p className="text-xs font-dm mb-2" style={{ color: "rgba(255,255,255,0.5)" }}>{obj.description}</p>
+              <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.25)" }}>{obj.detail}</p>
             </button>
           ))}
         </div>
@@ -1317,16 +1352,16 @@ export default function AdminCampaignsPage() {
           {objective === "lead_generation" ? (
             <a
               href="/admin/campaigns/lead-gen"
-              className="btn-primary px-8 py-3 inline-block text-center no-underline"
+              className="px-8 py-3 rounded-xl text-sm font-bold text-white inline-block text-center no-underline transition" style={{ background: "#D35400" }}
             >
-              Configurer la campagne Lead Gen
+              {t("admin.campaigns.configureLeadGen")}
             </a>
           ) : (
             <button
               onClick={() => setView("form")}
-              className="btn-primary px-8 py-3"
+              className="px-8 py-3 rounded-xl text-sm font-bold text-white transition" style={{ background: "#D35400" }}
             >
-              Continuer
+              {t("admin.campaigns.continue")}
             </button>
           )}
         </div>
@@ -1337,13 +1372,13 @@ export default function AdminCampaignsPage() {
   // ==================== FORM VIEW ====================
   if (view === "form") {
     return (
-      <div className="p-6 max-w-4xl">
-        <button onClick={() => { resetForm(); setView(editingId ? "detail" : "list"); }} className="flex items-center gap-2 text-sm text-white/40 hover:text-white/70 transition mb-6">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      <div className="p-6 lg:p-8" style={{ maxWidth: "100%" }}>
+        <button onClick={() => { resetForm(); setView(editingId ? "detail" : "list"); }} className="flex items-center gap-2 text-xs font-medium transition mb-6" style={{ color: "rgba(255,255,255,0.35)" }} onMouseEnter={e => e.currentTarget.style.color = "rgba(255,255,255,0.7)"} onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.35)"}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           {t("common.back")}
         </button>
 
-        <h1 className="text-2xl font-bold mb-4">{editingId ? t("admin.campaigns.editRythme") : t("admin.campaigns.newRythme")}</h1>
+        <h1 className="text-2xl font-bold font-syne text-white mb-4">{editingId ? t("admin.campaigns.editRythme") : t("admin.campaigns.newRythme")}</h1>
 
         {/* Objective indicator */}
         <div className="flex items-center gap-2 mb-6">
@@ -1354,11 +1389,11 @@ export default function AdminCampaignsPage() {
                 ? "bg-purple-500/20 text-purple-300"
                 : "bg-teal-500/20 text-teal-300"
           }`}>
-            {objective === "awareness" ? "Notoriété" : objective === "lead_generation" ? "Lead Gen" : "Trafic"}
+            {objective === "awareness" ? t("admin.campaigns.objectiveAwareness") : objective === "lead_generation" ? t("admin.campaigns.objectiveLeadGen") : t("admin.campaigns.objectiveTraffic")}
           </span>
           {!editingId && (
             <button onClick={() => setView("objective")} className="text-xs text-white/30 hover:text-white/50 transition">
-              Changer
+              {t("admin.campaigns.changeObjective")}
             </button>
           )}
         </div>
@@ -1367,34 +1402,34 @@ export default function AdminCampaignsPage() {
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mb-6 flex items-start gap-3">
             <span className="text-lg">📸</span>
             <div>
-              <p className="text-sm font-semibold text-blue-300">Campagne Notoriété</p>
-              <p className="text-xs text-white/40">Les Échos partageront votre visuel + lien ensemble. L&apos;image est obligatoire.</p>
+              <p className="text-sm font-semibold text-blue-300">{t("admin.campaigns.awarenessNotice")}</p>
+              <p className="text-xs text-white/40">{t("admin.campaigns.awarenessNoticeDesc")}</p>
             </div>
           </div>
         )}
 
-        <div className="glass-card p-6">
+        <div className="rounded-2xl p-6" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
-              <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.campaigns.titleLabel")}</label>
-              <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder={t("admin.campaigns.titlePlaceholder")} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
+              <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.titleLabel")}</label>
+              <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder={t("admin.campaigns.titlePlaceholder")} className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.campaigns.description")}</label>
-              <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder={t("admin.campaigns.descPlaceholder")} rows={3} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition resize-none" />
+              <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.description")}</label>
+              <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder={t("admin.campaigns.descPlaceholder")} rows={3} className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition resize-none" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.campaigns.destUrlLabel")}</label>
-              <input type="url" value={form.destination_url} onChange={(e) => setForm({ ...form, destination_url: e.target.value })} placeholder={t("admin.campaigns.destUrlPlaceholder")} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
+              <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.destUrlLabel")}</label>
+              <input type="url" value={form.destination_url} onChange={(e) => setForm({ ...form, destination_url: e.target.value })} placeholder={t("admin.campaigns.destUrlPlaceholder")} className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-xs font-semibold text-white/40 mb-2">
+              <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>
                 {t("admin.campaigns.campaignVisuals")}
                 {objective === "awareness" && <span className="text-red-400 ml-1">*</span>}
               </label>
               {objective === "awareness" && creativeUrls.length === 0 && (
-                <p className="text-xs text-red-400 mb-2">Image obligatoire pour une campagne Notoriété</p>
+                <p className="text-xs text-red-400 mb-2">{t("admin.campaigns.imageRequired")}</p>
               )}
               <div className="flex flex-wrap gap-3 mb-3">
                 {creativeUrls.map((url, i) => (
@@ -1441,8 +1476,8 @@ export default function AdminCampaignsPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.campaigns.cpcLabel")}</label>
-              <input type="number" value={form.cpc} onChange={(e) => setForm({ ...form, cpc: e.target.value })} placeholder="25" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
+              <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.cpcLabel")}</label>
+              <input type="number" value={form.cpc} onChange={(e) => setForm({ ...form, cpc: e.target.value })} placeholder="25" className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
               {avgCpc > 0 && (
                 <div className="mt-2">
                   <p className="text-xs text-white/40">
@@ -1462,21 +1497,21 @@ export default function AdminCampaignsPage() {
               )}
             </div>
             <div>
-              <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.campaigns.budgetLabel")}</label>
-              <input type="number" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="100000" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
+              <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.budgetLabel")}</label>
+              <input type="number" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="100000" className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.campaigns.startDate")}</label>
-              <input type="datetime-local" value={form.starts_at} onChange={(e) => setForm({ ...form, starts_at: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
+              <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.startDate")}</label>
+              <input type="datetime-local" value={form.starts_at} onChange={(e) => setForm({ ...form, starts_at: e.target.value })} className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.campaigns.endDate")}</label>
-              <input type="datetime-local" value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition" />
+              <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.endDate")}</label>
+              <input type="datetime-local" value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
             </div>
 
             {/* City Targeting */}
             <div className="md:col-span-2">
-              <label className="block text-xs font-semibold text-white/40 mb-2">{t("admin.campaigns.targeting")}</label>
+              <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.targeting")}</label>
               <p className="text-xs text-white/30 mb-2">{t("admin.campaigns.targetingHint")}</p>
               <div className="relative">
                 <input
@@ -1484,7 +1519,7 @@ export default function AdminCampaignsPage() {
                   value={citySearch}
                   onChange={(e) => setCitySearch(e.target.value)}
                   placeholder={t("admin.campaigns.searchCity")}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+                  className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }}
                 />
                 {citySearch && (
                   <ul className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto rounded-xl bg-[#1a1a2e] border border-white/10 shadow-xl">
@@ -1503,7 +1538,7 @@ export default function AdminCampaignsPage() {
               {targetCities.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-3">
                   {targetCities.map((city) => (
-                    <span key={city} className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-semibold">
+                    <span key={city} className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold" style={{ background: "rgba(211,84,0,0.15)", color: "#D35400" }}>
                       {city}
                       <button onClick={() => setTargetCities(targetCities.filter((c) => c !== city))} className="hover:text-white transition">×</button>
                     </span>
@@ -1522,20 +1557,20 @@ export default function AdminCampaignsPage() {
                 className="flex items-center gap-2 text-sm font-semibold text-white/50 hover:text-white/80 transition"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                Suivi de conversions (Pixel)
+                {t("admin.campaigns.conversionTracking")}
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${showPixelSection ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6"/></svg>
               </button>
               {showPixelSection && (
                 <div className="mt-3 p-4 rounded-xl bg-white/[0.03] border border-white/10">
                   <p className="text-xs text-white/30 mb-3">
-                    Associez un pixel pour tracker les conversions de cette campagne.
+                    {t("admin.campaigns.pixelLinkDesc")}
                   </p>
                   <select
                     value={selectedPixelId || ""}
                     onChange={(e) => setSelectedPixelId(e.target.value || null)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+                    className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }}
                   >
-                    <option value="">Aucun pixel</option>
+                    <option value="">{t("admin.campaigns.noPixel")}</option>
                     {brandPixels.filter((p) => p.is_active).map((p) => (
                       <option key={p.pixel_id} value={p.pixel_id}>
                         {p.name} ({p.platform}) — {p.pixel_id}
@@ -1544,7 +1579,7 @@ export default function AdminCampaignsPage() {
                   </select>
                   {selectedPixelId && (
                     <p className="text-xs text-emerald-400 mt-2">
-                      Les conversions seront automatiquement attribuées à cette campagne.
+                      {t("admin.campaigns.pixelLinkedSuccess")}
                     </p>
                   )}
                 </div>
@@ -1560,19 +1595,19 @@ export default function AdminCampaignsPage() {
             const echoEarningsPerClick = Math.floor(cpc * ECHO_SHARE_PERCENT / 100);
             const isAboveAvg = avgCpc > 0 && cpc >= avgCpc;
             return (
-              <div className="mt-5 p-4 rounded-xl bg-white/[0.03] border border-white/10">
-                <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+              <div className="mt-5 p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+                <h4 className="text-sm font-bold font-syne text-white mb-3 flex items-center gap-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#D35400" }}><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
                   {t("admin.campaigns.estimationTitle")}
                 </h4>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-white/5 rounded-lg p-3 text-center">
-                    <p className="text-lg font-black text-primary">{estimatedClicks.toLocaleString()}</p>
-                    <p className="text-[10px] text-white/40">{t("admin.campaigns.estClicks")}</p>
+                  <div className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.03)" }}>
+                    <p className="text-lg font-black font-syne" style={{ color: "#D35400" }}>{estimatedClicks.toLocaleString()}</p>
+                    <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.estClicks")}</p>
                   </div>
-                  <div className="bg-white/5 rounded-lg p-3 text-center">
-                    <p className="text-lg font-black text-accent">{formatFCFA(echoEarningsPerClick)}</p>
-                    <p className="text-[10px] text-white/40">{t("admin.campaigns.echoEarnsPerClick")}</p>
+                  <div className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.03)" }}>
+                    <p className="text-lg font-black font-syne" style={{ color: "#D35400" }}>{formatFCFA(echoEarningsPerClick)}</p>
+                    <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.echoEarnsPerClick")}</p>
                   </div>
                 </div>
                 {isAboveAvg && (
@@ -1593,7 +1628,7 @@ export default function AdminCampaignsPage() {
             <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
               <p>{error}</p>
               {showRechargePrompt && (
-                <a href="/admin/wallet" className="inline-block mt-2 px-4 py-2 rounded-xl bg-primary/20 text-primary font-semibold text-xs hover:bg-primary/30 transition">
+                <a href="/admin/wallet" className="inline-block mt-2 px-4 py-2 rounded-xl font-semibold text-xs transition" style={{ background: "rgba(211,84,0,0.15)", color: "#D35400" }}>
                   {t("admin.campaigns.rechargeWallet")}
                 </a>
               )}
@@ -1623,7 +1658,7 @@ export default function AdminCampaignsPage() {
                 type="button"
                 onClick={() => handleSubmit(false)}
                 disabled={submitting || !form.title || !form.destination_url || !form.cpc || !form.budget || (objective === "awareness" && creativeUrls.length === 0)}
-                className="btn-primary px-8 py-3 disabled:opacity-40"
+                className="px-8 py-3 rounded-xl text-sm font-bold text-white transition disabled:opacity-40" style={{ background: "#D35400" }}
               >
                 {submitting ? t("common.saving") : editingId ? t("common.save") : t("admin.campaigns.launchRythme")}
               </button>
@@ -1632,7 +1667,7 @@ export default function AdminCampaignsPage() {
 
           {showCancelConfirm && (
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-              <div className="bg-gray-900 border border-white/10 rounded-xl p-6 max-w-md w-full">
+              <div className="rounded-2xl p-6 max-w-md w-full" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.08)" }}>
                 <h3 className="text-white font-bold text-lg mb-2">{t("admin.campaigns.cancelConfirm")}</h3>
                 <p className="text-white/40 text-sm mb-6">
                   {t("admin.campaigns.cancelMessage")}
@@ -1663,7 +1698,7 @@ export default function AdminCampaignsPage() {
 
           {showDeleteConfirm && (
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-              <div className="bg-gray-900 border border-red-500/20 rounded-xl p-6 max-w-md w-full">
+              <div className="rounded-2xl p-6 max-w-md w-full" style={{ background: "#111128", border: "0.5px solid rgba(239,68,68,0.15)" }}>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
                     <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1699,26 +1734,64 @@ export default function AdminCampaignsPage() {
   }
 
   // ==================== LIST VIEW (Card Grid) ====================
+  // Best CPC computed once outside the loop
+  const allFinishedCampaigns = campaigns.filter(c => c.status === "completed" && c.spent > 0);
+  const bestCPCId = allFinishedCampaigns.length > 1
+    ? [...allFinishedCampaigns].sort((a, b) => {
+        const aCPC = a.cpc > 0 ? Math.floor(a.spent / a.cpc) : 0;
+        const bCPC = b.cpc > 0 ? Math.floor(b.spent / b.cpc) : 0;
+        return (aCPC > 0 ? a.spent / aCPC : Infinity) - (bCPC > 0 ? b.spent / bCPC : Infinity);
+      })[0]?.id
+    : null;
+
   return (
-    <div className="p-6 max-w-6xl">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold">{t("admin.campaigns.title")}</h1>
-        <button onClick={openNewForm} className="btn-primary text-sm">{t("admin.campaigns.newRythme")}</button>
+    <div className="p-4 lg:p-6" style={{ maxWidth: "100%" }}>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <div>
+          <h1 className="text-xl font-bold font-syne text-white">{t("admin.campaigns.title")}</h1>
+          <p className="text-[11px] font-dm mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+            {campaigns.length} {campaigns.length === 1 ? t("admin.campaigns.rythmeCount") : t("admin.campaigns.rythmeCountPlural")} ·{" "}
+            {campaigns.filter(c => c.status === "active").length} {t("admin.dashboard.live").toLowerCase()}
+          </p>
+        </div>
+        <button
+          onClick={openNewForm}
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[11px] font-bold text-white transition-all active:scale-[0.97] hover:shadow-lg hover:shadow-orange-900/20"
+          style={{ background: "#D35400" }}
+          aria-label={t("admin.campaigns.newRythme")}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          {t("admin.campaigns.newRythme")}
+        </button>
       </div>
 
+      {error && (
+        <div role="alert" className="mb-5 p-3 rounded-xl text-xs" style={{ background: error.startsWith("✓") ? "rgba(29,158,117,0.1)" : "rgba(239,68,68,0.1)", border: `0.5px solid ${error.startsWith("✓") ? "rgba(29,158,117,0.3)" : "rgba(239,68,68,0.3)"}`, color: error.startsWith("✓") ? "#5DCAA5" : "#EF4444" }}>
+          {error}
+        </div>
+      )}
+
       {campaigns.length === 0 ? (
-        <div className="glass-card p-12 text-center">
-          <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-white/20">
-              <path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0-11V3m0 0L9.5 7.5M12 3l2.5 4.5" />
-            </svg>
+        <div
+          className="rounded-2xl p-10 text-center"
+          style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}
+        >
+          <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "rgba(211,84,0,0.1)" }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D35400" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0-11V3m0 0L9.5 7.5M12 3l2.5 4.5" /></svg>
           </div>
-          <p className="text-white/40 text-sm mb-2">{t("admin.campaigns.noRythmes")}</p>
-          <p className="text-xs text-white/30 mb-4">{t("admin.campaigns.noRythmesDesc")}</p>
-          <button onClick={openNewForm} className="btn-primary text-sm">{t("admin.campaigns.createFirst")}</button>
+          <p className="text-sm font-semibold font-syne text-white mb-1">{t("admin.campaigns.noRythmes")}</p>
+          <p className="text-[11px] mb-4 font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.noRythmesDesc")}</p>
+          <button
+            onClick={openNewForm}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-bold text-white transition-all active:scale-[0.97]"
+            style={{ background: "#D35400" }}
+          >
+            {t("admin.campaigns.createFirst")}
+          </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {campaigns.map((campaign) => {
             const progress = campaign.budget > 0 ? (campaign.spent / campaign.budget) * 100 : 0;
             const stats = campaignStats[campaign.id];
@@ -1728,171 +1801,206 @@ export default function AdminCampaignsPage() {
             const actualCPC = estimatedClicks > 0 ? Math.round(campaign.spent / estimatedClicks) : campaign.cpc;
             const isFinished = campaign.status === "completed";
             const budgetConsumed = progress >= 100;
+            const isActive = campaign.status === "active";
+            const isPaused = campaign.status === "paused";
+            const isDraft = campaign.status === "draft" && (campaign.moderation_status !== "pending" || (campaign.objective === "lead_generation" && !campaign.landing_page_id));
+            const isPendingReview = campaign.status === "draft" && campaign.moderation_status === "pending" && !(campaign.objective === "lead_generation" && !campaign.landing_page_id);
+            const isRejected = campaign.status === "rejected";
 
-            // Find best campaign by CPC for badge
-            const allFinished = campaigns.filter(c => c.status === "completed" && c.spent > 0);
-            const bestCPCId = allFinished.length > 1
-              ? allFinished.sort((a, b) => {
-                  const aCPC = a.cpc > 0 ? Math.floor(a.spent / a.cpc) : 0;
-                  const bCPC = b.cpc > 0 ? Math.floor(b.spent / b.cpc) : 0;
-                  return (aCPC > 0 ? a.spent / aCPC : Infinity) - (bCPC > 0 ? b.spent / bCPC : Infinity);
-                })[0]?.id
-              : null;
+            const statusConfig = isActive
+              ? { dot: "#D35400", label: t("common.active"), bg: "rgba(211,84,0,0.1)" }
+              : isPaused
+              ? { dot: "#EAB308", label: t("common.paused"), bg: "rgba(234,179,8,0.1)" }
+              : isFinished
+              ? { dot: "rgba(255,255,255,0.2)", label: t("common.finished"), bg: "rgba(255,255,255,0.04)" }
+              : isDraft
+              ? { dot: "rgba(255,255,255,0.15)", label: t("admin.campaigns.draft"), bg: "rgba(255,255,255,0.04)" }
+              : isPendingReview
+              ? { dot: "#F59E0B", label: t("admin.campaigns.pendingValidation"), bg: "rgba(245,158,11,0.1)" }
+              : isRejected
+              ? { dot: "#EF4444", label: t("common.rejected"), bg: "rgba(239,68,68,0.1)" }
+              : { dot: "rgba(255,255,255,0.2)", label: campaign.status, bg: "rgba(255,255,255,0.04)" };
+
+            const objectiveConfig = (campaign.objective || "traffic") === "awareness"
+              ? { label: t("admin.campaigns.objectiveAwareness"), color: "#3B82F6", bg: "rgba(59,130,246,0.1)" }
+              : (campaign.objective || "traffic") === "lead_generation"
+              ? { label: t("admin.campaigns.objectiveLeadGen"), color: "#8B5CF6", bg: "rgba(139,92,246,0.1)" }
+              : { label: t("admin.campaigns.objectiveTraffic"), color: "#1D9E75", bg: "rgba(29,158,117,0.1)" };
 
             return (
               <div
                 key={campaign.id}
-                className="glass-card p-5 hover:border-primary/30 transition-all group"
+                role="article"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDetail(campaign); } }}
+                className="rounded-xl overflow-hidden transition-all cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D35400]/50"
+                style={{
+                  background: "#111128",
+                  border: "0.5px solid rgba(255,255,255,0.06)",
+                }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(211,84,0,0.2)"}
+                onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)"}
+                onClick={() => openDetail(campaign)}
               >
-                <div onClick={() => openDetail(campaign)} className="cursor-pointer">
-                  {campaign.creative_urls && campaign.creative_urls.length > 0 ? (
-                    <div className="h-32 rounded-xl overflow-hidden mb-4 border border-white/5">
-                      <img src={campaign.creative_urls[0]} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                    </div>
-                  ) : (
-                    <div className="h-32 rounded-xl mb-4 bg-white/[0.02] border border-white/5 flex items-center justify-center">
-                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-white/10">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
-                      </svg>
-                    </div>
-                  )}
+                {/* Image / placeholder */}
+                {campaign.creative_urls && campaign.creative_urls.length > 0 ? (
+                  <div className="h-24 overflow-hidden">
+                    <img src={campaign.creative_urls[0]} alt={campaign.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  </div>
+                ) : (
+                  <div className="h-12 flex items-center justify-center" style={{ background: "rgba(255,255,255,0.02)" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+                    </svg>
+                  </div>
+                )}
 
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <div className="min-w-0">
-                      <h3 className="font-bold text-sm truncate">{campaign.title}</h3>
-                      {campaign.description && <p className="text-xs text-white/30 truncate mt-0.5">{campaign.description}</p>}
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                        (campaign.objective || "traffic") === "awareness"
-                          ? "bg-blue-500/20 text-blue-300"
-                          : (campaign.objective || "traffic") === "lead_generation"
-                            ? "bg-purple-500/20 text-purple-300"
-                            : "bg-teal-500/20 text-teal-300"
-                      }`}>
-                        {(campaign.objective || "traffic") === "awareness" ? "Notoriété" : (campaign.objective || "traffic") === "lead_generation" ? "Lead Gen" : "Trafic"}
-                      </span>
-                      <span className={`badge-${campaign.status === "draft" && campaign.moderation_status === "pending" && !(campaign.objective === "lead_generation" && !campaign.landing_page_id) ? "pending" : campaign.status} shrink-0`}>{getStatusLabel(campaign)}</span>
-                    </div>
+                <div className="p-2.5">
+                  {/* Title + objective badge */}
+                  <div className="flex items-start justify-between gap-1 mb-1.5">
+                    <h3 className="text-[11px] font-bold font-syne text-white truncate leading-tight">{campaign.title}</h3>
+                    <span className="text-[8px] font-medium px-1 py-px rounded-full shrink-0 leading-tight" style={{ background: objectiveConfig.bg, color: objectiveConfig.color }}>
+                      {objectiveConfig.label}
+                    </span>
                   </div>
 
-                  {/* Budget progress */}
-                  <div className="mb-3">
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-white/40">{formatFCFA(campaign.spent)}</span>
-                      <span className={budgetConsumed ? "text-emerald-400 font-semibold" : "text-white/40"}>
+                  {/* Status + echo count */}
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="w-1 h-1 rounded-full shrink-0" style={{ background: statusConfig.dot }} />
+                    <span className="text-[9px] font-medium" style={{ color: statusConfig.dot === "rgba(255,255,255,0.2)" || statusConfig.dot === "rgba(255,255,255,0.15)" ? "rgba(255,255,255,0.4)" : statusConfig.dot }}>{statusConfig.label}</span>
+                    {echoCount > 0 && (
+                      <span className="text-[8px] ml-auto" style={{ color: "rgba(255,255,255,0.25)" }}>
+                        {echoCount} {t("admin.campaigns.echosCount")}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Budget bar */}
+                  <div className="mb-2">
+                    <div className="h-[3px] rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${Math.min(progress, 100)}%`,
+                          background: budgetConsumed ? "#1D9E75" : isActive ? "#D35400" : "rgba(255,255,255,0.2)",
+                        }}
+                      />
+                    </div>
+                    <div className="flex justify-between mt-1 text-[8px]" style={{ color: "rgba(255,255,255,0.3)" }}>
+                      <span>{formatFCFA(campaign.spent)}</span>
+                      <span style={{ color: budgetConsumed ? "#5DCAA5" : "rgba(255,255,255,0.3)" }}>
                         {budgetConsumed ? t("admin.campaigns.fullyConsumed") : formatFCFA(campaign.budget)}
                       </span>
                     </div>
-                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full ${budgetConsumed ? "bg-emerald-500" : "bg-gradient-primary"}`} style={{ width: `${Math.min(progress, 100)}%` }} />
-                    </div>
                   </div>
 
-                  {/* Metrics row */}
-                  <div className="flex items-center gap-3 text-xs text-white/40 mb-2">
-                    <span>{echoCount} Échos</span>
-                    <span>·</span>
-                    <span>{estimatedClicks} {t("admin.campaigns.realClicks")}</span>
-                    <span>·</span>
+                  {/* Metrics */}
+                  <div className="flex items-center gap-1 text-[9px]" style={{ color: "rgba(255,255,255,0.4)" }}>
+                    <span className="font-medium text-white">{estimatedClicks.toLocaleString()} {t("common.clicks")}</span>
+                    <span style={{ color: "rgba(255,255,255,0.12)" }}>·</span>
                     <span>{formatFCFA(actualCPC)}/{t("admin.campaigns.perClick")}</span>
                   </div>
 
-                  {/* Performance badge */}
-                  {bestCPCId === campaign.id && allFinished.length > 1 && (
-                    <div className="mb-2">
-                      <span className="text-[10px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-full">{t("admin.campaigns.bestCPC")}</span>
+                  {/* Best CPC badge */}
+                  {bestCPCId === campaign.id && allFinishedCampaigns.length > 1 && (
+                    <div className="mt-1.5">
+                      <span className="text-[8px] font-semibold px-1.5 py-px rounded-full" style={{ background: "rgba(29,158,117,0.12)", color: "#5DCAA5" }}>
+                        {t("admin.campaigns.bestCPC")}
+                      </span>
                     </div>
                   )}
+
+                  {/* Action buttons — stop propagation so card click doesn't fire */}
+                  {isDraft && (
+                    <div className="flex gap-1.5 mt-2 pt-2" style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)" }}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (campaign.objective === "lead_generation") {
+                            router.push(`/admin/campaigns/lead-gen?draft=${campaign.id}`);
+                          } else {
+                            openEditForm(campaign);
+                          }
+                        }}
+                        className="flex-1 py-1.5 rounded-lg text-[10px] font-semibold transition-colors"
+                        style={{ background: "rgba(211,84,0,0.08)", color: "#D35400" }}
+                        aria-label={`${t("common.edit")} ${campaign.title}`}
+                      >
+                        {t("common.edit")}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (campaign.objective === "lead_generation") {
+                            router.push(`/admin/campaigns/lead-gen?draft=${campaign.id}`);
+                          } else {
+                            handleSubmitDraft(campaign.id);
+                          }
+                        }}
+                        disabled={actionLoading !== null}
+                        className="flex-1 py-1.5 rounded-lg text-[10px] font-bold text-white transition-colors disabled:opacity-40"
+                        style={{ background: "#D35400" }}
+                        aria-label={`${t("admin.campaigns.launchDraft")} ${campaign.title}`}
+                      >
+                        {actionLoading === "submitDraft" ? "..." : t("admin.campaigns.launchDraft")}
+                      </button>
+                    </div>
+                  )}
+
+                  {isRejected && (
+                    <div className="flex gap-1.5 mt-2 pt-2" style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)" }}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (campaign.objective === "lead_generation") {
+                            router.push(`/admin/campaigns/lead-gen?draft=${campaign.id}`);
+                          } else {
+                            openEditForm(campaign);
+                          }
+                        }}
+                        className="flex-1 py-1.5 rounded-lg text-[10px] font-semibold transition-colors"
+                        style={{ background: "rgba(211,84,0,0.08)", color: "#D35400" }}
+                      >
+                        {t("common.edit")}
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleAction(campaign.id, "resubmit"); }}
+                        disabled={actionLoading !== null}
+                        className="flex-1 py-1.5 rounded-lg text-[10px] font-bold text-white transition-colors disabled:opacity-40"
+                        style={{ background: "#D35400" }}
+                      >
+                        {actionLoading === "resubmit" ? "..." : t("admin.campaigns.resubmit")}
+                      </button>
+                    </div>
+                  )}
+
+                  {isFinished && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setForm({
+                          title: campaign.title,
+                          description: campaign.description || "",
+                          destination_url: campaign.destination_url,
+                          cpc: campaign.cpc.toString(),
+                          budget: campaign.budget.toString(),
+                          starts_at: "",
+                          ends_at: "",
+                        });
+                        setCreativeUrls(campaign.creative_urls || []);
+                        setEditingId(null);
+                        setError(null);
+                        setShowRechargePrompt(false);
+                        setView("form");
+                      }}
+                      className="w-full mt-2 pt-2 pb-0 text-center text-[10px] font-semibold transition-colors"
+                      style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)", color: "#D35400" }}
+                      aria-label={`${t("admin.campaigns.relaunch")} ${campaign.title}`}
+                    >
+                      {t("admin.campaigns.relaunch")}
+                    </button>
+                  )}
                 </div>
-
-                {/* Draft actions */}
-                {campaign.status === "draft" && (campaign.moderation_status !== "pending" || (campaign.objective === "lead_generation" && !campaign.landing_page_id)) && (
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (campaign.objective === "lead_generation") {
-                          router.push(`/admin/campaigns/lead-gen?draft=${campaign.id}`);
-                        } else {
-                          openEditForm(campaign);
-                        }
-                      }}
-                      className="flex-1 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-bold hover:bg-primary/20 transition"
-                    >
-                      {t("common.edit")}
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (campaign.objective === "lead_generation") {
-                          router.push(`/admin/campaigns/lead-gen?draft=${campaign.id}`);
-                        } else {
-                          handleSubmitDraft(campaign.id);
-                        }
-                      }}
-                      disabled={actionLoading !== null}
-                      className="flex-1 py-2 rounded-xl bg-accent/10 border border-accent/20 text-accent text-xs font-bold hover:bg-accent/20 transition disabled:opacity-40"
-                    >
-                      {actionLoading === "submitDraft" ? "..." : t("admin.campaigns.launchDraft")}
-                    </button>
-                  </div>
-                )}
-
-                {/* Edit & resubmit for rejected campaigns */}
-                {campaign.status === "rejected" && (
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (campaign.objective === "lead_generation") {
-                          router.push(`/admin/campaigns/lead-gen?draft=${campaign.id}`);
-                        } else {
-                          openEditForm(campaign);
-                        }
-                      }}
-                      className="flex-1 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-bold hover:bg-primary/20 transition"
-                    >
-                      {t("common.edit")}
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAction(campaign.id, "resubmit");
-                      }}
-                      disabled={actionLoading !== null}
-                      className="flex-1 py-2 rounded-xl bg-accent/10 border border-accent/20 text-accent text-xs font-bold hover:bg-accent/20 transition disabled:opacity-40"
-                    >
-                      {actionLoading === "resubmit" ? "..." : "Resoumettre"}
-                    </button>
-                  </div>
-                )}
-
-                {/* Relaunch button for finished campaigns */}
-                {isFinished && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setForm({
-                        title: campaign.title,
-                        description: campaign.description || "",
-                        destination_url: campaign.destination_url,
-                        cpc: campaign.cpc.toString(),
-                        budget: campaign.budget.toString(),
-                        starts_at: "",
-                        ends_at: "",
-                      });
-                      setCreativeUrls(campaign.creative_urls || []);
-                      setEditingId(null);
-                      setError(null);
-                      setShowRechargePrompt(false);
-                      setView("form");
-                    }}
-                    className="w-full mt-2 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-bold hover:bg-primary/20 transition"
-                  >
-                    {t("admin.campaigns.relaunch")}
-                  </button>
-                )}
               </div>
             );
           })}
