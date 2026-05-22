@@ -860,7 +860,9 @@
       "responseTimeValue": "< 24 hours",
       "supportHours": "Mon-Sat, 9am-6pm (Dakar time)",
       "whatsappSupport": "Chat on WhatsApp",
-      "whatsappSupportDesc": "Need quick help? Contact us on WhatsApp."
+      "whatsappSupportDesc": "Need quick help? Contact us on WhatsApp.",
+      "faq6q": "How do I pause or reactivate a rythme?",
+      "faq6a": "Open your active rythme and click \"Pause\". Unspent budget is refunded to your wallet. To resume, click \"Reactivate\" — the remaining budget will be debited again."
     },
     "settings": {
       "title": "Settings",
