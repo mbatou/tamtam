@@ -401,7 +401,7 @@ export default function AdminCampaignsPage() {
   async function handleLeadAction(leadId: string, action: "verify" | "reject") {
     const lead = leads.find(l => l.id === leadId);
     if (action === "reject" && lead?.status === "verified") {
-      if (!confirm("Ce lead a deja ete accepte et paye. Le rejeter remboursera le CPL au budget de la campagne. Continuer ?")) {
+      if (!confirm(t("admin.campaigns.revertLeadConfirm"))) {
         return;
       }
     }
@@ -414,12 +414,12 @@ export default function AdminCampaignsPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        alert(data.error || "Erreur");
+        alert(data.error || t("common.error"));
       } else {
         setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: action === "verify" ? "verified" : "rejected" } : l));
       }
     } catch {
-      alert("Erreur de connexion");
+      alert(t("common.networkError"));
     } finally {
       setLeadActionLoading(null);
     }
@@ -441,15 +441,15 @@ export default function AdminCampaignsPage() {
       <div className="p-6 lg:p-8 space-y-5" style={{ maxWidth: "100%" }}>
         <div className="h-8 w-48 rounded-xl animate-pulse" style={{ background: "rgba(255,255,255,0.06)" }} />
         <div className="h-3 w-32 rounded-lg animate-pulse" style={{ background: "rgba(255,255,255,0.04)" }} />
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mt-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="rounded-2xl overflow-hidden animate-pulse" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-              <div className="h-36" style={{ background: "rgba(255,255,255,0.03)" }} />
-              <div className="p-4 space-y-3">
-                <div className="h-4 w-3/4 rounded" style={{ background: "rgba(255,255,255,0.06)" }} />
-                <div className="h-2.5 w-1/2 rounded" style={{ background: "rgba(255,255,255,0.04)" }} />
-                <div className="h-1 w-full rounded-full" style={{ background: "rgba(255,255,255,0.04)" }} />
-                <div className="h-3 w-2/3 rounded" style={{ background: "rgba(255,255,255,0.04)" }} />
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mt-4">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="rounded-xl overflow-hidden animate-pulse" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+              <div className="h-24" style={{ background: "rgba(255,255,255,0.03)" }} />
+              <div className="p-2.5 space-y-2">
+                <div className="h-3 w-3/4 rounded" style={{ background: "rgba(255,255,255,0.06)" }} />
+                <div className="h-2 w-1/2 rounded" style={{ background: "rgba(255,255,255,0.04)" }} />
+                <div className="h-[3px] w-full rounded-full" style={{ background: "rgba(255,255,255,0.04)" }} />
+                <div className="h-2 w-2/3 rounded" style={{ background: "rgba(255,255,255,0.04)" }} />
               </div>
             </div>
           ))}
@@ -532,10 +532,10 @@ export default function AdminCampaignsPage() {
               })()}
               {(() => {
                 const oc = (c.objective || "traffic") === "awareness"
-                  ? { label: "Notoriete", color: "#3B82F6", bg: "rgba(59,130,246,0.1)" }
+                  ? { label: t("admin.campaigns.objectiveAwareness"), color: "#3B82F6", bg: "rgba(59,130,246,0.1)" }
                   : (c.objective || "traffic") === "lead_generation"
-                  ? { label: "Lead Gen", color: "#8B5CF6", bg: "rgba(139,92,246,0.1)" }
-                  : { label: "Trafic", color: "#1D9E75", bg: "rgba(29,158,117,0.1)" };
+                  ? { label: t("admin.campaigns.objectiveLeadGen"), color: "#8B5CF6", bg: "rgba(139,92,246,0.1)" }
+                  : { label: t("admin.campaigns.objectiveTraffic"), color: "#1D9E75", bg: "rgba(29,158,117,0.1)" };
                 return <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ background: oc.bg, color: oc.color }}>{oc.label}</span>;
               })()}
             </div>
@@ -582,7 +582,7 @@ export default function AdminCampaignsPage() {
                 className="px-4 py-2 rounded-xl text-xs font-bold transition"
                 style={{ background: "rgba(139,92,246,0.08)", color: "#8B5CF6" }}
               >
-                Voir la page
+                {t("admin.campaigns.viewPage")}
               </button>
             )}
             {!isEnded && (
@@ -634,7 +634,7 @@ export default function AdminCampaignsPage() {
                   className="px-4 py-2 rounded-xl text-xs font-bold text-white transition disabled:opacity-40"
                   style={{ background: "#D35400" }}
                 >
-                  {actionLoading === "resubmit" ? "..." : "Resoumettre"}
+                  {actionLoading === "resubmit" ? "..." : t("admin.campaigns.resubmit")}
                 </button>
               </div>
             </div>
@@ -677,13 +677,13 @@ export default function AdminCampaignsPage() {
               <p className="text-xl font-bold font-syne text-white">{formatFCFA(c.cost_per_lead_fcfa || 0)}</p>
             </div>
             <div className="rounded-2xl p-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-              <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>Leads captures</p>
+              <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.leadsCaptured")}</p>
               <p className="text-xl font-bold font-syne" style={{ color: "#8B5CF6" }}>{c.leads_captured_count || 0}</p>
             </div>
             <div className="rounded-2xl p-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-              <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>Frais landing page</p>
+              <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.landingPageFee")}</p>
               <p className="text-xl font-bold font-syne text-white">{formatFCFA(LEAD_GEN_SETUP_FEE_FCFA)}</p>
-              <p className="text-[10px] text-white/20">{c.setup_fee_paid ? "Paye" : "Non paye"}</p>
+              <p className="text-[10px] text-white/20">{c.setup_fee_paid ? t("admin.campaigns.paid") : t("admin.campaigns.notPaid")}</p>
             </div>
           </div>
         )}
@@ -691,7 +691,7 @@ export default function AdminCampaignsPage() {
         {/* Landing page URL for lead gen */}
         {(c.objective || "traffic") === "lead_generation" && landingSlug && (
           <div className="rounded-2xl p-4 mb-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-            <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>Landing page</p>
+            <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.landingPage")}</p>
             <a href={`${SITE_URL}/l/${landingSlug}`} target="_blank" rel="noopener noreferrer" className="text-sm font-mono hover:underline break-all" style={{ color: "#D35400" }}>
               {SITE_URL}/l/{landingSlug}
             </a>
@@ -701,15 +701,15 @@ export default function AdminCampaignsPage() {
         {/* Objective context */}
         {(c.objective || "traffic") === "awareness" ? (
           <p className="text-sm text-white/40 mb-4">
-            Chaque clic signifie qu&apos;une personne a vu votre visuel ET a cliqué.
+            {t("admin.campaigns.awarenessContext")}
           </p>
         ) : (c.objective || "traffic") === "lead_generation" ? (
           <p className="text-sm text-white/40 mb-4">
-            Le budget couvre les clics (CPC) et les leads verifies (CPL). Les Echos recoivent 75% du CPL pour chaque lead valide.
+            {t("admin.campaigns.leadGenContext")}
           </p>
         ) : (
           <p className="text-sm text-white/40 mb-4">
-            Chaque clic est un visiteur vérifié sur votre lien.
+            {t("admin.campaigns.trafficContext")}
           </p>
         )}
 
@@ -717,16 +717,16 @@ export default function AdminCampaignsPage() {
         {((c.objective || "traffic") === "lead_generation" || c.pixel_id) && (
           <div className="flex gap-1 mb-6 rounded-xl p-1 w-fit" style={{ background: "rgba(255,255,255,0.04)" }}>
             <button onClick={() => setDetailTab("overview")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${detailTab === "overview" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"}`}>
-              Apercu
+              {t("admin.campaigns.overview")}
             </button>
             {(c.objective || "traffic") === "lead_generation" && (
               <button onClick={() => setDetailTab("leads")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${detailTab === "leads" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"}`}>
-                Leads ({leads.length})
+                {t("admin.campaigns.leadsTab")} ({leads.length})
               </button>
             )}
             {c.pixel_id && (
               <button onClick={() => setDetailTab("conversions")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${detailTab === "conversions" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"}`}>
-                Conversions
+                {t("admin.campaigns.conversionsTab")}
               </button>
             )}
           </div>
@@ -736,7 +736,7 @@ export default function AdminCampaignsPage() {
         {(c.objective || "traffic") === "lead_generation" && detailTab === "leads" && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold">Leads ({leads.length})</p>
+              <p className="text-sm font-semibold">{t("admin.campaigns.leadsTab")} ({leads.length})</p>
               {leads.length > 0 && (
                 <a
                   href={`/api/admin/campaigns/leads?campaign_id=${c.id}&format=csv`}
@@ -744,14 +744,14 @@ export default function AdminCampaignsPage() {
                   className="px-4 py-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold hover:bg-purple-500/20 transition flex items-center gap-2"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  Telecharger CSV
+                  {t("admin.campaigns.downloadCSV")}
                 </a>
               )}
             </div>
             {leadsLoading ? (
-              <div className="rounded-2xl p-8 text-center text-white/30 text-sm" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>Chargement...</div>
+              <div className="rounded-2xl p-8 text-center text-white/30 text-sm" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>{t("admin.campaigns.loadingData")}</div>
             ) : leads.length === 0 ? (
-              <div className="rounded-2xl p-8 text-center text-white/30 text-sm" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>Aucun lead pour le moment</div>
+              <div className="rounded-2xl p-8 text-center text-white/30 text-sm" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>{t("admin.campaigns.noLeads")}</div>
             ) : (
               <div className="rounded-2xl overflow-x-auto" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
                 {(() => {
@@ -760,15 +760,15 @@ export default function AdminCampaignsPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-white/10 text-left">
-                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">Nom</th>
-                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">Telephone</th>
-                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">Email</th>
+                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">{t("admin.campaigns.leadName")}</th>
+                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">{t("admin.campaigns.leadPhone")}</th>
+                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">{t("common.email")}</th>
                           {customFieldKeys.map(key => (
                             <th key={key} className="px-4 py-3 text-xs text-white/40 font-semibold">{key}</th>
                           ))}
-                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">Statut</th>
-                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">Date</th>
-                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">Actions</th>
+                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">{t("admin.campaigns.leadStatus")}</th>
+                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">{t("admin.campaigns.leadDate")}</th>
+                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">{t("admin.campaigns.leadActions")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -787,7 +787,7 @@ export default function AdminCampaignsPage() {
                                 lead.status === "flagged" ? "bg-yellow-500/20 text-yellow-300" :
                                 "bg-white/10 text-white/60"
                               }`}>
-                                {lead.status === "verified" ? "Accepte" : lead.status === "rejected" ? "Rejete" : lead.status === "flagged" ? "Suspect" : "En attente"}
+                                {lead.status === "verified" ? t("admin.campaigns.leadAccepted") : lead.status === "rejected" ? t("admin.campaigns.leadRejected") : lead.status === "flagged" ? t("admin.campaigns.leadFlagged") : t("admin.campaigns.leadPending")}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-xs text-white/40">{new Date(lead.created_at).toLocaleDateString("fr-FR")}</td>
@@ -799,14 +799,14 @@ export default function AdminCampaignsPage() {
                                     disabled={leadActionLoading === lead.id}
                                     className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-[11px] font-semibold hover:bg-emerald-500/20 transition disabled:opacity-40"
                                   >
-                                    {leadActionLoading === lead.id ? "..." : "Accepter"}
+                                    {leadActionLoading === lead.id ? "..." : t("admin.campaigns.acceptLead")}
                                   </button>
                                   <button
                                     onClick={() => handleLeadAction(lead.id, "reject")}
                                     disabled={leadActionLoading === lead.id}
                                     className="px-2.5 py-1 rounded-lg bg-red-500/10 text-red-400 text-[11px] font-semibold hover:bg-red-500/20 transition disabled:opacity-40"
                                   >
-                                    {leadActionLoading === lead.id ? "..." : "Rejeter"}
+                                    {leadActionLoading === lead.id ? "..." : t("admin.campaigns.rejectLead")}
                                   </button>
                                 </div>
                               )}
@@ -816,10 +816,10 @@ export default function AdminCampaignsPage() {
                                   disabled={leadActionLoading === lead.id}
                                   className="px-2.5 py-1 rounded-lg bg-red-500/10 text-red-400 text-[11px] font-semibold hover:bg-red-500/20 transition disabled:opacity-40"
                                 >
-                                  {leadActionLoading === lead.id ? "..." : "Rejeter"}
+                                  {leadActionLoading === lead.id ? "..." : t("admin.campaigns.rejectLead")}
                                 </button>
                               )}
-                              {lead.status === "rejected" && <span className="text-[11px] text-red-400/50">Rejete</span>}
+                              {lead.status === "rejected" && <span className="text-[11px] text-red-400/50">{t("admin.campaigns.leadRejected")}</span>}
                             </td>
                           </tr>
                         ))}
@@ -843,7 +843,7 @@ export default function AdminCampaignsPage() {
               <>
                 {/* Funnel */}
                 <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-                  <h3 className="text-[10px] font-bold font-dm uppercase tracking-wider mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>Funnel de conversion</h3>
+                  <h3 className="text-[10px] font-bold font-dm uppercase tracking-wider mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.conversionFunnel")}</h3>
                   <ConversionFunnel funnel={convData.funnel} rates={convData.rates} />
                 </div>
 
@@ -853,7 +853,7 @@ export default function AdminCampaignsPage() {
                 {/* Daily chart */}
                 {convData.daily.length > 1 && (
                   <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-                    <h3 className="text-[10px] font-bold font-dm uppercase tracking-wider mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>Conversions par jour</h3>
+                    <h3 className="text-[10px] font-bold font-dm uppercase tracking-wider mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.conversionsPerDay")}</h3>
                     <div className="h-64 -ml-2">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={convData.daily}>
@@ -889,21 +889,21 @@ export default function AdminCampaignsPage() {
                 {convData.recent.length > 0 && (
                   <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-[10px] font-bold font-dm uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.35)" }}>Conversions récentes</h3>
+                      <h3 className="text-[10px] font-bold font-dm uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.recentConversions")}</h3>
                       <a
                         href={`/api/brand/conversions?campaign_id=${c.id}&format=csv`}
                         download
                         className="text-xs font-semibold bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg transition flex items-center gap-2"
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        Exporter CSV
+                        {t("admin.campaigns.exportCSV")}
                       </a>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="text-white/30 text-xs border-b border-white/5">
-                            <th className="text-left py-2 px-3 font-semibold">Date</th>
+                            <th className="text-left py-2 px-3 font-semibold">{t("admin.campaigns.leadDate")}</th>
                             <th className="text-left py-2 px-3 font-semibold">Événement</th>
                             <th className="text-left py-2 px-3 font-semibold">Valeur</th>
                             <th className="text-left py-2 px-3 font-semibold">Attribué</th>
@@ -961,7 +961,7 @@ export default function AdminCampaignsPage() {
                           disabled={convPage === 0}
                           className="text-xs font-semibold bg-white/5 px-3 py-1.5 rounded-lg disabled:opacity-30 hover:bg-white/10 transition"
                         >
-                          Précédent
+                          {t("admin.campaigns.previous")}
                         </button>
                         <span className="text-xs text-white/30">
                           {convPage + 1} / {Math.ceil(convData.recent.length / 10)}
@@ -971,7 +971,7 @@ export default function AdminCampaignsPage() {
                           disabled={(convPage + 1) * 10 >= convData.recent.length}
                           className="text-xs font-semibold bg-white/5 px-3 py-1.5 rounded-lg disabled:opacity-30 hover:bg-white/10 transition"
                         >
-                          Suivant
+                          {t("admin.campaigns.nextPage")}
                         </button>
                       </div>
                     )}
@@ -981,13 +981,13 @@ export default function AdminCampaignsPage() {
             ) : convError ? (
               <div className="rounded-2xl text-center py-16" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
                 <p className="text-sm text-red-400 font-semibold">Erreur : {convError}</p>
-                <button onClick={() => setDetailTab("conversions")} className="mt-4 text-sm hover:underline" style={{ color: "#D35400" }}>Réessayer</button>
+                <button onClick={() => setDetailTab("conversions")} className="mt-4 text-sm hover:underline" style={{ color: "#D35400" }}>{t("admin.campaigns.retryLoad")}</button>
               </div>
             ) : (
               /* Empty state — pixel linked but no conversions yet */
               <div className="rounded-2xl text-center py-16" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto text-white/15 mb-4"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                <h3 className="text-lg font-bold text-white/50">En attente de conversions</h3>
+                <h3 className="text-lg font-bold text-white/50">{t("admin.campaigns.waitingConversions")}</h3>
                 <p className="text-sm text-white/30 mt-2 max-w-md mx-auto">
                   Votre Pixel est configuré et lié à cette campagne.
                   Les données de conversion apparaîtront ici dès que votre app enverra le premier événement.
@@ -1282,25 +1282,25 @@ export default function AdminCampaignsPage() {
     const objectives = [
       {
         id: "traffic" as const,
-        label: "Trafic",
-        description: "Maximisez les clics vers votre site ou lien",
-        detail: "Les Échos partagent votre lien. Vous payez par clic vérifié.",
+        label: t("admin.campaigns.objectiveTraffic"),
+        description: t("admin.campaigns.trafficDesc"),
+        detail: t("admin.campaigns.trafficDetail"),
         icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>,
         disabled: false,
       },
       {
         id: "awareness" as const,
-        label: "Notoriété",
-        description: "Maximisez la visibilité de votre marque",
-        detail: "Les Échos partagent votre visuel + lien ensemble. Votre image est vue à chaque partage.",
+        label: t("admin.campaigns.objectiveAwareness"),
+        description: t("admin.campaigns.awarenessDesc"),
+        detail: t("admin.campaigns.awarenessDetail"),
         icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
         disabled: false,
       },
       {
         id: "lead_generation" as const,
-        label: "Génération de leads",
-        description: "Collectez des prospects qualifiés",
-        detail: "Landing page IA + formulaire. Payez par lead vérifié.",
+        label: t("admin.campaigns.leadGenLabel"),
+        description: t("admin.campaigns.leadGenDesc"),
+        detail: t("admin.campaigns.leadGenDetail"),
         icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
         disabled: false,
       },
@@ -1314,7 +1314,7 @@ export default function AdminCampaignsPage() {
         </button>
 
         <h1 className="text-2xl font-bold font-syne text-white mb-2">{t("admin.campaigns.newRythme")}</h1>
-        <p className="text-xs font-dm mb-8" style={{ color: "rgba(255,255,255,0.35)" }}>Quel est l&apos;objectif de votre campagne ?</p>
+        <p className="text-xs font-dm mb-8" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.objectiveQuestion")}</p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
           {objectives.map((obj) => (
@@ -1332,7 +1332,7 @@ export default function AdminCampaignsPage() {
             >
               {obj.disabled && (
                 <span className="absolute top-3 right-3 text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/40 font-semibold">
-                  Bientôt
+                  {t("admin.campaigns.comingSoon")}
                 </span>
               )}
               {!obj.disabled && objective === obj.id && (
@@ -1354,14 +1354,14 @@ export default function AdminCampaignsPage() {
               href="/admin/campaigns/lead-gen"
               className="px-8 py-3 rounded-xl text-sm font-bold text-white inline-block text-center no-underline transition" style={{ background: "#D35400" }}
             >
-              Configurer la campagne Lead Gen
+              {t("admin.campaigns.configureLeadGen")}
             </a>
           ) : (
             <button
               onClick={() => setView("form")}
               className="px-8 py-3 rounded-xl text-sm font-bold text-white transition" style={{ background: "#D35400" }}
             >
-              Continuer
+              {t("admin.campaigns.continue")}
             </button>
           )}
         </div>
@@ -1389,11 +1389,11 @@ export default function AdminCampaignsPage() {
                 ? "bg-purple-500/20 text-purple-300"
                 : "bg-teal-500/20 text-teal-300"
           }`}>
-            {objective === "awareness" ? "Notoriété" : objective === "lead_generation" ? "Lead Gen" : "Trafic"}
+            {objective === "awareness" ? t("admin.campaigns.objectiveAwareness") : objective === "lead_generation" ? t("admin.campaigns.objectiveLeadGen") : t("admin.campaigns.objectiveTraffic")}
           </span>
           {!editingId && (
             <button onClick={() => setView("objective")} className="text-xs text-white/30 hover:text-white/50 transition">
-              Changer
+              {t("admin.campaigns.changeObjective")}
             </button>
           )}
         </div>
@@ -1402,8 +1402,8 @@ export default function AdminCampaignsPage() {
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mb-6 flex items-start gap-3">
             <span className="text-lg">📸</span>
             <div>
-              <p className="text-sm font-semibold text-blue-300">Campagne Notoriété</p>
-              <p className="text-xs text-white/40">Les Échos partageront votre visuel + lien ensemble. L&apos;image est obligatoire.</p>
+              <p className="text-sm font-semibold text-blue-300">{t("admin.campaigns.awarenessNotice")}</p>
+              <p className="text-xs text-white/40">{t("admin.campaigns.awarenessNoticeDesc")}</p>
             </div>
           </div>
         )}
@@ -1429,7 +1429,7 @@ export default function AdminCampaignsPage() {
                 {objective === "awareness" && <span className="text-red-400 ml-1">*</span>}
               </label>
               {objective === "awareness" && creativeUrls.length === 0 && (
-                <p className="text-xs text-red-400 mb-2">Image obligatoire pour une campagne Notoriété</p>
+                <p className="text-xs text-red-400 mb-2">{t("admin.campaigns.imageRequired")}</p>
               )}
               <div className="flex flex-wrap gap-3 mb-3">
                 {creativeUrls.map((url, i) => (
@@ -1557,20 +1557,20 @@ export default function AdminCampaignsPage() {
                 className="flex items-center gap-2 text-sm font-semibold text-white/50 hover:text-white/80 transition"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                Suivi de conversions (Pixel)
+                {t("admin.campaigns.conversionTracking")}
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${showPixelSection ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6"/></svg>
               </button>
               {showPixelSection && (
                 <div className="mt-3 p-4 rounded-xl bg-white/[0.03] border border-white/10">
                   <p className="text-xs text-white/30 mb-3">
-                    Associez un pixel pour tracker les conversions de cette campagne.
+                    {t("admin.campaigns.pixelLinkDesc")}
                   </p>
                   <select
                     value={selectedPixelId || ""}
                     onChange={(e) => setSelectedPixelId(e.target.value || null)}
                     className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }}
                   >
-                    <option value="">Aucun pixel</option>
+                    <option value="">{t("admin.campaigns.noPixel")}</option>
                     {brandPixels.filter((p) => p.is_active).map((p) => (
                       <option key={p.pixel_id} value={p.pixel_id}>
                         {p.name} ({p.platform}) — {p.pixel_id}
@@ -1579,7 +1579,7 @@ export default function AdminCampaignsPage() {
                   </select>
                   {selectedPixelId && (
                     <p className="text-xs text-emerald-400 mt-2">
-                      Les conversions seront automatiquement attribuées à cette campagne.
+                      {t("admin.campaigns.pixelLinkedSuccess")}
                     </p>
                   )}
                 </div>
@@ -1734,53 +1734,64 @@ export default function AdminCampaignsPage() {
   }
 
   // ==================== LIST VIEW (Card Grid) ====================
+  // Best CPC computed once outside the loop
+  const allFinishedCampaigns = campaigns.filter(c => c.status === "completed" && c.spent > 0);
+  const bestCPCId = allFinishedCampaigns.length > 1
+    ? [...allFinishedCampaigns].sort((a, b) => {
+        const aCPC = a.cpc > 0 ? Math.floor(a.spent / a.cpc) : 0;
+        const bCPC = b.cpc > 0 ? Math.floor(b.spent / b.cpc) : 0;
+        return (aCPC > 0 ? a.spent / aCPC : Infinity) - (bCPC > 0 ? b.spent / bCPC : Infinity);
+      })[0]?.id
+    : null;
+
   return (
-    <div className="p-6 lg:p-8" style={{ maxWidth: "100%" }}>
+    <div className="p-4 lg:p-6" style={{ maxWidth: "100%" }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold font-syne text-white">{t("admin.campaigns.title")}</h1>
-          <p className="text-xs font-dm mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>
-            {campaigns.length} {campaigns.length === 1 ? "rythme" : "rythmes"} ·{" "}
+          <h1 className="text-xl font-bold font-syne text-white">{t("admin.campaigns.title")}</h1>
+          <p className="text-[11px] font-dm mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+            {campaigns.length} {campaigns.length === 1 ? t("admin.campaigns.rythmeCount") : t("admin.campaigns.rythmeCountPlural")} ·{" "}
             {campaigns.filter(c => c.status === "active").length} {t("admin.dashboard.live").toLowerCase()}
           </p>
         </div>
         <button
           onClick={openNewForm}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white transition-all active:scale-[0.97] hover:shadow-lg hover:shadow-orange-900/20"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[11px] font-bold text-white transition-all active:scale-[0.97] hover:shadow-lg hover:shadow-orange-900/20"
           style={{ background: "#D35400" }}
+          aria-label={t("admin.campaigns.newRythme")}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           {t("admin.campaigns.newRythme")}
         </button>
       </div>
 
       {error && (
-        <div className="mb-6 p-3 rounded-xl text-sm" style={{ background: error.startsWith("✓") ? "rgba(29,158,117,0.1)" : "rgba(239,68,68,0.1)", border: `0.5px solid ${error.startsWith("✓") ? "rgba(29,158,117,0.3)" : "rgba(239,68,68,0.3)"}`, color: error.startsWith("✓") ? "#5DCAA5" : "#EF4444" }}>
+        <div role="alert" className="mb-5 p-3 rounded-xl text-xs" style={{ background: error.startsWith("✓") ? "rgba(29,158,117,0.1)" : "rgba(239,68,68,0.1)", border: `0.5px solid ${error.startsWith("✓") ? "rgba(29,158,117,0.3)" : "rgba(239,68,68,0.3)"}`, color: error.startsWith("✓") ? "#5DCAA5" : "#EF4444" }}>
           {error}
         </div>
       )}
 
       {campaigns.length === 0 ? (
         <div
-          className="rounded-2xl p-12 text-center"
+          className="rounded-2xl p-10 text-center"
           style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}
         >
-          <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "rgba(211,84,0,0.1)" }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D35400" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0-11V3m0 0L9.5 7.5M12 3l2.5 4.5" /></svg>
+          <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "rgba(211,84,0,0.1)" }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D35400" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0-11V3m0 0L9.5 7.5M12 3l2.5 4.5" /></svg>
           </div>
-          <p className="text-sm font-semibold text-white mb-1">{t("admin.campaigns.noRythmes")}</p>
-          <p className="text-xs mb-5" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.noRythmesDesc")}</p>
+          <p className="text-sm font-semibold font-syne text-white mb-1">{t("admin.campaigns.noRythmes")}</p>
+          <p className="text-[11px] mb-4 font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.noRythmesDesc")}</p>
           <button
             onClick={openNewForm}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-bold text-white transition-all active:scale-[0.97]"
             style={{ background: "#D35400" }}
           >
             {t("admin.campaigns.createFirst")}
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {campaigns.map((campaign) => {
             const progress = campaign.budget > 0 ? (campaign.spent / campaign.budget) * 100 : 0;
             const stats = campaignStats[campaign.id];
@@ -1811,109 +1822,97 @@ export default function AdminCampaignsPage() {
               : { dot: "rgba(255,255,255,0.2)", label: campaign.status, bg: "rgba(255,255,255,0.04)" };
 
             const objectiveConfig = (campaign.objective || "traffic") === "awareness"
-              ? { label: "Notoriete", color: "#3B82F6", bg: "rgba(59,130,246,0.1)" }
+              ? { label: t("admin.campaigns.objectiveAwareness"), color: "#3B82F6", bg: "rgba(59,130,246,0.1)" }
               : (campaign.objective || "traffic") === "lead_generation"
-              ? { label: "Lead Gen", color: "#8B5CF6", bg: "rgba(139,92,246,0.1)" }
-              : { label: "Trafic", color: "#1D9E75", bg: "rgba(29,158,117,0.1)" };
-
-            // Find best campaign by CPC for badge
-            const allFinished = campaigns.filter(c => c.status === "completed" && c.spent > 0);
-            const bestCPCId = allFinished.length > 1
-              ? allFinished.sort((a, b) => {
-                  const aCPC = a.cpc > 0 ? Math.floor(a.spent / a.cpc) : 0;
-                  const bCPC = b.cpc > 0 ? Math.floor(b.spent / b.cpc) : 0;
-                  return (aCPC > 0 ? a.spent / aCPC : Infinity) - (bCPC > 0 ? b.spent / bCPC : Infinity);
-                })[0]?.id
-              : null;
+              ? { label: t("admin.campaigns.objectiveLeadGen"), color: "#8B5CF6", bg: "rgba(139,92,246,0.1)" }
+              : { label: t("admin.campaigns.objectiveTraffic"), color: "#1D9E75", bg: "rgba(29,158,117,0.1)" };
 
             return (
               <div
                 key={campaign.id}
-                className="rounded-2xl overflow-hidden transition-all"
+                role="article"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDetail(campaign); } }}
+                className="rounded-xl overflow-hidden transition-all cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D35400]/50"
                 style={{
                   background: "#111128",
                   border: "0.5px solid rgba(255,255,255,0.06)",
                 }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(211,84,0,0.2)"}
                 onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)"}
+                onClick={() => openDetail(campaign)}
               >
                 {/* Image / placeholder */}
-                <div onClick={() => openDetail(campaign)} className="cursor-pointer">
-                  {campaign.creative_urls && campaign.creative_urls.length > 0 ? (
-                    <div className="h-36 overflow-hidden">
-                      <img src={campaign.creative_urls[0]} alt="" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
-                    </div>
-                  ) : (
-                    <div className="h-20 flex items-center justify-center" style={{ background: "rgba(255,255,255,0.02)" }}>
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
+                {campaign.creative_urls && campaign.creative_urls.length > 0 ? (
+                  <div className="h-24 overflow-hidden">
+                    <img src={campaign.creative_urls[0]} alt={campaign.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  </div>
+                ) : (
+                  <div className="h-12 flex items-center justify-center" style={{ background: "rgba(255,255,255,0.02)" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+                    </svg>
+                  </div>
+                )}
 
-                <div className="p-4">
-                  {/* Title + badges */}
-                  <div onClick={() => openDetail(campaign)} className="cursor-pointer">
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <h3 className="text-[14px] font-bold font-syne text-white truncate">{campaign.title}</h3>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full" style={{ background: objectiveConfig.bg, color: objectiveConfig.color }}>
-                          {objectiveConfig.label}
-                        </span>
-                      </div>
-                    </div>
+                <div className="p-2.5">
+                  {/* Title + objective badge */}
+                  <div className="flex items-start justify-between gap-1 mb-1.5">
+                    <h3 className="text-[11px] font-bold font-syne text-white truncate leading-tight">{campaign.title}</h3>
+                    <span className="text-[8px] font-medium px-1 py-px rounded-full shrink-0 leading-tight" style={{ background: objectiveConfig.bg, color: objectiveConfig.color }}>
+                      {objectiveConfig.label}
+                    </span>
+                  </div>
 
-                    {/* Status + echo count */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: statusConfig.dot }} />
-                      <span className="text-[11px] font-medium" style={{ color: statusConfig.dot === "rgba(255,255,255,0.2)" || statusConfig.dot === "rgba(255,255,255,0.15)" ? "rgba(255,255,255,0.4)" : statusConfig.dot }}>{statusConfig.label}</span>
-                      {echoCount > 0 && (
-                        <span className="text-[10px] ml-auto" style={{ color: "rgba(255,255,255,0.25)" }}>
-                          {echoCount} Echos
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Budget bar */}
-                    <div className="mb-3">
-                      <div className="h-[4px] rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{
-                            width: `${Math.min(progress, 100)}%`,
-                            background: budgetConsumed ? "#1D9E75" : isActive ? "#D35400" : "rgba(255,255,255,0.2)",
-                          }}
-                        />
-                      </div>
-                      <div className="flex justify-between mt-1.5 text-[10px]" style={{ color: "rgba(255,255,255,0.3)" }}>
-                        <span>{formatFCFA(campaign.spent)}</span>
-                        <span style={{ color: budgetConsumed ? "#5DCAA5" : "rgba(255,255,255,0.3)" }}>
-                          {budgetConsumed ? t("admin.campaigns.fullyConsumed") : formatFCFA(campaign.budget)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Metrics */}
-                    <div className="flex items-center gap-2 text-[11px]" style={{ color: "rgba(255,255,255,0.4)" }}>
-                      <span className="font-medium text-white">{estimatedClicks.toLocaleString()} {t("common.clicks")}</span>
-                      <span style={{ color: "rgba(255,255,255,0.15)" }}>·</span>
-                      <span>{formatFCFA(actualCPC)}/{t("admin.campaigns.perClick")}</span>
-                    </div>
-
-                    {/* Best CPC badge */}
-                    {bestCPCId === campaign.id && allFinished.length > 1 && (
-                      <div className="mt-2">
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(29,158,117,0.12)", color: "#5DCAA5" }}>
-                          {t("admin.campaigns.bestCPC")}
-                        </span>
-                      </div>
+                  {/* Status + echo count */}
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="w-1 h-1 rounded-full shrink-0" style={{ background: statusConfig.dot }} />
+                    <span className="text-[9px] font-medium" style={{ color: statusConfig.dot === "rgba(255,255,255,0.2)" || statusConfig.dot === "rgba(255,255,255,0.15)" ? "rgba(255,255,255,0.4)" : statusConfig.dot }}>{statusConfig.label}</span>
+                    {echoCount > 0 && (
+                      <span className="text-[8px] ml-auto" style={{ color: "rgba(255,255,255,0.25)" }}>
+                        {echoCount} {t("admin.campaigns.echosCount")}
+                      </span>
                     )}
                   </div>
 
-                  {/* Draft actions */}
+                  {/* Budget bar */}
+                  <div className="mb-2">
+                    <div className="h-[3px] rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${Math.min(progress, 100)}%`,
+                          background: budgetConsumed ? "#1D9E75" : isActive ? "#D35400" : "rgba(255,255,255,0.2)",
+                        }}
+                      />
+                    </div>
+                    <div className="flex justify-between mt-1 text-[8px]" style={{ color: "rgba(255,255,255,0.3)" }}>
+                      <span>{formatFCFA(campaign.spent)}</span>
+                      <span style={{ color: budgetConsumed ? "#5DCAA5" : "rgba(255,255,255,0.3)" }}>
+                        {budgetConsumed ? t("admin.campaigns.fullyConsumed") : formatFCFA(campaign.budget)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Metrics */}
+                  <div className="flex items-center gap-1 text-[9px]" style={{ color: "rgba(255,255,255,0.4)" }}>
+                    <span className="font-medium text-white">{estimatedClicks.toLocaleString()} {t("common.clicks")}</span>
+                    <span style={{ color: "rgba(255,255,255,0.12)" }}>·</span>
+                    <span>{formatFCFA(actualCPC)}/{t("admin.campaigns.perClick")}</span>
+                  </div>
+
+                  {/* Best CPC badge */}
+                  {bestCPCId === campaign.id && allFinishedCampaigns.length > 1 && (
+                    <div className="mt-1.5">
+                      <span className="text-[8px] font-semibold px-1.5 py-px rounded-full" style={{ background: "rgba(29,158,117,0.12)", color: "#5DCAA5" }}>
+                        {t("admin.campaigns.bestCPC")}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Action buttons — stop propagation so card click doesn't fire */}
                   {isDraft && (
-                    <div className="flex gap-2 mt-3 pt-3" style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)" }}>
+                    <div className="flex gap-1.5 mt-2 pt-2" style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)" }}>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1923,8 +1922,9 @@ export default function AdminCampaignsPage() {
                             openEditForm(campaign);
                           }
                         }}
-                        className="flex-1 py-2 rounded-xl text-xs font-semibold transition"
+                        className="flex-1 py-1.5 rounded-lg text-[10px] font-semibold transition-colors"
                         style={{ background: "rgba(211,84,0,0.08)", color: "#D35400" }}
+                        aria-label={`${t("common.edit")} ${campaign.title}`}
                       >
                         {t("common.edit")}
                       </button>
@@ -1938,17 +1938,17 @@ export default function AdminCampaignsPage() {
                           }
                         }}
                         disabled={actionLoading !== null}
-                        className="flex-1 py-2 rounded-xl text-xs font-bold text-white transition disabled:opacity-40"
+                        className="flex-1 py-1.5 rounded-lg text-[10px] font-bold text-white transition-colors disabled:opacity-40"
                         style={{ background: "#D35400" }}
+                        aria-label={`${t("admin.campaigns.launchDraft")} ${campaign.title}`}
                       >
                         {actionLoading === "submitDraft" ? "..." : t("admin.campaigns.launchDraft")}
                       </button>
                     </div>
                   )}
 
-                  {/* Rejected actions */}
                   {isRejected && (
-                    <div className="flex gap-2 mt-3 pt-3" style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)" }}>
+                    <div className="flex gap-1.5 mt-2 pt-2" style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)" }}>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1958,7 +1958,7 @@ export default function AdminCampaignsPage() {
                             openEditForm(campaign);
                           }
                         }}
-                        className="flex-1 py-2 rounded-xl text-xs font-semibold transition"
+                        className="flex-1 py-1.5 rounded-lg text-[10px] font-semibold transition-colors"
                         style={{ background: "rgba(211,84,0,0.08)", color: "#D35400" }}
                       >
                         {t("common.edit")}
@@ -1966,15 +1966,14 @@ export default function AdminCampaignsPage() {
                       <button
                         onClick={(e) => { e.stopPropagation(); handleAction(campaign.id, "resubmit"); }}
                         disabled={actionLoading !== null}
-                        className="flex-1 py-2 rounded-xl text-xs font-bold text-white transition disabled:opacity-40"
+                        className="flex-1 py-1.5 rounded-lg text-[10px] font-bold text-white transition-colors disabled:opacity-40"
                         style={{ background: "#D35400" }}
                       >
-                        {actionLoading === "resubmit" ? "..." : "Resoumettre"}
+                        {actionLoading === "resubmit" ? "..." : t("admin.campaigns.resubmit")}
                       </button>
                     </div>
                   )}
 
-                  {/* Relaunch for finished */}
                   {isFinished && (
                     <button
                       onClick={(e) => {
@@ -1994,8 +1993,9 @@ export default function AdminCampaignsPage() {
                         setShowRechargePrompt(false);
                         setView("form");
                       }}
-                      className="w-full mt-3 pt-3 pb-0 text-center text-[11px] font-semibold transition"
+                      className="w-full mt-2 pt-2 pb-0 text-center text-[10px] font-semibold transition-colors"
                       style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)", color: "#D35400" }}
+                      aria-label={`${t("admin.campaigns.relaunch")} ${campaign.title}`}
                     >
                       {t("admin.campaigns.relaunch")}
                     </button>
