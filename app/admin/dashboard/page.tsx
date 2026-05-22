@@ -8,7 +8,7 @@ import CampaignList from "@/components/dashboard/CampaignList";
 import ClicksChart from "@/components/dashboard/ClicksChart";
 import WalletCard from "@/components/dashboard/WalletCard";
 import TopEchosList from "@/components/dashboard/TopEchosList";
-import { Eye, UserCheck, Banknote, TrendingDown, Plus, Search } from "lucide-react";
+import { Eye, UserCheck, Banknote, TrendingDown, Plus, Search, Trophy, Target, Users, Zap } from "lucide-react";
 
 interface Campaign {
   id: string;
@@ -303,8 +303,8 @@ export default function AdminDashboard() {
 
       {/* Row 2: Campaign table (2/3) + Wallet + Top Echos stacked (1/3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Left: Campaigns (collapsible) */}
-        <div className="lg:col-span-2">
+        {/* Left: Campaigns (collapsible) + Performance highlights */}
+        <div className="lg:col-span-2 space-y-5">
           {campaignRows.length > 0 ? (
             <CampaignList campaigns={campaignRows} defaultVisible={4} />
           ) : (
@@ -321,6 +321,79 @@ export default function AdminDashboard() {
                 <Plus size={13} />
                 {t("admin.dashboard.launchRythme")}
               </a>
+            </div>
+          )}
+
+          {/* Performance highlights — fills the gap under campaigns */}
+          {allCampaigns.length > 0 && (
+            <div
+              className="rounded-2xl p-5"
+              style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}
+            >
+              <h3 className="text-sm font-semibold font-syne text-white mb-4">{t("admin.dashboard.performanceHighlights")}</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {/* Best campaign */}
+                <div className="flex items-start gap-2.5">
+                  <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(29,158,117,0.1)" }}>
+                    <Trophy size={14} style={{ color: "#1D9E75" }} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.dashboard.bestPerformer")}</p>
+                    <p className="text-[12px] font-semibold text-white mt-0.5 truncate max-w-[120px]">
+                      {bestCampaign ? bestCampaign.title : "—"}
+                    </p>
+                    {bestCampaign && (
+                      <p className="text-[10px] mt-0.5" style={{ color: "#5DCAA5" }}>
+                        {formatFCFA(bestCampaign.actualCPC)}/{t("admin.campaigns.perClick")}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Total campaigns */}
+                <div className="flex items-start gap-2.5">
+                  <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(211,84,0,0.1)" }}>
+                    <Target size={14} style={{ color: "#D35400" }} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.dashboard.totalCampaigns")}</p>
+                    <p className="text-[12px] font-semibold text-white mt-0.5">{allCampaigns.length}</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                      {finishedCampaigns.length} {t("admin.dashboard.completed")}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Echos engaged */}
+                <div className="flex items-start gap-2.5">
+                  <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(139,92,246,0.1)" }}>
+                    <Users size={14} style={{ color: "#8B5CF6" }} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.dashboard.echosEngaged")}</p>
+                    <p className="text-[12px] font-semibold text-white mt-0.5">{stats.activeEchos}</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                      {t("admin.dashboard.sharingYourLinks")}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Avg clicks per campaign */}
+                <div className="flex items-start gap-2.5">
+                  <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(59,130,246,0.1)" }}>
+                    <Zap size={14} style={{ color: "#3B82F6" }} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.dashboard.avgPerCampaign")}</p>
+                    <p className="text-[12px] font-semibold text-white mt-0.5">
+                      {allCampaigns.length > 0 ? formatNumber(Math.round(stats.validClicks / allCampaigns.length)) : "—"}
+                    </p>
+                    <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                      {t("admin.dashboard.clicksPerRythme")}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>

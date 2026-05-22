@@ -529,7 +529,15 @@
       "searchPlaceholder": "Search campaigns...",
       "showMore": "{count} more campaigns",
       "showLess": "Show less",
-      "validRate": "validity rate"
+      "validRate": "validity rate",
+      "performanceHighlights": "Performance Highlights",
+      "bestPerformer": "Best Performer",
+      "totalCampaigns": "Total Campaigns",
+      "completed": "completed",
+      "echosEngaged": "Echos Engaged",
+      "sharingYourLinks": "sharing your links",
+      "avgPerCampaign": "Avg per Campaign",
+      "clicksPerRythme": "clicks per rythme"
     },
     "onboarding": {
       "welcome": "Welcome to Tamtam!",

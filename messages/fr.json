@@ -529,7 +529,15 @@
       "searchPlaceholder": "Rechercher des campagnes...",
       "showMore": "{count} autres campagnes",
       "showLess": "Voir moins",
-      "validRate": "taux de validité"
+      "validRate": "taux de validité",
+      "performanceHighlights": "Points forts",
+      "bestPerformer": "Meilleur rythme",
+      "totalCampaigns": "Total campagnes",
+      "completed": "terminées",
+      "echosEngaged": "Échos engagés",
+      "sharingYourLinks": "partagent vos liens",
+      "avgPerCampaign": "Moy. par campagne",
+      "clicksPerRythme": "clics par rythme"
     },
     "onboarding": {
       "welcome": "Bienvenue sur Tamtam !",
