@@ -516,7 +516,17 @@
       "cheaperThanAvg": "{ratio}x moins cher que votre moyenne.",
       "echosActive": "échos actifs",
       "paused": "En pause",
-      "draft": "Brouillon"
+      "draft": "Brouillon",
+      "viewAll": "Voir tout",
+      "campaign": "Campagne",
+      "budgetUsed": "Budget utilisé",
+      "clicksOverview": "Aperçu des clics",
+      "totalInPeriod": "clics totaux cette période",
+      "walletBalance": "Solde du portefeuille",
+      "totalSpentLabel": "Total dépensé",
+      "campaignBudgetLeft": "Budget restant",
+      "addFunds": "Ajouter des fonds",
+      "searchPlaceholder": "Rechercher des campagnes..."
     },
     "onboarding": {
       "welcome": "Bienvenue sur Tamtam !",

@@ -516,7 +516,17 @@
       "cheaperThanAvg": "{ratio}x cheaper than your average.",
       "echosActive": "echos active",
       "paused": "Paused",
-      "draft": "Draft"
+      "draft": "Draft",
+      "viewAll": "View all",
+      "campaign": "Campaign",
+      "budgetUsed": "Budget used",
+      "clicksOverview": "Clicks Overview",
+      "totalInPeriod": "total clicks this period",
+      "walletBalance": "Wallet Balance",
+      "totalSpentLabel": "Total Spent",
+      "campaignBudgetLeft": "Budget Left",
+      "addFunds": "Add Funds",
+      "searchPlaceholder": "Search campaigns..."
     },
     "onboarding": {
       "welcome": "Welcome to Tamtam!",

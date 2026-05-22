@@ -4,62 +4,50 @@ interface StatCardProps {
   label: string;
   value: string;
   sub?: string;
-  icon?: React.ReactNode;
   Icon?: LucideIcon;
-  accent?: "orange" | "teal" | "purple" | "red";
-  highlight?: boolean;
-  benchmarkIcon?: React.ReactNode;
+  accent?: "orange" | "teal" | "purple" | "blue" | "red";
 }
 
-export default function StatCard({ label, value, sub, icon, Icon, accent = "orange", highlight = false, benchmarkIcon }: StatCardProps) {
-  const bg = highlight ? "#160E08" : "#111128";
-  const borderColor = highlight ? "rgba(211,84,0,0.3)" : "rgba(255,255,255,0.07)";
-  const valueColor = highlight ? "#D35400" : "#FFFFFF";
+const ACCENT_CONFIG: Record<string, { iconBg: string; iconColor: string; subColor: string }> = {
+  orange: { iconBg: "rgba(211,84,0,0.12)", iconColor: "#D35400", subColor: "rgba(255,255,255,0.4)" },
+  teal:   { iconBg: "rgba(29,158,117,0.12)", iconColor: "#1D9E75", subColor: "#5DCAA5" },
+  purple: { iconBg: "rgba(139,92,246,0.12)", iconColor: "#8B5CF6", subColor: "rgba(255,255,255,0.4)" },
+  blue:   { iconBg: "rgba(59,130,246,0.12)", iconColor: "#3B82F6", subColor: "rgba(255,255,255,0.4)" },
+  red:    { iconBg: "rgba(239,68,68,0.12)", iconColor: "#EF4444", subColor: "rgba(255,255,255,0.4)" },
+};
 
-  const subColors: Record<string, string> = {
-    orange: "rgba(255,255,255,0.35)",
-    teal: "#5DCAA5",
-    purple: "rgba(255,255,255,0.35)",
-    red: "rgba(255,255,255,0.35)",
-  };
+export default function StatCard({ label, value, sub, Icon, accent = "orange" }: StatCardProps) {
+  const config = ACCENT_CONFIG[accent] || ACCENT_CONFIG.orange;
 
   return (
     <div
-      className="rounded-xl p-4"
+      className="rounded-2xl p-5 flex items-center gap-4 transition-all hover:scale-[1.02] cursor-default"
       style={{
-        background: bg,
-        border: `0.5px solid ${borderColor}`,
+        background: "#111128",
+        border: "0.5px solid rgba(255,255,255,0.06)",
       }}
     >
-      <div className="flex items-center gap-1.5 mb-2">
-        {Icon && <Icon size={13} style={{ color: "rgba(255,255,255,0.35)" }} />}
-        {icon}
-        <span
-          className="text-[11px] font-medium font-dm"
-          style={{ color: "rgba(255,255,255,0.35)" }}
+      {Icon && (
+        <div
+          className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center"
+          style={{ background: config.iconBg }}
         >
-          {label}
-        </span>
-      </div>
-
-      <p
-        className="text-2xl font-bold font-syne"
-        style={{ color: valueColor }}
-      >
-        {value}
-      </p>
-
-      {sub && (
-        <div className="flex items-center gap-1 mt-1">
-          {benchmarkIcon}
-          <span
-            className="text-xs font-dm"
-            style={{ color: subColors[accent] || subColors.orange }}
-          >
-            {sub}
-          </span>
+          <Icon size={20} style={{ color: config.iconColor }} />
         </div>
       )}
+      <div className="min-w-0">
+        <p className="text-[11px] font-medium font-dm mb-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+          {label}
+        </p>
+        <p className="text-xl font-bold font-syne text-white leading-none">
+          {value}
+        </p>
+        {sub && (
+          <p className="text-[10px] font-dm mt-1" style={{ color: config.subColor }}>
+            {sub}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
