@@ -146,7 +146,7 @@ export default async function LandingPage({ params, searchParams }: PageProps) {
               ctaText={page.cta_text}
               brandColor={brandColor}
               accentColor={accentColor}
-              ref={ref || null}
+              echoRef={ref || null}
             />
           </div>
 
