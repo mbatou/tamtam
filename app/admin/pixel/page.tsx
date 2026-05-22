@@ -37,6 +37,7 @@ export default function PixelDashboardPage() {
   const [regenKey, setRegenKey] = useState<{ pixelId: string; apiKey: string } | null>(null);
   const [liveEvents, setLiveEvents] = useState<ConversionEvent[]>([]);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [showGuide, setShowGuide] = useState(false);
   const supabase = createClient();
 
   const loadPixels = useCallback(async () => {
@@ -178,14 +179,14 @@ export default function PixelDashboardPage() {
           <p className="text-[11px] font-dm mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{t("admin.pixel.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
-          <a
-            href="/admin/pixel/guide"
+          <button
+            onClick={() => setShowGuide(!showGuide)}
             className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-dm font-semibold transition-all hover:brightness-110"
-            style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" }}
+            style={{ background: showGuide ? "rgba(139,92,246,0.1)" : "rgba(255,255,255,0.04)", border: showGuide ? "0.5px solid rgba(139,92,246,0.2)" : "0.5px solid rgba(255,255,255,0.08)", color: showGuide ? "#8B5CF6" : "rgba(255,255,255,0.6)" }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
             {t("admin.pixel.viewGuide")}
-          </a>
+          </button>
           <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-dm font-semibold text-white transition-all hover:brightness-110 active:scale-[0.97]"
@@ -372,6 +373,148 @@ export default function PixelDashboardPage() {
                       {new Date(evt.created_at).toLocaleTimeString("fr-FR")}
                     </span>
                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====== IMPLEMENTATION GUIDE ====== */}
+      {showGuide && (
+        <div className="mt-6 space-y-3">
+          <h2 className="text-sm font-bold font-syne text-white mb-1 flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            {t("admin.pixel.guideTitle")}
+          </h2>
+          <p className="text-[11px] font-dm mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.pixel.guideSubtitle")}</p>
+
+          {/* Step 1 */}
+          <div className="rounded-2xl p-5" style={C}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold font-syne text-white" style={{ background: "#D35400" }}>1</div>
+              <div>
+                <p className="text-sm font-bold font-syne text-white">{t("admin.pixel.step1Title")}</p>
+                <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.pixel.step1Desc")}</p>
+              </div>
+            </div>
+            <div className="rounded-xl p-4 overflow-x-auto" style={{ background: "rgba(0,0,0,0.3)", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+              <pre className="text-[11px] font-mono whitespace-pre" style={{ color: "rgba(255,255,255,0.6)" }}>{`# ${t("admin.pixel.step1Comment")}
+curl -X POST ${typeof window !== "undefined" ? window.location.origin : "https://your-domain.com"}/api/v1/conversions \\
+  -H "Content-Type: application/json" \\
+  -H "X-Tamtam-Key: YOUR_API_KEY" \\
+  -d '{"pixel_id":"YOUR_PIXEL_ID","event":"test"}'`}</pre>
+            </div>
+            <p className="text-[10px] font-dm mt-2" style={{ color: "rgba(255,255,255,0.25)" }}>{t("admin.pixel.step1Note")}</p>
+          </div>
+
+          {/* Step 2 */}
+          <div className="rounded-2xl p-5" style={C}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold font-syne text-white" style={{ background: "#D35400" }}>2</div>
+              <div>
+                <p className="text-sm font-bold font-syne text-white">{t("admin.pixel.step2Title")}</p>
+                <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.pixel.step2Desc")}</p>
+              </div>
+            </div>
+            <div className="rounded-xl p-4 overflow-x-auto" style={{ background: "rgba(0,0,0,0.3)", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+              <pre className="text-[11px] font-mono whitespace-pre" style={{ color: "rgba(255,255,255,0.6)" }}>{`// ${t("admin.pixel.step2CommentNode")}
+const response = await fetch(
+  "${typeof window !== "undefined" ? window.location.origin : "https://your-domain.com"}/api/v1/conversions",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Tamtam-Key": process.env.TAMTAM_API_KEY,
+    },
+    body: JSON.stringify({
+      pixel_id: "YOUR_PIXEL_ID",
+      event: "install",         // install | signup | subscription | purchase | lead | activation | custom
+      tm_ref: req.query.tm_ref, // ${t("admin.pixel.step2TmRef")}
+      external_id: user.id,     // ${t("admin.pixel.step2ExtId")}
+      value: 5000,              // ${t("admin.pixel.step2Value")}
+      currency: "XOF",
+      event_name: "premium_plan",
+      metadata: { plan: "pro" }
+    }),
+  }
+);`}</pre>
+            </div>
+          </div>
+
+          {/* Step 3 */}
+          <div className="rounded-2xl p-5" style={C}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold font-syne text-white" style={{ background: "#D35400" }}>3</div>
+              <div>
+                <p className="text-sm font-bold font-syne text-white">{t("admin.pixel.step3Title")}</p>
+                <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.pixel.step3Desc")}</p>
+              </div>
+            </div>
+            <div className="rounded-xl p-4 overflow-x-auto" style={{ background: "rgba(0,0,0,0.3)", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+              <pre className="text-[11px] font-mono whitespace-pre" style={{ color: "rgba(255,255,255,0.6)" }}>{`# ${t("admin.pixel.step3CommentPython")}
+import requests
+
+requests.post(
+    "${typeof window !== "undefined" ? window.location.origin : "https://your-domain.com"}/api/v1/conversions",
+    headers={
+        "Content-Type": "application/json",
+        "X-Tamtam-Key": TAMTAM_API_KEY,
+    },
+    json={
+        "pixel_id": "YOUR_PIXEL_ID",
+        "event": "signup",
+        "tm_ref": request.GET.get("tm_ref"),
+        "external_id": str(user.id),
+    },
+)`}</pre>
+            </div>
+          </div>
+
+          {/* Step 4 */}
+          <div className="rounded-2xl p-5" style={C}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold font-syne text-white" style={{ background: "#1D9E75" }}>4</div>
+              <div>
+                <p className="text-sm font-bold font-syne text-white">{t("admin.pixel.step4Title")}</p>
+                <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.pixel.step4Desc")}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {[
+                { event: "install", desc: t("admin.pixel.eventInstall") },
+                { event: "signup", desc: t("admin.pixel.eventSignup") },
+                { event: "activation", desc: t("admin.pixel.eventActivation") },
+                { event: "subscription", desc: t("admin.pixel.eventSubscription") },
+                { event: "purchase", desc: t("admin.pixel.eventPurchase") },
+                { event: "lead", desc: t("admin.pixel.eventLead") },
+              ].map((e) => (
+                <div key={e.event} className="flex items-center gap-3 rounded-xl px-4 py-3" style={{ background: "rgba(255,255,255,0.02)", border: "0.5px solid rgba(255,255,255,0.04)" }}>
+                  <code className="text-[11px] font-mono font-bold shrink-0" style={{ color: "#D35400" }}>{e.event}</code>
+                  <span className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.4)" }}>{e.desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Step 5 */}
+          <div className="rounded-2xl p-5" style={C}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold font-syne text-white" style={{ background: "#1D9E75" }}>5</div>
+              <div>
+                <p className="text-sm font-bold font-syne text-white">{t("admin.pixel.step5Title")}</p>
+                <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.pixel.step5Desc")}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              {[
+                { code: "200", label: t("admin.pixel.resp200"), color: "#1D9E75" },
+                { code: "401", label: t("admin.pixel.resp401"), color: "#EF4444" },
+                { code: "422", label: t("admin.pixel.resp422"), color: "#EAB308" },
+              ].map((r) => (
+                <div key={r.code} className="flex items-center gap-2 rounded-xl px-4 py-3" style={{ background: "rgba(255,255,255,0.02)", border: "0.5px solid rgba(255,255,255,0.04)" }}>
+                  <code className="text-xs font-mono font-bold" style={{ color: r.color }}>{r.code}</code>
+                  <span className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.4)" }}>{r.label}</span>
                 </div>
               ))}
             </div>
