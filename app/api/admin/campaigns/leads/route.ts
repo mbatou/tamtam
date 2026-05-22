@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
         return [
           `"${(l.name || "").replace(/"/g, '""')}"`,
           `"${l.phone}"`,
-          `"${l.email || ""}"`,
+          `"${(l.email || Object.entries(cf).find(([k]) => k.toLowerCase().includes("email"))?.[1] || "").replace(/"/g, '""')}"`,
           ...customFieldKeys.map(k => `"${(cf[k] || "").replace(/"/g, '""')}"`),
           l.status,
           l.fraud_score,
