@@ -1,4 +1,16 @@
 {
+  "awa": {
+    "tooltip": "Awa — appuyez pour créer une campagne",
+    "name": "Awa — Guide Campagne",
+    "status": "En ligne · EN/FR",
+    "placeholder": "Posez une question à Awa...",
+    "chips": {
+      "budget": "Quel budget ?",
+      "cpc": "Comment fonctionne le CPC ?",
+      "echos": "Combien d'Échos ?",
+      "create": "Créer une campagne"
+    }
+  },
   "common": {
     "loading": "Chargement...",
     "error": "Erreur",
