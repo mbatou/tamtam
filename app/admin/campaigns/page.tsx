@@ -1324,12 +1324,13 @@ export default function AdminCampaignsPage() {
         <h1 className="text-2xl font-bold font-syne text-white mb-2">{t("admin.campaigns.newRythme")}</h1>
         <p className="text-xs font-dm mb-8" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.objectiveQuestion")}</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+        <div data-tour="objective-grid" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
           {objectives.map((obj) => (
             <button
               key={obj.id}
               onClick={() => !obj.disabled && setObjective(obj.id as CampaignObjective)}
               disabled={obj.disabled}
+              data-tour={`objective-${obj.id}`}
               className="relative text-left p-5 rounded-2xl transition-all"
               style={{
                 background: obj.disabled ? "rgba(255,255,255,0.02)" : objective === obj.id ? "rgba(211,84,0,0.08)" : "#111128",
@@ -1765,6 +1766,7 @@ export default function AdminCampaignsPage() {
         </div>
         <button
           onClick={openNewForm}
+          data-tour="new-campaign-btn"
           className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[11px] font-bold text-white transition-all active:scale-[0.97] hover:shadow-lg hover:shadow-orange-900/20"
           style={{ background: "#D35400" }}
           aria-label={t("admin.campaigns.newRythme")}
@@ -1799,7 +1801,7 @@ export default function AdminCampaignsPage() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+        <div data-tour="campaign-list" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {campaigns.map((campaign) => {
             const progress = campaign.budget > 0 ? (campaign.spent / campaign.budget) * 100 : 0;
             const stats = campaignStats[campaign.id];

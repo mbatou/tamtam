@@ -1,57 +1,182 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAwa } from "./AwaProvider";
 import { useTranslation } from "@/lib/i18n";
 
+const NUDGES: Record<string, { fr: string[]; en: string[] }> = {
+  overview: {
+    fr: [
+      "Besoin d'aide pour lire vos stats ?",
+      "Créons une campagne ensemble !",
+      "Votre solde est prêt, on lance un rythme ?",
+    ],
+    en: [
+      "Need help reading your stats?",
+      "Let's create a campaign together!",
+      "Your balance is ready, launch a rythme?",
+    ],
+  },
+  campaigns: {
+    fr: [
+      "Cliquez 'Nouveau Rythme' pour lancer !",
+      "Je peux vous aider à choisir l'objectif",
+      "Optimisons votre budget ensemble",
+    ],
+    en: [
+      "Click 'New Rythme' to launch!",
+      "I can help you choose the objective",
+      "Let's optimize your budget together",
+    ],
+  },
+  wallet: {
+    fr: [
+      "Rechargez ici via Wave !",
+      "Je vous explique vos transactions",
+      "Besoin de recharger votre solde ?",
+    ],
+    en: [
+      "Top up here via Wave!",
+      "I'll explain your transactions",
+      "Need to top up your balance?",
+    ],
+  },
+  pixel: {
+    fr: [
+      "Installez le Pixel en 5 min !",
+      "Je vous guide étape par étape",
+      "Suivez vos conversions ici",
+    ],
+    en: [
+      "Install the Pixel in 5 min!",
+      "I'll guide you step by step",
+      "Track your conversions here",
+    ],
+  },
+  settings: {
+    fr: [
+      "Configurez votre profil ici",
+      "Ajoutez votre logo de marque",
+      "Invitez votre équipe !",
+    ],
+    en: [
+      "Set up your profile here",
+      "Add your brand logo",
+      "Invite your team!",
+    ],
+  },
+  support: {
+    fr: [
+      "Une question ? Je suis là !",
+      "Consultez la FAQ d'abord",
+      "Créez un ticket si besoin",
+    ],
+    en: [
+      "Have a question? I'm here!",
+      "Check the FAQ first",
+      "Create a ticket if needed",
+    ],
+  },
+  analytics: {
+    fr: [
+      "Analysons vos performances !",
+      "Je peux expliquer vos métriques",
+      "Améliorons votre CTR ensemble",
+    ],
+    en: [
+      "Let's analyze your performance!",
+      "I can explain your metrics",
+      "Let's improve your CTR together",
+    ],
+  },
+};
+
 export default function AwaButton() {
-  const { open, setOpen, unread } = useAwa();
-  const { t } = useTranslation();
-  const [showTooltip, setShowTooltip] = useState(false);
-  const [tooltipDismissed, setTooltipDismissed] = useState(false);
+  const { open, setOpen, unread, currentPage } = useAwa();
+  const { locale } = useTranslation();
+  const [nudgeText, setNudgeText] = useState("");
+  const [showNudge, setShowNudge] = useState(false);
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
+  const nudgeIndexRef = useRef(0);
+  const nudgeTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
-    if (tooltipDismissed || open) return;
-    const show = setTimeout(() => setShowTooltip(true), 2000);
-    const hide = setTimeout(() => setShowTooltip(false), 7000);
-    return () => { clearTimeout(show); clearTimeout(hide); };
-  }, [tooltipDismissed, open]);
+    setNudgeDismissed(false);
+    nudgeIndexRef.current = 0;
+  }, [currentPage]);
+
+  useEffect(() => {
+    if (open || nudgeDismissed) {
+      setShowNudge(false);
+      return;
+    }
+
+    function showNext() {
+      const pageNudges = NUDGES[currentPage] || NUDGES.overview;
+      const langNudges = locale === "en" ? pageNudges.en : pageNudges.fr;
+      const idx = nudgeIndexRef.current % langNudges.length;
+      setNudgeText(langNudges[idx]);
+      setShowNudge(true);
+      nudgeIndexRef.current++;
+
+      nudgeTimerRef.current = setTimeout(() => {
+        setShowNudge(false);
+        nudgeTimerRef.current = setTimeout(showNext, 12000);
+      }, 5000);
+    }
+
+    nudgeTimerRef.current = setTimeout(showNext, 4000);
+    return () => { if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current); };
+  }, [open, nudgeDismissed, currentPage, locale]);
 
   function handleClick() {
     setOpen(!open);
-    setShowTooltip(false);
-    setTooltipDismissed(true);
+    setShowNudge(false);
+    setNudgeDismissed(true);
   }
 
   return (
     <>
-      {/* Tooltip */}
+      {/* Nudge bubble */}
       <AnimatePresence>
-        {showTooltip && !open && (
+        {showNudge && !open && (
           <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.95 }}
+            initial={{ opacity: 0, y: 10, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.95 }}
-            className="fixed z-[99] pointer-events-none"
-            style={{
-              bottom: 90,
-              right: open ? 340 : 20,
-              transition: "right 0.3s ease",
-            }}
+            exit={{ opacity: 0, y: 6, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            className="fixed z-[99] cursor-pointer"
+            style={{ bottom: 88, right: 16 }}
+            onClick={handleClick}
           >
             <div
-              className="px-3 py-2 rounded-lg text-[11px] font-dm whitespace-nowrap"
+              className="px-3.5 py-2.5 rounded-xl text-[12px] font-dm leading-snug max-w-[200px]"
               style={{
-                background: "#111128",
-                border: "0.5px solid rgba(211,84,0,0.3)",
-                color: "rgba(255,255,255,0.7)",
+                background: "linear-gradient(135deg, #1a1a35 0%, #111128 100%)",
+                border: "0.5px solid rgba(211,84,0,0.25)",
+                color: "rgba(255,255,255,0.85)",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(211,84,0,0.08)",
               }}
             >
-              {t("awa.tooltip")}
+              <div className="flex items-start gap-2">
+                <div className="w-[18px] h-[18px] rounded-md flex flex-col items-center justify-center shrink-0 mt-0.5" style={{ background: "#D35400" }}>
+                  <div className="flex gap-[3px]">
+                    <div className="w-[3px] h-[3px] rounded-full bg-white" />
+                    <div className="w-[3px] h-[3px] rounded-full bg-white" />
+                  </div>
+                  <div className="w-[5px] h-[1.5px] rounded-full bg-white/60 mt-[1.5px]" />
+                </div>
+                <span>{nudgeText}</span>
+              </div>
+              {/* Arrow pointing down to the button */}
               <div
-                className="absolute -bottom-1 right-5 w-2 h-2 rotate-45"
-                style={{ background: "#111128", borderRight: "0.5px solid rgba(211,84,0,0.3)", borderBottom: "0.5px solid rgba(211,84,0,0.3)" }}
+                className="absolute -bottom-[6px] right-6 w-3 h-3 rotate-45"
+                style={{
+                  background: "#111128",
+                  borderRight: "0.5px solid rgba(211,84,0,0.25)",
+                  borderBottom: "0.5px solid rgba(211,84,0,0.25)",
+                }}
               />
             </div>
           </motion.div>
@@ -62,12 +187,8 @@ export default function AwaButton() {
       <motion.button
         onClick={handleClick}
         className="fixed z-[100] cursor-pointer"
-        style={{
-          bottom: 24,
-          right: open ? 336 : 16,
-          transition: "right 0.35s cubic-bezier(0.4,0,0.2,1)",
-        }}
-        animate={{ y: [0, -8, 0], rotate: [-1.5, 1.5, -1.5] }}
+        style={{ bottom: 24, right: 16 }}
+        animate={{ y: [0, -6, 0], rotate: [-1, 1, -1] }}
         transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
         aria-label="Awa assistant"
       >
@@ -81,7 +202,7 @@ export default function AwaButton() {
 
         {/* Body */}
         <div
-          className="w-[56px] h-[56px] rounded-2xl flex flex-col items-center justify-center relative"
+          className="w-[52px] h-[52px] rounded-2xl flex flex-col items-center justify-center relative"
           style={{ background: "#D35400", boxShadow: "0 4px 20px rgba(211,84,0,0.3)" }}
         >
           {/* Antenna */}
@@ -91,17 +212,17 @@ export default function AwaButton() {
           </div>
 
           {/* Eyes */}
-          <div className="flex gap-[10px] mt-1">
-            <div className="w-[9px] h-[9px] rounded-full bg-white flex items-center justify-center">
-              <div className="w-[4px] h-[4px] rounded-full" style={{ background: "#0A0A1A", animation: "awaBlink 4s infinite" }} />
+          <div className="flex gap-[9px] mt-1">
+            <div className="w-[8px] h-[8px] rounded-full bg-white flex items-center justify-center">
+              <div className="w-[3.5px] h-[3.5px] rounded-full" style={{ background: "#0A0A1A", animation: "awaBlink 4s infinite" }} />
             </div>
-            <div className="w-[9px] h-[9px] rounded-full bg-white flex items-center justify-center">
-              <div className="w-[4px] h-[4px] rounded-full" style={{ background: "#0A0A1A", animation: "awaBlink 4s infinite" }} />
+            <div className="w-[8px] h-[8px] rounded-full bg-white flex items-center justify-center">
+              <div className="w-[3.5px] h-[3.5px] rounded-full" style={{ background: "#0A0A1A", animation: "awaBlink 4s infinite" }} />
             </div>
           </div>
 
           {/* Mouth */}
-          <div className="w-[12px] h-[3px] rounded-full bg-white/60 mt-[5px]" />
+          <div className="w-[10px] h-[3px] rounded-full bg-white/60 mt-[4px]" />
         </div>
 
         {/* Notification dot */}

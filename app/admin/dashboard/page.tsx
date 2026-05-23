@@ -247,6 +247,7 @@ export default function AdminDashboard() {
           </div>
           <a
             href="/admin/campaigns"
+            data-tour="new-rythme-btn"
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white transition-all active:scale-[0.97] hover:shadow-lg hover:shadow-orange-900/20"
             style={{ background: "#D35400" }}
           >
@@ -257,7 +258,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stat cards — each tells a different part of the story */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div data-tour="stat-cards" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="animate-fade-up animate-fade-up-1">
           <StatCard
             label={t("admin.dashboard.totalReach")}
@@ -372,7 +373,9 @@ export default function AdminDashboard() {
           )}
 
           {campaignRows.length > 0 ? (
+            <div data-tour="campaign-results">
             <CampaignList campaigns={campaignRows} defaultVisible={4} />
+            </div>
           ) : (
             <div
               className="rounded-2xl p-10 text-center"
@@ -393,13 +396,17 @@ export default function AdminDashboard() {
 
         {/* Right: Wallet card + Top Echos stacked */}
         <div className="space-y-5">
+          <div data-tour="wallet-card">
           <WalletCard
             balance={stats.walletBalance}
             totalSpent={stats.budgetSpent}
             totalBudget={stats.budgetTotal}
           />
+          </div>
           {stats.topEchos.length > 0 && (
+            <div data-tour="top-echos">
             <TopEchosList echos={stats.topEchos.slice(0, 4)} />
+            </div>
           )}
         </div>
       </div>
