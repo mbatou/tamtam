@@ -8,6 +8,10 @@ import type { AwaBrandData } from "@/types/awa";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return new Response("AWA_NOT_CONFIGURED", { status: 503 });
+  }
+
   const authClient = createClient();
   const {
     data: { session },
@@ -45,42 +49,46 @@ export async function POST(req: Request) {
 
   const systemPrompt = getAwaSystemPrompt({ language, brandData: enrichedBrandData });
 
-  const client = new Anthropic();
+  try {
+    const client = new Anthropic();
 
-  const stream = await client.messages.stream({
-    model: "claude-sonnet-4-5-20250514",
-    max_tokens: 1024,
-    system: systemPrompt,
-    messages: messages.slice(-20).map((m) => ({
-      role: m.role as "user" | "assistant",
-      content: m.content,
-    })),
-  });
+    const stream = await client.messages.stream({
+      model: "claude-sonnet-4-5-20250514",
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: messages.slice(-20).map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      })),
+    });
 
-  const encoder = new TextEncoder();
-  const readable = new ReadableStream({
-    async start(controller) {
-      try {
-        for await (const event of stream) {
-          if (
-            event.type === "content_block_delta" &&
-            event.delta.type === "text_delta"
-          ) {
-            controller.enqueue(encoder.encode(event.delta.text));
+    const encoder = new TextEncoder();
+    const readable = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const event of stream) {
+            if (
+              event.type === "content_block_delta" &&
+              event.delta.type === "text_delta"
+            ) {
+              controller.enqueue(encoder.encode(event.delta.text));
+            }
           }
+        } catch {
+          controller.enqueue(encoder.encode("\n[Error generating response]"));
+        } finally {
+          controller.close();
         }
-      } catch {
-        controller.enqueue(encoder.encode("\n[Error generating response]"));
-      } finally {
-        controller.close();
-      }
-    },
-  });
+      },
+    });
 
-  return new Response(readable, {
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-cache",
-    },
-  });
+    return new Response(readable, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache",
+      },
+    });
+  } catch {
+    return new Response("AWA_SERVICE_ERROR", { status: 500 });
+  }
 }

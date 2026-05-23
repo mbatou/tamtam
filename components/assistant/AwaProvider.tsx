@@ -81,6 +81,13 @@ export default function AwaProvider({ children }: { children: ReactNode }) {
         });
 
         if (!res.ok || !res.body) {
+          const errText = await res.text();
+          if (errText === "AWA_NOT_CONFIGURED") {
+            throw new Error("__AWA_NOT_CONFIGURED__");
+          }
+          if (res.status === 429) {
+            throw new Error("__RATE_LIMIT__");
+          }
           throw new Error("Stream failed");
         }
 
@@ -101,10 +108,22 @@ export default function AwaProvider({ children }: { children: ReactNode }) {
         if (!open) setUnread((u) => u + 1);
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
+        let fallback = "Something went wrong. Please try again.";
+        if (err instanceof Error) {
+          if (err.message === "__AWA_NOT_CONFIGURED__") {
+            fallback = brandData.language === "fr"
+              ? "Awa est en cours de configuration. Veuillez réessayer plus tard."
+              : "Awa is being configured. Please try again later.";
+          } else if (err.message === "__RATE_LIMIT__") {
+            fallback = brandData.language === "fr"
+              ? "Vous avez atteint la limite de messages. Veuillez patienter un moment."
+              : "You've reached the message limit. Please wait a moment.";
+          }
+        }
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
-              ? { ...m, content: m.content || "Something went wrong. Please try again." }
+              ? { ...m, content: m.content || fallback }
               : m
           )
         );
