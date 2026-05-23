@@ -112,6 +112,25 @@ export async function GET(
 
   // If valid click, update counters (with budget guard)
   if (valid) {
+    // Check if echo is suspended — don't credit suspended users
+    const { data: echoUser } = await supabase
+      .from("users")
+      .select("status")
+      .eq("id", link.echo_id)
+      .single();
+
+    if (echoUser?.status === "suspended") {
+      await supabase
+        .from("clicks")
+        .update({ is_valid: false, rejection_reason: "echo_suspended" })
+        .eq("link_id", link.id)
+        .eq("ip_address", ip)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      return NextResponse.redirect(appendTmRef(destinationUrl, tmRef));
+    }
+
     // Pre-check: can the campaign afford this click?
     const preRemaining = campaign.budget - (campaign.spent || 0);
     if (preRemaining < campaign.cpc) {
