@@ -96,7 +96,6 @@ function FinancePageContent() {
   const highlightId = searchParams.get("id");
   const [dateRange, setDateRange] = useState<DateRange>({ key: "all", from: null, to: null });
   const [stuckData, setStuckData] = useState<StuckEarningsData | null>(null);
-  const [stuckLoading, setStuckLoading] = useState(false);
   const [fixingEarnings, setFixingEarnings] = useState(false);
   const [fixResult, setFixResult] = useState<FixResult | null>(null);
   const [showFixConfirm, setShowFixConfirm] = useState(false);
