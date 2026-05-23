@@ -5,6 +5,7 @@ import { sendCampaignCompletedToEcho, sendEmail } from "@/lib/email";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { getEffectiveBrandId } from "@/lib/brand-utils";
+import { unlockCampaignEarnings } from "@/lib/unlock-earnings";
 
 export const dynamic = "force-dynamic";
 
@@ -270,7 +271,7 @@ export async function PUT(request: NextRequest) {
   const brandId = await getEffectiveBrandId(supabase, session.user.id);
 
   // Verify ownership and get current campaign data
-  const { data: existing } = await supabase.from("campaigns").select("batteur_id, budget, spent, status, moderation_status").eq("id", id).single();
+  const { data: existing } = await supabase.from("campaigns").select("batteur_id, budget, spent, status, moderation_status, title").eq("id", id).single();
   if (!existing || existing.batteur_id !== brandId) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
@@ -470,9 +471,15 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Notify echos when campaign is completed
+  // Unlock echo earnings and notify when campaign is completed
   if (status === "completed" && existing.status === "active") {
+    unlockCampaignEarnings(id, existing.title || id).catch(console.error);
     notifyCampaignCompleted(id);
+  }
+
+  // Also unlock when pausing (echos shouldn't wait for a paused campaign)
+  if (status === "paused" && existing.status === "active") {
+    unlockCampaignEarnings(id, existing.title || id).catch(console.error);
   }
 
   return NextResponse.json(data);
@@ -503,7 +510,7 @@ export async function DELETE(request: NextRequest) {
   const brandId = await getEffectiveBrandId(supabase, session.user.id);
 
   // Verify ownership and get campaign data for refund
-  const { data: existing } = await supabase.from("campaigns").select("batteur_id, budget, spent, status, moderation_status, objective, setup_fee_paid, setup_fee_amount_fcfa").eq("id", id).single();
+  const { data: existing } = await supabase.from("campaigns").select("batteur_id, budget, spent, status, moderation_status, objective, setup_fee_paid, setup_fee_amount_fcfa, title").eq("id", id).single();
   if (!existing || existing.batteur_id !== brandId) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
@@ -564,5 +571,11 @@ export async function DELETE(request: NextRequest) {
   if (deleteResult.error) {
     return NextResponse.json({ error: deleteResult.error.message }, { status: 500 });
   }
+
+  // Unlock echo earnings when campaign is deleted
+  if (["active", "paused"].includes(existing.status)) {
+    unlockCampaignEarnings(id, existing.title || id).catch(console.error);
+  }
+
   return NextResponse.json({ success: true, refunded });
 }
