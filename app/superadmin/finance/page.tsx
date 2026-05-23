@@ -13,6 +13,27 @@ import { useToast } from "@/components/ui/Toast";
 import DateRangeSelector, { type DateRange } from "@/components/ui/DateRangeSelector";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
+interface StuckCampaign {
+  id: string;
+  title: string;
+  status: string;
+  echos: number;
+  total_fcfa: number;
+}
+
+interface StuckEarningsData {
+  stuck: number;
+  total_fcfa: number;
+  campaigns: StuckCampaign[];
+}
+
+interface FixResult {
+  dry_run: boolean;
+  fixed: number;
+  total_fcfa: number;
+  campaigns: { campaign_id: string; title: string; echos_unlocked: number }[];
+}
+
 interface PayoutRow {
   id: string;
   echo_id: string;
@@ -74,6 +95,11 @@ function FinancePageContent() {
   const searchParams = useSearchParams();
   const highlightId = searchParams.get("id");
   const [dateRange, setDateRange] = useState<DateRange>({ key: "all", from: null, to: null });
+  const [stuckData, setStuckData] = useState<StuckEarningsData | null>(null);
+  const [stuckLoading, setStuckLoading] = useState(false);
+  const [fixingEarnings, setFixingEarnings] = useState(false);
+  const [fixResult, setFixResult] = useState<FixResult | null>(null);
+  const [showFixConfirm, setShowFixConfirm] = useState(false);
 
   const openPayoutById = useCallback((finData: FinanceData, id: string) => {
     const match = finData.payouts.find((p) => p.id === id);
@@ -92,14 +118,45 @@ function FinancePageContent() {
       if (dateRange.from) params.set("from", dateRange.from);
       if (dateRange.to) params.set("to", dateRange.to);
       const qs = params.toString();
-      const res = await fetch(`/api/superadmin/finance${qs ? `?${qs}` : ""}`);
+      const [res, stuckRes] = await Promise.all([
+        fetch(`/api/superadmin/finance${qs ? `?${qs}` : ""}`),
+        fetch("/api/superadmin/fix-stuck-earnings"),
+      ]);
       const json = await res.json();
       setData(json);
       if (highlightId) openPayoutById(json, highlightId);
+      if (stuckRes.ok) {
+        const stuckJson = await stuckRes.json();
+        setStuckData(stuckJson);
+      }
     } catch {
       showToast(t("common.networkError"), "error");
     }
     setLoading(false);
+  }
+
+  async function executeFixStuckEarnings() {
+    setFixingEarnings(true);
+    try {
+      const res = await fetch("/api/superadmin/fix-stuck-earnings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dry_run: false }),
+      });
+      if (res.ok) {
+        const result = await res.json();
+        setFixResult(result);
+        setShowFixConfirm(false);
+        setStuckData({ stuck: 0, total_fcfa: 0, campaigns: [] });
+        showToast(`${result.fixed} écho(s) crédité(s) — ${result.total_fcfa.toLocaleString("fr-FR")} FCFA débloqués`, "success");
+      } else {
+        const err = await res.json();
+        showToast(err.error || "Erreur", "error");
+      }
+    } catch {
+      showToast("Erreur réseau", "error");
+    }
+    setFixingEarnings(false);
   }
 
   function requestPayoutAction(payout: PayoutRow, action: "approve" | "reject", reason?: string) {
@@ -186,6 +243,129 @@ function FinancePageContent() {
         <StatCard label={t("superadmin.dashboard.paidToEchos")} value={formatFCFA(data.sentTotal)} accent="purple" />
         <StatCard label={t("common.pending")} value={formatFCFA(data.pendingTotal)} accent="red" />
       </div>
+
+      {/* Stuck Earnings Alert */}
+      {stuckData && stuckData.stuck > 0 && !fixResult && (
+        <div className="mb-8 rounded-2xl border border-red-500/30 bg-red-500/5 overflow-hidden">
+          <div className="p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center text-2xl shrink-0">
+                  &#9888;&#65039;
+                </div>
+                <div>
+                  <h3 className="font-bold text-red-400 text-lg">Gains échos bloqués</h3>
+                  <p className="text-sm text-white/50 mt-0.5">
+                    {stuckData.stuck} écho(s) n&apos;ont pas reçu leurs gains après la fin de campagne(s)
+                  </p>
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="text-2xl font-black text-red-400">{formatFCFA(stuckData.total_fcfa)}</div>
+                <div className="text-xs text-white/30">à débloquer</div>
+              </div>
+            </div>
+
+            {/* Campaign breakdown */}
+            <div className="mt-4 space-y-2">
+              {stuckData.campaigns.map((c) => (
+                <div key={c.id} className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-white/5">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Badge status={c.status} />
+                    <span className="text-sm font-semibold truncate">{c.title}</span>
+                  </div>
+                  <div className="flex items-center gap-4 shrink-0">
+                    <span className="text-xs text-white/40">{c.echos} écho(s)</span>
+                    <span className="text-sm font-bold text-red-400">{formatFCFA(c.total_fcfa)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 flex items-center gap-3">
+              <button
+                onClick={() => setShowFixConfirm(true)}
+                className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-sm hover:opacity-90 transition"
+              >
+                Débloquer tous les gains
+              </button>
+              <p className="text-xs text-white/30">
+                Transfère les gains en attente vers le solde disponible de chaque écho et les notifie par email/WhatsApp.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fix Result Success */}
+      {fixResult && fixResult.fixed > 0 && (
+        <div className="mb-8 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-6">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-xl">&#10003;</div>
+            <div>
+              <h3 className="font-bold text-emerald-400">Gains débloqués avec succès</h3>
+              <p className="text-sm text-white/50">{fixResult.fixed} écho(s) crédité(s) — {formatFCFA(fixResult.total_fcfa)} transférés</p>
+            </div>
+          </div>
+          <div className="space-y-1.5 mt-3">
+            {fixResult.campaigns.map((c) => (
+              <div key={c.campaign_id} className="flex items-center justify-between text-sm py-1.5 px-3 rounded-lg bg-white/5">
+                <span className="text-white/60">{c.title}</span>
+                <span className="text-emerald-400 font-semibold">{c.echos_unlocked} écho(s) débloqué(s)</span>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => setFixResult(null)}
+            className="mt-3 text-xs text-white/30 hover:text-white/50 transition"
+          >
+            Masquer
+          </button>
+        </div>
+      )}
+
+      {/* Fix Confirmation Modal */}
+      <Modal
+        open={showFixConfirm}
+        onClose={() => setShowFixConfirm(false)}
+        title="Confirmer le déblocage des gains"
+      >
+        <div className="space-y-4">
+          <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+            <p className="text-sm text-white/70 mb-3">
+              Cette action va transférer les gains bloqués vers le solde disponible de chaque écho concerné.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-white">{stuckData?.stuck || 0}</div>
+                <div className="text-xs text-white/40">écho(s) à créditer</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-emerald-400">{formatFCFA(stuckData?.total_fcfa || 0)}</div>
+                <div className="text-xs text-white/40">FCFA à débloquer</div>
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-white/40">
+            Chaque écho recevra une notification par email et WhatsApp pour l&apos;informer que ses gains sont disponibles au retrait.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowFixConfirm(false)}
+              className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 font-bold text-sm hover:bg-white/10 transition"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={executeFixStuckEarnings}
+              disabled={fixingEarnings}
+              className="flex-1 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-sm hover:opacity-90 transition disabled:opacity-50"
+            >
+              {fixingEarnings ? "Déblocage en cours..." : "Confirmer le déblocage"}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Reconciliation Bar */}
       <div className="glass-card p-6 mb-8">
