@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
-import { notifyEchoUnlock } from "@/lib/unlock-earnings";
+import { notifyEchoUnlock, unlockCampaignEarnings } from "@/lib/unlock-earnings";
 import { timingSafeEqual } from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +23,44 @@ export async function GET(request: NextRequest) {
   }
 
   const today = new Date().toISOString().split("T")[0];
+  const now = new Date().toISOString();
+
+  // Auto-complete expired campaigns (ends_at has passed)
+  const { data: expiredCampaigns } = await supabaseAdmin
+    .from("campaigns")
+    .select("id, title, batteur_id, budget, spent")
+    .eq("status", "active")
+    .lte("ends_at", now);
+
+  let expiredCount = 0;
+  for (const campaign of expiredCampaigns || []) {
+    await supabaseAdmin
+      .from("campaigns")
+      .update({ status: "completed" })
+      .eq("id", campaign.id)
+      .eq("status", "active");
+
+    unlockCampaignEarnings(campaign.id, campaign.title || campaign.id).catch(console.error);
+
+    // Refund remaining budget to brand
+    const remaining = campaign.budget - (campaign.spent || 0);
+    if (remaining > 0 && campaign.batteur_id) {
+      await supabaseAdmin.rpc("increment_balance", {
+        p_user_id: campaign.batteur_id,
+        p_amount: remaining,
+      });
+      await logWalletTransaction({
+        supabase: supabaseAdmin,
+        userId: campaign.batteur_id,
+        amount: remaining,
+        type: "campaign_budget_refund",
+        description: `Remboursement fin de campagne: ${campaign.title || campaign.id}`,
+        sourceId: campaign.id,
+        sourceType: "campaign",
+      });
+    }
+    expiredCount++;
+  }
 
   const { data: dueList } = await supabaseAdmin
     .from("pending_earnings")
@@ -138,5 +176,5 @@ export async function GET(request: NextRequest) {
     unlockedCount++;
   }
 
-  return NextResponse.json({ unlocked: unlockedCount, date: today });
+  return NextResponse.json({ unlocked: unlockedCount, expired_campaigns: expiredCount, date: today });
 }
