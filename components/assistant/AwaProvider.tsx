@@ -1,6 +1,8 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useRef, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { useTranslation } from "@/lib/i18n";
 import type { AwaMessage, AwaBrandData } from "@/types/awa";
 
 interface AwaContextType {
@@ -10,10 +12,10 @@ interface AwaContextType {
   sending: boolean;
   sendMessage: (content: string) => void;
   brandData: AwaBrandData;
-  setBrandData: (d: AwaBrandData) => void;
   chipsUsed: boolean;
   setChipsUsed: (v: boolean) => void;
   unread: number;
+  currentPage: string;
 }
 
 const AwaContext = createContext<AwaContextType | null>(null);
@@ -24,7 +26,25 @@ export function useAwa() {
   return ctx;
 }
 
+const PAGE_MAP: Record<string, string> = {
+  "/admin/dashboard": "overview",
+  "/admin/campaigns": "campaigns",
+  "/admin/wallet": "wallet",
+  "/admin/pixel": "pixel",
+  "/admin/settings": "settings",
+  "/admin/support": "support",
+  "/admin/analytics": "analytics",
+};
+
+function resolvePageKey(pathname: string): string {
+  return PAGE_MAP[pathname] || "overview";
+}
+
 export default function AwaProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const { locale } = useTranslation();
+  const currentPage = resolvePageKey(pathname);
+
   const [open, setOpenState] = useState(false);
   const [messages, setMessages] = useState<AwaMessage[]>([]);
   const [sending, setSending] = useState(false);
@@ -36,10 +56,46 @@ export default function AwaProvider({ children }: { children: ReactNode }) {
     activeCampaigns: 0,
     totalCampaigns: 0,
     totalClicks: 0,
-    language: "fr",
+    totalEchos: 0,
+    avgCpc: 0,
+    language: locale,
     brandName: "",
+    currentPage,
   });
   const abortRef = useRef<AbortController | null>(null);
+  const dataFetchedRef = useRef(false);
+
+  useEffect(() => {
+    setBrandData((prev) => ({ ...prev, currentPage, language: locale }));
+  }, [currentPage, locale]);
+
+  useEffect(() => {
+    if (dataFetchedRef.current) return;
+    dataFetchedRef.current = true;
+
+    fetch("/api/admin/stats")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data) return;
+        setBrandData((prev) => ({
+          ...prev,
+          walletBalance: data.walletBalance || 0,
+          totalSpent: data.budgetSpent || 0,
+          activeCampaigns: data.activeRythmes || 0,
+          totalCampaigns: data.totalCampaigns || 0,
+          totalClicks: data.totalClicks || data.validClicks || 0,
+          totalEchos: data.activeEchos || 0,
+          avgCpc: data.validClicks && data.budgetSpent ? Math.round(data.budgetSpent / data.validClicks) : 0,
+          brandName: data.brandName || prev.brandName,
+        }));
+      })
+      .catch(() => {});
+  }, []);
+
+  // Reset chips when navigating to a different page
+  useEffect(() => {
+    setChipsUsed(false);
+  }, [currentPage]);
 
   const setOpen = useCallback((v: boolean) => {
     setOpenState(v);
@@ -136,7 +192,7 @@ export default function AwaProvider({ children }: { children: ReactNode }) {
 
   return (
     <AwaContext.Provider
-      value={{ open, setOpen, messages, sending, sendMessage, brandData, setBrandData, chipsUsed, setChipsUsed, unread }}
+      value={{ open, setOpen, messages, sending, sendMessage, brandData, chipsUsed, setChipsUsed, unread, currentPage }}
     >
       {children}
     </AwaContext.Provider>

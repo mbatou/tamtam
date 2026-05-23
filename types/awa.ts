@@ -11,6 +11,9 @@ export interface AwaBrandData {
   activeCampaigns: number;
   totalCampaigns: number;
   totalClicks: number;
+  totalEchos: number;
+  avgCpc: number;
   language: string;
   brandName: string;
+  currentPage: string;
 }

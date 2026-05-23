@@ -6,18 +6,27 @@ import { useTranslation } from "@/lib/i18n";
 import AwaMessages from "./AwaMessages";
 import AwaInput from "./AwaInput";
 
+const PAGE_CHIPS: Record<string, string[]> = {
+  overview: ["chips.budget", "chips.cpc", "chips.echos", "chips.create"],
+  campaigns: ["chips.createCampaign", "chips.optimizeBudget", "chips.bestObjective", "chips.campaignTips"],
+  wallet: ["chips.recharge", "chips.spendingBreakdown", "chips.budgetAdvice", "chips.paymentHelp"],
+  pixel: ["chips.pixelSetup", "chips.pixelEvents", "chips.conversionTracking", "chips.pixelDebug"],
+  settings: ["chips.profileSetup", "chips.teamInvite", "chips.securityTips", "chips.languageHelp"],
+  support: ["chips.contactSupport", "chips.responseTime", "chips.commonIssues", "chips.ticketStatus"],
+  analytics: ["chips.readMetrics", "chips.improveCtr", "chips.audienceInsights", "chips.exportData"],
+};
+
 export default function AwaPanel() {
-  const { open, setOpen, messages, sending, sendMessage, chipsUsed, setChipsUsed } = useAwa();
+  const { open, setOpen, messages, sending, sendMessage, chipsUsed, setChipsUsed, currentPage } = useAwa();
   const { t } = useTranslation();
 
   if (!open) return null;
 
-  const CHIPS = [
-    { key: "budget", label: t("awa.chips.budget") },
-    { key: "cpc", label: t("awa.chips.cpc") },
-    { key: "echos", label: t("awa.chips.echos") },
-    { key: "create", label: t("awa.chips.create") },
-  ];
+  const chipKeys = PAGE_CHIPS[currentPage] || PAGE_CHIPS.overview;
+  const chips = chipKeys.map((key) => ({
+    key,
+    label: t(`awa.${key}`),
+  }));
 
   function handleChip(label: string) {
     setChipsUsed(true);
@@ -81,7 +90,7 @@ export default function AwaPanel() {
       {/* Quick chips */}
       {!chipsUsed && messages.length === 0 && (
         <div className="px-3 pb-2 flex flex-wrap gap-1.5">
-          {CHIPS.map((chip) => (
+          {chips.map((chip) => (
             <button
               key={chip.key}
               onClick={() => handleChip(chip.label)}
