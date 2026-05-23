@@ -147,7 +147,6 @@ export default function EchoDashboard() {
   const totalEarnings = activeLinks.reduce(
     (sum, l) => sum + Math.floor(l.click_count * (l.campaigns?.cpc || 0) * ECHO_SHARE_PERCENT / 100), 0
   );
-  const hasActiveCampaigns = availableCampaigns.length > 0 || activeLinks.some((l) => l.campaigns?.status === "active");
   const balance = user?.available_balance ?? user?.balance ?? 0;
   const pendingBalance = user?.pending_balance ?? 0;
   const totalEarned = user?.total_earned || 0;

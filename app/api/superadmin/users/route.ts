@@ -163,7 +163,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Activity filter — applied post-enrichment since it depends on click_stats
-  let enriched = (users || []).map((u) => ({
+  const enriched = (users || []).map((u) => ({
     ...u,
     click_stats: clickStats[u.id] || { total: 0, valid: 0, fraud: 0, rate: 0 },
     has_echo_activity: echoUserIds.has(u.id),
