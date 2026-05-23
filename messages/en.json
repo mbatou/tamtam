@@ -1,4 +1,16 @@
 {
+  "awa": {
+    "tooltip": "Awa — tap me to create a campaign",
+    "name": "Awa — Campaign Guide",
+    "status": "Online · EN/FR",
+    "placeholder": "Ask Awa anything...",
+    "chips": {
+      "budget": "What budget?",
+      "cpc": "How does CPC work?",
+      "echos": "How many Échos?",
+      "create": "Create a campaign"
+    }
+  },
   "common": {
     "loading": "Loading...",
     "error": "Error",
