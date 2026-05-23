@@ -238,15 +238,16 @@ export async function POST(request: NextRequest) {
   }
 
   // ---- Legacy Flow (Orange Money or no Wave API key) ----
-  // Debit available_balance immediately
-  const newBalance = effectiveBalance - parsed.data.amount;
-  const { error: balanceError } = await supabase
-    .from("users")
-    .update({ available_balance: newBalance })
-    .eq("id", session.user.id);
+  // Atomic debit via RPC (same as Wave path — prevents race conditions)
+  const legacyIdempotencyKey = randomUUID();
+  const { data: legacyDebited } = await supabase.rpc("debit_wallet_for_payout", {
+    p_user_id: session.user.id,
+    p_amount: parsed.data.amount,
+    p_idempotency_key: legacyIdempotencyKey,
+  });
 
-  if (balanceError) {
-    return NextResponse.json({ error: balanceError.message }, { status: 500 });
+  if (!legacyDebited) {
+    return NextResponse.json({ error: "Solde insuffisant ou retrait en cours" }, { status: 400 });
   }
 
   await logWalletTransaction({
@@ -265,11 +266,11 @@ export async function POST(request: NextRequest) {
   }).select().single();
 
   if (error) {
-    // Rollback available_balance if payout creation fails
-    await supabase
-      .from("users")
-      .update({ available_balance: effectiveBalance })
-      .eq("id", session.user.id);
+    // Rollback: re-credit the balance via RPC
+    await supabase.rpc("increment_echo_balance", {
+      p_echo_id: session.user.id,
+      p_amount: parsed.data.amount,
+    });
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 

@@ -38,10 +38,8 @@ const toolsGroup = {
   storageKey: "sidebar_tools_open",
   items: [
     { label: "Users", href: "/superadmin/users", emoji: "👤", permKey: "users" },
-    { label: "Gamification", href: "/superadmin/gamification", emoji: "🎮", permKey: "gamification" },
     { label: "Anti-Fraud", href: "/superadmin/fraud", emoji: "🛡️", badgeKey: "fraud", permKey: "fraud" },
     { label: "Investigation", href: "/superadmin/investigate", emoji: "🔍", superadminOnly: true },
-    { label: "Challenges", href: "/superadmin/challenges", emoji: "🥚", permKey: "challenges" },
     { label: "Ambassadors", href: "/superadmin/ambassadors", emoji: "🤝", permKey: "ambassadors" },
     { label: "Roadmap", href: "/superadmin/roadmap", emoji: "🗺️", permKey: "roadmap" },
     { label: "Reconciliation", href: "/superadmin/wave-reconciliation", emoji: "⚖️", superadminOnly: true },

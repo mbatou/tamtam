@@ -102,18 +102,7 @@ export async function GET(request: NextRequest) {
       0
     );
 
-    // Challenge rewards today
-    const { data: challengeTxns } = await supabaseAdmin
-      .from("wallet_transactions")
-      .select("amount")
-      .in("type", ["badge_reward", "streak_bonus"])
-      .gte("created_at", startOfDay)
-      .lte("created_at", endOfDay);
-
-    const challengeRewards = (challengeTxns || []).reduce(
-      (s: number, r: { amount: number }) => s + Math.abs(r.amount),
-      0
-    );
+    const challengeRewards = 0;
 
     // Click stats today
     const { count: clicksVerified } = await supabaseAdmin

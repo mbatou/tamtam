@@ -86,40 +86,7 @@ export async function GET(req: NextRequest) {
     }
   } catch { /* clicks table may not exist */ }
 
-  // 8. Gamification achievements
-  let achievements: unknown[] = [];
-  try {
-    const { data } = await supabase
-      .from("echo_achievements")
-      .select("*, gamification_milestones(name, reward_fcfa, condition_type, condition_value)")
-      .eq("echo_id", userId)
-      .order("created_at", { ascending: false });
-    achievements = data || [];
-  } catch { /* table may not exist */ }
-
-  // 9. Streak rewards
-  let streakRewards: unknown[] = [];
-  try {
-    const { data } = await supabase
-      .from("streak_rewards")
-      .select("*")
-      .eq("echo_id", userId)
-      .order("created_at", { ascending: false });
-    streakRewards = data || [];
-  } catch { /* table may not exist */ }
-
-  // 10. Streak data
-  let streakData = null;
-  try {
-    const { data } = await supabase
-      .from("echo_streaks")
-      .select("*")
-      .eq("echo_id", userId)
-      .single();
-    streakData = data;
-  } catch { /* table may not exist */ }
-
-  // 11. Referral info — who referred them and who they referred
+  // 8. Referral info — who referred them and who they referred
   let referrer = null;
   if (user.referred_by) {
     const { data } = await supabase
@@ -217,26 +184,6 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // Achievements
-  for (const a of achievements as { created_at: string; reward_fcfa: number; gamification_milestones: { name: string; reward_fcfa: number } | null }[]) {
-    timeline.push({
-      time: a.created_at,
-      type: "achievement",
-      description: `Milestone reached: ${a.gamification_milestones?.name || "?"}`,
-      amount: a.reward_fcfa,
-    });
-  }
-
-  // Streak rewards
-  for (const s of streakRewards as { created_at: string; reward_fcfa: number; streak_count: number }[]) {
-    timeline.push({
-      time: s.created_at,
-      type: "streak",
-      description: `Streak reward ${s.streak_count} days`,
-      amount: s.reward_fcfa,
-    });
-  }
-
   // Admin actions
   for (const a of adminActions as { created_at: string; action: string; details: unknown }[]) {
     timeline.push({
@@ -310,9 +257,6 @@ export async function GET(req: NextRequest) {
     trackedLinks: trackedLinks || [],
     campaignsCreated: campaignsCreated || [],
     clickStats,
-    achievements,
-    streakRewards,
-    streakData,
     referrer,
     referrals: referrals || [],
     adminActions,

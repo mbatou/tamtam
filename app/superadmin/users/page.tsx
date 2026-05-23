@@ -31,7 +31,6 @@ interface UserRow {
   referral_code: string | null;
   last_click_at: string | null;
   campaigns_joined: number;
-  current_streak: number;
   is_dual_role?: boolean;
   has_echo_activity?: boolean;
   has_batteur_activity?: boolean;
@@ -333,8 +332,7 @@ function UsersPageContent() {
   function qualityScore(user: UserRow): number {
     const validRatio = user.click_stats.total > 0 ? user.click_stats.valid / user.click_stats.total : 0;
     const campaignsJoined = Math.min(user.campaigns_joined / 5, 1);
-    const streakBonus = Math.min(user.current_streak / 10, 1);
-    return Math.round((validRatio * 0.5 + campaignsJoined * 0.3 + streakBonus * 0.2) * 100);
+    return Math.round((validRatio * 0.6 + campaignsJoined * 0.4) * 100);
   }
 
   if (loading) {
@@ -604,7 +602,6 @@ function UsersPageContent() {
                   <div className="flex gap-4 mt-2 text-[10px] text-white/30">
                     <span>{t("superadmin.users.validRatio") || "Valid ratio"}: {selected.click_stats.total > 0 ? Math.round(selected.click_stats.valid / selected.click_stats.total * 100) : 0}%</span>
                     <span>{t("superadmin.users.campaignsJoinedLabel") || "Campaigns"}: {selected.campaigns_joined}</span>
-                    <span>{t("superadmin.users.streakLabel") || "Streak"}: {selected.current_streak}</span>
                   </div>
                 </div>
               );

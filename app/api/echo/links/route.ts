@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { acceptCampaignSchema } from "@/lib/validations";
-import { updateStreak, checkMilestones, processReferralBonus } from "@/lib/gamification";
 import { trackConversion } from "@/lib/tracking/track-conversion";
 
 export const dynamic = "force-dynamic";
@@ -99,7 +98,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Update campaigns joined count, streak, and check milestones
+  // Update campaigns joined count
   const echoId = session.user.id;
   try {
     const { count } = await supabase
@@ -112,14 +111,11 @@ export async function POST(request: NextRequest) {
       .update({ total_campaigns_joined: count || 0 })
       .eq("id", echoId);
 
-    await updateStreak(echoId);
-    await checkMilestones(echoId);
-
-    // First campaign accepted — fire activation conversion and referral bonus (non-blocking)
+    // First campaign accepted — fire activation conversion (non-blocking)
     if (count === 1) {
       const { data: user } = await supabase
         .from("users")
-        .select("signup_tm_ref, referred_by")
+        .select("signup_tm_ref")
         .eq("id", echoId)
         .single();
 
@@ -128,13 +124,9 @@ export async function POST(request: NextRequest) {
         tmRef: user?.signup_tm_ref || null,
         externalId: `echo_activation_${echoId}`,
       }).catch(() => {});
-
-      if (user?.referred_by) {
-        processReferralBonus(user.referred_by, echoId).catch(() => {});
-      }
     }
   } catch (err) {
-    console.error("Gamification update failed:", err);
+    console.error("Post-accept update failed:", err);
   }
 
   return NextResponse.json(data, { status: 201 });

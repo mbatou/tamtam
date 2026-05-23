@@ -4,45 +4,9 @@ import { ECHO_SHARE_PERCENT, SITE_URL } from "@/lib/constants";
 import { rateLimit } from "@/lib/rate-limit";
 import { validateClick } from "@/lib/click-validator";
 import * as Sentry from "@sentry/nextjs";
-import { processGamification } from "@/lib/gamification";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { unlockCampaignEarnings } from "@/lib/unlock-earnings";
 import { generateShortCode } from "@/lib/utils";
-
-async function updateChallengeParticipation(supabase: ReturnType<typeof getSupabase>, echoId: string) {
-  const now = new Date().toISOString();
-  const { data: activeChallenge } = await supabase
-    .from("challenges")
-    .select("id, clicks_per_reward")
-    .eq("status", "active")
-    .lte("start_date", now)
-    .gte("end_date", now)
-    .single();
-
-  if (!activeChallenge) return;
-
-  const { data: existing } = await supabase
-    .from("challenge_participants")
-    .select("id, valid_clicks")
-    .eq("challenge_id", activeChallenge.id)
-    .eq("echo_id", echoId)
-    .single();
-
-  if (existing) {
-    await supabase
-      .from("challenge_participants")
-      .update({ valid_clicks: existing.valid_clicks + 1 })
-      .eq("id", existing.id);
-  } else {
-    await supabase
-      .from("challenge_participants")
-      .insert({
-        challenge_id: activeChallenge.id,
-        echo_id: echoId,
-        valid_clicks: 1,
-      });
-  }
-}
 
 function appendTmRef(url: string, tmRef: string): string {
   try {
@@ -200,20 +164,9 @@ export async function GET(
       return NextResponse.redirect(destinationUrl);
     }
 
-    // Apply tier bonus to echo earnings
-    const { data: echo } = await supabase
-      .from("users")
-      .select("tier_bonus_percent")
-      .eq("id", link.echo_id)
-      .single();
-
-    const baseShare = Math.floor(
+    const echoEarnings = Math.floor(
       (campaign.cpc * ECHO_SHARE_PERCENT) / 100
     );
-    const tierBonus = Math.round(
-      baseShare * ((echo?.tier_bonus_percent || 0) / 100)
-    );
-    const echoEarnings = baseShare + tierBonus;
 
     // increment_click returns false if budget would be exceeded
     Sentry.addBreadcrumb({
@@ -282,7 +235,7 @@ export async function GET(
         } catch (e) { console.error(e); }
       })();
 
-      // Log click earning transaction + update click counter + gamification (async, don't block redirect)
+      // Log click earning transaction + update click counter (async, don't block redirect)
       Promise.all([
         logWalletTransaction({
           supabase,
@@ -294,12 +247,7 @@ export async function GET(
           sourceType: "campaign",
         }),
         supabase.rpc("increment_echo_clicks", { p_echo_id: link.echo_id }),
-      ])
-        .then(() => processGamification(link.echo_id))
-        .catch(console.error);
-
-      // Update challenge participation if there's an active challenge
-      updateChallengeParticipation(supabase, link.echo_id).catch(console.error);
+      ]).catch(console.error);
 
       // Post-click check: if remaining budget < CPC after this click, auto-complete + refund
       const postRemaining = campaign.budget - ((campaign.spent || 0) + campaign.cpc);

@@ -10,7 +10,7 @@ import type { Campaign, TrackedLinkWithCampaign } from "@/lib/types";
 import { requestNotificationPermission, canAskNotification } from "@/lib/notifications";
 import { shareCampaignToWhatsApp } from "@/lib/share-utils";
 import { trackEvent } from "@/lib/analytics";
-import ChallengeBanner from "@/components/ChallengeBanner";
+
 
 
 export default function RythmesPage() {
@@ -143,7 +143,6 @@ export default function RythmesPage() {
       )}
 
       {/* Challenge banner */}
-      <ChallengeBanner />
 
       <div className="flex items-center justify-between mb-5">
         <h1 className="text-xl font-bold">{t("echo.rythmes.title")}</h1>
@@ -343,12 +342,12 @@ export default function RythmesPage() {
                 <span className="text-[10px] text-accent block mt-0.5">+150 FCFA</span>
               </button>
               <button
-                onClick={() => window.location.href = "/leaderboard"}
+                onClick={() => window.location.href = "/earnings"}
                 className="glass-card p-4 text-center"
               >
-                <span className="text-xl block mb-1">🏆</span>
-                <span className="text-xs font-bold block">{t("echo.rythmes.seeRanking")}</span>
-                <span className="text-[10px] text-white/30 block mt-0.5">{t("echo.rythmes.seeYourRank")}</span>
+                <span className="text-xl block mb-1">💰</span>
+                <span className="text-xs font-bold block">{t("echo.rythmes.seeEarnings")}</span>
+                <span className="text-[10px] text-white/30 block mt-0.5">{t("echo.rythmes.trackYourGains")}</span>
               </button>
             </div>
 
