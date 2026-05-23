@@ -214,6 +214,7 @@ function AdminWalletPage() {
 
         {/* LEFT: Balance card (matches overview WalletCard) */}
         <div
+          data-tour="wallet-balance"
           className="lg:col-span-5 rounded-2xl p-5 relative overflow-hidden"
           style={{ background: "linear-gradient(135deg, #D35400 0%, #B84700 50%, #8B3500 100%)" }}
         >
@@ -254,7 +255,7 @@ function AdminWalletPage() {
         </div>
 
         {/* CENTER: Recharge quick-actions (like Onpay's "Upcoming payments") */}
-        <div className="lg:col-span-3 flex flex-col gap-3">
+        <div data-tour="recharge-btn" className="lg:col-span-3 flex flex-col gap-3">
           {/* Quick recharge card 1 */}
           <button
             onClick={() => handlePayment(25000)}
@@ -370,7 +371,7 @@ function AdminWalletPage() {
       </div>
 
       {/* ====== TABS — Onpay-style with "Recent transactions" + "Sort by" ====== */}
-      <div className="flex items-center justify-between mb-4">
+      <div data-tour="transactions" className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-1">
           {([
             { key: "recent" as Tab, label: t("admin.wallet.rechargeHistory") },

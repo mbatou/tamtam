@@ -199,7 +199,7 @@ export default function PixelDashboardPage() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div data-tour="pixel-status" className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {[
           { label: t("admin.pixel.activePixels"), value: activePixels, color: "#1D9E75" },
           { label: t("admin.pixel.totalPixels"), value: pixels.length, color: "#3B82F6" },
@@ -382,7 +382,7 @@ export default function PixelDashboardPage() {
 
       {/* ====== IMPLEMENTATION GUIDE ====== */}
       {showGuide && (
-        <div className="mt-6 space-y-3">
+        <div data-tour="pixel-guide" className="mt-6 space-y-3">
           <h2 className="text-sm font-bold font-syne text-white mb-1 flex items-center gap-2">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
             {t("admin.pixel.guideTitle")}

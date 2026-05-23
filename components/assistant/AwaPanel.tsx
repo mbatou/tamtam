@@ -17,8 +17,8 @@ const PAGE_CHIPS: Record<string, string[]> = {
 };
 
 export default function AwaPanel() {
-  const { open, setOpen, messages, sending, sendMessage, chipsUsed, setChipsUsed, currentPage } = useAwa();
-  const { t } = useTranslation();
+  const { open, setOpen, messages, sending, sendMessage, chipsUsed, setChipsUsed, currentPage, startTour } = useAwa();
+  const { t, locale } = useTranslation();
 
   if (!open) return null;
 
@@ -98,6 +98,14 @@ export default function AwaPanel() {
               {t("awa.status")}
             </p>
           </div>
+
+          <button
+            onClick={() => startTour()}
+            className="px-2.5 py-1 rounded-lg text-[10px] font-dm font-medium transition hover:brightness-125 shrink-0"
+            style={{ background: "rgba(211,84,0,0.12)", color: "#D35400", border: "0.5px solid rgba(211,84,0,0.2)" }}
+          >
+            {locale === "fr" ? "Visite guidée" : "Tour"}
+          </button>
 
           <button
             onClick={() => setOpen(false)}

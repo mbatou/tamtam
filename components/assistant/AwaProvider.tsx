@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useCallback, useRef, useEffect, ty
 import { usePathname } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import type { AwaMessage, AwaBrandData } from "@/types/awa";
+import { TOURS, type TourStep } from "@/lib/awa-tours";
 
 interface AwaContextType {
   open: boolean;
@@ -16,6 +17,10 @@ interface AwaContextType {
   setChipsUsed: (v: boolean) => void;
   unread: number;
   currentPage: string;
+  tourActive: boolean;
+  tourSteps: TourStep[];
+  startTour: (tourId?: string) => void;
+  endTour: () => void;
 }
 
 const AwaContext = createContext<AwaContextType | null>(null);
@@ -40,6 +45,24 @@ function resolvePageKey(pathname: string): string {
   return PAGE_MAP[pathname] || "overview";
 }
 
+const SEEN_TOURS_KEY = "awa-seen-tours";
+
+function getSeenTours(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(SEEN_TOURS_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function markTourSeen(tourId: string) {
+  const seen = getSeenTours();
+  seen.add(tourId);
+  localStorage.setItem(SEEN_TOURS_KEY, JSON.stringify(Array.from(seen)));
+}
+
 export default function AwaProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { locale } = useTranslation();
@@ -50,6 +73,8 @@ export default function AwaProvider({ children }: { children: ReactNode }) {
   const [sending, setSending] = useState(false);
   const [chipsUsed, setChipsUsed] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [tourActive, setTourActive] = useState(false);
+  const [tourSteps, setTourSteps] = useState<TourStep[]>([]);
   const [brandData, setBrandData] = useState<AwaBrandData>({
     walletBalance: 0,
     totalSpent: 0,
@@ -64,6 +89,7 @@ export default function AwaProvider({ children }: { children: ReactNode }) {
   });
   const abortRef = useRef<AbortController | null>(null);
   const dataFetchedRef = useRef(false);
+  const autoTourTriggeredRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     setBrandData((prev) => ({ ...prev, currentPage, language: locale }));
@@ -92,15 +118,57 @@ export default function AwaProvider({ children }: { children: ReactNode }) {
       .catch(() => {});
   }, []);
 
-  // Reset chips when navigating to a different page
   useEffect(() => {
     setChipsUsed(false);
   }, [currentPage]);
 
+  // Auto-offer tour on first visit to a page (if not seen before)
+  useEffect(() => {
+    if (tourActive) return;
+    if (autoTourTriggeredRef.current.has(currentPage)) return;
+    autoTourTriggeredRef.current.add(currentPage);
+
+    const seen = getSeenTours();
+    const tour = TOURS.find((t) => t.page === currentPage);
+    if (tour && !seen.has(tour.id)) {
+      const delay = setTimeout(() => {
+        const hasTargets = tour.steps.some((s) => document.querySelector(s.target));
+        if (hasTargets) {
+          setTourSteps(tour.steps);
+          setTourActive(true);
+        }
+      }, 2000);
+      return () => clearTimeout(delay);
+    }
+  }, [currentPage, tourActive]);
+
+  const startTour = useCallback((tourId?: string) => {
+    const id = tourId || currentPage;
+    const tour = TOURS.find((t) => t.id === id || t.page === id);
+    if (tour) {
+      setTourSteps(tour.steps);
+      setTourActive(true);
+      setOpenState(false);
+    }
+  }, [currentPage]);
+
+  const endTour = useCallback(() => {
+    setTourActive(false);
+    const tour = TOURS.find((t) => t.steps === tourSteps);
+    if (tour) markTourSeen(tour.id);
+    setTourSteps([]);
+  }, [tourSteps]);
+
   const setOpen = useCallback((v: boolean) => {
     setOpenState(v);
-    if (v) setUnread(0);
-  }, []);
+    if (v) {
+      setUnread(0);
+      if (tourActive) {
+        setTourActive(false);
+        setTourSteps([]);
+      }
+    }
+  }, [tourActive]);
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -192,7 +260,11 @@ export default function AwaProvider({ children }: { children: ReactNode }) {
 
   return (
     <AwaContext.Provider
-      value={{ open, setOpen, messages, sending, sendMessage, brandData, chipsUsed, setChipsUsed, unread, currentPage }}
+      value={{
+        open, setOpen, messages, sending, sendMessage, brandData,
+        chipsUsed, setChipsUsed, unread, currentPage,
+        tourActive, tourSteps, startTour, endTour,
+      }}
     >
       {children}
     </AwaContext.Provider>

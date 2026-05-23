@@ -233,7 +233,7 @@ export default function AdminSettingsPage() {
       )}
 
       {/* Tab pills */}
-      <div className="flex items-center gap-1 mb-6 p-1 rounded-xl w-fit" style={{ background: "rgba(255,255,255,0.03)", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+      <div data-tour="settings-tabs" className="flex items-center gap-1 mb-6 p-1 rounded-xl w-fit" style={{ background: "rgba(255,255,255,0.03)", border: "0.5px solid rgba(255,255,255,0.06)" }}>
         {TABS.map((t_) => (
           <button
             key={t_.id}
@@ -253,7 +253,7 @@ export default function AdminSettingsPage() {
       <div className="max-w-2xl">
         {/* ====== PROFILE TAB ====== */}
         {tab === "profile" && (
-          <div className="space-y-4">
+          <div data-tour="profile-form" className="space-y-4">
             {/* Logo */}
             <div className="rounded-2xl p-5" style={C}>
               <p className="text-[10px] font-dm font-semibold uppercase tracking-wider mb-4" style={{ color: "rgba(255,255,255,0.3)" }}>{t("admin.settings.companyLogo")}</p>
