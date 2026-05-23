@@ -22,7 +22,6 @@ export default function EarningsPage() {
   const [minPayout, setMinPayout] = useState(MIN_PAYOUT_AMOUNT);
   const [showNotifCTA, setShowNotifCTA] = useState(true);
   const [campaignEarnings, setCampaignEarnings] = useState<{ id: string; name: string; image_url: string | null; myClicks: number; myEarnings: number }[]>([]);
-  const [bonusEarnings, setBonusEarnings] = useState<{ streaks: number; badges: number; referrals: number }>({ streaks: 0, badges: 0, referrals: 0 });
   const [avgCpc, setAvgCpc] = useState(25);
   const [topEchoEarnings, setTopEchoEarnings] = useState(0);
   const [balanceData, setBalanceData] = useState<{
@@ -61,7 +60,6 @@ export default function EarningsPage() {
     if (breakdownRes.ok) {
       const breakdownData = await breakdownRes.json();
       setCampaignEarnings(breakdownData.campaignEarnings || []);
-      setBonusEarnings(breakdownData.bonusEarnings || { streaks: 0, badges: 0, referrals: 0 });
       setAvgCpc(breakdownData.avgCpc || 25);
       setTopEchoEarnings(breakdownData.topEchoEarnings || 0);
     }
@@ -374,14 +372,11 @@ export default function EarningsPage() {
             Maximum 30 jours d&apos;attente. Si une campagne est longue, vos gains
             sont débloqués tous les 30 jours automatiquement.
           </p>
-          <p className="text-accent">
-            Les bonus (séries, badges, parrainages) sont toujours disponibles immédiatement.
-          </p>
         </div>
       )}
 
       {/* Earning breakdown by source */}
-      {(campaignEarnings.length > 0 || bonusEarnings.streaks > 0 || bonusEarnings.badges > 0 || bonusEarnings.referrals > 0) && (
+      {campaignEarnings.length > 0 && (
         <div className="bg-card rounded-xl p-6 mb-5">
           <h3 className="text-white font-bold mb-3">{t("echo.earnings.earningsDetail")}</h3>
 
@@ -409,36 +404,6 @@ export default function EarningsPage() {
             </div>
           )}
 
-          {/* Bonus earnings */}
-          {(bonusEarnings.streaks > 0 || bonusEarnings.badges > 0 || bonusEarnings.referrals > 0) && (
-            <div className="space-y-2">
-              <div className="text-xs text-gray-500 uppercase tracking-wider">Bonus</div>
-              {bonusEarnings.streaks > 0 && (
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-gray-300 text-sm">🔥 Bonus de série</span>
-                  <span className="text-orange-400 font-bold text-sm">
-                    +{bonusEarnings.streaks.toLocaleString("fr-FR")} FCFA
-                  </span>
-                </div>
-              )}
-              {bonusEarnings.badges > 0 && (
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-gray-300 text-sm">🏅 Badges gagnés</span>
-                  <span className="text-orange-400 font-bold text-sm">
-                    +{bonusEarnings.badges.toLocaleString("fr-FR")} FCFA
-                  </span>
-                </div>
-              )}
-              {bonusEarnings.referrals > 0 && (
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-gray-300 text-sm">🤝 Parrainages</span>
-                  <span className="text-orange-400 font-bold text-sm">
-                    +{bonusEarnings.referrals.toLocaleString("fr-FR")} FCFA
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       )}
 

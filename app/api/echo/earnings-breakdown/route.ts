@@ -39,17 +39,7 @@ export async function GET() {
       };
     });
 
-  // Get bonus earnings from achievements
-  const { data: achievements } = await supabase
-    .from("echo_achievements")
-    .select("type, reward_amount")
-    .eq("echo_id", userId);
-
-  const bonusEarnings = {
-    streaks: (achievements || []).filter((a) => a.type === "streak").reduce((s, a) => s + (a.reward_amount || 0), 0),
-    badges: (achievements || []).filter((a) => a.type === "badge").reduce((s, a) => s + (a.reward_amount || 0), 0),
-    referrals: (achievements || []).filter((a) => a.type === "referral").reduce((s, a) => s + (a.reward_amount || 0), 0),
-  };
+  const bonusEarnings = { streaks: 0, badges: 0, referrals: 0 };
 
   // Average CPC across active/completed campaigns
   const { data: avgData } = await supabase

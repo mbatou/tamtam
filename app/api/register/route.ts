@@ -157,13 +157,6 @@ export async function POST(req: NextRequest) {
       sourceType: "referral",
     });
 
-    // Check milestones for referrer (referral milestones)
-    try {
-      const { checkMilestones } = await import("@/lib/gamification");
-      await checkMilestones(referrerId);
-    } catch {
-      // Non-critical, continue
-    }
   }
 
   return NextResponse.json({ success: true });

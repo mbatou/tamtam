@@ -12,29 +12,6 @@ import CitySelect from "@/components/ui/CitySelect";
 import type { User } from "@/lib/types";
 import InterestOnboardingModal from "@/components/echo/InterestOnboardingModal";
 
-const TIER_INFO: Record<string, { icon: string; label: string }> = {
-  echo: { icon: "🔵", label: "tierName_echo" },
-  argent: { icon: "🥈", label: "tierName_argent" },
-  or: { icon: "🥇", label: "tierName_or" },
-  diamant: { icon: "💎", label: "tierName_diamant" },
-};
-
-interface Milestone {
-  id: string;
-  key: string;
-  title: string;
-  icon: string;
-  reward_fcfa: number;
-  condition_type: string;
-  condition_value: number;
-}
-
-interface Achievement {
-  milestone_id: string;
-  reward_fcfa: number;
-  achieved_at: string;
-}
-
 export default function ProfilPage() {
   const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState({ totalClicks: 0, activeCampaigns: 0, totalEarned: 0 });
@@ -44,20 +21,6 @@ export default function ProfilPage() {
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
   const [form, setForm] = useState({ name: "", phone: "", city: "", mobile_money_provider: "" });
-  const [gamification, setGamification] = useState<{
-    tier: string;
-    tierBonusPercent: number;
-    totalClicks: number;
-    achievementsCount: number;
-    totalAchievements: number;
-    streak: number;
-    milestones: Milestone[];
-    achievements: Achievement[];
-    totalCampaignsJoined: number;
-    referralCount: number;
-  } | null>(null);
-  const [ranks, setRanks] = useState<{ week: number; month: number; all: number } | null>(null);
-
   const [acceptingTerms, setAcceptingTerms] = useState(false);
   const [referralEnabled, setReferralEnabled] = useState(true);
 
@@ -87,11 +50,9 @@ export default function ProfilPage() {
   }, []);
 
   async function loadData() {
-    const [userRes, linksRes, gamRes, rankRes, settingsRes] = await Promise.all([
+    const [userRes, linksRes, settingsRes] = await Promise.all([
       fetch("/api/echo/user"),
       fetch("/api/echo/links"),
-      fetch("/api/echo/gamification"),
-      fetch("/api/echo/rank"),
       fetch("/api/echo/settings"),
     ]);
 
@@ -115,27 +76,6 @@ export default function ProfilPage() {
         return sum + Math.floor(l.click_count * (l.campaigns?.cpc || 0) * ECHO_SHARE_PERCENT / 100);
       }, 0);
       setStats({ totalClicks, activeCampaigns: totalCampaigns, totalEarned });
-    }
-
-    if (gamRes.ok) {
-      const gam = await gamRes.json();
-      setGamification({
-        tier: gam.user?.tier || "echo",
-        tierBonusPercent: gam.user?.tier_bonus_percent || 0,
-        totalClicks: gam.user?.total_valid_clicks || 0,
-        achievementsCount: gam.achievements?.length || 0,
-        totalAchievements: gam.milestones?.length || 0,
-        streak: gam.streak?.current_streak || 0,
-        milestones: gam.milestones || [],
-        achievements: gam.achievements || [],
-        totalCampaignsJoined: gam.user?.total_campaigns_joined || 0,
-        referralCount: gam.user?.referral_count || 0,
-      });
-    }
-
-    if (rankRes.ok) {
-      const rankData = await rankRes.json();
-      setRanks(rankData);
     }
 
     if (settingsRes.ok) {
@@ -264,19 +204,6 @@ export default function ProfilPage() {
     );
   }
 
-  // Badge grid data
-  const achievedIds = new Set(gamification?.achievements?.map((a) => a.milestone_id) || []);
-
-  // Helper to get progress for a milestone
-  function getMilestoneProgress(m: Milestone): number {
-    if (!gamification) return 0;
-    if (m.condition_type === "clicks") return gamification.totalClicks;
-    if (m.condition_type === "campaigns") return gamification.totalCampaignsJoined;
-    if (m.condition_type === "referrals") return gamification.referralCount;
-    if (m.condition_type === "streak") return gamification.streak;
-    return 0;
-  }
-
   // Member since
   const memberSinceDate = user?.created_at ? new Date(user.created_at) : null;
   const daysSinceJoined = memberSinceDate
@@ -361,9 +288,6 @@ export default function ProfilPage() {
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <h2 className="text-lg font-bold truncate">{user?.name}</h2>
-                {gamification && (
-                  <span className="text-base">{TIER_INFO[gamification.tier]?.icon || "🔵"}</span>
-                )}
                 {user?.is_founding_echo && (
                   <span className="text-sm" title="Écho Fondateur — Fait partie des premiers Échos de Tamtam">&#129351;</span>
                 )}
@@ -487,48 +411,6 @@ export default function ProfilPage() {
         </div>
       </div>
 
-      {/* Tier & Rank badges */}
-      {gamification && (
-        <div className="glass-card p-4 mb-5">
-          {/* Tier badge */}
-          <div className="flex items-center gap-3 mb-4">
-            <span className="text-3xl">{TIER_INFO[gamification.tier]?.icon || "🔵"}</span>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-bold">
-                {t(`gamification.${TIER_INFO[gamification.tier]?.label || "tierName_echo"}`)}
-              </h3>
-              <p className="text-xs text-white/40">
-                {t("gamification.tierBonus", { percent: gamification.tierBonusPercent })}
-              </p>
-            </div>
-            {gamification.streak > 0 && (
-              <div className="text-center px-3 py-1.5 rounded-xl bg-[#D35400]/10 border border-[#D35400]/20">
-                <p className="text-sm font-black text-[#D35400]">🔥 {gamification.streak}</p>
-                <p className="text-[9px] text-white/40">{t("gamification.streak")}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Rank cards */}
-          {ranks && (ranks.week > 0 || ranks.month > 0 || ranks.all > 0) && (
-            <div className="grid grid-cols-3 gap-2 mb-3">
-              <div className="bg-white/5 rounded-xl p-2.5 text-center">
-                <p className="text-sm font-black">{ranks.week > 0 ? `#${ranks.week}` : "—"}</p>
-                <p className="text-[9px] text-white/40">{t("gamification.thisWeek")}</p>
-              </div>
-              <div className="bg-white/5 rounded-xl p-2.5 text-center">
-                <p className="text-sm font-black">{ranks.month > 0 ? `#${ranks.month}` : "—"}</p>
-                <p className="text-[9px] text-white/40">{t("gamification.thisMonth")}</p>
-              </div>
-              <div className="bg-white/5 rounded-xl p-2.5 text-center">
-                <p className="text-sm font-black">{ranks.all > 0 ? `#${ranks.all}` : "—"}</p>
-                <p className="text-[9px] text-white/40">{t("gamification.allTime")}</p>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Écho Fondateur badge */}
       {user?.is_founding_echo && (
         <div className="glass-card p-4 mb-5 border border-[#FDEF42]/20 bg-[#FDEF42]/5">
@@ -538,48 +420,6 @@ export default function ProfilPage() {
               <h3 className="text-sm font-bold text-[#FDEF42]">&Eacute;cho Fondateur</h3>
               <p className="text-[10px] text-white/40">Fait partie des premiers 1 152 &Eacute;chos de Tamtam. Ce badge est exclusif et ne sera jamais redistribu&eacute;.</p>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Visual Badge Grid */}
-      {gamification && gamification.milestones.length > 0 && (
-        <div className="glass-card p-4 mb-5">
-          <h3 className="text-sm font-bold mb-3">
-            {t("echo.profile.myBadges")} ({gamification.achievementsCount}/{gamification.totalAchievements})
-          </h3>
-          <div className="grid grid-cols-3 gap-3">
-            {gamification.milestones.map((m) => {
-              const isUnlocked = achievedIds.has(m.id);
-              const progress = getMilestoneProgress(m);
-              const pct = Math.min(Math.round((progress / m.condition_value) * 100), 100);
-
-              return (
-                <div
-                  key={m.id}
-                  className={`rounded-xl p-3 text-center transition ${
-                    isUnlocked
-                      ? "bg-accent/10 border border-accent/20"
-                      : "bg-white/3 border border-white/5 opacity-50"
-                  }`}
-                >
-                  <span className={`text-2xl block mb-1 ${isUnlocked ? "" : "grayscale"}`}>{m.icon}</span>
-                  <p className="text-[10px] font-bold leading-tight">{m.title}</p>
-                  {isUnlocked ? (
-                    <p className="text-[9px] text-accent mt-1">✓ +{formatFCFA(m.reward_fcfa)}</p>
-                  ) : (
-                    <div className="mt-1">
-                      <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-                        <div className="h-full bg-white/30 rounded-full" style={{ width: `${pct}%` }} />
-                      </div>
-                      <p className="text-[9px] text-white/30 mt-0.5">
-                        {m.condition_value - progress} {t("echo.profile.remaining")}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
           </div>
         </div>
       )}
@@ -649,12 +489,6 @@ export default function ProfilPage() {
             {t("echo.profile.copyLink")}
           </button>
         </div>
-        {gamification && (
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5 text-[10px] text-white/30">
-            <span>{t("echo.profile.friendsInvited")}: {gamification.referralCount}</span>
-            <span>{t("echo.profile.bonusEarned")}: {formatFCFA(gamification.referralCount * 150)}</span>
-          </div>
-        )}
       </div>
 
       {/* Details */}

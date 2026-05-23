@@ -9,11 +9,8 @@ import { useToast } from "@/components/ui/Toast";
 import CampaignDetailModal from "@/components/CampaignDetailModal";
 import { useTranslation } from "@/lib/i18n";
 import type { User, TrackedLinkWithCampaign, Campaign } from "@/lib/types";
-import StreakDisplay from "@/components/gamification/StreakDisplay";
-import TierProgress from "@/components/gamification/TierProgress";
 import { requestNotificationPermission, canAskNotification } from "@/lib/notifications";
 import { shareCampaignToWhatsApp } from "@/lib/share-utils";
-import ChallengeBanner from "@/components/ChallengeBanner";
 import { getActiveTheme } from "@/lib/theme";
 
 export default function EchoDashboard() {
@@ -27,10 +24,6 @@ export default function EchoDashboard() {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   const [sharing, setSharing] = useState<string | null>(null);
-  const [gamification, setGamification] = useState<{
-    streak: { current_streak: number; longest_streak: number; last_campaign_date: string | null };
-    user: { tier: string; tier_bonus_percent: number; total_valid_clicks: number; total_campaigns_joined: number; referral_count: number } | null;
-  } | null>(null);
   const supabase = createClient();
   const { showToast, ToastComponent } = useToast();
   const { t } = useTranslation();
@@ -47,12 +40,6 @@ export default function EchoDashboard() {
     const campaignsData = await campaignsRes.json();
 
     if (userRes.ok) setUser(userData);
-
-    // Load gamification data
-    fetch("/api/echo/gamification")
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => data && setGamification(data))
-      .catch(() => {});
 
     const links = Array.isArray(linksData) ? linksData as TrackedLinkWithCampaign[] : [];
     setActiveLinks(links);
@@ -213,9 +200,6 @@ export default function EchoDashboard() {
         </div>
       )}
 
-      {/* Challenge banner */}
-      <ChallengeBanner />
-
       {/* Earnings card — with contextual CTAs */}
       <div className="earnings-card-bg rounded-2xl p-5 mb-5 border border-primary/20">
         <div className="flex items-center justify-between">
@@ -263,24 +247,6 @@ export default function EchoDashboard() {
           </div>
         )}
       </div>
-
-      {/* Streak display */}
-      {gamification && (
-        <div className="mb-5">
-          <StreakDisplay streak={gamification.streak} hasActiveCampaigns={hasActiveCampaigns} />
-        </div>
-      )}
-
-      {/* Tier progress */}
-      {gamification?.user && (
-        <div className="mb-5">
-          <TierProgress
-            tier={gamification.user.tier}
-            tierBonusPercent={gamification.user.tier_bonus_percent}
-            totalClicks={gamification.user.total_valid_clicks}
-          />
-        </div>
-      )}
 
       {/* Stats row — renamed labels */}
       <div className="grid grid-cols-3 gap-2 mb-5">
@@ -452,18 +418,12 @@ export default function EchoDashboard() {
               <div className="text-3xl mb-1">🔔</div>
               <p className="text-sm font-semibold">{t("echo.dashboard.noAvailable")}</p>
               <p className="text-xs text-white/30">{t("echo.dashboard.notifHint")}</p>
-              <div className="grid grid-cols-2 gap-2 pt-2">
+              <div className="pt-2">
                 <button
                   onClick={() => window.location.href = "/profil"}
-                  className="py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold"
+                  className="py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold w-full"
                 >
                   🤝 {t("echo.dashboard.inviteFriend")}
-                </button>
-                <button
-                  onClick={() => window.location.href = "/leaderboard"}
-                  className="py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold"
-                >
-                  🏆 {t("gamification.leaderboard")}
                 </button>
               </div>
             </div>

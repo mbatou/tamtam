@@ -171,23 +171,7 @@ export async function GET(request: NextRequest) {
     is_dual_role: echoUserIds.has(u.id) && batteurUserIds.has(u.id),
     last_click_at: lastClickMap[u.id] || null,
     campaigns_joined: campaignsJoinedMap[u.id] || 0,
-    current_streak: 0,
   }));
-
-  // Streak data
-  try {
-    const { data: streaks } = await supabase
-      .from("echo_streaks")
-      .select("echo_id, current_streak")
-      .in("echo_id", userIds);
-    if (streaks) {
-      const streakMap: Record<string, number> = {};
-      for (const s of streaks) streakMap[s.echo_id] = s.current_streak || 0;
-      enriched = enriched.map((u) => ({ ...u, current_streak: streakMap[u.id] || 0 }));
-    }
-  } catch {
-    // echo_streaks may not exist yet
-  }
 
   return NextResponse.json({
     stats: {

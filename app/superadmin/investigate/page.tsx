@@ -17,9 +17,6 @@ interface InvestigationData {
   trackedLinks: { id: string; short_code: string; click_count: number; created_at: string; campaigns: { title: string; cpc: number; status: string } | null }[];
   campaignsCreated: { id: string; title: string; status: string; cpc: number; budget: number; spent: number; created_at: string }[];
   clickStats: { total: number; valid: number; fraud: number };
-  achievements: { created_at: string; reward_fcfa: number; gamification_milestones: { name: string; reward_fcfa: number } | null }[];
-  streakRewards: { created_at: string; reward_fcfa: number; streak_count: number }[];
-  streakData: { current_streak: number; longest_streak: number; last_active_date: string } | null;
   referrer: { id: string; name: string; phone: string | null; role: string } | null;
   referrals: { id: string; name: string; phone: string | null; role: string; created_at: string }[];
   adminActions: { created_at: string; action: string; admin_id: string; details: Record<string, unknown> }[];
@@ -40,7 +37,7 @@ function InvestigatePageContent() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<InvestigationData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"timeline" | "wallet" | "payouts" | "campaigns" | "gamification" | "admin">("timeline");
+  const [activeTab, setActiveTab] = useState<"timeline" | "wallet" | "payouts" | "campaigns" | "admin">("timeline");
 
   // Account deletion
   const [showAdminDelete, setShowAdminDelete] = useState(false);
@@ -85,8 +82,6 @@ function InvestigatePageContent() {
     payment: "bg-accent/10 text-accent border-accent/20",
     payout: "bg-purple-500/10 text-purple-400 border-purple-500/20",
     campaign_join: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-    achievement: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
-    streak: "bg-orange-500/10 text-orange-400 border-orange-500/20",
     admin: "bg-red-500/10 text-red-400 border-red-500/20",
     account: "bg-white/10 text-white/60 border-white/10",
   };
@@ -96,8 +91,6 @@ function InvestigatePageContent() {
     payment: "💰",
     payout: "📤",
     campaign_join: "🔗",
-    achievement: "🏆",
-    streak: "🔥",
     admin: "🛡️",
     account: "👤",
   };
@@ -314,7 +307,6 @@ function InvestigatePageContent() {
               { key: "wallet", label: "Transactions", count: data.walletTransactions.length },
               { key: "payouts", label: "Payouts", count: data.payouts.length },
               { key: "campaigns", label: "Campaigns", count: data.trackedLinks.length + data.campaignsCreated.length },
-              { key: "gamification", label: "Gamification", count: data.achievements.length + data.streakRewards.length },
               { key: "admin", label: "Admin actions", count: data.adminActions.length },
             ] as { key: typeof activeTab; label: string; count: number }[]).map((tab) => (
               <button
@@ -474,62 +466,6 @@ function InvestigatePageContent() {
                 )}
                 {data.trackedLinks.length === 0 && data.campaignsCreated.length === 0 && (
                   <p className="text-xs text-white/20 text-center py-6">No campaigns</p>
-                )}
-              </div>
-            )}
-
-            {activeTab === "gamification" && (
-              <div className="space-y-4 max-h-[600px] overflow-y-auto pr-1">
-                {data.streakData && (
-                  <div className="p-3 rounded-xl bg-orange-500/5 border border-orange-500/10">
-                    <h4 className="text-xs font-bold text-orange-400 mb-2">Current streak</h4>
-                    <div className="flex gap-4 text-xs">
-                      <span>Série: <strong className="text-white">{data.streakData.current_streak} jours</strong></span>
-                      <span>Record: <strong className="text-white">{data.streakData.longest_streak} jours</strong></span>
-                      <span>Dernière activité: <strong className="text-white">{data.streakData.last_active_date}</strong></span>
-                    </div>
-                  </div>
-                )}
-                {data.achievements.length > 0 && (
-                  <div>
-                    <h4 className="text-xs font-bold text-yellow-400 mb-2">Milestones ({data.achievements.length})</h4>
-                    <div className="space-y-2">
-                      {data.achievements.map((a, i) => (
-                        <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.03] border border-white/5">
-                          <div className="flex items-center gap-2">
-                            <span>🏆</span>
-                            <span className="text-sm">{a.gamification_milestones?.name || "?"}</span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-sm font-bold text-emerald-400">+{formatFCFA(a.reward_fcfa)}</span>
-                            <span className="text-[10px] text-white/30">{new Date(a.created_at).toLocaleDateString("en-US")}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {data.streakRewards.length > 0 && (
-                  <div>
-                    <h4 className="text-xs font-bold text-orange-400 mb-2">Streak rewards ({data.streakRewards.length})</h4>
-                    <div className="space-y-2">
-                      {data.streakRewards.map((s, i) => (
-                        <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.03] border border-white/5">
-                          <div className="flex items-center gap-2">
-                            <span>🔥</span>
-                            <span className="text-sm">{s.streak_count}-day streak</span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-sm font-bold text-emerald-400">+{formatFCFA(s.reward_fcfa)}</span>
-                            <span className="text-[10px] text-white/30">{new Date(s.created_at).toLocaleDateString("en-US")}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {data.achievements.length === 0 && data.streakRewards.length === 0 && !data.streakData && (
-                  <p className="text-xs text-white/20 text-center py-6">No gamification data</p>
                 )}
               </div>
             )}
