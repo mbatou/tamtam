@@ -860,7 +860,9 @@
       "responseTimeValue": "< 24 heures",
       "supportHours": "Lun-Sam, 9h-18h (heure de Dakar)",
       "whatsappSupport": "Discuter sur WhatsApp",
-      "whatsappSupportDesc": "Besoin d'aide rapide ? Contactez-nous sur WhatsApp."
+      "whatsappSupportDesc": "Besoin d'aide rapide ? Contactez-nous sur WhatsApp.",
+      "faq6q": "Comment mettre en pause ou réactiver un rythme ?",
+      "faq6a": "Ouvrez votre rythme actif et cliquez \"Pause\". Le budget non dépensé est remboursé sur votre portefeuille. Pour reprendre, cliquez \"Réactiver\" — le budget restant sera de nouveau débité."
     },
     "settings": {
       "title": "Paramètres",
