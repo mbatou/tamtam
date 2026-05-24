@@ -19,6 +19,18 @@ const config: Config = {
         accent: "#1ABC9C",
         card: "rgba(255,255,255,0.03)",
         "card-hover": "rgba(255,255,255,0.06)",
+        tt: {
+          orange: "#D35400",
+          "orange-light": "#FEF0E7",
+          "orange-mid": "#F0997B",
+          "orange-dark": "#9A3D08",
+          night: "#0A0A1A",
+          "night-2": "#111128",
+          teal: "#1D9E75",
+          "teal-mid": "#5DCAA5",
+          "teal-light": "#E1F5EE",
+          ivory: "#F5F3EE",
+        },
         tamtam: {
           orange: "#D35400",
           gold: "#F39C12",
@@ -56,6 +68,14 @@ const config: Config = {
           "0%, 100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-8px)" },
         },
+        "float-slow": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-6px)" },
+        },
+        marquee: {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-50%)" },
+        },
         "wave-bar": {
           "0%, 100%": { transform: "scaleY(1)" },
           "50%": { transform: "scaleY(1.8)" },
@@ -73,6 +93,8 @@ const config: Config = {
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
         "slide-up": "slide-up 0.5s ease-out forwards",
         float: "float 3s ease-in-out infinite",
+        "float-slow": "float-slow 4s ease-in-out infinite",
+        marquee: "marquee 30s linear infinite",
         "wave-bar": "wave-bar 1.2s ease-in-out infinite",
         shimmer: "shimmer 2s linear infinite",
         ripple: "ripple 0.6s ease-out",
