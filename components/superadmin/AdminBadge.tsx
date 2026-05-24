@@ -2,7 +2,7 @@
 
 import React from "react";
 
-interface AdminBadgeProps {
+export interface AdminBadgeProps {
   status:
     | "active"
     | "verified"
@@ -14,6 +14,7 @@ interface AdminBadgeProps {
     | "draft"
     | "paused"
     | "rejected";
+  label?: string;
   children?: React.ReactNode;
   size?: "sm" | "md";
 }
@@ -71,6 +72,7 @@ const SIZE_CLASSES: Record<string, string> = {
 
 export default function AdminBadge({
   status,
+  label: labelProp,
   children,
   size = "sm",
 }: AdminBadgeProps) {
@@ -78,7 +80,7 @@ export default function AdminBadge({
   const sizeClass = SIZE_CLASSES[size];
 
   const label =
-    children ?? status.charAt(0).toUpperCase() + status.slice(1);
+    children ?? labelProp ?? status.charAt(0).toUpperCase() + status.slice(1);
 
   return (
     <span

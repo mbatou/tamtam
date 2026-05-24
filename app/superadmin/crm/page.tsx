@@ -2,8 +2,28 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { formatFCFA } from "@/lib/utils";
 import { useToast } from "@/components/ui/Toast";
 import Pagination from "@/components/ui/Pagination";
+import AdminStatCard from "@/components/superadmin/AdminStatCard";
+import AdminBadge from "@/components/superadmin/AdminBadge";
+import AdminDrawer from "@/components/superadmin/AdminDrawer";
+import {
+  Building2,
+  Search,
+  Download,
+  Mail,
+  Trash2,
+  Pencil,
+  ExternalLink,
+  MessageCircle,
+  CreditCard,
+  Eye,
+  Megaphone,
+  Wallet,
+  Plus,
+  X,
+} from "lucide-react";
 
 interface BrandUser {
   id: string;
@@ -86,9 +106,25 @@ interface CRMData {
 }
 
 const AVAILABLE_TAGS = [
-  "VIP", "Priority", "New", "Inactive", "Follow-up", "Loyal",
-  "Enterprise", "SMB", "Startup", "E-commerce", "Service", "Media",
+  "VIP", "Prioritaire", "Nouveau", "Inactif", "Suivi", "Fidèle",
+  "Entreprise", "PME", "Startup", "E-commerce", "Service", "Média",
 ];
+
+const STAGE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  vip: { label: "VIP", color: "#EAB308", bg: "rgba(234,179,8,0.12)" },
+  repeat: { label: "Récurrent", color: "#5DCAA5", bg: "rgba(29,158,117,0.12)" },
+  first_campaign: { label: "1ère campagne", color: "#60A5FA", bg: "rgba(96,165,250,0.12)" },
+  recharged: { label: "Rechargé", color: "#C084FC", bg: "rgba(192,132,252,0.12)" },
+  registered: { label: "Inscrit", color: "rgba(255,255,255,0.4)", bg: "rgba(255,255,255,0.06)" },
+};
+
+const NOTE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  note: { label: "Note", color: "rgba(255,255,255,0.4)", bg: "rgba(255,255,255,0.06)" },
+  call: { label: "Appel", color: "#60A5FA", bg: "rgba(96,165,250,0.12)" },
+  email: { label: "Email", color: "#C084FC", bg: "rgba(192,132,252,0.12)" },
+  followup: { label: "Suivi", color: "#D35400", bg: "rgba(211,84,0,0.12)" },
+  meeting: { label: "Réunion", color: "#5DCAA5", bg: "rgba(29,158,117,0.12)" },
+};
 
 export default function CRMPage() {
   const router = useRouter();
@@ -118,18 +154,12 @@ export default function CRMPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        view: "brands",
-        search,
-        city: cityFilter,
-        status: stageFilter,
-        page: String(page),
-      });
+      const params = new URLSearchParams({ view: "brands", search, city: cityFilter, status: stageFilter, page: String(page) });
       const res = await fetch(`/api/superadmin/crm?${params}`);
       const result = await res.json();
       setData(result);
     } catch {
-      showToast("Loading error", "error");
+      showToast("Erreur de chargement", "error");
     }
     setLoading(false);
   }, [search, cityFilter, stageFilter, page]);
@@ -140,13 +170,8 @@ export default function CRMPage() {
     setDetailNotesLoading(true);
     try {
       const res = await fetch(`/api/superadmin/crm/notes?contact_id=${userId}&contact_type=brand`);
-      if (res.ok) {
-        const notes = await res.json();
-        setDetailNotes(notes);
-      }
-    } catch {
-      setDetailNotes([]);
-    }
+      if (res.ok) setDetailNotes(await res.json());
+    } catch { setDetailNotes([]); }
     setDetailNotesLoading(false);
   }, []);
 
@@ -156,22 +181,10 @@ export default function CRMPage() {
       const res = await fetch("/api/superadmin/crm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "add_note",
-          contact_id: detailUser.id,
-          contact_type: "brand",
-          content: newNote.trim(),
-          note_type: newNoteType,
-        }),
+        body: JSON.stringify({ action: "add_note", contact_id: detailUser.id, contact_type: "brand", content: newNote.trim(), note_type: newNoteType }),
       });
-      if (res.ok) {
-        setNewNote("");
-        fetchNotes(detailUser.id);
-        showToast("Note added", "success");
-      }
-    } catch {
-      showToast("Error", "error");
-    }
+      if (res.ok) { setNewNote(""); fetchNotes(detailUser.id); showToast("Note ajoutée", "success"); }
+    } catch { showToast("Erreur", "error"); }
   };
 
   const handleDeleteNote = async (noteId: string) => {
@@ -182,9 +195,7 @@ export default function CRMPage() {
         body: JSON.stringify({ action: "delete_note", note_id: noteId }),
       });
       if (detailUser) fetchNotes(detailUser.id);
-    } catch {
-      showToast("Error", "error");
-    }
+    } catch { showToast("Erreur", "error"); }
   };
 
   const handleUpdateTags = async (userId: string, tags: string[]) => {
@@ -192,34 +203,20 @@ export default function CRMPage() {
       await fetch("/api/superadmin/crm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "update_tags",
-          contact_id: userId,
-          contact_type: "brand",
-          tags,
-        }),
+        body: JSON.stringify({ action: "update_tags", contact_id: userId, contact_type: "brand", tags }),
       });
-      if (detailUser) {
-        setDetailUser({ ...detailUser, crm_tags: tags });
-      }
+      if (detailUser) setDetailUser({ ...detailUser, crm_tags: tags });
       fetchData();
-      showToast("Tags updated", "success");
-    } catch {
-      showToast("Error", "error");
-    }
+      showToast("Tags mis à jour", "success");
+    } catch { showToast("Erreur", "error"); }
   };
 
   const fetchBrandDetail = useCallback(async (userId: string) => {
     setBrandDetailLoading(true);
     try {
       const res = await fetch(`/api/superadmin/crm/detail?user_id=${userId}`);
-      if (res.ok) {
-        const detail = await res.json();
-        setBrandDetail(detail);
-      }
-    } catch {
-      setBrandDetail(null);
-    }
+      if (res.ok) setBrandDetail(await res.json());
+    } catch { setBrandDetail(null); }
     setBrandDetailLoading(false);
   }, []);
 
@@ -237,41 +234,27 @@ export default function CRMPage() {
       const res = await fetch("/api/superadmin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "topup",
-          user_id: detailUser.id,
-          amount: topupAmount,
-        }),
+        body: JSON.stringify({ action: "topup", user_id: detailUser.id, amount: topupAmount }),
       });
       const result = await res.json();
       if (res.ok) {
-        showToast(`New balance: ${Number(result.new_balance).toLocaleString("en-US")} F`, "success");
+        showToast(`Nouveau solde : ${formatFCFA(result.new_balance)}`, "success");
         setShowTopup(false);
         setTopupAmount("");
         setDetailUser({ ...detailUser, balance: result.new_balance });
         fetchBrandDetail(detailUser.id);
         fetchData();
-      } else {
-        showToast(result.error || "Error", "error");
-      }
-    } catch {
-      showToast("Network error", "error");
-    }
+      } else { showToast(result.error || "Erreur", "error"); }
+    } catch { showToast("Erreur réseau", "error"); }
     setToppingUp(false);
   };
 
   const toggleSelect = (id: string) => {
-    setSelectedUsers(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
+    setSelectedUsers(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
 
   const selectAll = () => {
-    if (selectedUsers.length === data.users.length) {
-      setSelectedUsers([]);
-    } else {
-      setSelectedUsers(data.users.map(u => u.id));
-    }
+    setSelectedUsers(selectedUsers.length === data.users.length ? [] : data.users.map(u => u.id));
   };
 
   const handleExport = async () => {
@@ -284,26 +267,15 @@ export default function CRMPage() {
       const { users } = await res.json();
       if (!users || users.length === 0) return;
       const headers = Object.keys(users[0]);
-      const csv = [
-        headers.join(","),
-        ...users.map((u: Record<string, unknown>) =>
-          headers.map(h => {
-            const val = String(u[h] ?? "");
-            return val.includes(",") ? `"${val}"` : val;
-          }).join(",")
-        ),
-      ].join("\n");
+      const csv = [headers.join(","), ...users.map((u: Record<string, unknown>) =>
+        headers.map(h => { const val = String(u[h] ?? ""); return val.includes(",") ? `"${val}"` : val; }).join(",")
+      )].join("\n");
       const blob = new Blob([csv], { type: "text/csv" });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "tamtam-export.csv";
-      a.click();
+      const a = document.createElement("a"); a.href = url; a.download = "tamtam-export.csv"; a.click();
       URL.revokeObjectURL(url);
-      showToast("CSV export downloaded", "success");
-    } catch {
-      showToast("Export error", "error");
-    }
+      showToast("Export CSV téléchargé", "success");
+    } catch { showToast("Erreur d'export", "error"); }
   };
 
   const handleSaveUser = async () => {
@@ -312,78 +284,69 @@ export default function CRMPage() {
       const res = await fetch("/api/superadmin/crm/update", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: editingUser.id,
-          updates: {
-            name: editingUser.name,
-            email: editingUser.email,
-            phone: editingUser.phone,
-            city: editingUser.city,
-            company_name: editingUser.company_name,
-            balance: editingUser.balance,
-          },
-        }),
+        body: JSON.stringify({ userId: editingUser.id, updates: { name: editingUser.name, email: editingUser.email, phone: editingUser.phone, city: editingUser.city, company_name: editingUser.company_name, balance: editingUser.balance } }),
       });
-      if (!res.ok) {
-        const err = await res.json();
-        showToast(err.error || "Error", "error");
-        return;
-      }
-      showToast("User updated", "success");
+      if (!res.ok) { const err = await res.json(); showToast(err.error || "Erreur", "error"); return; }
+      showToast("Utilisateur mis à jour", "success");
       setEditingUser(null);
       fetchData();
-    } catch {
-      showToast("Update error", "error");
-    }
+    } catch { showToast("Erreur", "error"); }
   };
 
   const stageCounts = data.stageCounts || { registered: 0, recharged: 0, first_campaign: 0, repeat: 0, vip: 0 };
 
   return (
-    <div className="p-6">
+    <div className="p-6 max-w-[1400px]">
       {ToastComponent}
-      <h1 className="text-2xl font-bold text-white mb-6">CRM</h1>
 
-      {/* Brand pipeline stages */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      {/* KPI row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <AdminStatCard label="Total marques" value={data.total} icon={<Building2 size={16} />} />
+        <AdminStatCard label="Rechargées" value={stageCounts.recharged + stageCounts.first_campaign + stageCounts.repeat + stageCounts.vip} icon={<CreditCard size={16} />} accent="teal" />
+        <AdminStatCard label="Actives" value={stageCounts.first_campaign + stageCounts.repeat + stageCounts.vip} icon={<Megaphone size={16} />} accent="teal" />
+        <AdminStatCard label="VIP" value={stageCounts.vip} icon={<Wallet size={16} />} accent="orange" />
+      </div>
+
+      {/* Pipeline stages */}
+      <div className="flex gap-1 p-1 rounded-xl mb-4" style={{ background: "rgba(255,255,255,0.03)" }}>
         {[
-          { key: "", label: "All", count: data.total },
-          { key: "registered", label: "Registered", count: stageCounts.registered, color: "text-white/40" },
-          { key: "recharged", label: "Recharged", count: stageCounts.recharged, color: "text-blue-400" },
-          { key: "first_campaign", label: "1st campaign", count: stageCounts.first_campaign, color: "text-teal-400" },
-          { key: "repeat", label: "Recurring", count: stageCounts.repeat, color: "text-green-400" },
-          { key: "vip", label: "VIP", count: stageCounts.vip, color: "text-yellow-400" },
+          { key: "", label: "Toutes", count: data.total },
+          { key: "registered", label: "Inscrites", count: stageCounts.registered },
+          { key: "recharged", label: "Rechargées", count: stageCounts.recharged },
+          { key: "first_campaign", label: "1ère campagne", count: stageCounts.first_campaign },
+          { key: "repeat", label: "Récurrentes", count: stageCounts.repeat },
+          { key: "vip", label: "VIP", count: stageCounts.vip },
         ].map(stage => (
           <button
             key={stage.key}
             onClick={() => { setStageFilter(stage.key); setPage(1); }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-              stageFilter === stage.key
-                ? "bg-gradient-primary text-white"
-                : "bg-white/5 text-white/40 hover:text-white/70"
-            }`}
+            className="px-3 py-1.5 rounded-lg font-dm text-xs font-medium transition-all"
+            style={{
+              background: stageFilter === stage.key ? "rgba(211,84,0,0.12)" : "transparent",
+              color: stageFilter === stage.key ? "#D35400" : "rgba(255,255,255,0.4)",
+            }}
           >
-            {stage.label} ({stage.count || 0})
+            {stage.label} <span className="font-bold ml-1">{stage.count || 0}</span>
           </button>
         ))}
       </div>
 
-      {/* Search + filters + bulk actions */}
+      {/* Search + filters + bulk */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <input
-          type="text"
-          value={search}
-          onChange={e => { setSearch(e.target.value); setPage(1); }}
-          placeholder="Search by name, email, company..."
-          className="flex-1 min-w-[200px] bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-primary/50"
-        />
+        <div className="relative flex-1 min-w-[200px] max-w-md">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "rgba(255,255,255,0.25)" }} />
+          <input
+            type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
+            placeholder="Rechercher par nom, email, entreprise..."
+            className="w-full pl-9 pr-4 py-2 rounded-xl font-dm text-sm focus:outline-none transition"
+            style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "#fff" }}
+          />
+        </div>
 
-        <select
-          value={cityFilter}
-          onChange={e => { setCityFilter(e.target.value); setPage(1); }}
-          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white/70 text-sm focus:outline-none"
-        >
-          <option value="">All cities</option>
+        <select value={cityFilter} onChange={e => { setCityFilter(e.target.value); setPage(1); }}
+          className="rounded-xl px-3 py-2 font-dm text-sm focus:outline-none"
+          style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}>
+          <option value="">Toutes villes</option>
           <option value="Dakar">Dakar</option>
           <option value="Rufisque">Rufisque</option>
           <option value="Thiès">Thiès</option>
@@ -391,134 +354,96 @@ export default function CRMPage() {
           <option value="Saint-Louis">Saint-Louis</option>
         </select>
 
-        {/* Bulk actions */}
         {selectedUsers.length > 0 && (
           <div className="flex items-center gap-2">
-            <span className="text-white/40 text-sm">{selectedUsers.length} selected</span>
-            <button
-              onClick={() => setShowBulkEmail(true)}
-              className="bg-blue-500/20 text-blue-400 px-3 py-2 rounded-lg text-xs hover:bg-blue-500/30 transition"
-            >
-              Email
-            </button>
-            <button
-              onClick={() => setShowBulkDelete(true)}
-              className="bg-red-500/20 text-red-400 px-3 py-2 rounded-lg text-xs hover:bg-red-500/30 transition"
-            >
-              Delete
-            </button>
-            <button
-              onClick={handleExport}
-              className="bg-white/5 text-white/50 px-3 py-2 rounded-lg text-xs hover:bg-white/10 transition"
-            >
-              CSV
-            </button>
+            <span className="font-dm text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>{selectedUsers.length} sélectionnés</span>
+            <button onClick={() => setShowBulkEmail(true)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg font-dm text-xs font-bold transition"
+              style={{ background: "rgba(96,165,250,0.12)", color: "#60A5FA" }}><Mail size={12} /> Email</button>
+            <button onClick={() => setShowBulkDelete(true)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg font-dm text-xs font-bold transition"
+              style={{ background: "rgba(226,75,74,0.12)", color: "#F09595" }}><Trash2 size={12} /> Supprimer</button>
+            <button onClick={handleExport} className="flex items-center gap-1.5 px-3 py-2 rounded-lg font-dm text-xs font-bold transition"
+              style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.5)" }}><Download size={12} /> CSV</button>
           </div>
         )}
       </div>
 
-      {/* User table */}
-      <div className="sa-card rounded-xl overflow-hidden">
+      {/* Table */}
+      <div className="rounded-xl overflow-hidden" style={{ border: "0.5px solid rgba(255,255,255,0.07)" }}>
         {loading ? (
-          <div className="flex items-center justify-center py-20 text-white/30">
-            <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mr-3" />
-            Loading...
+          <div className="flex items-center justify-center py-20" style={{ color: "rgba(255,255,255,0.25)" }}>
+            <div className="animate-spin w-5 h-5 rounded-full mr-3" style={{ border: "2px solid #D35400", borderTopColor: "transparent" }} />
+            <span className="font-dm text-sm">Chargement...</span>
           </div>
         ) : data.users.length === 0 ? (
-          <div className="text-center py-20 text-white/30 text-sm">
-            No users found
-          </div>
+          <div className="text-center py-20 font-dm text-sm" style={{ color: "rgba(255,255,255,0.25)" }}>Aucune marque trouvée</div>
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full">
                 <thead>
-                  <tr className="text-white/30 text-xs uppercase border-b border-white/5">
-                    <th className="py-3 px-4 text-left">
-                      <input
-                        type="checkbox"
-                        checked={selectedUsers.length === data.users.length && data.users.length > 0}
-                        onChange={selectAll}
-                        className="rounded accent-orange-500"
-                      />
+                  <tr style={{ background: "#111128" }}>
+                    <th className="py-3 px-4 text-left w-10">
+                      <input type="checkbox" checked={selectedUsers.length === data.users.length && data.users.length > 0}
+                        onChange={selectAll} className="rounded accent-orange-500" />
                     </th>
-                    <th className="py-3 px-4 text-left">Company</th>
-                    <th className="py-3 px-4 text-left">Email</th>
-                    <th className="py-3 px-4 text-left">City</th>
-                    <th className="py-3 px-4 text-right">Balance</th>
-                    <th className="py-3 px-4 text-center">Campaigns</th>
-                    <th className="py-3 px-4 text-center">Status</th>
-                    <th className="py-3 px-4 text-left">Registered</th>
-                    <th className="py-3 px-4 text-center">Actions</th>
+                    {["Entreprise", "Email", "Ville", "Solde", "Campagnes", "Étape", "Inscrit", "Actions"].map(h => (
+                      <th key={h} className="py-3 px-4 text-left font-dm font-medium uppercase tracking-wider" style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)" }}>{h}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {data.users.map(user => {
-                    const brand = user as BrandUser;
+                    const stage = STAGE_CONFIG[user.pipelineStage || "registered"] || STAGE_CONFIG.registered;
                     return (
-                      <tr key={user.id} className="border-t border-white/5 hover:bg-white/[0.02] transition">
+                      <tr key={user.id} className="transition-colors" style={{ borderBottom: "0.5px solid rgba(255,255,255,0.05)" }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
                         <td className="py-3 px-4">
-                          <input
-                            type="checkbox"
-                            checked={selectedUsers.includes(user.id)}
-                            onChange={() => toggleSelect(user.id)}
-                            className="rounded accent-orange-500"
-                          />
+                          <input type="checkbox" checked={selectedUsers.includes(user.id)} onChange={() => toggleSelect(user.id)} className="rounded accent-orange-500" />
                         </td>
                         <td className="py-3 px-4">
-                          <button
-                            onClick={() => openDetail(brand)}
-                            className="text-left hover:opacity-80 transition group"
-                          >
-                            <div className="text-white font-medium group-hover:text-orange-400 transition">
-                              {brand.company_name || user.name}
-                            </div>
-                            {brand.company_name && <div className="text-white/30 text-xs">{user.name}</div>}
+                          <button onClick={() => openDetail(user)} className="text-left group">
+                            <div className="font-dm text-sm font-semibold text-white group-hover:text-[#D35400] transition">{user.company_name || user.name}</div>
+                            {user.company_name && <div className="font-dm text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>{user.name}</div>}
                           </button>
                         </td>
-                        <td className="py-3 px-4 text-white/40">{user.email}</td>
-                        <td className="py-3 px-4 text-white/40">{user.city || "—"}</td>
-                        <td className="py-3 px-4 text-right text-white">
-                          {Number(user.balance || 0).toLocaleString("en-US")} F
-                        </td>
-                        <td className="py-3 px-4 text-center text-white/40">
-                          {brand.campaignCount || 0}
-                          {(brand.activeCampaigns || 0) > 0 && (
-                            <span className="text-green-400 text-xs ml-1">({brand.activeCampaigns} active)</span>
+                        <td className="py-3 px-4 font-dm text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>{user.email}</td>
+                        <td className="py-3 px-4 font-dm text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>{user.city || "—"}</td>
+                        <td className="py-3 px-4 font-syne font-bold text-sm text-white text-right">{formatFCFA(user.balance || 0)}</td>
+                        <td className="py-3 px-4 font-dm text-sm text-center" style={{ color: "rgba(255,255,255,0.4)" }}>
+                          {user.campaignCount || 0}
+                          {(user.activeCampaigns || 0) > 0 && (
+                            <span className="ml-1" style={{ color: "#5DCAA5", fontSize: "11px" }}>({user.activeCampaigns})</span>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-center">
-                          <PipelineStageBadge stage={brand.pipelineStage || "registered"} />
+                        <td className="py-3 px-4">
+                          <span className="font-dm text-[10px] font-semibold px-2 py-1 rounded-full" style={{ background: stage.bg, color: stage.color }}>{stage.label}</span>
                         </td>
-                        <td className="py-3 px-4 text-white/30 text-xs">
-                          {new Date(user.created_at).toLocaleDateString("en-US")}
+                        <td className="py-3 px-4 font-dm text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
+                          {new Date(user.created_at).toLocaleDateString("fr-FR")}
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center justify-center gap-1">
-                            <button
-                              onClick={() => setEditingUser(brand)}
-                              className="text-white/30 hover:text-orange-400 text-xs px-2 py-1 transition"
-                              title="Edit"
-                            >
-                              ✏️
+                            <button onClick={() => setEditingUser(user)} className="p-1.5 rounded-lg transition" title="Modifier"
+                              style={{ color: "rgba(255,255,255,0.3)" }}
+                              onMouseEnter={e => { e.currentTarget.style.color = "#D35400"; }}
+                              onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.3)"; }}>
+                              <Pencil size={13} />
                             </button>
                             {user.phone && (
-                              <a
-                                href={`https://wa.me/${user.phone.replace(/[^0-9]/g, "")}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-white/30 hover:text-green-400 text-xs px-2 py-1 transition"
-                                title="WhatsApp"
-                              >
-                                💬
+                              <a href={`https://wa.me/${user.phone.replace(/[^0-9]/g, "")}`} target="_blank" rel="noopener noreferrer"
+                                className="p-1.5 rounded-lg transition" title="WhatsApp"
+                                style={{ color: "rgba(255,255,255,0.3)" }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#5DCAA5"; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.3)"; }}>
+                                <MessageCircle size={13} />
                               </a>
                             )}
-                            <button
-                              onClick={() => router.push(`/superadmin/users?id=${user.id}`)}
-                              className="text-white/30 hover:text-blue-400 text-xs px-2 py-1 transition"
-                              title="Investigation"
-                            >
-                              🔍
+                            <button onClick={() => router.push(`/superadmin/users?id=${user.id}`)} className="p-1.5 rounded-lg transition" title="Investigation"
+                              style={{ color: "rgba(255,255,255,0.3)" }}
+                              onMouseEnter={e => { e.currentTarget.style.color = "#60A5FA"; }}
+                              onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.3)"; }}>
+                              <ExternalLink size={13} />
                             </button>
                           </div>
                         </td>
@@ -528,78 +453,60 @@ export default function CRMPage() {
                 </tbody>
               </table>
             </div>
-
-            {/* Pagination */}
-            <div className="px-4 py-3 border-t border-white/5">
-              <Pagination
-                currentPage={page}
-                totalItems={data.total}
-                pageSize={25}
-                onPageChange={setPage}
-              />
+            <div className="px-4 py-3" style={{ borderTop: "0.5px solid rgba(255,255,255,0.05)" }}>
+              <Pagination currentPage={page} totalItems={data.total} pageSize={25} onPageChange={setPage} />
             </div>
           </>
         )}
       </div>
 
-      {/* Brand detail modal */}
-      {detailUser && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setDetailUser(null)}>
-          <div className="bg-[#1a1a2e] border border-white/10 rounded-xl max-w-2xl w-full max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            {/* Header */}
-            <div className="p-6 border-b border-white/5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-white font-bold text-lg">
-                    {detailUser.company_name || detailUser.name}
-                  </h3>
-                  {detailUser.company_name && (
-                    <p className="text-white/40 text-sm">{detailUser.name}</p>
-                  )}
-                  <div className="flex items-center gap-2 mt-2">
-                    <PipelineStageBadge stage={detailUser.pipelineStage || "registered"} />
-                    {detailUser.city && (
-                      <span className="text-xs text-white/30 bg-white/5 px-2 py-0.5 rounded">{detailUser.city}</span>
-                    )}
-                  </div>
-                </div>
-                <button onClick={() => setDetailUser(null)} className="text-white/30 hover:text-white/60 text-xl">&times;</button>
-              </div>
+      {/* Brand Detail Drawer */}
+      <AdminDrawer
+        open={!!detailUser}
+        onClose={() => setDetailUser(null)}
+        title={detailUser ? (detailUser.company_name || detailUser.name) : ""}
+        subtitle={detailUser?.company_name ? detailUser.name : undefined}
+        width="560px"
+      >
+        {detailUser && (
+          <div className="space-y-5">
+            {/* Stage + city */}
+            <div className="flex items-center gap-2">
+              <span className="font-dm text-[10px] font-semibold px-2 py-1 rounded-full"
+                style={{ background: (STAGE_CONFIG[detailUser.pipelineStage || "registered"] || STAGE_CONFIG.registered).bg, color: (STAGE_CONFIG[detailUser.pipelineStage || "registered"] || STAGE_CONFIG.registered).color }}>
+                {(STAGE_CONFIG[detailUser.pipelineStage || "registered"] || STAGE_CONFIG.registered).label}
+              </span>
+              {detailUser.city && (
+                <span className="font-dm text-[10px] px-2 py-1 rounded-full" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}>{detailUser.city}</span>
+              )}
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-4 gap-3 p-6 border-b border-white/5">
-              <div className="bg-white/5 rounded-lg p-3 text-center">
-                <div className="text-white font-bold">{Number(detailUser.balance || 0).toLocaleString("en-US")} F</div>
-                <div className="text-white/30 text-xs mt-1">Balance</div>
-              </div>
-              <div className="bg-white/5 rounded-lg p-3 text-center">
-                <div className="text-white font-bold">{detailUser.campaignCount || 0}</div>
-                <div className="text-white/30 text-xs mt-1">Campaigns</div>
-              </div>
-              <div className="bg-white/5 rounded-lg p-3 text-center">
-                <div className="text-green-400 font-bold">{detailUser.activeCampaigns || 0}</div>
-                <div className="text-white/30 text-xs mt-1">Active</div>
-              </div>
-              <div className="bg-white/5 rounded-lg p-3 text-center">
-                <div className="text-white font-bold">{detailUser.teamMembers || 0}</div>
-                <div className="text-white/30 text-xs mt-1">Team</div>
-              </div>
+            {/* Stats grid */}
+            <div className="grid grid-cols-4 gap-3">
+              {[
+                { value: formatFCFA(detailUser.balance || 0), label: "Solde", color: "#fff" },
+                { value: String(detailUser.campaignCount || 0), label: "Campagnes", color: "#fff" },
+                { value: String(detailUser.activeCampaigns || 0), label: "Actives", color: "#5DCAA5" },
+                { value: String(detailUser.teamMembers || 0), label: "Équipe", color: "#fff" },
+              ].map(s => (
+                <div key={s.label} className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.04)" }}>
+                  <div className="font-syne font-bold" style={{ color: s.color }}>{s.value}</div>
+                  <div className="font-dm text-[10px]" style={{ color: "rgba(255,255,255,0.3)" }}>{s.label}</div>
+                </div>
+              ))}
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b border-white/5">
-              {(["info", "campaigns", "finance"] as const).map(tab => (
-                <button
-                  key={tab}
-                  onClick={() => setDetailTab(tab)}
-                  className={`flex-1 py-3 text-xs font-medium uppercase tracking-wide transition ${
-                    detailTab === tab
-                      ? "text-white border-b-2 border-primary"
-                      : "text-white/30 hover:text-white/50"
-                  }`}
-                >
-                  {tab === "info" ? "Info" : tab === "campaigns" ? "Campaigns" : "Finance"}
+            <div className="flex gap-1 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.04)" }}>
+              {([
+                { key: "info" as const, label: "Info", icon: Eye },
+                { key: "campaigns" as const, label: "Campagnes", icon: Megaphone },
+                { key: "finance" as const, label: "Finance", icon: Wallet },
+              ]).map(tab => (
+                <button key={tab.key} onClick={() => setDetailTab(tab.key)}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-dm text-xs font-medium transition-all"
+                  style={{ background: detailTab === tab.key ? "rgba(211,84,0,0.12)" : "transparent", color: detailTab === tab.key ? "#D35400" : "rgba(255,255,255,0.4)" }}>
+                  <tab.icon size={12} /> {tab.label}
                 </button>
               ))}
             </div>
@@ -607,53 +514,42 @@ export default function CRMPage() {
             {/* Tab: Info */}
             {detailTab === "info" && (
               <>
-                {/* Contact info */}
-                <div className="p-6 border-b border-white/5 space-y-2">
-                  <h4 className="text-white/60 text-xs font-semibold uppercase mb-3">Contact</h4>
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-white/30 w-16">Email</span>
-                    <span className="text-white">{detailUser.email || "—"}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-white/30 w-16">Tel.</span>
-                    <span className="text-white">{detailUser.phone || "—"}</span>
-                    {detailUser.phone && (
-                      <a
-                        href={`https://wa.me/${detailUser.phone.replace(/[^0-9]/g, "")}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-green-400 hover:text-green-300 text-xs transition"
-                      >
-                        WhatsApp
-                      </a>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-white/30 w-16">Joined</span>
-                    <span className="text-white">{new Date(detailUser.created_at).toLocaleDateString("en-US")}</span>
-                  </div>
+                {/* Contact */}
+                <div className="space-y-2">
+                  <h4 className="font-dm text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.3)" }}>Contact</h4>
+                  {[
+                    { label: "Email", value: detailUser.email || "—" },
+                    { label: "Tél.", value: detailUser.phone || "—", wa: detailUser.phone },
+                    { label: "Inscrit", value: new Date(detailUser.created_at).toLocaleDateString("fr-FR") },
+                  ].map(row => (
+                    <div key={row.label} className="flex items-center gap-2 font-dm text-sm">
+                      <span className="w-14" style={{ color: "rgba(255,255,255,0.3)" }}>{row.label}</span>
+                      <span className="text-white">{row.value}</span>
+                      {row.wa && (
+                        <a href={`https://wa.me/${row.wa.replace(/[^0-9]/g, "")}`} target="_blank" rel="noopener noreferrer"
+                          className="font-dm text-xs transition" style={{ color: "#5DCAA5" }}>WhatsApp</a>
+                      )}
+                    </div>
+                  ))}
                 </div>
 
                 {/* Tags */}
-                <div className="p-6 border-b border-white/5">
-                  <h4 className="text-white/60 text-xs font-semibold uppercase mb-3">Tags</h4>
+                <div>
+                  <h4 className="font-dm text-[10px] uppercase tracking-wider mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>Tags</h4>
                   <div className="flex flex-wrap gap-2">
                     {AVAILABLE_TAGS.map(tag => {
                       const isActive = (detailUser.crm_tags || []).includes(tag);
                       return (
-                        <button
-                          key={tag}
-                          onClick={() => {
-                            const current = detailUser.crm_tags || [];
-                            const newTags = isActive ? current.filter(t => t !== tag) : [...current, tag];
-                            handleUpdateTags(detailUser.id, newTags);
-                          }}
-                          className={`px-2.5 py-1 rounded-full text-xs font-medium transition ${
-                            isActive
-                              ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
-                              : "bg-white/5 text-white/30 border border-white/5 hover:text-white/50 hover:border-white/10"
-                          }`}
-                        >
+                        <button key={tag} onClick={() => {
+                          const current = detailUser.crm_tags || [];
+                          handleUpdateTags(detailUser.id, isActive ? current.filter(t => t !== tag) : [...current, tag]);
+                        }}
+                          className="px-2.5 py-1 rounded-full font-dm text-xs font-medium transition"
+                          style={{
+                            background: isActive ? "rgba(211,84,0,0.12)" : "rgba(255,255,255,0.04)",
+                            color: isActive ? "#D35400" : "rgba(255,255,255,0.3)",
+                            border: `0.5px solid ${isActive ? "rgba(211,84,0,0.3)" : "rgba(255,255,255,0.05)"}`,
+                          }}>
                           {tag}
                         </button>
                       );
@@ -662,62 +558,55 @@ export default function CRMPage() {
                 </div>
 
                 {/* Notes */}
-                <div className="p-6 border-b border-white/5">
-                  <h4 className="text-white/60 text-xs font-semibold uppercase mb-3">Notes</h4>
+                <div>
+                  <h4 className="font-dm text-[10px] uppercase tracking-wider mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>Notes</h4>
                   {detailNotesLoading ? (
-                    <div className="text-white/20 text-sm py-4 text-center">Loading...</div>
+                    <div className="font-dm text-sm py-4 text-center" style={{ color: "rgba(255,255,255,0.2)" }}>Chargement...</div>
                   ) : detailNotes.length === 0 ? (
-                    <div className="text-white/20 text-sm py-4 text-center">No notes</div>
+                    <div className="font-dm text-sm py-4 text-center" style={{ color: "rgba(255,255,255,0.2)" }}>Aucune note</div>
                   ) : (
-                    <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
-                      {detailNotes.map(note => (
-                        <div key={note.id} className="bg-white/5 rounded-lg p-3 group">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <NoteTypeBadge type={note.note_type} />
-                                <span className="text-white/20 text-xs">
-                                  {new Date(note.created_at).toLocaleDateString("en-US")}
-                                </span>
+                    <div className="space-y-2 mb-3 max-h-48 overflow-y-auto">
+                      {detailNotes.map(note => {
+                        const nc = NOTE_CONFIG[note.note_type] || NOTE_CONFIG.note;
+                        return (
+                          <div key={note.id} className="rounded-lg p-3 group" style={{ background: "rgba(255,255,255,0.04)" }}>
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-dm text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: nc.bg, color: nc.color }}>{nc.label}</span>
+                                  <span className="font-dm text-[10px]" style={{ color: "rgba(255,255,255,0.2)" }}>{new Date(note.created_at).toLocaleDateString("fr-FR")}</span>
+                                </div>
+                                <p className="font-dm text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>{note.content}</p>
                               </div>
-                              <p className="text-white/70 text-sm">{note.content}</p>
+                              <button onClick={() => handleDeleteNote(note.id)}
+                                className="opacity-0 group-hover:opacity-100 transition p-1" style={{ color: "rgba(255,255,255,0.2)" }}>
+                                <X size={12} />
+                              </button>
                             </div>
-                            <button
-                              onClick={() => handleDeleteNote(note.id)}
-                              className="text-white/10 hover:text-red-400 text-xs transition opacity-0 group-hover:opacity-100"
-                            >
-                              ✕
-                            </button>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                   <div className="flex gap-2">
-                    <select
-                      value={newNoteType}
-                      onChange={e => setNewNoteType(e.target.value)}
-                      className="bg-white/5 border border-white/10 rounded-lg px-2 py-2 text-white/50 text-xs focus:outline-none"
-                    >
+                    <select value={newNoteType} onChange={e => setNewNoteType(e.target.value)}
+                      className="rounded-lg px-2 py-2 font-dm text-xs focus:outline-none"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}>
                       <option value="note">Note</option>
-                      <option value="call">Call</option>
+                      <option value="call">Appel</option>
                       <option value="email">Email</option>
-                      <option value="followup">Follow-up</option>
-                      <option value="meeting">Meeting</option>
+                      <option value="followup">Suivi</option>
+                      <option value="meeting">Réunion</option>
                     </select>
-                    <input
-                      value={newNote}
-                      onChange={e => setNewNote(e.target.value)}
+                    <input value={newNote} onChange={e => setNewNote(e.target.value)}
                       onKeyDown={e => { if (e.key === "Enter") handleAddNote(); }}
-                      placeholder="Add a note..."
-                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-primary/50"
-                    />
-                    <button
-                      onClick={handleAddNote}
-                      disabled={!newNote.trim()}
-                      className="bg-gradient-primary text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-30 transition"
-                    >
-                      Add
+                      placeholder="Ajouter une note..."
+                      className="flex-1 rounded-lg px-3 py-2 font-dm text-sm focus:outline-none transition"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "#fff" }} />
+                    <button onClick={handleAddNote} disabled={!newNote.trim()}
+                      className="px-4 py-2 rounded-lg font-dm text-sm font-bold transition disabled:opacity-30"
+                      style={{ background: "#D35400", color: "#fff" }}>
+                      <Plus size={14} />
                     </button>
                   </div>
                 </div>
@@ -726,34 +615,43 @@ export default function CRMPage() {
 
             {/* Tab: Campaigns */}
             {detailTab === "campaigns" && (
-              <div className="p-6">
-                <h4 className="text-white/60 text-xs font-semibold uppercase mb-3">Campaigns</h4>
+              <div>
                 {brandDetailLoading ? (
-                  <div className="text-white/20 text-sm py-8 text-center">Loading...</div>
+                  <div className="font-dm text-sm py-8 text-center" style={{ color: "rgba(255,255,255,0.2)" }}>Chargement...</div>
                 ) : !brandDetail || brandDetail.campaigns.length === 0 ? (
-                  <div className="text-white/20 text-sm py-8 text-center">No campaigns</div>
+                  <div className="font-dm text-sm py-8 text-center" style={{ color: "rgba(255,255,255,0.2)" }}>Aucune campagne</div>
                 ) : (
                   <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                    {brandDetail.campaigns.map(campaign => (
-                      <div key={campaign.id} className="bg-white/5 rounded-lg p-4 hover:bg-white/[0.07] transition">
+                    {brandDetail.campaigns.map(c => (
+                      <div key={c.id} className="rounded-xl p-4 transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.05)" }}>
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1 min-w-0">
-                            <div className="text-white font-medium text-sm truncate">{campaign.title}</div>
+                            <div className="font-dm text-sm font-semibold text-white truncate">{c.title}</div>
                             <div className="flex items-center gap-2 mt-1">
-                              <CampaignStatusBadge status={campaign.status} moderation={campaign.moderation_status} />
-                              {campaign.target_cities && campaign.target_cities.length > 0 && (
-                                <span className="text-xs text-white/20">{campaign.target_cities.join(", ")}</span>
+                              <AdminBadge status={
+                                c.moderation_status === "pending" ? "pending" :
+                                c.moderation_status === "rejected" ? "rejected" :
+                                c.status === "active" ? "active" :
+                                c.status === "paused" ? "paused" : "finished"
+                              }>
+                                {c.moderation_status === "pending" ? "En attente" :
+                                 c.moderation_status === "rejected" ? "Rejetée" :
+                                 c.status === "active" ? "Active" :
+                                 c.status === "paused" ? "Pause" : c.status}
+                              </AdminBadge>
+                              {c.target_cities && c.target_cities.length > 0 && (
+                                <span className="font-dm text-[10px]" style={{ color: "rgba(255,255,255,0.2)" }}>{c.target_cities.join(", ")}</span>
                               )}
                             </div>
                           </div>
                           <div className="text-right ml-3">
-                            <div className="text-white font-bold text-sm">{Number(campaign.budget || 0).toLocaleString("en-US")} F</div>
-                            <div className="text-white/20 text-xs">{campaign.cpc} F/clic</div>
+                            <div className="font-syne font-bold text-sm text-white">{formatFCFA(c.budget || 0)}</div>
+                            <div className="font-dm text-[10px]" style={{ color: "rgba(255,255,255,0.2)" }}>{c.cpc} F/clic</div>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between text-xs text-white/30 mt-2 pt-2 border-t border-white/5">
-                          <span>{new Date(campaign.created_at).toLocaleDateString("en-US")}</span>
-                          <span>{campaign.echoCount} echo{campaign.echoCount !== 1 ? "s" : ""}</span>
+                        <div className="flex items-center justify-between font-dm text-xs mt-2 pt-2" style={{ borderTop: "0.5px solid rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.25)" }}>
+                          <span>{new Date(c.created_at).toLocaleDateString("fr-FR")}</span>
+                          <span>{c.echoCount} écho{c.echoCount !== 1 ? "s" : ""}</span>
                         </div>
                       </div>
                     ))}
@@ -764,65 +662,62 @@ export default function CRMPage() {
 
             {/* Tab: Finance */}
             {detailTab === "finance" && (
-              <div className="p-6">
+              <div>
                 {brandDetailLoading ? (
-                  <div className="text-white/20 text-sm py-8 text-center">Loading...</div>
+                  <div className="font-dm text-sm py-8 text-center" style={{ color: "rgba(255,255,255,0.2)" }}>Chargement...</div>
                 ) : !brandDetail ? (
-                  <div className="text-white/20 text-sm py-8 text-center">No data</div>
+                  <div className="font-dm text-sm py-8 text-center" style={{ color: "rgba(255,255,255,0.2)" }}>Aucune donnée</div>
                 ) : (
                   <>
-                    {/* Financial summary */}
-                    <div className="grid grid-cols-3 gap-3 mb-6">
-                      <div className="bg-white/5 rounded-lg p-3 text-center">
-                        <div className="text-white font-bold text-sm">{Number(detailUser.balance || 0).toLocaleString("en-US")} F</div>
-                        <div className="text-white/30 text-xs mt-1">Current balance</div>
-                      </div>
-                      <div className="bg-green-500/10 rounded-lg p-3 text-center">
-                        <div className="text-green-400 font-bold text-sm">{Number(brandDetail.totalRecharged || 0).toLocaleString("en-US")} F</div>
-                        <div className="text-white/30 text-xs mt-1">Total recharged</div>
-                      </div>
-                      <div className="bg-orange-500/10 rounded-lg p-3 text-center">
-                        <div className="text-orange-400 font-bold text-sm">{Number(brandDetail.totalSpent || 0).toLocaleString("en-US")} F</div>
-                        <div className="text-white/30 text-xs mt-1">Total spent</div>
-                      </div>
+                    <div className="grid grid-cols-3 gap-3 mb-5">
+                      {[
+                        { value: formatFCFA(detailUser.balance || 0), label: "Solde actuel", color: "#fff" },
+                        { value: formatFCFA(brandDetail.totalRecharged || 0), label: "Total rechargé", color: "#5DCAA5" },
+                        { value: formatFCFA(brandDetail.totalSpent || 0), label: "Total dépensé", color: "#D35400" },
+                      ].map(s => (
+                        <div key={s.label} className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.04)" }}>
+                          <div className="font-syne font-bold text-sm" style={{ color: s.color }}>{s.value}</div>
+                          <div className="font-dm text-[10px]" style={{ color: "rgba(255,255,255,0.3)" }}>{s.label}</div>
+                        </div>
+                      ))}
                     </div>
 
-                    {/* Recharge history */}
-                    <h4 className="text-white/60 text-xs font-semibold uppercase mb-3">Recharge history</h4>
+                    <h4 className="font-dm text-[10px] uppercase tracking-wider mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>Historique recharges</h4>
                     {brandDetail.payments.length === 0 ? (
-                      <div className="text-white/20 text-sm py-4 text-center mb-6">No recharges</div>
+                      <div className="font-dm text-sm py-4 text-center mb-4" style={{ color: "rgba(255,255,255,0.2)" }}>Aucune recharge</div>
                     ) : (
-                      <div className="space-y-2 mb-6 max-h-48 overflow-y-auto">
-                        {brandDetail.payments.map(payment => (
-                          <div key={payment.id} className="bg-white/5 rounded-lg p-3 flex items-center justify-between">
+                      <div className="space-y-1.5 mb-5 max-h-48 overflow-y-auto">
+                        {brandDetail.payments.map(p => (
+                          <div key={p.id} className="rounded-lg p-3 flex items-center justify-between" style={{ background: "rgba(255,255,255,0.04)" }}>
                             <div className="flex items-center gap-3">
-                              <PaymentStatusBadge status={payment.status} />
+                              <AdminBadge status={p.status === "completed" ? "active" : p.status === "pending" ? "pending" : "error"}>
+                                {p.status === "completed" ? "OK" : p.status === "pending" ? "Attente" : "Échoué"}
+                              </AdminBadge>
                               <div>
-                                <div className="text-white text-sm font-medium">{Number(payment.amount || 0).toLocaleString("en-US")} F</div>
-                                <div className="text-white/20 text-xs">{payment.payment_method || "Wave"}</div>
+                                <div className="font-dm text-sm font-medium text-white">{formatFCFA(p.amount || 0)}</div>
+                                <div className="font-dm text-[10px]" style={{ color: "rgba(255,255,255,0.2)" }}>{p.payment_method || "Wave"}</div>
                               </div>
                             </div>
-                            <span className="text-white/20 text-xs">{new Date(payment.created_at).toLocaleDateString("en-US")}</span>
+                            <span className="font-dm text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>{new Date(p.created_at).toLocaleDateString("fr-FR")}</span>
                           </div>
                         ))}
                       </div>
                     )}
 
-                    {/* Recent transactions */}
-                    <h4 className="text-white/60 text-xs font-semibold uppercase mb-3">Recent transactions</h4>
+                    <h4 className="font-dm text-[10px] uppercase tracking-wider mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>Transactions récentes</h4>
                     {brandDetail.transactions.length === 0 ? (
-                      <div className="text-white/20 text-sm py-4 text-center">No transactions</div>
+                      <div className="font-dm text-sm py-4 text-center" style={{ color: "rgba(255,255,255,0.2)" }}>Aucune transaction</div>
                     ) : (
-                      <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                      <div className="space-y-1 max-h-48 overflow-y-auto">
                         {brandDetail.transactions.map(tx => (
-                          <div key={tx.id} className="bg-white/5 rounded-lg px-3 py-2.5 flex items-center justify-between">
+                          <div key={tx.id} className="rounded-lg px-3 py-2.5 flex items-center justify-between" style={{ background: "rgba(255,255,255,0.04)" }}>
                             <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <span className={`text-xs font-mono font-bold ${tx.amount >= 0 ? "text-green-400" : "text-red-400"}`}>
-                                {tx.amount >= 0 ? "+" : ""}{Number(tx.amount).toLocaleString("en-US")} F
+                              <span className="font-mono font-bold font-dm text-xs" style={{ color: tx.amount >= 0 ? "#5DCAA5" : "#F09595" }}>
+                                {tx.amount >= 0 ? "+" : ""}{formatFCFA(tx.amount)}
                               </span>
-                              <span className="text-white/30 text-xs truncate">{tx.description || tx.type}</span>
+                              <span className="font-dm text-xs truncate" style={{ color: "rgba(255,255,255,0.3)" }}>{tx.description || tx.type}</span>
                             </div>
-                            <span className="text-white/20 text-xs ml-2 shrink-0">{new Date(tx.created_at).toLocaleDateString("en-US")}</span>
+                            <span className="font-dm text-xs ml-2 shrink-0" style={{ color: "rgba(255,255,255,0.2)" }}>{new Date(tx.created_at).toLocaleDateString("fr-FR")}</span>
                           </div>
                         ))}
                       </div>
@@ -833,335 +728,170 @@ export default function CRMPage() {
             )}
 
             {/* Actions */}
-            <div className="p-6 border-t border-white/5 flex gap-3 flex-wrap">
-              <button
-                onClick={() => setShowTopup(true)}
-                className="flex-1 bg-blue-500/10 text-blue-400 py-2.5 rounded-lg text-sm hover:bg-blue-500/20 transition font-medium"
-              >
-                Top up
+            <div className="flex gap-2 pt-4" style={{ borderTop: "0.5px solid rgba(255,255,255,0.07)" }}>
+              <button onClick={() => { setShowTopup(true); }}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-dm text-sm font-bold transition"
+                style={{ background: "rgba(29,158,117,0.1)", border: "0.5px solid rgba(29,158,117,0.3)", color: "#5DCAA5" }}>
+                <CreditCard size={14} /> Recharger
               </button>
-              <button
-                onClick={() => {
-                  setDetailUser(null);
-                  setEditingUser(detailUser);
-                }}
-                className="flex-1 bg-white/5 text-white/60 py-2.5 rounded-lg text-sm hover:bg-white/10 transition"
-              >
-                Edit
+              <button onClick={() => { setDetailUser(null); setEditingUser(detailUser); }}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-dm text-sm font-semibold transition"
+                style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}>
+                <Pencil size={14} /> Modifier
               </button>
-              <button
-                onClick={() => {
-                  setDetailUser(null);
-                  router.push(`/superadmin/users?id=${detailUser.id}`);
-                }}
-                className="flex-1 bg-white/5 text-white/60 py-2.5 rounded-lg text-sm hover:bg-white/10 transition"
-              >
-                Investigation
+              <button onClick={() => { setDetailUser(null); router.push(`/superadmin/users?id=${detailUser.id}`); }}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-dm text-sm font-semibold transition"
+                style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}>
+                <ExternalLink size={14} /> Voir
               </button>
-              {detailUser.phone && (
-                <a
-                  href={`https://wa.me/${detailUser.phone.replace(/[^0-9]/g, "")}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 bg-green-500/10 text-green-400 py-2.5 rounded-lg text-sm text-center hover:bg-green-500/20 transition"
-                >
-                  WhatsApp
-                </a>
-              )}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </AdminDrawer>
 
-      {/* Topup modal */}
+      {/* Topup overlay */}
       {showTopup && detailUser && (
-        <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4" onClick={() => setShowTopup(false)}>
-          <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
-            <h3 className="text-white font-bold mb-1">Top up account</h3>
-            <p className="text-white/40 text-sm mb-4">{detailUser.company_name || detailUser.name}</p>
-            <div className="bg-white/5 rounded-lg p-3 mb-4 flex items-center justify-between">
-              <span className="text-white/40 text-sm">Current balance</span>
-              <span className="text-white font-bold">{Number(detailUser.balance || 0).toLocaleString("en-US")} F</span>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }} onClick={() => setShowTopup(false)}>
+          <div className="rounded-xl p-6 max-w-sm w-full" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.1)" }} onClick={e => e.stopPropagation()}>
+            <h3 className="font-syne font-bold text-white mb-1">Recharger le compte</h3>
+            <p className="font-dm text-sm mb-4" style={{ color: "rgba(255,255,255,0.4)" }}>{detailUser.company_name || detailUser.name}</p>
+            <div className="rounded-lg p-3 mb-4 flex items-center justify-between" style={{ background: "rgba(255,255,255,0.04)" }}>
+              <span className="font-dm text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>Solde actuel</span>
+              <span className="font-syne font-bold text-white">{formatFCFA(detailUser.balance || 0)}</span>
             </div>
-            <input
-              type="number"
-              value={topupAmount}
-              onChange={e => setTopupAmount(e.target.value)}
-              placeholder="Amount (FCFA)"
-              min="0"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-primary/50 mb-3"
-            />
+            <input type="number" value={topupAmount} onChange={e => setTopupAmount(e.target.value)}
+              placeholder="Montant (FCFA)" min="0"
+              className="w-full rounded-xl px-4 py-3 font-dm text-sm mb-3 focus:outline-none transition"
+              style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "#fff" }} />
             <div className="flex gap-2 mb-4">
               {[5000, 10000, 25000, 50000].map(amt => (
-                <button
-                  key={amt}
-                  onClick={() => setTopupAmount(String(amt))}
-                  className={`flex-1 py-2 rounded-lg text-xs font-medium transition ${
-                    topupAmount === String(amt)
-                      ? "bg-primary/20 text-primary border border-primary/30"
-                      : "bg-white/5 text-white/40 hover:bg-white/10"
-                  }`}
-                >
-                  {(amt / 1000)}k
+                <button key={amt} onClick={() => setTopupAmount(String(amt))}
+                  className="flex-1 py-2 rounded-lg font-dm text-xs font-bold transition"
+                  style={{ background: topupAmount === String(amt) ? "#D35400" : "rgba(255,255,255,0.04)", color: topupAmount === String(amt) ? "#fff" : "rgba(255,255,255,0.4)" }}>
+                  {amt / 1000}k
                 </button>
               ))}
             </div>
             {topupAmount && parseInt(topupAmount) > 0 && (
-              <div className="bg-green-500/10 rounded-lg p-3 mb-4 flex items-center justify-between">
-                <span className="text-white/40 text-sm">New balance</span>
-                <span className="text-green-400 font-bold">
-                  {Number((detailUser.balance || 0) + parseInt(topupAmount)).toLocaleString("en-US")} F
-                </span>
+              <div className="rounded-lg p-3 mb-4 flex items-center justify-between" style={{ background: "rgba(29,158,117,0.05)", border: "0.5px solid rgba(29,158,117,0.15)" }}>
+                <span className="font-dm text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>Nouveau solde</span>
+                <span className="font-syne font-bold" style={{ color: "#5DCAA5" }}>{formatFCFA((detailUser.balance || 0) + parseInt(topupAmount))}</span>
               </div>
             )}
             <div className="flex gap-3">
-              <button
-                onClick={() => { setShowTopup(false); setTopupAmount(""); }}
-                className="flex-1 bg-white/5 text-white/50 py-2.5 rounded-lg text-sm hover:bg-white/10 transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleTopup}
-                disabled={toppingUp || !topupAmount || parseInt(topupAmount) <= 0}
-                className="flex-1 bg-gradient-primary text-white py-2.5 rounded-lg text-sm font-medium disabled:opacity-30 transition"
-              >
-                {toppingUp ? "Topping up..." : `Top up ${topupAmount ? Number(topupAmount).toLocaleString("en-US") + " F" : ""}`}
+              <button onClick={() => { setShowTopup(false); setTopupAmount(""); }}
+                className="flex-1 py-2.5 rounded-xl font-dm text-sm font-bold transition"
+                style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.5)" }}>Annuler</button>
+              <button onClick={handleTopup} disabled={toppingUp || !topupAmount || parseInt(topupAmount) <= 0}
+                className="flex-1 py-2.5 rounded-xl font-dm text-sm font-bold transition disabled:opacity-50"
+                style={{ background: "#D35400", color: "#fff" }}>
+                {toppingUp ? "Rechargement..." : `Recharger ${topupAmount ? formatFCFA(parseInt(topupAmount)) : ""}`}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Edit user modal */}
-      {editingUser && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setEditingUser(null)}>
-          <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-6 max-w-lg w-full" onClick={e => e.stopPropagation()}>
-            <h3 className="text-white font-bold text-lg mb-4">
-              Edit {editingUser.company_name || editingUser.name}
-            </h3>
-            <div className="space-y-3">
-              <div>
-                <label className="text-white/30 text-xs">Name</label>
-                <input
-                  type="text"
-                  value={editingUser.name || ""}
-                  onChange={e => setEditingUser({ ...editingUser, name: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-primary/50"
-                />
+      {/* Edit user drawer */}
+      <AdminDrawer open={!!editingUser} onClose={() => setEditingUser(null)} title={editingUser ? `Modifier ${editingUser.company_name || editingUser.name}` : ""}>
+        {editingUser && (
+          <div className="space-y-4">
+            {[
+              { label: "Nom", key: "name" as const, type: "text" },
+              { label: "Entreprise", key: "company_name" as const, type: "text" },
+              { label: "Email", key: "email" as const, type: "email" },
+              { label: "Téléphone", key: "phone" as const, type: "text" },
+              { label: "Ville", key: "city" as const, type: "text" },
+            ].map(field => (
+              <div key={field.key}>
+                <label className="font-dm text-[10px] uppercase tracking-wider block mb-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>{field.label}</label>
+                <input type={field.type} value={editingUser[field.key] || ""}
+                  onChange={e => setEditingUser({ ...editingUser, [field.key]: e.target.value })}
+                  className="w-full rounded-xl px-4 py-2.5 font-dm text-sm focus:outline-none transition"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "#fff" }} />
               </div>
-              <div>
-                <label className="text-white/30 text-xs">Entreprise</label>
-                <input
-                  type="text"
-                  value={editingUser.company_name || ""}
-                  onChange={e => setEditingUser({ ...editingUser, company_name: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-primary/50"
-                />
-              </div>
-              <div>
-                <label className="text-white/30 text-xs">Email</label>
-                <input
-                  type="email"
-                  value={editingUser.email || ""}
-                  onChange={e => setEditingUser({ ...editingUser, email: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-primary/50"
-                />
-              </div>
-              <div>
-                <label className="text-white/30 text-xs">Téléphone</label>
-                <input
-                  type="text"
-                  value={editingUser.phone || ""}
-                  onChange={e => setEditingUser({ ...editingUser, phone: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-primary/50"
-                />
-              </div>
-              <div>
-                <label className="text-white/30 text-xs">Ville</label>
-                <input
-                  type="text"
-                  value={editingUser.city || ""}
-                  onChange={e => setEditingUser({ ...editingUser, city: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-primary/50"
-                />
-              </div>
-              <div>
-                <label className="text-white/30 text-xs">Solde (FCFA)</label>
-                <input
-                  type="number"
-                  value={editingUser.balance || 0}
-                  onChange={e => setEditingUser({ ...editingUser, balance: Number(e.target.value) })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-primary/50"
-                />
-                <p className="text-white/20 text-xs mt-1">Les ajustements de solde sont loggés automatiquement</p>
-              </div>
+            ))}
+            <div>
+              <label className="font-dm text-[10px] uppercase tracking-wider block mb-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>Solde (FCFA)</label>
+              <input type="number" value={editingUser.balance || 0}
+                onChange={e => setEditingUser({ ...editingUser, balance: Number(e.target.value) })}
+                className="w-full rounded-xl px-4 py-2.5 font-dm text-sm focus:outline-none transition"
+                style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "#fff" }} />
+              <p className="font-dm text-[10px] mt-1" style={{ color: "rgba(255,255,255,0.2)" }}>Les ajustements sont loggés automatiquement</p>
             </div>
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setEditingUser(null)}
-                className="flex-1 bg-white/5 text-white/50 py-2.5 rounded-lg text-sm hover:bg-white/10 transition"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleSaveUser}
-                className="flex-1 bg-gradient-primary text-white py-2.5 rounded-lg text-sm font-medium"
-              >
-                Sauvegarder
-              </button>
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => setEditingUser(null)} className="flex-1 py-3 rounded-xl font-dm text-sm font-bold transition"
+                style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.5)" }}>Annuler</button>
+              <button onClick={handleSaveUser} className="flex-1 py-3 rounded-xl font-dm text-sm font-bold transition"
+                style={{ background: "#D35400", color: "#fff" }}>Sauvegarder</button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </AdminDrawer>
 
-      {/* Bulk email modal */}
+      {/* Bulk email overlay */}
       {showBulkEmail && (
-        <BulkEmailModal
-          count={selectedUsers.length}
+        <BulkEmailModal count={selectedUsers.length}
           onSend={async (subject, message) => {
             try {
               await fetch("/api/superadmin/crm/bulk", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  action: "send_invitation",
-                  userIds: selectedUsers,
-                  data: { subject, message },
-                }),
+                body: JSON.stringify({ action: "send_invitation", userIds: selectedUsers, data: { subject, message } }),
               });
-              showToast(`${selectedUsers.length} emails sent`, "success");
+              showToast(`${selectedUsers.length} emails envoyés`, "success");
               setShowBulkEmail(false);
               setSelectedUsers([]);
-            } catch {
-              showToast("Send error", "error");
-            }
+            } catch { showToast("Erreur d'envoi", "error"); }
           }}
-          onClose={() => setShowBulkEmail(false)}
-        />
+          onClose={() => setShowBulkEmail(false)} />
       )}
 
-      {/* Bulk delete modal */}
+      {/* Bulk delete overlay */}
       {showBulkDelete && (
-        <BulkDeleteModal
-          count={selectedUsers.length}
+        <BulkDeleteModal count={selectedUsers.length}
           onDelete={async (reason) => {
             try {
               await fetch("/api/superadmin/crm/bulk", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  action: "delete",
-                  userIds: selectedUsers,
-                  data: { reason },
-                }),
+                body: JSON.stringify({ action: "delete", userIds: selectedUsers, data: { reason } }),
               });
-              showToast(`${selectedUsers.length} accounts deleted`, "success");
+              showToast(`${selectedUsers.length} compte(s) supprimé(s)`, "success");
               setShowBulkDelete(false);
               setSelectedUsers([]);
               fetchData();
-            } catch {
-              showToast("Deletion error", "error");
-            }
+            } catch { showToast("Erreur de suppression", "error"); }
           }}
-          onClose={() => setShowBulkDelete(false)}
-        />
+          onClose={() => setShowBulkDelete(false)} />
       )}
     </div>
   );
 }
 
-function PipelineStageBadge({ stage }: { stage: string }) {
-  const config: Record<string, { label: string; color: string }> = {
-    vip: { label: "VIP", color: "bg-yellow-500/20 text-yellow-400" },
-    repeat: { label: "Repeat", color: "bg-green-500/20 text-green-400" },
-    first_campaign: { label: "1st Campaign", color: "bg-teal-500/20 text-teal-400" },
-    recharged: { label: "Recharged", color: "bg-blue-500/20 text-blue-400" },
-    registered: { label: "Registered", color: "bg-white/10 text-white/40" },
-  };
-  const c = config[stage] || config.registered;
-  return <span className={`text-xs px-2 py-1 rounded ${c.color}`}>{c.label}</span>;
-}
-
-function NoteTypeBadge({ type }: { type: string }) {
-  const config: Record<string, { label: string; color: string }> = {
-    note: { label: "Note", color: "bg-white/10 text-white/40" },
-    call: { label: "Call", color: "bg-blue-500/20 text-blue-400" },
-    email: { label: "Email", color: "bg-purple-500/20 text-purple-400" },
-    followup: { label: "Follow-up", color: "bg-orange-500/20 text-orange-400" },
-    meeting: { label: "Meeting", color: "bg-teal-500/20 text-teal-400" },
-  };
-  const c = config[type] || config.note;
-  return <span className={`text-xs px-1.5 py-0.5 rounded ${c.color}`}>{c.label}</span>;
-}
-
-function CampaignStatusBadge({ status, moderation }: { status: string; moderation: string }) {
-  const config: Record<string, { label: string; color: string }> = {
-    active: { label: "Active", color: "bg-green-500/20 text-green-400" },
-    paused: { label: "Paused", color: "bg-yellow-500/20 text-yellow-400" },
-    completed: { label: "Completed", color: "bg-white/10 text-white/40" },
-    draft: { label: "Draft", color: "bg-white/10 text-white/30" },
-  };
-  const modConfig: Record<string, { label: string; color: string }> = {
-    pending: { label: "Pending", color: "bg-orange-500/20 text-orange-400" },
-    rejected: { label: "Rejected", color: "bg-red-500/20 text-red-400" },
-  };
-  if (moderation === "pending" || moderation === "rejected") {
-    const m = modConfig[moderation];
-    return <span className={`text-xs px-1.5 py-0.5 rounded ${m.color}`}>{m.label}</span>;
-  }
-  const c = config[status] || config.draft;
-  return <span className={`text-xs px-1.5 py-0.5 rounded ${c.color}`}>{c.label}</span>;
-}
-
-function PaymentStatusBadge({ status }: { status: string }) {
-  const config: Record<string, { label: string; color: string }> = {
-    completed: { label: "OK", color: "bg-green-500/20 text-green-400" },
-    pending: { label: "Pending", color: "bg-orange-500/20 text-orange-400" },
-    failed: { label: "Failed", color: "bg-red-500/20 text-red-400" },
-  };
-  const c = config[status] || { label: status, color: "bg-white/10 text-white/40" };
-  return <span className={`text-xs px-1.5 py-0.5 rounded ${c.color}`}>{c.label}</span>;
-}
-
-function BulkEmailModal({ count, onSend, onClose }: {
-  count: number;
-  onSend: (subject: string, message: string) => Promise<void>;
-  onClose: () => void;
-}) {
-  const [subject, setSubject] = useState("Votre compte Tamtam vous attend!");
+function BulkEmailModal({ count, onSend, onClose }: { count: number; onSend: (subject: string, message: string) => Promise<void>; onClose: () => void }) {
+  const [subject, setSubject] = useState("Votre compte Tamtam vous attend !");
   const [message, setMessage] = useState("Connectez-vous pour découvrir les nouvelles fonctionnalités et lancer votre première campagne.");
   const [sending, setSending] = useState(false);
-
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
-        <h3 className="text-white font-bold mb-4">Send email to {count} user(s)</h3>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }} onClick={onClose}>
+      <div className="rounded-xl p-6 max-w-md w-full" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.1)" }} onClick={e => e.stopPropagation()}>
+        <h3 className="font-syne font-bold text-white mb-4">Envoyer un email à {count} utilisateur(s)</h3>
         <div className="space-y-3">
-          <input
-            value={subject}
-            onChange={e => setSubject(e.target.value)}
-            placeholder="Subject"
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-primary/50"
-          />
-          <textarea
-            value={message}
-            onChange={e => setMessage(e.target.value)}
-            placeholder="Message"
-            rows={4}
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-primary/50 resize-none"
-          />
+          <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Sujet"
+            className="w-full rounded-xl px-4 py-2.5 font-dm text-sm focus:outline-none transition"
+            style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "#fff" }} />
+          <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="Message" rows={4}
+            className="w-full rounded-xl px-4 py-2.5 font-dm text-sm resize-none focus:outline-none transition"
+            style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "#fff" }} />
         </div>
         <div className="flex gap-3 mt-4">
-          <button onClick={onClose} className="flex-1 bg-white/5 text-white/50 py-2 rounded-lg text-sm hover:bg-white/10 transition">
-            Cancel
-          </button>
-          <button
-            onClick={async () => { setSending(true); await onSend(subject, message); }}
-            disabled={sending}
-            className="flex-1 bg-blue-500 text-white py-2 rounded-lg text-sm font-medium disabled:opacity-50"
-          >
-            {sending ? "Sending..." : `Send to ${count}`}
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl font-dm text-sm font-bold transition"
+            style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.5)" }}>Annuler</button>
+          <button onClick={async () => { setSending(true); await onSend(subject, message); }} disabled={sending}
+            className="flex-1 py-2.5 rounded-xl font-dm text-sm font-bold transition disabled:opacity-50"
+            style={{ background: "#D35400", color: "#fff" }}>
+            {sending ? "Envoi..." : `Envoyer à ${count}`}
           </button>
         </div>
       </div>
@@ -1169,35 +899,24 @@ function BulkEmailModal({ count, onSend, onClose }: {
   );
 }
 
-function BulkDeleteModal({ count, onDelete, onClose }: {
-  count: number;
-  onDelete: (reason: string) => Promise<void>;
-  onClose: () => void;
-}) {
+function BulkDeleteModal({ count, onDelete, onClose }: { count: number; onDelete: (reason: string) => Promise<void>; onClose: () => void }) {
   const [reason, setReason] = useState("");
   const [deleting, setDeleting] = useState(false);
-
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-[#1a1a2e] border border-red-500/30 rounded-xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
-        <h3 className="text-red-400 font-bold mb-2">Delete {count} account(s)</h3>
-        <p className="text-white/40 text-sm mb-4">This action is irreversible. Data will be anonymized.</p>
-        <input
-          value={reason}
-          onChange={e => setReason(e.target.value)}
-          placeholder="Reason for deletion..."
-          className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm mb-4 focus:outline-none focus:border-red-500/50"
-        />
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }} onClick={onClose}>
+      <div className="rounded-xl p-6 max-w-md w-full" style={{ background: "#111128", border: "0.5px solid rgba(226,75,74,0.2)" }} onClick={e => e.stopPropagation()}>
+        <h3 className="font-syne font-bold mb-2" style={{ color: "#F09595" }}>Supprimer {count} compte(s)</h3>
+        <p className="font-dm text-sm mb-4" style={{ color: "rgba(255,255,255,0.4)" }}>Action irréversible. Les données seront anonymisées.</p>
+        <input value={reason} onChange={e => setReason(e.target.value)} placeholder="Raison de la suppression..."
+          className="w-full rounded-xl px-4 py-2.5 font-dm text-sm mb-4 focus:outline-none transition"
+          style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "#fff" }} />
         <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 bg-white/5 text-white/50 py-2 rounded-lg text-sm hover:bg-white/10 transition">
-            Cancel
-          </button>
-          <button
-            onClick={async () => { setDeleting(true); await onDelete(reason); }}
-            disabled={deleting || !reason}
-            className="flex-1 bg-red-500 text-white py-2 rounded-lg text-sm font-medium disabled:opacity-50"
-          >
-            {deleting ? "Deleting..." : `Delete ${count} account(s)`}
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl font-dm text-sm font-bold transition"
+            style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.5)" }}>Annuler</button>
+          <button onClick={async () => { setDeleting(true); await onDelete(reason); }} disabled={deleting || !reason}
+            className="flex-1 py-2.5 rounded-xl font-dm text-sm font-bold transition disabled:opacity-50"
+            style={{ background: "rgba(226,75,74,0.15)", color: "#F09595" }}>
+            {deleting ? "Suppression..." : `Supprimer ${count}`}
           </button>
         </div>
       </div>
