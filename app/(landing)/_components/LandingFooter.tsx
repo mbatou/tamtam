@@ -11,7 +11,7 @@ export default function LandingFooter() {
         {t("selector.footerTagline")}
       </p>
       <p className="text-gray-600 text-xs mt-1 flex items-center justify-center gap-2">
-        <span>par Lupandu</span>
+        <span>par Pandorus</span>
         <span>·</span>
         <a
           href="mailto:support@tamma.me"

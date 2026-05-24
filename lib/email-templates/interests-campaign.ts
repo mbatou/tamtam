@@ -41,7 +41,7 @@ function wrapEmail(content: string, preheader: string): string {
           </tr>
           <tr>
             <td style="padding:24px 32px;border-top:1px solid #2A2A3E;color:#8E8E93;font-size:12px;text-align:center;">
-              Tamtam &mdash; Lupandu SARL<br>
+              Tamtam &mdash; Pandorus<br>
               Dakar, S&eacute;n&eacute;gal<br>
               <a href="https://tamma.me" style="color:#1ABC9C;text-decoration:none;">tamma.me</a>
             </td>
