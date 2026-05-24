@@ -4,14 +4,27 @@ import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { formatFCFA, timeAgo } from "@/lib/utils";
 import { getBrandDisplayName, getBrandSubtitle } from "@/lib/display-utils";
-import { useTranslation } from "@/lib/i18n";
-import StatCard from "@/components/StatCard";
-import Badge from "@/components/ui/Badge";
-import TabBar from "@/components/ui/TabBar";
-import Modal from "@/components/ui/Modal";
 import Pagination from "@/components/ui/Pagination";
 import { useToast } from "@/components/ui/Toast";
 import CitySelect from "@/components/ui/CitySelect";
+import AdminStatCard from "@/components/superadmin/AdminStatCard";
+import AdminBadge from "@/components/superadmin/AdminBadge";
+import AdminDrawer from "@/components/superadmin/AdminDrawer";
+import {
+  Users,
+  Building2,
+  AlertTriangle,
+  Wallet,
+  Search,
+  Plus,
+  CheckCircle2,
+  Flag,
+  Ban,
+  RotateCcw,
+  Crown,
+  CreditCard,
+  MousePointerClick,
+} from "lucide-react";
 
 interface UserRow {
   id: string;
@@ -79,7 +92,6 @@ interface ApiTabs {
 }
 
 function UsersPageContent() {
-  const { t } = useTranslation();
   const router = useRouter();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [stats, setStats] = useState<ApiStats>({ totalEchos: 0, totalBrands: 0, flagged: 0, totalPaid: 0 });
@@ -95,34 +107,23 @@ function UsersPageContent() {
   const searchParams = useSearchParams();
   const highlightId = searchParams.get("id");
 
-  // Create brand user state
   const [showCreateBrand, setShowCreateBrand] = useState(false);
   const [creatingBrand, setCreatingBrand] = useState(false);
-  const [newBrand, setNewBrand] = useState({
-    name: "",
-    email: "",
-    password: "",
-    phone: "",
-    city: "",
-  });
+  const [newBrand, setNewBrand] = useState({ name: "", email: "", password: "", phone: "", city: "" });
 
-  // Campaign history state
   const [echoCampaigns, setEchoCampaigns] = useState<CampaignHistory[]>([]);
   const [batteurCampaigns, setBatteurCampaigns] = useState<CampaignHistory[]>([]);
   const [payoutHistory, setPayoutHistory] = useState<PayoutHistory[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyTab, setHistoryTab] = useState<"echo" | "batteur" | "payouts">("echo");
 
-  // Pagination
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 30;
 
-  // Payout action state (inline approve/reject from user modal)
   const [payoutActionLoading, setPayoutActionLoading] = useState<string | null>(null);
   const [payoutRejectId, setPayoutRejectId] = useState<string | null>(null);
   const [payoutRejectReason, setPayoutRejectReason] = useState("");
 
-  // Top-up state
   const [showTopup, setShowTopup] = useState(false);
   const [topupUser, setTopupUser] = useState<UserRow | null>(null);
   const [topupAmount, setTopupAmount] = useState("");
@@ -140,7 +141,6 @@ function UsersPageContent() {
         setEchoCampaigns(data.echoCampaigns || []);
         setBatteurCampaigns(data.batteurCampaigns || []);
         setPayoutHistory(data.payouts || []);
-        // Auto-select the right tab
         if (data.echoCampaigns?.length > 0) setHistoryTab("echo");
         else if (data.batteurCampaigns?.length > 0) setHistoryTab("batteur");
         else setHistoryTab("echo");
@@ -179,7 +179,6 @@ function UsersPageContent() {
     }
   }, []);
 
-  // Debounce search input
   const [debouncedSearch, setDebouncedSearch] = useState("");
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
@@ -204,38 +203,38 @@ function UsersPageContent() {
       setTotalFiltered(data.total || 0);
       if (highlightId) openUserById(data.users || [], highlightId);
     } catch {
-      showToast(t("superadmin.users.loadError"), "error");
+      showToast("Erreur de chargement", "error");
     }
     setLoading(false);
   }
 
-  async function performAction(userId: string, action: string, reason?: string) {
+  async function performAction(userId: string, action: string) {
     try {
       const res = await fetch("/api/superadmin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, action, reason }),
+        body: JSON.stringify({ user_id: userId, action }),
       });
       if (res.ok) {
-        showToast(t("superadmin.users.actionDone", { action }), "success");
+        showToast(`Action "${action}" effectuée`, "success");
         setSelected(null);
         loadData();
       } else {
         const err = await res.json();
-        showToast(err.error || t("common.error"), "error");
+        showToast(err.error || "Erreur", "error");
       }
     } catch {
-      showToast(t("common.networkError"), "error");
+      showToast("Erreur réseau", "error");
     }
   }
 
   async function createBrandUser() {
     if (!newBrand.name || !newBrand.email || !newBrand.password) {
-      showToast(t("superadmin.users.nameEmailRequired"), "error");
+      showToast("Nom, email et mot de passe requis", "error");
       return;
     }
     if (newBrand.password.length < 6) {
-      showToast(t("superadmin.users.passwordMinCreate"), "error");
+      showToast("Mot de passe min. 6 caractères", "error");
       return;
     }
     setCreatingBrand(true);
@@ -247,22 +246,22 @@ function UsersPageContent() {
       });
       const data = await res.json();
       if (res.ok) {
-        showToast(t("superadmin.users.batteurCreated"), "success");
+        showToast("Marque créée", "success");
         setShowCreateBrand(false);
         setNewBrand({ name: "", email: "", password: "", phone: "", city: "" });
         loadData();
       } else {
-        showToast(data.error || t("common.error"), "error");
+        showToast(data.error || "Erreur", "error");
       }
     } catch {
-      showToast(t("common.networkError"), "error");
+      showToast("Erreur réseau", "error");
     }
     setCreatingBrand(false);
   }
 
   async function handleTopup() {
     if (!topupUser || !topupAmount || parseInt(topupAmount) <= 0) {
-      showToast(t("superadmin.users.invalidAmount"), "error");
+      showToast("Montant invalide", "error");
       return;
     }
     setToppingUp(true);
@@ -270,25 +269,21 @@ function UsersPageContent() {
       const res = await fetch("/api/superadmin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "topup",
-          user_id: topupUser.id,
-          amount: topupAmount,
-        }),
+        body: JSON.stringify({ action: "topup", user_id: topupUser.id, amount: topupAmount }),
       });
       const data = await res.json();
       if (res.ok) {
-        showToast(t("superadmin.users.newBalanceResult", { balance: formatFCFA(data.new_balance) }), "success");
+        showToast(`Nouveau solde : ${formatFCFA(data.new_balance)}`, "success");
         setShowTopup(false);
         setTopupUser(null);
         setTopupAmount("");
         setSelected(null);
         loadData();
       } else {
-        showToast(data.error || t("common.error"), "error");
+        showToast(data.error || "Erreur", "error");
       }
     } catch {
-      showToast(t("common.networkError"), "error");
+      showToast("Erreur réseau", "error");
     }
     setToppingUp(false);
   }
@@ -302,24 +297,22 @@ function UsersPageContent() {
         body: JSON.stringify({ payout_id: payoutId, action, reason }),
       });
       if (res.ok) {
-        showToast(action === "approve" ? t("common.sent") : t("common.rejected"), action === "approve" ? "success" : "info");
+        showToast(action === "approve" ? "Envoyé" : "Rejeté", action === "approve" ? "success" : "info");
         setPayoutRejectId(null);
         setPayoutRejectReason("");
-        // Reload history for current user
         if (selected) loadHistory(selected);
       } else {
         const err = await res.json();
-        showToast(err.error || t("common.error"), "error");
+        showToast(err.error || "Erreur", "error");
       }
     } catch {
-      showToast(t("common.networkError"), "error");
+      showToast("Erreur réseau", "error");
     }
     setPayoutActionLoading(null);
   }
 
   const dualRoleUsers = users.filter((u) => u.is_dual_role || (u.has_echo_activity && u.has_batteur_activity));
 
-  // Activity filter applied client-side (depends on enrichment data)
   const displayUsers = users.filter((u) => {
     if (roleFilter === "dual") {
       if (!u.is_dual_role && !(u.has_echo_activity && u.has_batteur_activity)) return false;
@@ -338,270 +331,319 @@ function UsersPageContent() {
   if (loading) {
     return (
       <div className="p-6 space-y-4">
-        <div className="skeleton h-8 w-64 rounded-xl" />
+        <div className="h-8 w-64 rounded-xl bg-white/5 animate-pulse" />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton h-24 rounded-xl" />)}
+          {[1, 2, 3, 4].map((i) => <div key={i} className="h-24 rounded-xl bg-white/5 animate-pulse" />)}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-7xl">
+    <div className="p-6 max-w-[1400px]">
       {ToastComponent}
 
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">{t("superadmin.users.title")}</h1>
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <AdminStatCard label="Total Échos" value={stats.totalEchos} icon={<Users size={16} />} />
+        <AdminStatCard label="Marques" value={stats.totalBrands} icon={<Building2 size={16} />} accent="teal" />
+        <AdminStatCard label="Signalés" value={stats.flagged} icon={<AlertTriangle size={16} />} accent={stats.flagged > 0 ? "red" : "white"} />
+        <AdminStatCard label="Total versé" value={formatFCFA(stats.totalPaid)} icon={<Wallet size={16} />} accent="teal" />
+      </div>
+
+      {/* Filters row */}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        {/* Role filter */}
+        <div className="flex gap-1 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.03)" }}>
+          {[
+            { key: "all", label: "Tous" },
+            { key: "echo", label: "Échos" },
+            { key: "batteur", label: "Marques" },
+            ...(dualRoleUsers.length > 0 ? [{ key: "dual", label: `Double rôle (${dualRoleUsers.length})` }] : []),
+          ].map((r) => (
+            <button
+              key={r.key}
+              onClick={() => { setRoleFilter(r.key); setPage(1); }}
+              className="px-3 py-1.5 rounded-lg font-dm text-xs font-medium transition-all"
+              style={{
+                background: roleFilter === r.key ? (r.key === "dual" ? "rgba(192,132,252,0.12)" : "rgba(211,84,0,0.12)") : "transparent",
+                color: roleFilter === r.key ? (r.key === "dual" ? "#C084FC" : "#D35400") : "rgba(255,255,255,0.4)",
+              }}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Activity filter */}
+        <div className="flex gap-1 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.03)" }}>
+          {([
+            { key: "all" as const, label: "Tous" },
+            { key: "active" as const, label: "Actifs" },
+            { key: "inactive" as const, label: "Inactifs" },
+          ]).map((a) => (
+            <button
+              key={a.key}
+              onClick={() => { setActivityFilter(a.key); setPage(1); }}
+              className="px-3 py-1.5 rounded-lg font-dm text-xs font-medium transition-all"
+              style={{
+                background: activityFilter === a.key ? "rgba(29,158,117,0.12)" : "transparent",
+                color: activityFilter === a.key ? "#5DCAA5" : "rgba(255,255,255,0.4)",
+              }}
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Search */}
+        <div className="relative flex-1 max-w-sm">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "rgba(255,255,255,0.25)" }} />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            placeholder="Rechercher par nom, téléphone, ville..."
+            className="w-full pl-9 pr-4 py-2 rounded-xl font-dm text-sm focus:outline-none transition"
+            style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "#fff" }}
+          />
+        </div>
+
+        {/* Create brand button */}
         <button
           onClick={() => setShowCreateBrand(true)}
-          className="px-4 py-2.5 rounded-xl bg-gradient-primary text-white text-sm font-bold hover:opacity-90 transition"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl font-dm text-sm font-bold transition ml-auto"
+          style={{ background: "#D35400", color: "#fff" }}
         >
-          {t("superadmin.users.createBatteur")}
+          <Plus size={14} />
+          Créer Marque
         </button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label={t("superadmin.users.totalEchos")} value={stats.totalEchos.toString()} accent="orange" />
-        <StatCard label={t("superadmin.users.batteurs")} value={stats.totalBrands.toString()} accent="teal" />
-        <StatCard label={t("superadmin.users.flagged")} value={stats.flagged.toString()} accent="red" />
-        <StatCard label={t("superadmin.users.totalPaid")} value={formatFCFA(stats.totalPaid)} accent="purple" />
-      </div>
-
-      {/* Role filter */}
-      <div className="flex gap-2 mb-4">
+      {/* Status tabs */}
+      <div className="flex gap-1 p-1 rounded-xl mb-4" style={{ background: "rgba(255,255,255,0.03)" }}>
         {[
-          { key: "all", label: t("superadmin.users.all") },
-          { key: "echo", label: t("superadmin.users.echosFilter") },
-          { key: "batteur", label: t("superadmin.users.batteursFilter") },
-          ...(dualRoleUsers.length > 0 ? [{ key: "dual", label: `${t("superadmin.users.dualRole")} (${dualRoleUsers.length})` }] : []),
-        ].map((r) => (
+          { key: "all", label: "Tous", count: tabs.all },
+          { key: "verified", label: "Vérifiés", count: tabs.verified },
+          { key: "flagged", label: "Signalés", count: tabs.flagged },
+          { key: "suspended", label: "Suspendus", count: tabs.suspended },
+        ].map((t) => (
           <button
-            key={r.key}
-            onClick={() => { setRoleFilter(r.key); setPage(1); }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-              roleFilter === r.key
-                ? r.key === "dual" ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" : "bg-gradient-primary text-white"
-                : r.key === "dual" ? "bg-purple-500/5 text-purple-400/60 border border-purple-500/10" : "bg-white/5 text-white/40"
-            }`}
+            key={t.key}
+            onClick={() => { setFilter(t.key); setPage(1); }}
+            className="px-3 py-1.5 rounded-lg font-dm text-xs font-medium transition-all"
+            style={{
+              background: filter === t.key ? "rgba(211,84,0,0.12)" : "transparent",
+              color: filter === t.key ? "#D35400" : "rgba(255,255,255,0.4)",
+            }}
           >
-            {r.label}
+            {t.label}
+            {t.count > 0 && <span className="ml-1.5 font-bold">{t.count}</span>}
           </button>
         ))}
       </div>
 
-      {/* Activity filter */}
-      <div className="flex gap-2 mb-4">
-        {(["all", "active", "inactive"] as const).map((key) => (
-          <button
-            key={key}
-            onClick={() => { setActivityFilter(key); setPage(1); }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-              activityFilter === key ? "bg-accent/20 text-accent border border-accent/30" : "bg-white/5 text-white/40"
-            }`}
-          >
-            {key === "all" ? t("superadmin.users.activityAll") : key === "active" ? t("superadmin.users.activityActive") : t("superadmin.users.activityInactive")}
-          </button>
-        ))}
-      </div>
-
-      {/* Search */}
-      <div className="mb-4">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          placeholder={t("superadmin.users.searchPlaceholder") || "Search by name, phone, city..."}
-          className="w-full max-w-sm bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition placeholder:text-white/20"
-        />
-      </div>
-
-      <TabBar
-        tabs={[
-          { key: "all", label: t("superadmin.users.allTab"), count: tabs.all },
-          { key: "verified", label: t("superadmin.users.verified"), count: tabs.verified },
-          { key: "flagged", label: t("superadmin.users.flaggedTab"), count: tabs.flagged },
-          { key: "suspended", label: t("superadmin.users.suspended"), count: tabs.suspended },
-        ]}
-        active={filter}
-        onChange={(f) => { setFilter(f); setPage(1); }}
-        className="mb-6"
-      />
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-xs text-white/30 border-b border-white/5">
-              <th className="pb-3 font-semibold">{t("superadmin.users.user")}</th>
-              <th className="pb-3 font-semibold">{t("superadmin.users.role")}</th>
-              <th className="pb-3 font-semibold">{t("common.status")}</th>
-              <th className="pb-3 font-semibold hidden md:table-cell">{t("superadmin.users.clicks")}</th>
-              <th className="pb-3 font-semibold hidden md:table-cell">{t("superadmin.users.gains")}</th>
-              <th className="pb-3 font-semibold hidden md:table-cell">{t("superadmin.users.quality") || "Quality"}</th>
-              <th className="pb-3 font-semibold hidden lg:table-cell">{t("superadmin.users.balance")}</th>
-              <th className="pb-3 font-semibold hidden lg:table-cell">{t("superadmin.users.registered")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {displayUsers.map((user) => (
-              <tr
-                key={user.id}
-                className="border-b border-white/5 hover:bg-white/3 cursor-pointer transition"
-                onClick={() => selectUser(user)}
-              >
-                <td className="py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-xs font-bold text-white">
-                      {getBrandDisplayName(user).charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">{getBrandDisplayName(user)}</span>
-                        {user.is_dual_role ? (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 whitespace-nowrap">
-                            {t("superadmin.users.dualRole")}
-                          </span>
-                        ) : user.has_echo_activity && user.role !== "echo" ? (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20 whitespace-nowrap">
-                            + Echo
-                          </span>
-                        ) : user.has_batteur_activity && user.role !== "batteur" ? (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/20 whitespace-nowrap">
-                            + Brand
-                          </span>
-                        ) : null}
-                      </div>
-                      {getBrandSubtitle(user) && <div className="text-xs text-white/40">{getBrandSubtitle(user)}</div>}
-                      <div className="text-xs text-white/30">{user.city || user.phone || ""}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="py-3">
-                  <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                    user.role === "echo" ? "bg-primary/10 text-primary" :
-                    user.role === "batteur" ? "bg-accent/10 text-accent" :
-                    "bg-red-500/10 text-red-400"
-                  }`}>
-                    {user.role}
-                  </span>
-                </td>
-                <td className="py-3">
-                  <Badge status={user.status || "active"} />
-                </td>
-                <td className="py-3 hidden md:table-cell text-xs">
-                  {user.click_stats.total > 0 ? (
-                    <span>
-                      {user.click_stats.total} ({user.click_stats.rate}% fraud)
-                    </span>
-                  ) : "—"}
-                </td>
-                <td className="py-3 font-bold hidden md:table-cell">{formatFCFA(user.total_earned)}</td>
-                <td className="py-3 hidden md:table-cell">
-                  {user.role === "echo" || user.has_echo_activity ? (() => {
-                    const score = qualityScore(user);
-                    return (
-                      <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                        score >= 70 ? "bg-emerald-500/15 text-emerald-400" :
-                        score >= 40 ? "bg-orange-500/15 text-orange-400" :
-                        "bg-red-500/15 text-red-400"
-                      }`}>
-                        {score}%
-                      </span>
-                    );
-                  })() : <span className="text-white/20">—</span>}
-                </td>
-                <td className="py-3 hidden lg:table-cell">{formatFCFA(user.balance)}</td>
-                <td className="py-3 hidden lg:table-cell">
-                  <div className="text-xs text-white/40">{new Date(user.created_at).toLocaleDateString("en-US")}</div>
-                  <div className={`text-[10px] ${user.last_click_at ? "text-accent/70" : "text-white/20"}`}>
-                    {user.last_click_at ? timeAgo(user.last_click_at, t) : t("superadmin.users.neverActive")}
-                  </div>
-                </td>
+      {/* Table */}
+      <div className="rounded-xl overflow-hidden" style={{ border: "0.5px solid rgba(255,255,255,0.07)" }}>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr style={{ background: "#111128" }}>
+                {["Utilisateur", "Rôle", "Statut", "Clics", "Gains", "Qualité", "Solde", "Inscrit"].map((h, i) => (
+                  <th
+                    key={h}
+                    className={`text-left font-dm font-medium uppercase tracking-wider px-4 py-3 ${
+                      i >= 3 && i <= 5 ? "hidden md:table-cell" : ""
+                    } ${i >= 6 ? "hidden lg:table-cell" : ""}`}
+                    style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)" }}
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {displayUsers.map((user) => {
+                const score = (user.role === "echo" || user.has_echo_activity) ? qualityScore(user) : null;
+                return (
+                  <tr
+                    key={user.id}
+                    className="cursor-pointer transition-colors"
+                    style={{ borderBottom: "0.5px solid rgba(255,255,255,0.05)" }}
+                    onClick={() => selectUser(user)}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center font-dm text-xs font-bold text-white shrink-0" style={{ background: "#D35400" }}>
+                          {getBrandDisplayName(user).charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-dm text-sm font-semibold text-white">{getBrandDisplayName(user)}</span>
+                            {user.is_dual_role && (
+                              <span className="text-[9px] font-dm font-bold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(192,132,252,0.15)", color: "#C084FC" }}>Double</span>
+                            )}
+                          </div>
+                          {getBrandSubtitle(user) && <div className="font-dm text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>{getBrandSubtitle(user)}</div>}
+                          <div className="font-dm text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>{user.city || user.phone || ""}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className="font-dm text-[10px] font-bold px-2 py-1 rounded-full"
+                        style={{
+                          background: user.role === "echo" ? "rgba(211,84,0,0.12)" : user.role === "batteur" ? "rgba(29,158,117,0.12)" : "rgba(226,75,74,0.12)",
+                          color: user.role === "echo" ? "#D35400" : user.role === "batteur" ? "#5DCAA5" : "#F09595",
+                        }}
+                      >
+                        {user.role === "echo" ? "Écho" : user.role === "batteur" ? "Marque" : user.role}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <AdminBadge status={
+                        user.status === "verified" ? "verified" :
+                        user.status === "flagged" ? "error" :
+                        user.status === "suspended" ? "suspended" :
+                        "active"
+                      }>
+                        {user.status === "verified" ? "Vérifié" :
+                         user.status === "flagged" ? "Signalé" :
+                         user.status === "suspended" ? "Suspendu" :
+                         "Actif"}
+                      </AdminBadge>
+                    </td>
+                    <td className="px-4 py-3 hidden md:table-cell font-dm text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
+                      {user.click_stats.total > 0 ? (
+                        <span>{user.click_stats.total} <span style={{ color: user.click_stats.rate > 20 ? "#F09595" : "rgba(255,255,255,0.3)" }}>({user.click_stats.rate}% fraude)</span></span>
+                      ) : "—"}
+                    </td>
+                    <td className="px-4 py-3 hidden md:table-cell font-syne font-bold text-white text-sm">{formatFCFA(user.total_earned)}</td>
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      {score !== null ? (
+                        <span
+                          className="font-dm text-[10px] font-bold px-2 py-1 rounded-full"
+                          style={{
+                            background: score >= 70 ? "rgba(29,158,117,0.12)" : score >= 40 ? "rgba(211,84,0,0.12)" : "rgba(226,75,74,0.12)",
+                            color: score >= 70 ? "#5DCAA5" : score >= 40 ? "#D35400" : "#F09595",
+                          }}
+                        >
+                          {score}%
+                        </span>
+                      ) : <span style={{ color: "rgba(255,255,255,0.15)" }}>—</span>}
+                    </td>
+                    <td className="px-4 py-3 hidden lg:table-cell font-dm text-sm text-white">{formatFCFA(user.balance)}</td>
+                    <td className="px-4 py-3 hidden lg:table-cell">
+                      <div className="font-dm text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>{new Date(user.created_at).toLocaleDateString("fr-FR")}</div>
+                      <div className="font-dm text-[10px]" style={{ color: user.last_click_at ? "rgba(29,158,117,0.6)" : "rgba(255,255,255,0.15)" }}>
+                        {user.last_click_at ? timeAgo(user.last_click_at) : "Jamais actif"}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {displayUsers.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="px-4 py-12 text-center font-dm text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>
+                    Aucun utilisateur trouvé
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <Pagination currentPage={page} totalItems={totalFiltered} pageSize={PAGE_SIZE} onPageChange={setPage} />
+      <div className="mt-4">
+        <Pagination currentPage={page} totalItems={totalFiltered} pageSize={PAGE_SIZE} onPageChange={setPage} />
+      </div>
 
-      {/* User Detail Modal */}
-      <Modal open={!!selected} onClose={() => { setSelected(null); setEchoCampaigns([]); setBatteurCampaigns([]); setPayoutHistory([]); }} title={selected ? getBrandDisplayName(selected) : ""}>
+      {/* User Detail Drawer */}
+      <AdminDrawer
+        open={!!selected}
+        onClose={() => { setSelected(null); setEchoCampaigns([]); setBatteurCampaigns([]); setPayoutHistory([]); }}
+        title={selected ? getBrandDisplayName(selected) : ""}
+        subtitle={selected ? `${selected.role === "echo" ? "Écho" : "Marque"} · ${selected.city || ""} · ${selected.phone || ""}` : undefined}
+        width="520px"
+      >
         {selected && (
-          <div className="space-y-4">
+          <div className="space-y-5">
+            {/* Avatar + ID */}
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-gradient-primary flex items-center justify-center text-xl font-bold text-white">
+              <div className="w-14 h-14 rounded-full flex items-center justify-center font-dm text-xl font-bold text-white shrink-0" style={{ background: "#D35400" }}>
                 {getBrandDisplayName(selected).charAt(0).toUpperCase()}
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-bold text-lg">{getBrandDisplayName(selected)}</h3>
-                  {selected.is_dual_role ? (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                      {t("superadmin.users.dualRole")}
-                    </span>
-                  ) : selected.has_echo_activity && selected.role !== "echo" ? (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20">
-                      + Echo
-                    </span>
-                  ) : selected.has_batteur_activity && selected.role !== "batteur" ? (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/20">
-                      + Brand
-                    </span>
-                  ) : null}
+                  <h3 className="font-syne font-bold text-lg text-white">{getBrandDisplayName(selected)}</h3>
+                  {selected.is_dual_role && (
+                    <span className="font-dm text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(192,132,252,0.15)", color: "#C084FC" }}>Double rôle</span>
+                  )}
                 </div>
-                {getBrandSubtitle(selected) && <p className="text-xs text-white/50">{getBrandSubtitle(selected)}</p>}
-                <p className="text-xs text-white/40">{selected.phone || ""} · {selected.city || ""} · {selected.role}</p>
-                <p className="text-[10px] font-mono text-white/20 mt-0.5 select-all cursor-pointer" title="Click to copy"
-                  onClick={() => { navigator.clipboard.writeText(selected.id); showToast("UUID copied", "success"); }}
-                >{selected.id}</p>
+                {getBrandSubtitle(selected) && <p className="font-dm text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{getBrandSubtitle(selected)}</p>}
+                <p
+                  className="font-dm text-[10px] font-mono mt-0.5 cursor-pointer select-all"
+                  style={{ color: "rgba(255,255,255,0.2)" }}
+                  onClick={() => { navigator.clipboard.writeText(selected.id); showToast("UUID copié", "success"); }}
+                  title="Cliquer pour copier"
+                >
+                  {selected.id}
+                </p>
               </div>
             </div>
 
+            {/* Status badges */}
             <div className="flex gap-2">
-              <Badge status={selected.status || "active"} />
-              {selected.risk_level && <Badge status={selected.risk_level} />}
+              <AdminBadge size="md" status={
+                selected.status === "verified" ? "verified" :
+                selected.status === "flagged" ? "error" :
+                selected.status === "suspended" ? "suspended" :
+                "active"
+              }>
+                {selected.status === "verified" ? "Vérifié" :
+                 selected.status === "flagged" ? "Signalé" :
+                 selected.status === "suspended" ? "Suspendu" :
+                 "Actif"}
+              </AdminBadge>
+              {selected.risk_level && (
+                <AdminBadge size="md" status={selected.risk_level === "high" ? "fraud" : selected.risk_level === "medium" ? "pending" : "active"}>
+                  Risque: {selected.risk_level}
+                </AdminBadge>
+              )}
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
-              <div className="glass-card p-3">
-                <div className="text-lg font-bold">{formatFCFA(selected.total_earned)}</div>
-                <div className="text-[10px] text-white/40">{t("superadmin.users.totalEarnedLabel")}</div>
-              </div>
-              <div className="glass-card p-3">
-                <div className="text-lg font-bold">{formatFCFA(selected.balance || 0)}</div>
-                <div className="text-[10px] text-white/40">{t("superadmin.users.balance")}</div>
-              </div>
-              <div className="glass-card p-3">
-                <div className="text-lg font-bold">{selected.click_stats.total}</div>
-                <div className="text-[10px] text-white/40">{t("superadmin.users.totalClicks")}</div>
-              </div>
-              <div className="glass-card p-3">
-                <div className="text-lg font-bold text-red-400">{selected.click_stats.rate}%</div>
-                <div className="text-[10px] text-white/40">{t("superadmin.users.fraudRate")}</div>
-              </div>
+            {/* Stats grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { value: formatFCFA(selected.total_earned), label: "Total gagné", color: "#D35400" },
+                { value: formatFCFA(selected.balance || 0), label: "Solde", color: "#5DCAA5" },
+                { value: String(selected.click_stats.total), label: "Total clics", color: "#fff" },
+                { value: `${selected.click_stats.rate}%`, label: "Taux fraude", color: selected.click_stats.rate > 20 ? "#F09595" : "#fff" },
+              ].map((s) => (
+                <div key={s.label} className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.04)" }}>
+                  <div className="font-syne font-bold text-lg" style={{ color: s.color }}>{s.value}</div>
+                  <div className="font-dm text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>{s.label}</div>
+                </div>
+              ))}
             </div>
 
-            {/* Quality Score (for echos) */}
+            {/* Quality Score */}
             {(selected.role === "echo" || selected.has_echo_activity) && (() => {
               const score = qualityScore(selected);
+              const scoreColor = score >= 70 ? "#5DCAA5" : score >= 40 ? "#D35400" : "#F09595";
+              const scoreBg = score >= 70 ? "rgba(29,158,117,0.06)" : score >= 40 ? "rgba(211,84,0,0.06)" : "rgba(226,75,74,0.06)";
+              const scoreBorder = score >= 70 ? "rgba(29,158,117,0.15)" : score >= 40 ? "rgba(211,84,0,0.15)" : "rgba(226,75,74,0.15)";
               return (
-                <div className={`p-3 rounded-xl border ${
-                  score >= 70 ? "bg-emerald-500/5 border-emerald-500/20" :
-                  score >= 40 ? "bg-orange-500/5 border-orange-500/20" :
-                  "bg-red-500/5 border-red-500/20"
-                }`}>
+                <div className="rounded-xl p-3" style={{ background: scoreBg, border: `0.5px solid ${scoreBorder}` }}>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm">{score >= 70 ? "⭐" : score >= 40 ? "📊" : "⚠️"}</span>
-                      <span className="text-xs font-bold text-white/60">{t("superadmin.users.qualityScore") || "Quality Score"}</span>
-                    </div>
-                    <span className={`text-lg font-black ${
-                      score >= 70 ? "text-emerald-400" : score >= 40 ? "text-orange-400" : "text-red-400"
-                    }`}>{score}%</span>
+                    <span className="font-dm text-xs font-semibold" style={{ color: "rgba(255,255,255,0.5)" }}>Score qualité</span>
+                    <span className="font-syne font-bold text-lg" style={{ color: scoreColor }}>{score}%</span>
                   </div>
-                  <div className="flex gap-4 mt-2 text-[10px] text-white/30">
-                    <span>{t("superadmin.users.validRatio") || "Valid ratio"}: {selected.click_stats.total > 0 ? Math.round(selected.click_stats.valid / selected.click_stats.total * 100) : 0}%</span>
-                    <span>{t("superadmin.users.campaignsJoinedLabel") || "Campaigns"}: {selected.campaigns_joined}</span>
+                  <div className="flex gap-4 mt-2 font-dm text-[10px]" style={{ color: "rgba(255,255,255,0.25)" }}>
+                    <span>Ratio valide : {selected.click_stats.total > 0 ? Math.round(selected.click_stats.valid / selected.click_stats.total * 100) : 0}%</span>
+                    <span>Campagnes : {selected.campaigns_joined}</span>
                   </div>
                 </div>
               );
@@ -609,33 +651,30 @@ function UsersPageContent() {
 
             {/* Referral info */}
             {(selected.referral_count > 0 || selected.referred_by) && (
-              <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/10">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm">🤝</span>
-                  <span className="text-xs font-bold text-purple-300">{t("superadmin.users.referralInfo")}</span>
-                </div>
-                <div className="flex flex-wrap gap-4 text-xs">
+              <div className="rounded-xl p-3" style={{ background: "rgba(192,132,252,0.04)", border: "0.5px solid rgba(192,132,252,0.1)" }}>
+                <span className="font-dm text-xs font-semibold" style={{ color: "#C084FC" }}>Parrainage</span>
+                <div className="flex flex-wrap gap-4 mt-2 font-dm text-xs">
                   {selected.referral_code && (
                     <div>
-                      <span className="text-white/40">{t("superadmin.users.referralCode")}: </span>
-                      <span className="font-bold text-purple-300">{selected.referral_code}</span>
+                      <span style={{ color: "rgba(255,255,255,0.35)" }}>Code : </span>
+                      <span className="font-bold" style={{ color: "#C084FC" }}>{selected.referral_code}</span>
                     </div>
                   )}
                   <div>
-                    <span className="text-white/40">{t("superadmin.users.referrals")}: </span>
-                    <span className="font-bold text-accent">{selected.referral_count}</span>
+                    <span style={{ color: "rgba(255,255,255,0.35)" }}>Filleuls : </span>
+                    <span className="font-bold" style={{ color: "#5DCAA5" }}>{selected.referral_count}</span>
                   </div>
                   {selected.referred_by && (
                     <div>
-                      <span className="text-white/40">{t("superadmin.users.referredBy")}: </span>
+                      <span style={{ color: "rgba(255,255,255,0.35)" }}>Parrainé par : </span>
                       <button
                         onClick={() => {
                           const referrer = users.find((u) => u.id === selected.referred_by);
                           if (referrer) selectUser(referrer);
                         }}
-                        className="font-bold text-primary hover:underline"
+                        className="font-bold transition" style={{ color: "#D35400" }}
                       >
-                        {(() => { const ref = users.find((u) => u.id === selected.referred_by); return ref ? getBrandDisplayName(ref) : selected.referred_by.slice(0, 8); })()}
+                        {(() => { const ref = users.find((u) => u.id === selected.referred_by); return ref ? getBrandDisplayName(ref) : selected.referred_by!.slice(0, 8); })()}
                       </button>
                     </div>
                   )}
@@ -643,131 +682,132 @@ function UsersPageContent() {
               </div>
             )}
 
-            {/* History tabs: Echo / Brand / Payouts */}
-            <div className="pt-3 border-t border-white/5">
-              {/* Tab buttons */}
+            {/* History tabs */}
+            <div className="pt-4" style={{ borderTop: "0.5px solid rgba(255,255,255,0.07)" }}>
               <div className="flex gap-1 mb-3">
                 {echoCampaigns.length > 0 && (
                   <button
                     onClick={() => setHistoryTab("echo")}
-                    className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition ${
-                      historyTab === "echo" ? "bg-primary/20 text-primary" : "bg-white/5 text-white/40"
-                    }`}
+                    className="px-3 py-1.5 rounded-lg font-dm text-[11px] font-bold transition"
+                    style={{
+                      background: historyTab === "echo" ? "rgba(211,84,0,0.12)" : "rgba(255,255,255,0.04)",
+                      color: historyTab === "echo" ? "#D35400" : "rgba(255,255,255,0.4)",
+                    }}
                   >
-                    {t("superadmin.users.campaignsJoined")} ({echoCampaigns.length})
+                    Campagnes rejointes ({echoCampaigns.length})
                   </button>
                 )}
                 {batteurCampaigns.length > 0 && (
                   <button
                     onClick={() => setHistoryTab("batteur")}
-                    className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition ${
-                      historyTab === "batteur" ? "bg-accent/20 text-accent" : "bg-white/5 text-white/40"
-                    }`}
+                    className="px-3 py-1.5 rounded-lg font-dm text-[11px] font-bold transition"
+                    style={{
+                      background: historyTab === "batteur" ? "rgba(29,158,117,0.12)" : "rgba(255,255,255,0.04)",
+                      color: historyTab === "batteur" ? "#5DCAA5" : "rgba(255,255,255,0.4)",
+                    }}
                   >
-                    {t("superadmin.users.campaignsLaunched")} ({batteurCampaigns.length})
+                    Campagnes lancées ({batteurCampaigns.length})
                   </button>
                 )}
                 <button
                   onClick={() => setHistoryTab("payouts")}
-                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition flex items-center gap-1.5 ${
-                    historyTab === "payouts" ? "bg-purple-500/20 text-purple-400" : "bg-white/5 text-white/40"
-                  }`}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-dm text-[11px] font-bold transition"
+                  style={{
+                    background: historyTab === "payouts" ? "rgba(192,132,252,0.12)" : "rgba(255,255,255,0.04)",
+                    color: historyTab === "payouts" ? "#C084FC" : "rgba(255,255,255,0.4)",
+                  }}
                 >
-                  {t("superadmin.users.payoutRequests")} ({payoutHistory.length})
+                  Retraits ({payoutHistory.length})
                   {payoutHistory.filter((p) => p.status === "pending").length > 0 && (
-                    <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] text-center">
+                    <span className="font-bold text-[9px] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(226,75,74,0.15)", color: "#F09595" }}>
                       {payoutHistory.filter((p) => p.status === "pending").length}
                     </span>
                   )}
                 </button>
               </div>
 
-              {/* If no tabs have data and not in payouts, show empty */}
               {echoCampaigns.length === 0 && batteurCampaigns.length === 0 && historyTab !== "payouts" && (
                 <button
                   onClick={() => setHistoryTab("echo")}
-                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold mb-3 ${
-                    historyTab === "echo" ? "bg-primary/20 text-primary" : "bg-white/5 text-white/40"
-                  }`}
+                  className="px-3 py-1.5 rounded-lg font-dm text-[11px] font-bold mb-3"
+                  style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.4)" }}
                 >
-                  {t("superadmin.users.campaignsJoined")} (0)
+                  Campagnes rejointes (0)
                 </button>
               )}
 
               {historyLoading ? (
                 <div className="space-y-2">
-                  {[1, 2].map((i) => <div key={i} className="skeleton h-14 rounded-xl" />)}
+                  {[1, 2].map((i) => <div key={i} className="h-14 rounded-xl bg-white/5 animate-pulse" />)}
                 </div>
               ) : historyTab === "payouts" ? (
-                /* Payout history */
                 payoutHistory.length === 0 ? (
-                  <p className="text-xs text-white/20 text-center py-3">{t("superadmin.users.noPayouts")}</p>
+                  <p className="font-dm text-xs text-center py-3" style={{ color: "rgba(255,255,255,0.2)" }}>Aucun retrait</p>
                 ) : (
                   <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                     {payoutHistory.map((p) => {
-                      const statusColors: Record<string, string> = {
-                        pending: "text-yellow-400 bg-yellow-500/10",
-                        sent: "text-emerald-400 bg-emerald-500/10",
-                        failed: "text-red-400 bg-red-500/10",
-                      };
                       const isPending = p.status === "pending";
                       const isRejecting = payoutRejectId === p.id;
                       return (
-                        <div key={p.id} className={`p-3 rounded-xl border transition ${isPending ? "bg-yellow-500/[0.03] border-yellow-500/10" : "bg-white/[0.03] border-white/5"}`}>
+                        <div key={p.id} className="p-3 rounded-xl transition" style={{
+                          background: isPending ? "rgba(234,179,8,0.03)" : "rgba(255,255,255,0.03)",
+                          border: `0.5px solid ${isPending ? "rgba(234,179,8,0.1)" : "rgba(255,255,255,0.05)"}`,
+                        }}>
                           <div className="flex items-start justify-between gap-2 mb-1.5">
-                            <span className="text-sm font-semibold">{formatFCFA(p.amount)}</span>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${statusColors[p.status] || "text-white/40 bg-white/5"}`}>
-                              {p.status === "pending" ? t("common.pending") : p.status === "sent" ? t("common.sent") : t("common.failed")}
-                            </span>
+                            <span className="font-syne font-bold text-sm text-white">{formatFCFA(p.amount)}</span>
+                            <AdminBadge status={p.status === "pending" ? "pending" : p.status === "sent" ? "active" : "error"}>
+                              {p.status === "pending" ? "En attente" : p.status === "sent" ? "Envoyé" : "Échoué"}
+                            </AdminBadge>
                           </div>
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-white/40">
-                            <span>{t("superadmin.finance.provider")}: <strong className="text-white/70">{p.provider === "wave" ? t("common.wave") : t("common.orangeMoney")}</strong></span>
-                            <span>{new Date(p.created_at).toLocaleDateString("en-US")}</span>
-                            {p.failure_reason && (
-                              <span className="text-red-400">{p.failure_reason}</span>
-                            )}
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 font-dm text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+                            <span>Via : <strong className="text-white/70">{p.provider === "wave" ? "Wave" : "Orange Money"}</strong></span>
+                            <span>{new Date(p.created_at).toLocaleDateString("fr-FR")}</span>
+                            {p.failure_reason && <span style={{ color: "#F09595" }}>{p.failure_reason}</span>}
                           </div>
-                          {/* Inline approve/reject for pending payouts */}
                           {isPending && !isRejecting && (
                             <div className="flex gap-2 mt-2">
                               <button
                                 onClick={() => handlePayoutAction(p.id, "approve")}
                                 disabled={payoutActionLoading === p.id}
-                                className="flex-1 py-1.5 rounded-lg bg-accent/10 border border-accent/30 text-accent text-[11px] font-bold hover:bg-accent/20 transition disabled:opacity-50"
+                                className="flex-1 py-1.5 rounded-lg font-dm text-[11px] font-bold transition disabled:opacity-50"
+                                style={{ background: "rgba(29,158,117,0.1)", border: "0.5px solid rgba(29,158,117,0.3)", color: "#5DCAA5" }}
                               >
-                                {payoutActionLoading === p.id ? "..." : t("superadmin.users.approvePayoutDirect")}
+                                {payoutActionLoading === p.id ? "..." : "Approuver"}
                               </button>
                               <button
                                 onClick={() => setPayoutRejectId(p.id)}
-                                className="flex-1 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-[11px] font-bold hover:bg-red-500/20 transition"
+                                className="flex-1 py-1.5 rounded-lg font-dm text-[11px] font-bold transition"
+                                style={{ background: "rgba(226,75,74,0.1)", border: "0.5px solid rgba(226,75,74,0.3)", color: "#F09595" }}
                               >
-                                {t("superadmin.users.rejectPayoutDirect")}
+                                Rejeter
                               </button>
                             </div>
                           )}
-                          {/* Reject reason input */}
                           {isRejecting && (
                             <div className="mt-2 space-y-2">
                               <textarea
                                 value={payoutRejectReason}
                                 onChange={(e) => setPayoutRejectReason(e.target.value)}
-                                placeholder={t("superadmin.finance.rejectReasonPlaceholder")}
-                                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-red-400 transition resize-none h-12"
+                                placeholder="Raison du rejet..."
+                                className="w-full rounded-lg px-3 py-2 font-dm text-xs resize-none h-12 focus:outline-none transition"
+                                style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "#fff" }}
                                 autoFocus
                               />
                               <div className="flex gap-2">
                                 <button
                                   onClick={() => { setPayoutRejectId(null); setPayoutRejectReason(""); }}
-                                  className="flex-1 py-1.5 rounded-lg bg-white/5 text-white/40 text-[11px] font-bold"
+                                  className="flex-1 py-1.5 rounded-lg font-dm text-[11px] font-bold"
+                                  style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.4)" }}
                                 >
-                                  {t("common.cancel")}
+                                  Annuler
                                 </button>
                                 <button
                                   onClick={() => handlePayoutAction(p.id, "reject", payoutRejectReason)}
                                   disabled={payoutActionLoading === p.id}
-                                  className="flex-1 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-[11px] font-bold disabled:opacity-50"
+                                  className="flex-1 py-1.5 rounded-lg font-dm text-[11px] font-bold disabled:opacity-50"
+                                  style={{ background: "rgba(226,75,74,0.1)", border: "0.5px solid rgba(226,75,74,0.3)", color: "#F09595" }}
                                 >
-                                  {payoutActionLoading === p.id ? "..." : t("common.confirm")}
+                                  {payoutActionLoading === p.id ? "..." : "Confirmer"}
                                 </button>
                               </div>
                             </div>
@@ -778,258 +818,216 @@ function UsersPageContent() {
                   </div>
                 )
               ) : (
-                /* Campaign history (echo or batteur) */
                 (() => {
                   const displayCampaigns = historyTab === "batteur" ? batteurCampaigns : echoCampaigns;
                   const isEcho = historyTab === "echo";
                   return displayCampaigns.length === 0 ? (
-                    <p className="text-xs text-white/20 text-center py-3">{t("superadmin.users.noCampaigns")}</p>
+                    <p className="font-dm text-xs text-center py-3" style={{ color: "rgba(255,255,255,0.2)" }}>Aucune campagne</p>
                   ) : (
                     <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                      {displayCampaigns.map((c) => {
-                        const statusColors: Record<string, string> = {
-                          active: "text-emerald-400 bg-emerald-500/10",
-                          completed: "text-blue-400 bg-blue-500/10",
-                          paused: "text-yellow-400 bg-yellow-500/10",
-                          draft: "text-white/40 bg-white/5",
-                          rejected: "text-red-400 bg-red-500/10",
-                        };
-                        return (
-                          <div key={c.campaign_id + (c.joined_at || c.created_at || "")} className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                            <div className="flex items-start justify-between gap-2 mb-1.5">
-                              <span className="text-sm font-semibold truncate flex-1">{c.title}</span>
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${statusColors[c.status] || "text-white/40 bg-white/5"}`}>
-                                {c.status}
-                              </span>
-                            </div>
-                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-white/40">
-                              {isEcho ? (
-                                <>
-                                  <span>{t("superadmin.users.histClicks")}: <strong className="text-white/70">{c.clicks}</strong></span>
-                                  <span>{t("superadmin.users.histEarned")}: <strong className="text-accent">{formatFCFA(c.earned || 0)}</strong></span>
-                                  <span>CPC: {formatFCFA(c.cpc)}</span>
-                                </>
-                              ) : (
-                                <>
-                                  <span>{t("common.budget")}: <strong className="text-white/70">{formatFCFA(c.budget || 0)}</strong></span>
-                                  <span>{t("admin.dashboard.spent")}: <strong className="text-accent">{formatFCFA(c.spent || 0)}</strong></span>
-                                  <span>{t("superadmin.users.histEchos")}: <strong className="text-white/70">{c.echos}</strong></span>
-                                  <span>CPC: {formatFCFA(c.cpc)}</span>
-                                </>
-                              )}
-                            </div>
+                      {displayCampaigns.map((c) => (
+                        <div key={c.campaign_id + (c.joined_at || c.created_at || "")} className="p-3 rounded-xl"
+                          style={{ background: "rgba(255,255,255,0.03)", border: "0.5px solid rgba(255,255,255,0.05)" }}>
+                          <div className="flex items-start justify-between gap-2 mb-1.5">
+                            <span className="font-dm text-sm font-semibold truncate flex-1 text-white">{c.title}</span>
+                            <AdminBadge status={c.status === "active" ? "active" : c.status === "completed" ? "finished" : c.status === "paused" ? "paused" : c.status === "rejected" ? "rejected" : "draft"}>
+                              {c.status}
+                            </AdminBadge>
                           </div>
-                        );
-                      })}
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 font-dm text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+                            {isEcho ? (
+                              <>
+                                <span>Clics : <strong className="text-white/70">{c.clicks}</strong></span>
+                                <span>Gagné : <strong style={{ color: "#5DCAA5" }}>{formatFCFA(c.earned || 0)}</strong></span>
+                                <span>CPC : {formatFCFA(c.cpc)}</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>Budget : <strong className="text-white/70">{formatFCFA(c.budget || 0)}</strong></span>
+                                <span>Dépensé : <strong style={{ color: "#5DCAA5" }}>{formatFCFA(c.spent || 0)}</strong></span>
+                                <span>Échos : <strong className="text-white/70">{c.echos}</strong></span>
+                                <span>CPC : {formatFCFA(c.cpc)}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   );
                 })()
               )}
             </div>
 
-            {/* Top-up button for batteurs, admins, and superadmins */}
+            {/* Top-up for brands */}
             {(selected.role === "batteur" || selected.role === "admin" || selected.role === "superadmin") && (
-              <div className="pt-2 border-t border-white/5">
+              <div className="pt-4" style={{ borderTop: "0.5px solid rgba(255,255,255,0.07)" }}>
                 <button
-                  onClick={() => {
-                    setTopupUser(selected);
-                    setShowTopup(true);
-                  }}
-                  className="w-full py-2.5 rounded-xl bg-accent/10 border border-accent/30 text-accent font-bold text-sm"
+                  onClick={() => { setTopupUser(selected); setShowTopup(true); }}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-dm text-sm font-bold transition"
+                  style={{ background: "rgba(29,158,117,0.1)", border: "0.5px solid rgba(29,158,117,0.3)", color: "#5DCAA5" }}
                 >
-                  {t("superadmin.users.rechargeBalance")}
+                  <CreditCard size={14} />
+                  Recharger le solde
                 </button>
               </div>
             )}
 
-            <div className="pt-2 border-t border-white/5">
+            {/* Investigate */}
+            <div className="pt-4" style={{ borderTop: "0.5px solid rgba(255,255,255,0.07)" }}>
               <button
                 onClick={() => router.push(`/superadmin/investigate?user_id=${selected.id}`)}
-                className="w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 font-bold text-sm hover:bg-white/10 transition flex items-center justify-center gap-2"
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-dm text-sm font-semibold transition"
+                style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}
               >
-                <span>🔍</span> Investigate this user
+                <MousePointerClick size={14} />
+                Investiguer cet utilisateur
               </button>
             </div>
 
-            <div className="flex flex-wrap gap-2 pt-2 border-t border-white/5">
-              <button
-                onClick={() => performAction(selected.id, "verify")}
-                className="flex-1 py-2 rounded-xl bg-accent/10 border border-accent/30 text-accent text-xs font-bold"
-              >
-                {t("superadmin.users.verify")}
+            {/* Actions */}
+            <div className="flex flex-wrap gap-2 pt-4" style={{ borderTop: "0.5px solid rgba(255,255,255,0.07)" }}>
+              <button onClick={() => performAction(selected.id, "verify")} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl font-dm text-xs font-bold transition"
+                style={{ background: "rgba(29,158,117,0.1)", border: "0.5px solid rgba(29,158,117,0.3)", color: "#5DCAA5" }}>
+                <CheckCircle2 size={12} /> Vérifier
               </button>
-              <button
-                onClick={() => performAction(selected.id, "flag")}
-                className="flex-1 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-bold"
-              >
-                {t("superadmin.users.flag")}
+              <button onClick={() => performAction(selected.id, "flag")} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl font-dm text-xs font-bold transition"
+                style={{ background: "rgba(234,179,8,0.1)", border: "0.5px solid rgba(234,179,8,0.3)", color: "#EAB308" }}>
+                <Flag size={12} /> Signaler
               </button>
-              <button
-                onClick={() => performAction(selected.id, "suspend")}
-                className="flex-1 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold"
-              >
-                {t("superadmin.users.suspend")}
+              <button onClick={() => performAction(selected.id, "suspend")} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl font-dm text-xs font-bold transition"
+                style={{ background: "rgba(226,75,74,0.1)", border: "0.5px solid rgba(226,75,74,0.3)", color: "#F09595" }}>
+                <Ban size={12} /> Suspendre
               </button>
             </div>
-
             <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => performAction(selected.id, "reset_balance")}
-                className="flex-1 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 text-xs font-bold"
-              >
-                {t("superadmin.users.resetBalance")}
+              <button onClick={() => performAction(selected.id, "reset_balance")} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl font-dm text-xs font-bold transition"
+                style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}>
+                <RotateCcw size={12} /> Reset solde
               </button>
-              <button
-                onClick={() => performAction(selected.id, "promote_admin")}
-                className="flex-1 py-2 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400 text-xs font-bold"
-              >
-                {t("superadmin.users.promoteAdmin")}
+              <button onClick={() => performAction(selected.id, "promote_admin")} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl font-dm text-xs font-bold transition"
+                style={{ background: "rgba(192,132,252,0.1)", border: "0.5px solid rgba(192,132,252,0.3)", color: "#C084FC" }}>
+                <Crown size={12} /> Promouvoir Admin
               </button>
             </div>
           </div>
         )}
-      </Modal>
+      </AdminDrawer>
 
-      {/* Create Brand User Modal */}
-      <Modal open={showCreateBrand} onClose={() => setShowCreateBrand(false)} title={t("superadmin.users.createBatteurTitle")}>
+      {/* Create Brand Drawer */}
+      <AdminDrawer
+        open={showCreateBrand}
+        onClose={() => setShowCreateBrand(false)}
+        title="Créer une marque"
+        subtitle="Remplissez les informations"
+      >
         <div className="space-y-4">
-          <div>
-            <label className="text-xs text-white/40 block mb-1">{t("superadmin.users.brandNameLabel")}</label>
-            <input
-              type="text"
-              value={newBrand.name}
-              onChange={(e) => setNewBrand({ ...newBrand, name: e.target.value })}
-              placeholder={t("superadmin.users.brandNamePlaceholder")}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs text-white/40 block mb-1">{t("superadmin.users.emailLabel")}</label>
-            <input
-              type="email"
-              value={newBrand.email}
-              onChange={(e) => setNewBrand({ ...newBrand, email: e.target.value })}
-              placeholder="contact@marque.com"
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs text-white/40 block mb-1">{t("superadmin.users.passwordLabel")}</label>
-            <input
-              type="password"
-              value={newBrand.password}
-              onChange={(e) => setNewBrand({ ...newBrand, password: e.target.value })}
-              placeholder={t("common.minChars")}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
-            />
-          </div>
-
+          <FormField label="Nom de la marque">
+            <input type="text" value={newBrand.name} onChange={(e) => setNewBrand({ ...newBrand, name: e.target.value })}
+              placeholder="Ex : SenegalShop" className="w-full rounded-xl px-4 py-3 font-dm text-sm focus:outline-none transition"
+              style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "#fff" }} />
+          </FormField>
+          <FormField label="Email">
+            <input type="email" value={newBrand.email} onChange={(e) => setNewBrand({ ...newBrand, email: e.target.value })}
+              placeholder="contact@marque.com" className="w-full rounded-xl px-4 py-3 font-dm text-sm focus:outline-none transition"
+              style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "#fff" }} />
+          </FormField>
+          <FormField label="Mot de passe">
+            <input type="password" value={newBrand.password} onChange={(e) => setNewBrand({ ...newBrand, password: e.target.value })}
+              placeholder="Min. 6 caractères" className="w-full rounded-xl px-4 py-3 font-dm text-sm focus:outline-none transition"
+              style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "#fff" }} />
+          </FormField>
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-white/40 block mb-1">{t("superadmin.users.phoneLabel")}</label>
-              <input
-                type="tel"
-                value={newBrand.phone}
-                onChange={(e) => setNewBrand({ ...newBrand, phone: e.target.value })}
-                placeholder="+221..."
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-white/40 block mb-1">{t("superadmin.users.cityLabel")}</label>
-              <CitySelect
-                value={newBrand.city}
-                onChange={(city) => setNewBrand({ ...newBrand, city })}
-              />
-            </div>
+            <FormField label="Téléphone">
+              <input type="tel" value={newBrand.phone} onChange={(e) => setNewBrand({ ...newBrand, phone: e.target.value })}
+                placeholder="+221..." className="w-full rounded-xl px-4 py-3 font-dm text-sm focus:outline-none transition"
+                style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "#fff" }} />
+            </FormField>
+            <FormField label="Ville">
+              <CitySelect value={newBrand.city} onChange={(city) => setNewBrand({ ...newBrand, city })} />
+            </FormField>
           </div>
-
-          <button
-            onClick={createBrandUser}
-            disabled={creatingBrand}
-            className="w-full py-3 rounded-xl bg-gradient-primary text-white font-bold text-sm hover:opacity-90 transition disabled:opacity-50"
-          >
-            {creatingBrand ? t("superadmin.users.creating") : t("superadmin.users.createButton")}
+          <button onClick={createBrandUser} disabled={creatingBrand}
+            className="w-full py-3 rounded-xl font-dm text-sm font-bold transition disabled:opacity-50"
+            style={{ background: "#D35400", color: "#fff" }}>
+            {creatingBrand ? "Création..." : "Créer la marque"}
           </button>
         </div>
-      </Modal>
+      </AdminDrawer>
 
-      {/* Top-Up Modal */}
-      <Modal
+      {/* Top-Up Drawer */}
+      <AdminDrawer
         open={showTopup}
         onClose={() => { setShowTopup(false); setTopupUser(null); setTopupAmount(""); }}
-        title={t("superadmin.users.rechargeTitle", { name: topupUser ? getBrandDisplayName(topupUser) : "" })}
+        title="Recharger le solde"
+        subtitle={topupUser ? getBrandDisplayName(topupUser) : undefined}
       >
         {topupUser && (
           <div className="space-y-4">
-            <div className="p-4 rounded-xl bg-white/5">
+            <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.04)" }}>
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center text-sm font-bold text-white">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center font-dm text-sm font-bold text-white" style={{ background: "#D35400" }}>
                   {getBrandDisplayName(topupUser).charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <div className="font-bold">{getBrandDisplayName(topupUser)}</div>
-                  <div className="text-xs text-white/40">{topupUser.phone || topupUser.city || "batteur"}</div>
+                  <div className="font-dm text-sm font-semibold text-white">{getBrandDisplayName(topupUser)}</div>
+                  <div className="font-dm text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>{topupUser.phone || topupUser.city || "marque"}</div>
                 </div>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-white/40">{t("superadmin.users.currentBalance")}</span>
-                <span className="font-bold text-accent">{formatFCFA(topupUser.balance || 0)}</span>
+              <div className="flex justify-between font-dm text-sm">
+                <span style={{ color: "rgba(255,255,255,0.4)" }}>Solde actuel</span>
+                <span className="font-bold" style={{ color: "#5DCAA5" }}>{formatFCFA(topupUser.balance || 0)}</span>
               </div>
             </div>
 
-            <div>
-              <label className="text-xs text-white/40 block mb-1">{t("superadmin.users.rechargeAmount")}</label>
-              <input
-                type="number"
-                value={topupAmount}
-                onChange={(e) => setTopupAmount(e.target.value)}
-                placeholder={t("superadmin.users.rechargeAmountPlaceholder")}
-                min="100"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
-              />
-            </div>
+            <FormField label="Montant (FCFA)">
+              <input type="number" value={topupAmount} onChange={(e) => setTopupAmount(e.target.value)}
+                placeholder="Ex : 50 000" min="100"
+                className="w-full rounded-xl px-4 py-3 font-dm text-sm focus:outline-none transition"
+                style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "#fff" }} />
+            </FormField>
 
             {topupAmount && parseInt(topupAmount) > 0 && (
-              <div className="p-3 rounded-xl bg-accent/5 border border-accent/20 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-white/40">{t("superadmin.users.newBalance")}</span>
-                  <span className="font-bold text-accent">
-                    {formatFCFA((topupUser.balance || 0) + parseInt(topupAmount))}
-                  </span>
+              <div className="rounded-xl px-4 py-3" style={{ background: "rgba(29,158,117,0.05)", border: "0.5px solid rgba(29,158,117,0.15)" }}>
+                <div className="flex justify-between font-dm text-xs">
+                  <span style={{ color: "rgba(255,255,255,0.4)" }}>Nouveau solde</span>
+                  <span className="font-bold" style={{ color: "#5DCAA5" }}>{formatFCFA((topupUser.balance || 0) + parseInt(topupAmount))}</span>
                 </div>
               </div>
             )}
 
-            {/* Quick amounts */}
             <div className="flex gap-2">
               {[5000, 10000, 25000, 50000, 100000].map((amt) => (
                 <button
                   key={amt}
                   onClick={() => setTopupAmount(amt.toString())}
-                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${
-                    topupAmount === amt.toString()
-                      ? "bg-gradient-primary text-white"
-                      : "bg-white/5 text-white/40 hover:bg-white/10"
-                  }`}
+                  className="flex-1 py-2 rounded-lg font-dm text-xs font-bold transition"
+                  style={{
+                    background: topupAmount === amt.toString() ? "#D35400" : "rgba(255,255,255,0.04)",
+                    color: topupAmount === amt.toString() ? "#fff" : "rgba(255,255,255,0.4)",
+                  }}
                 >
                   {amt >= 1000 ? `${amt / 1000}k` : amt}
                 </button>
               ))}
             </div>
 
-            <button
-              onClick={handleTopup}
-              disabled={toppingUp || !topupAmount || parseInt(topupAmount) <= 0}
-              className="w-full py-3 rounded-xl bg-gradient-primary text-white font-bold text-sm hover:opacity-90 transition disabled:opacity-50"
-            >
-              {toppingUp ? t("superadmin.users.recharging") : t("superadmin.users.rechargeButton", { amount: topupAmount ? formatFCFA(parseInt(topupAmount)) : "" })}
+            <button onClick={handleTopup} disabled={toppingUp || !topupAmount || parseInt(topupAmount) <= 0}
+              className="w-full py-3 rounded-xl font-dm text-sm font-bold transition disabled:opacity-50"
+              style={{ background: "#D35400", color: "#fff" }}>
+              {toppingUp ? "Rechargement..." : `Recharger ${topupAmount ? formatFCFA(parseInt(topupAmount)) : ""}`}
             </button>
           </div>
         )}
-      </Modal>
+      </AdminDrawer>
+    </div>
+  );
+}
+
+function FormField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="font-dm text-[10px] uppercase tracking-wider block mb-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>{label}</label>
+      {children}
     </div>
   );
 }
