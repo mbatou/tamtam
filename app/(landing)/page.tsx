@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
@@ -69,6 +69,14 @@ function FadeUp({ children, delay = 0, className = "" }: { children: React.React
 // ── Main Page ──
 
 export default function LandingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-tt-night" />}>
+      <LandingContent />
+    </Suspense>
+  );
+}
+
+function LandingContent() {
   return (
     <main className="bg-tt-night text-white overflow-x-hidden">
       <Navbar />
