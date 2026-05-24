@@ -423,3 +423,15 @@ h1, h2, h3 {
 
 .font-syne { font-family: 'Syne', sans-serif; }
 .font-dm { font-family: 'DM Sans', sans-serif; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee,
+  .animate-float,
+  .animate-float-slow,
+  .animate-pulse,
+  [class*="animate-float"],
+  [style*="animation"] {
+    animation: none !important;
+    transition: none !important;
+  }
+}

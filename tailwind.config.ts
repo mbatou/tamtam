@@ -94,7 +94,7 @@ const config: Config = {
         "slide-up": "slide-up 0.5s ease-out forwards",
         float: "float 3s ease-in-out infinite",
         "float-slow": "float-slow 4s ease-in-out infinite",
-        marquee: "marquee 30s linear infinite",
+        marquee: "marquee 25s linear infinite",
         "wave-bar": "wave-bar 1.2s ease-in-out infinite",
         shimmer: "shimmer 2s linear infinite",
         ripple: "ripple 0.6s ease-out",
