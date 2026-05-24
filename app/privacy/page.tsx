@@ -1,122 +1,215 @@
-import { Metadata } from "next";
-import Link from "next/link";
-import Image from "next/image";
-import Footer from "@/components/Footer";
-import SoundWave from "@/components/ui/SoundWave";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Politique de confidentialité",
-};
+import LegalLayout from "@/components/legal/LegalLayout";
+
+const toc = [
+  { id: "introduction", label: "1. Introduction" },
+  { id: "responsable", label: "2. Responsable" },
+  { id: "donnees", label: "3. Données collectées" },
+  { id: "utilisation", label: "4. Utilisation" },
+  { id: "base-legale", label: "5. Base légale" },
+  { id: "protection", label: "6. Protection" },
+  { id: "partage", label: "7. Partage" },
+  { id: "conservation", label: "8. Conservation" },
+  { id: "droits", label: "9. Vos droits" },
+  { id: "cookies", label: "10. Cookies" },
+  { id: "mineurs", label: "11. Mineurs" },
+  { id: "modifications", label: "12. Modifications" },
+  { id: "contact", label: "13. Contact" },
+];
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-background">
-      <header className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 max-w-7xl mx-auto">
-        <Link href="/" className="flex items-center gap-2 sm:gap-3">
-          <Image src="/brand/tamtam-horizontal-orange.png" alt="Tamtam" width={120} height={32} priority className="h-7 w-auto" />
-          <SoundWave bars={4} className="h-4 sm:h-5 opacity-60" />
-        </Link>
-        <Link href="/login" className="text-xs sm:text-sm font-semibold text-white/60 hover:text-white transition">
-          Connexion
-        </Link>
-      </header>
+    <LegalLayout title="Politique de confidentialité" lastUpdated="mai 2026" toc={toc}>
+      <section id="introduction">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">1. Introduction</h2>
+        <p>
+          Tamtam (accessible via tamma.me) est une plateforme de micro-influence opérée par Lupandu SARL,
+          société de droit sénégalais basée à Dakar. Nous nous engageons à protéger la vie privée
+          de nos utilisateurs conformément à la loi n° 2008-12 du 25 janvier 2008 sur la protection
+          des données à caractère personnel au Sénégal et aux réglementations de la Commission des
+          Données Personnelles (CDP) du Sénégal.
+        </p>
+      </section>
 
-      <main className="px-4 sm:px-6 py-10 sm:py-16 max-w-3xl mx-auto">
-        <h1 className="text-3xl sm:text-4xl font-bold mb-8">Politique de confidentialité</h1>
-        <p className="text-sm text-white/30 mb-8">Dernière mise à jour : mars 2026</p>
+      <section id="responsable">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">2. Responsable du traitement</h2>
+        <ul className="list-disc pl-5 space-y-2">
+          <li><strong className="text-[#0A0A1A]/70">Entité :</strong> Lupandu SARL</li>
+          <li><strong className="text-[#0A0A1A]/70">Siège :</strong> Dakar, Sénégal</li>
+          <li><strong className="text-[#0A0A1A]/70">Email :</strong> <a href="mailto:contact@tamma.me" className="text-[#D35400] hover:underline">contact@tamma.me</a></li>
+          <li><strong className="text-[#0A0A1A]/70">Site :</strong> tamma.me</li>
+        </ul>
+      </section>
 
-        <div className="prose-custom space-y-8 text-sm text-white/50 leading-relaxed">
-          <section>
-            <h2 className="text-lg font-bold text-white/80 mb-3">1. Introduction</h2>
-            <p>
-              Tamtam (accessible via tamma.me) est une plateforme de micro-influence opérant au Sénégal.
-              Nous nous engageons à protéger la vie privée de nos utilisateurs. Cette politique décrit
-              comment nous collectons, utilisons et protégeons vos données personnelles.
-            </p>
-          </section>
+      <section id="donnees">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">3. Données collectées</h2>
+        <p className="mb-3">Nous collectons les données suivantes :</p>
+        <ul className="list-disc pl-5 space-y-2">
+          <li>
+            <strong className="text-[#0A0A1A]/70">Données d&apos;inscription :</strong> nom, prénom, adresse email,
+            numéro de téléphone, ville, mot de passe (haché de manière irréversible).
+          </li>
+          <li>
+            <strong className="text-[#0A0A1A]/70">Données de paiement :</strong> numéro de téléphone mobile money
+            (Wave, Orange Money) pour les retraits. Nous ne stockons aucune donnée bancaire.
+          </li>
+          <li>
+            <strong className="text-[#0A0A1A]/70">Données d&apos;utilisation :</strong> clics sur les liens de campagne,
+            adresses IP, user-agent du navigateur, horodatage des actions, pages visitées.
+          </li>
+          <li>
+            <strong className="text-[#0A0A1A]/70">Données de campagne :</strong> contenu des campagnes créées
+            par les Batteurs (annonceurs), médias uploadés, URLs de destination.
+          </li>
+          <li>
+            <strong className="text-[#0A0A1A]/70">Données de géolocalisation :</strong> ville déclarée lors
+            de l&apos;inscription (pas de géolocalisation en temps réel).
+          </li>
+        </ul>
+      </section>
 
-          <section>
-            <h2 className="text-lg font-bold text-white/80 mb-3">2. Données collectées</h2>
-            <p>Nous collectons les données suivantes :</p>
-            <ul className="list-disc pl-5 mt-2 space-y-1">
-              <li><strong className="text-white/60">Informations d&apos;inscription :</strong> nom, prénom, email, numéro de téléphone, mot de passe (chiffré)</li>
-              <li><strong className="text-white/60">Données de paiement :</strong> numéro de téléphone mobile money (Wave, Orange Money) pour les retraits</li>
-              <li><strong className="text-white/60">Données d&apos;utilisation :</strong> clics sur les liens, adresses IP, user-agent du navigateur, horodatage des actions</li>
-              <li><strong className="text-white/60">Données de campagne :</strong> contenu des campagnes créées par les Batteurs (annonceurs)</li>
-            </ul>
-          </section>
+      <section id="utilisation">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">4. Utilisation des données</h2>
+        <p className="mb-3">Vos données sont utilisées exclusivement pour :</p>
+        <ul className="list-disc pl-5 space-y-2">
+          <li>Fournir, maintenir et améliorer nos services.</li>
+          <li>Valider les clics et détecter la fraude (analyse IP, user-agent, patterns).</li>
+          <li>Traiter les paiements, rechargements et retraits via nos prestataires.</li>
+          <li>Communiquer avec vous concernant votre compte (notifications, alertes).</li>
+          <li>Générer des statistiques agrégées et anonymisées pour les Batteurs.</li>
+          <li>Assurer la sécurité de la plateforme et prévenir les abus.</li>
+        </ul>
+      </section>
 
-          <section>
-            <h2 className="text-lg font-bold text-white/80 mb-3">3. Utilisation des données</h2>
-            <p>Vos données sont utilisées pour :</p>
-            <ul className="list-disc pl-5 mt-2 space-y-1">
-              <li>Fournir et améliorer nos services</li>
-              <li>Valider les clics et prévenir la fraude</li>
-              <li>Traiter les paiements et retraits</li>
-              <li>Communiquer avec vous concernant votre compte</li>
-              <li>Assurer la sécurité de la plateforme</li>
-            </ul>
-          </section>
+      <section id="base-legale">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">5. Base légale du traitement</h2>
+        <p>
+          Conformément à la loi n° 2008-12, le traitement de vos données repose sur :
+        </p>
+        <ul className="list-disc pl-5 space-y-2 mt-3">
+          <li><strong className="text-[#0A0A1A]/70">Consentement :</strong> acceptation des CGU lors de l&apos;inscription.</li>
+          <li><strong className="text-[#0A0A1A]/70">Exécution du contrat :</strong> nécessaire pour fournir le service.</li>
+          <li><strong className="text-[#0A0A1A]/70">Intérêt légitime :</strong> détection de fraude et sécurité de la plateforme.</li>
+        </ul>
+      </section>
 
-          <section>
-            <h2 className="text-lg font-bold text-white/80 mb-3">4. Protection des données</h2>
-            <p>
-              Nous utilisons des mesures de sécurité techniques et organisationnelles pour protéger
-              vos données, notamment le chiffrement SSL/TLS, le hachage des mots de passe,
-              et des contrôles d&apos;accès stricts à notre base de données.
-            </p>
-          </section>
+      <section id="protection">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">6. Protection des données</h2>
+        <p>
+          Nous mettons en place des mesures techniques et organisationnelles pour protéger vos données :
+        </p>
+        <ul className="list-disc pl-5 space-y-2 mt-3">
+          <li>Chiffrement SSL/TLS pour toutes les communications.</li>
+          <li>Hachage irréversible des mots de passe (bcrypt).</li>
+          <li>Contrôles d&apos;accès stricts à la base de données (Row Level Security).</li>
+          <li>Hébergement sécurisé via des prestataires certifiés (Supabase, Vercel).</li>
+          <li>Journalisation des accès et audits réguliers.</li>
+        </ul>
+      </section>
 
-          <section>
-            <h2 className="text-lg font-bold text-white/80 mb-3">5. Partage des données</h2>
-            <p>
-              Nous ne vendons jamais vos données personnelles. Nous pouvons partager des données avec :
-            </p>
-            <ul className="list-disc pl-5 mt-2 space-y-1">
-              <li>Nos prestataires de paiement (PayTech) pour traiter les transactions</li>
-              <li>Les autorités compétentes si la loi l&apos;exige</li>
-            </ul>
-          </section>
+      <section id="partage">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">7. Partage des données</h2>
+        <p className="mb-3">
+          Nous ne vendons jamais vos données personnelles. Nous pouvons partager des données avec :
+        </p>
+        <ul className="list-disc pl-5 space-y-2">
+          <li><strong className="text-[#0A0A1A]/70">Prestataires de paiement :</strong> Wave et Orange Money pour traiter les transactions.</li>
+          <li><strong className="text-[#0A0A1A]/70">Hébergeurs :</strong> Supabase (base de données) et Vercel (hébergement web).</li>
+          <li><strong className="text-[#0A0A1A]/70">Autorités :</strong> si la loi sénégalaise l&apos;exige ou en cas d&apos;ordonnance judiciaire.</li>
+        </ul>
+        <p className="mt-3">
+          Les statistiques partagées avec les Batteurs sont toujours agrégées et anonymisées.
+          Aucune donnée personnelle d&apos;un Écho n&apos;est communiquée à un Batteur.
+        </p>
+      </section>
 
-          <section>
-            <h2 className="text-lg font-bold text-white/80 mb-3">6. Conservation des données</h2>
-            <p>
-              Vos données sont conservées aussi longtemps que votre compte est actif.
-              Vous pouvez demander la suppression de votre compte et de vos données
-              en nous contactant par email.
-            </p>
-          </section>
+      <section id="conservation">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">8. Conservation des données</h2>
+        <ul className="list-disc pl-5 space-y-2">
+          <li>Les données de compte sont conservées tant que le compte est actif.</li>
+          <li>Après suppression du compte, les données sont anonymisées sous 30 jours.</li>
+          <li>Les données de transaction sont conservées 5 ans conformément aux obligations comptables sénégalaises.</li>
+          <li>Les logs de sécurité et anti-fraude sont conservés 12 mois.</li>
+        </ul>
+      </section>
 
-          <section>
-            <h2 className="text-lg font-bold text-white/80 mb-3">7. Vos droits</h2>
-            <p>Vous avez le droit de :</p>
-            <ul className="list-disc pl-5 mt-2 space-y-1">
-              <li>Accéder à vos données personnelles</li>
-              <li>Rectifier vos données inexactes</li>
-              <li>Demander la suppression de vos données</li>
-              <li>Retirer votre consentement à tout moment</li>
-            </ul>
-          </section>
+      <section id="droits">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">9. Vos droits</h2>
+        <p className="mb-3">
+          Conformément à la loi n° 2008-12 et aux décisions de la CDP du Sénégal, vous disposez des droits suivants :
+        </p>
+        <ul className="list-disc pl-5 space-y-2">
+          <li><strong className="text-[#0A0A1A]/70">Droit d&apos;accès :</strong> obtenir une copie de vos données personnelles.</li>
+          <li><strong className="text-[#0A0A1A]/70">Droit de rectification :</strong> corriger vos données inexactes ou incomplètes.</li>
+          <li><strong className="text-[#0A0A1A]/70">Droit de suppression :</strong> demander la suppression de vos données et de votre compte.</li>
+          <li><strong className="text-[#0A0A1A]/70">Droit d&apos;opposition :</strong> vous opposer au traitement de vos données.</li>
+          <li><strong className="text-[#0A0A1A]/70">Droit de retrait du consentement :</strong> retirer votre consentement à tout moment.</li>
+        </ul>
+        <p className="mt-3">
+          Pour exercer vos droits, contactez-nous à{" "}
+          <a href="mailto:contact@tamma.me" className="text-[#D35400] hover:underline font-semibold">
+            contact@tamma.me
+          </a>. Nous répondrons sous 30 jours.
+        </p>
+        <p className="mt-3">
+          Vous pouvez également introduire une réclamation auprès de la Commission des Données
+          Personnelles (CDP) du Sénégal : <span className="text-[#0A0A1A]/70">cdp.sn</span>
+        </p>
+      </section>
 
-          <section>
-            <h2 className="text-lg font-bold text-white/80 mb-3">8. Cookies</h2>
-            <p>
-              Nous utilisons des cookies essentiels pour le fonctionnement de la plateforme
-              (authentification, session). Aucun cookie publicitaire ou de suivi tiers n&apos;est utilisé.
-            </p>
-          </section>
+      <section id="cookies">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">10. Cookies</h2>
+        <p className="mb-3">Nous utilisons uniquement des cookies essentiels :</p>
+        <ul className="list-disc pl-5 space-y-2">
+          <li><strong className="text-[#0A0A1A]/70">Cookies de session :</strong> authentification et maintien de la session utilisateur.</li>
+          <li><strong className="text-[#0A0A1A]/70">Préférences :</strong> langue sélectionnée (tamtam-locale).</li>
+        </ul>
+        <p className="mt-3">
+          Aucun cookie publicitaire, de suivi tiers ou analytique n&apos;est utilisé.
+          Aucune donnée n&apos;est transmise à des régies publicitaires.
+        </p>
+      </section>
 
-          <section>
-            <h2 className="text-lg font-bold text-white/80 mb-3">9. Contact</h2>
-            <p>
-              Pour toute question concernant cette politique : <a href="mailto:contact@tamma.me" className="text-primary hover:underline">contact@tamma.me</a> ou{" "}
-              <a href="https://wa.me/221762799393" target="_blank" rel="noopener noreferrer" className="text-green-400 hover:underline">WhatsApp +221 76 279 93 93</a>
-            </p>
-          </section>
-        </div>
-      </main>
+      <section id="mineurs">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">11. Mineurs</h2>
+        <p>
+          Tamtam n&apos;est pas destiné aux personnes de moins de 18 ans. Nous ne collectons pas
+          sciemment de données personnelles de mineurs. Si nous découvrons qu&apos;un mineur s&apos;est
+          inscrit, son compte sera supprimé.
+        </p>
+      </section>
 
-      <Footer />
-    </div>
+      <section id="modifications">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">12. Modifications de cette politique</h2>
+        <p>
+          Lupandu SARL se réserve le droit de modifier cette politique à tout moment.
+          Les utilisateurs seront informés des changements significatifs par email.
+          La date de dernière mise à jour est indiquée en haut de cette page.
+        </p>
+      </section>
+
+      <section id="contact">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">13. Contact</h2>
+        <p>
+          Pour toute question relative à la protection de vos données :{" "}
+          <a href="mailto:contact@tamma.me" className="text-[#D35400] hover:underline font-semibold">
+            contact@tamma.me
+          </a>{" "}
+          ou{" "}
+          <a
+            href="https://wa.me/221762799393"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#1D9E75] hover:underline font-semibold"
+          >
+            WhatsApp +221 76 279 93 93
+          </a>
+        </p>
+        <p className="mt-4 text-xs text-black/30">
+          Lupandu SARL &middot; Dakar, Sénégal &middot; Loi applicable : loi n° 2008-12 du 25 janvier 2008
+        </p>
+      </section>
+    </LegalLayout>
   );
 }

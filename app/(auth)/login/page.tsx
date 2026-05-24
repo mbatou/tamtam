@@ -3,11 +3,12 @@
 import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-import SoundWave from "@/components/ui/SoundWave";
 import GoogleButton from "@/components/ui/GoogleButton";
+import AuthLayout from "@/components/auth/AuthLayout";
+import FormField from "@/components/auth/FormField";
 import { useTranslation } from "@/lib/i18n";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   return (
@@ -23,6 +24,7 @@ function LoginContent() {
   const [mode, setMode] = useState<"echo" | "batteur">("echo");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const supabase = createClient();
@@ -31,7 +33,6 @@ function LoginContent() {
   const hasBonus = searchParams.get("bonus") === "true";
   const ambassadorNameParam = searchParams.get("ambassador");
 
-  // Read tab query param
   useEffect(() => {
     const tab = searchParams.get("tab");
     if (tab === "batteur") setMode("batteur");
@@ -50,7 +51,6 @@ function LoginContent() {
       return;
     }
 
-    // Fetch user role using the access token directly to avoid cookie sync issues
     try {
       const userRes = await fetch("/api/echo/user", {
         headers: {
@@ -76,7 +76,6 @@ function LoginContent() {
       // Fall through to mode-based redirect
     }
 
-    // Fallback: use the selected login mode to determine redirect
     if (mode === "batteur") {
       window.location.href = "/admin/dashboard";
     } else {
@@ -84,196 +83,197 @@ function LoginContent() {
     }
   }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center px-6 bg-gradient-mesh">
-      <div className="w-full max-w-md">
-        <Link href="/" className="flex items-center justify-center gap-3 mb-10">
-          <Image src="/brand/tamtam-horizontal-orange.png" alt="Tamtam" width={180} height={48} priority className="h-12 w-auto" />
-          <SoundWave bars={5} className="h-5 opacity-60" />
-        </Link>
+  const accentColor = mode === "batteur" ? "orange" : "teal";
+  const ctaGradient =
+    mode === "batteur"
+      ? "bg-gradient-to-r from-[#D35400] to-[#F39C12]"
+      : "bg-gradient-to-r from-[#1D9E75] to-[#1ABC9C]";
 
-        {/* Success banners */}
-        {isVerified && ambassadorNameParam && (
-          <div className="mb-4 p-4 rounded-xl bg-gradient-to-r from-purple-500/20 to-orange-500/20 border border-purple-500/30 text-center animate-slide-up" style={{ opacity: 0 }}>
-            <p className="font-bold text-lg">2 000 FCFA offerts !</p>
-            <p className="text-sm text-white/60 mt-1">
-              Vous avez été référé par <strong className="text-orange-400">{ambassadorNameParam}</strong>
-            </p>
-          </div>
-        )}
-        {isVerified && !ambassadorNameParam && hasBonus && (
-          <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center text-emerald-400 text-sm animate-slide-up" style={{ opacity: 0 }}>
-            Compte créé avec succès ! Bonus de bienvenue crédité.
-          </div>
-        )}
-        {isVerified && !ambassadorNameParam && !hasBonus && (
-          <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center text-emerald-400 text-sm animate-slide-up" style={{ opacity: 0 }}>
-            Compte créé avec succès ! Connectez-vous.
-          </div>
-        )}
-
-        {/* Mode toggle */}
-        <div className="flex mb-8 glass-card p-1">
-          <button
-            onClick={() => { setMode("echo"); setError(""); }}
-            className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${
-              mode === "echo" ? "bg-gradient-primary text-white shadow-lg" : "text-white/40"
-            }`}
-          >
-            {t("auth.echo")}
-          </button>
-          <button
-            onClick={() => { setMode("batteur"); setError(""); }}
-            className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${
-              mode === "batteur" ? "bg-gradient-secondary text-white shadow-lg" : "text-white/40"
-            }`}
-          >
-            {t("auth.batteur")}
-          </button>
-        </div>
-
-        {/* ECHO LOGIN */}
-        {mode === "echo" && (
-          <>
-            <div className="glass-card p-8 animate-slide-up" style={{ opacity: 0 }}>
-              <h1 className="text-2xl font-bold mb-2">{t("auth.echoLogin")}</h1>
-              <p className="text-xs text-white/30 mb-6">
-                {t("auth.echoLoginDesc")}
-              </p>
-
-              {error && (
-                <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                  {error}
-                </div>
-              )}
-
-              <GoogleButton role="echo" label="Se connecter avec Google" className="mb-4" />
-
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex-1 h-px bg-white/10" />
-                <span className="text-xs text-white/30">ou</span>
-                <div className="flex-1 h-px bg-white/10" />
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-white/40 mb-2">{t("common.email")}</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder={t("auth.emailPlaceholder")}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
-                  />
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs font-semibold text-white/40">{t("common.password")}</label>
-                    <Link href="/forgot-password" className="text-xs text-primary hover:underline">
-                      {t("auth.forgotPassword")}
-                    </Link>
-                  </div>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={t("auth.passwordPlaceholder")}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
-                  />
-                </div>
-                <button
-                  onClick={handleLogin}
-                  disabled={loading}
-                  className="w-full py-3 rounded-btn font-bold text-white disabled:opacity-50 transition-all hover:opacity-90 hover:-translate-y-0.5 hover:shadow-lg bg-gradient-primary"
-                >
-                  {loading ? t("auth.loginLoading") : t("auth.loginButton")}
-                </button>
-              </div>
-            </div>
-
-            <p className="text-center text-sm text-white/30 mt-6">
-              {t("auth.noAccount")}{" "}
-              <Link href="/register" className="text-primary font-semibold hover:underline">
-                {t("auth.becomeEcho")}
-              </Link>
-            </p>
-          </>
-        )}
-
-        {/* BATTEUR LOGIN */}
-        {mode === "batteur" && (
-          <>
-            <div className="glass-card p-8 animate-slide-up" style={{ opacity: 0 }}>
-              <h1 className="text-2xl font-bold mb-2">{t("auth.batteurLogin")}</h1>
-              <p className="text-xs text-white/30 mb-6">
-                {t("auth.batteurLoginDesc")}
-              </p>
-
-              {error && (
-                <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                  {error}
-                </div>
-              )}
-
-              <GoogleButton role="batteur" label="Se connecter avec Google" className="mb-4" />
-
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex-1 h-px bg-white/10" />
-                <span className="text-xs text-white/30">ou</span>
-                <div className="flex-1 h-px bg-white/10" />
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-white/40 mb-2">{t("common.email")}</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="contact@marque.sn"
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-secondary transition"
-                  />
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs font-semibold text-white/40">{t("common.password")}</label>
-                    <Link href="/forgot-password" className="text-xs text-primary hover:underline">
-                      {t("auth.forgotPassword")}
-                    </Link>
-                  </div>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={t("auth.passwordPlaceholder")}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-secondary transition"
-                  />
-                </div>
-                <button
-                  onClick={handleLogin}
-                  disabled={loading}
-                  className="w-full py-3 rounded-btn font-bold text-white disabled:opacity-50 transition-all hover:opacity-90 hover:-translate-y-0.5 hover:shadow-lg bg-gradient-secondary"
-                >
-                  {loading ? t("auth.loginLoading") : t("auth.loginButton")}
-                </button>
-              </div>
-            </div>
-
-            <p className="text-center text-sm text-white/30 mt-6">
-              Pas encore de compte?{" "}
-              <Link href="/signup/brand" className="text-secondary font-semibold hover:underline">
-                Créer un compte marque
-              </Link>
-            </p>
-          </>
-        )}
-
-        <p className="text-center mt-4">
-          <Link href="/" className="text-xs text-white/30 hover:text-white/50 transition">
-            {t("auth.backToHome")}
-          </Link>
+  const panel = (
+    <div className="space-y-10 text-center">
+      <div>
+        <h2 className="text-3xl font-bold font-syne tracking-tight text-white mb-3">
+          Le bouche-à-oreille,
+          <br />
+          <span className="gradient-text">digitalisé.</span>
+        </h2>
+        <p className="text-sm text-white/40 font-dm leading-relaxed max-w-xs mx-auto">
+          Tamtam connecte les marques aux voix qui comptent. Chaque partage crée de la valeur.
         </p>
       </div>
+
+      <div className="space-y-4">
+        <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5">
+          <p className="text-sm text-white/60 italic font-dm leading-relaxed">
+            &ldquo;J&apos;ai gagné 45 000 FCFA en un mois juste en partageant des liens sur WhatsApp.&rdquo;
+          </p>
+          <p className="text-xs text-white/30 mt-3 font-dm">Awa D. &middot; Dakar</p>
+        </div>
+        <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5">
+          <p className="text-sm text-white/60 italic font-dm leading-relaxed">
+            &ldquo;Notre campagne a touché 12 000 personnes en 48h. Impossible avec la pub classique.&rdquo;
+          </p>
+          <p className="text-xs text-white/30 mt-3 font-dm">Moussa K. &middot; Boutique MK</p>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-center gap-8 text-center">
+        <div>
+          <p className="text-2xl font-bold font-syne text-white">2 500+</p>
+          <p className="text-xs text-white/30 font-dm">Échos actifs</p>
+        </div>
+        <div className="w-px h-8 bg-white/10" />
+        <div>
+          <p className="text-2xl font-bold font-syne text-white">500+</p>
+          <p className="text-xs text-white/30 font-dm">Campagnes</p>
+        </div>
+        <div className="w-px h-8 bg-white/10" />
+        <div>
+          <p className="text-2xl font-bold font-syne text-white">75%</p>
+          <p className="text-xs text-white/30 font-dm">Reversé</p>
+        </div>
+      </div>
     </div>
+  );
+
+  return (
+    <AuthLayout panel={panel} accentColor={accentColor}>
+      {/* Success banners */}
+      {isVerified && ambassadorNameParam && (
+        <div className="mb-5 p-4 rounded-xl bg-gradient-to-r from-[#6C3483]/20 to-[#D35400]/20 border border-[#6C3483]/30 text-center">
+          <p className="font-bold text-lg text-white">2 000 FCFA offerts !</p>
+          <p className="text-sm text-white/50 mt-1">
+            Vous avez été référé par <strong className="text-[#D35400]">{ambassadorNameParam}</strong>
+          </p>
+        </div>
+      )}
+      {isVerified && !ambassadorNameParam && hasBonus && (
+        <div className="mb-5 p-3 rounded-xl bg-[#1D9E75]/10 border border-[#1D9E75]/20 text-center text-[#1ABC9C] text-sm">
+          Compte créé avec succès ! Bonus de bienvenue crédité.
+        </div>
+      )}
+      {isVerified && !ambassadorNameParam && !hasBonus && (
+        <div className="mb-5 p-3 rounded-xl bg-[#1D9E75]/10 border border-[#1D9E75]/20 text-center text-[#1ABC9C] text-sm">
+          Compte créé avec succès ! Connectez-vous.
+        </div>
+      )}
+
+      {/* Mode toggle */}
+      <div className="flex mb-8 bg-[#111128] rounded-xl p-1">
+        <button
+          onClick={() => { setMode("echo"); setError(""); }}
+          className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all font-dm ${
+            mode === "echo"
+              ? "bg-[#1D9E75] text-white shadow-lg shadow-[#1D9E75]/20"
+              : "text-white/35 hover:text-white/50"
+          }`}
+        >
+          {t("auth.echo")}
+        </button>
+        <button
+          onClick={() => { setMode("batteur"); setError(""); }}
+          className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all font-dm ${
+            mode === "batteur"
+              ? "bg-[#D35400] text-white shadow-lg shadow-[#D35400]/20"
+              : "text-white/35 hover:text-white/50"
+          }`}
+        >
+          {t("auth.batteur")}
+        </button>
+      </div>
+
+      <h1 className="text-2xl font-bold font-syne tracking-tight text-white mb-1">
+        {mode === "echo" ? t("auth.echoLogin") : t("auth.batteurLogin")}
+      </h1>
+      <p className="text-sm text-white/35 font-dm mb-7">
+        {mode === "echo" ? t("auth.echoLoginDesc") : t("auth.batteurLoginDesc")}
+      </p>
+
+      {error && (
+        <div className="mb-5 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-dm">
+          {error}
+        </div>
+      )}
+
+      <GoogleButton
+        role={mode}
+        label={t("auth.loginButton") + " avec Google"}
+        className="mb-5"
+      />
+
+      <div className="flex items-center gap-3 mb-5">
+        <div className="flex-1 h-px bg-white/[0.07]" />
+        <span className="text-xs text-white/25 font-dm">ou par email</span>
+        <div className="flex-1 h-px bg-white/[0.07]" />
+      </div>
+
+      <div className="space-y-4">
+        <FormField
+          label={t("common.email")}
+          type="email"
+          value={email}
+          onChange={setEmail}
+          placeholder={mode === "batteur" ? "contact@marque.sn" : t("auth.emailPlaceholder")}
+          accentColor={accentColor}
+        />
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-medium text-white/50 font-dm">{t("common.password")}</label>
+            <Link href="/forgot-password" className="text-xs text-white/35 hover:text-white/50 transition font-dm">
+              {t("auth.forgotPassword")}
+            </Link>
+          </div>
+          <div className="relative">
+            <input
+              type={showPw ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={t("auth.passwordPlaceholder")}
+              className={`w-full bg-[#141420] border border-white/[0.07] rounded-xl px-4 py-3 pr-11 text-sm text-white placeholder:text-white/20 font-dm transition-all outline-none ${
+                accentColor === "orange"
+                  ? "focus:border-[#D35400]/50 focus:ring-1 focus:ring-[#D35400]/20"
+                  : "focus:border-[#1D9E75]/50 focus:ring-1 focus:ring-[#1D9E75]/20"
+              }`}
+              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPw(!showPw)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/50 transition"
+              tabIndex={-1}
+            >
+              {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+
+        <button
+          onClick={handleLogin}
+          disabled={loading}
+          className={`w-full py-3.5 rounded-xl font-bold text-white text-sm disabled:opacity-50 transition-all hover:opacity-90 hover:-translate-y-0.5 hover:shadow-lg font-dm ${ctaGradient}`}
+        >
+          {loading ? t("auth.loginLoading") : t("auth.loginButton")}
+        </button>
+      </div>
+
+      <p className="text-center text-sm text-white/30 mt-8 font-dm">
+        {mode === "echo" ? (
+          <>
+            {t("auth.noAccount")}{" "}
+            <Link href="/register" className="text-[#1D9E75] font-semibold hover:underline">
+              {t("auth.becomeEcho")}
+            </Link>
+          </>
+        ) : (
+          <>
+            Pas encore de compte?{" "}
+            <Link href="/signup/brand" className="text-[#D35400] font-semibold hover:underline">
+              Créer un compte marque
+            </Link>
+          </>
+        )}
+      </p>
+    </AuthLayout>
   );
 }

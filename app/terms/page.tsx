@@ -1,144 +1,179 @@
-import { Metadata } from "next";
-import Link from "next/link";
-import Image from "next/image";
-import Footer from "@/components/Footer";
-import SoundWave from "@/components/ui/SoundWave";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Conditions d'utilisation",
-};
+import LegalLayout from "@/components/legal/LegalLayout";
+
+const toc = [
+  { id: "acceptation", label: "1. Acceptation" },
+  { id: "description", label: "2. Description du service" },
+  { id: "inscription", label: "3. Inscription" },
+  { id: "echos", label: "4. Règles Échos" },
+  { id: "batteurs", label: "5. Règles Batteurs" },
+  { id: "paiements", label: "6. Paiements" },
+  { id: "soldes", label: "7. Soldes et retraits" },
+  { id: "antifraud", label: "8. Anti-fraude" },
+  { id: "propriete", label: "9. Propriété intellectuelle" },
+  { id: "responsabilite", label: "10. Responsabilité" },
+  { id: "modification", label: "11. Modifications" },
+  { id: "droit", label: "12. Droit applicable" },
+  { id: "contact", label: "13. Contact" },
+];
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-background">
-      <header className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 max-w-7xl mx-auto">
-        <Link href="/" className="flex items-center gap-2 sm:gap-3">
-          <Image src="/brand/tamtam-horizontal-orange.png" alt="Tamtam" width={120} height={32} priority className="h-7 w-auto" />
-          <SoundWave bars={4} className="h-4 sm:h-5 opacity-60" />
-        </Link>
-        <Link href="/login" className="text-xs sm:text-sm font-semibold text-white/60 hover:text-white transition">
-          Connexion
-        </Link>
-      </header>
+    <LegalLayout title="Conditions générales d'utilisation" lastUpdated="mai 2026" toc={toc}>
+      <section id="acceptation">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">1. Acceptation des conditions</h2>
+        <p>
+          En utilisant Tamtam (accessible via tamma.me), vous acceptez les présentes conditions générales
+          d&apos;utilisation (CGU). Si vous n&apos;acceptez pas ces conditions, veuillez ne pas utiliser la plateforme.
+          L&apos;utilisation continue de Tamtam après toute modification des CGU vaut acceptation des nouvelles conditions.
+        </p>
+      </section>
 
-      <main className="px-4 sm:px-6 py-10 sm:py-16 max-w-3xl mx-auto">
-        <h1 className="text-3xl sm:text-4xl font-bold mb-8">Conditions d&apos;utilisation</h1>
-        <p className="text-sm text-white/30 mb-8">Dernière mise à jour : mars 2026</p>
+      <section id="description">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">2. Description du service</h2>
+        <p>
+          Tamtam est une plateforme de micro-influence qui met en relation des annonceurs
+          (&laquo; Batteurs &raquo;) et des partageurs (&laquo; Échos &raquo;). Les Batteurs créent des campagnes
+          publicitaires et les Échos partagent les liens sur WhatsApp et autres canaux pour générer
+          du trafic qualifié. La rémunération est basée sur les clics validés (CPC — coût par clic).
+        </p>
+      </section>
 
-        <div className="prose-custom space-y-8 text-sm text-white/50 leading-relaxed">
-          <section>
-            <h2 className="text-lg font-bold text-white/80 mb-3">1. Acceptation des conditions</h2>
-            <p>
-              En utilisant Tamtam (tamma.me), vous acceptez les présentes conditions d&apos;utilisation.
-              Si vous n&apos;acceptez pas ces conditions, veuillez ne pas utiliser la plateforme.
-            </p>
-          </section>
+      <section id="inscription">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">3. Inscription et compte</h2>
+        <ul className="list-disc pl-5 space-y-2">
+          <li>Vous devez avoir au moins 18 ans pour utiliser Tamtam.</li>
+          <li>Les informations fournies lors de l&apos;inscription doivent être exactes et à jour.</li>
+          <li>Vous êtes responsable de la sécurité de votre mot de passe et de votre compte.</li>
+          <li>Un même numéro de téléphone peut être associé à un compte Écho et un compte Batteur.</li>
+          <li>Tamtam se réserve le droit de suspendre ou supprimer tout compte en cas de violation des présentes CGU.</li>
+        </ul>
+      </section>
 
-          <section>
-            <h2 className="text-lg font-bold text-white/80 mb-3">2. Description du service</h2>
-            <p>
-              Tamtam est une plateforme de micro-influence qui met en relation des annonceurs
-              (« Batteurs ») et des partageurs (« Échos »). Les Batteurs créent des campagnes
-              publicitaires et les Échos partagent les liens sur WhatsApp pour gagner de l&apos;argent
-              par clic validé.
-            </p>
-          </section>
+      <section id="echos">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">4. Règles pour les Échos</h2>
+        <ul className="list-disc pl-5 space-y-2">
+          <li>Les clics doivent provenir de personnes réelles et uniques.</li>
+          <li>Toute forme de fraude (clics artificiels, bots, auto-clics, fermes à clics) est strictement interdite.</li>
+          <li>Les liens doivent être partagés sur WhatsApp ou d&apos;autres canaux de communication légitimes.</li>
+          <li>Le spam, l&apos;envoi en masse non sollicité et le partage dans des groupes non pertinents sont interdits.</li>
+          <li>En cas de fraude avérée, le compte sera suspendu et les gains confisqués.</li>
+        </ul>
+      </section>
 
-          <section>
-            <h2 className="text-lg font-bold text-white/80 mb-3">3. Inscription et compte</h2>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>Vous devez avoir au moins 18 ans pour utiliser Tamtam</li>
-              <li>Les informations fournies lors de l&apos;inscription doivent être exactes</li>
-              <li>Vous êtes responsable de la sécurité de votre mot de passe</li>
-              <li>Un même numéro de téléphone peut être associé à un compte Écho et un compte Batteur</li>
-            </ul>
-          </section>
+      <section id="batteurs">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">5. Règles pour les Batteurs</h2>
+        <ul className="list-disc pl-5 space-y-2">
+          <li>Les campagnes doivent respecter la législation sénégalaise en vigueur.</li>
+          <li>Le contenu publicitaire ne doit pas être trompeur, offensant, discriminatoire ou illégal.</li>
+          <li>Le budget de campagne est débité lors de la création. En cas d&apos;annulation, le solde non consommé est restitué.</li>
+          <li>Tamtam se réserve le droit de rejeter, suspendre ou supprimer toute campagne sans préavis.</li>
+          <li>Les Batteurs sont responsables du contenu de leurs campagnes et des pages de destination associées.</li>
+        </ul>
+      </section>
 
-          <section>
-            <h2 className="text-lg font-bold text-white/80 mb-3">4. Règles pour les Échos</h2>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>Les clics doivent provenir de personnes réelles et uniques</li>
-              <li>Toute forme de fraude (clics artificiels, bots, auto-clics) est strictement interdite</li>
-              <li>Les liens doivent être partagés sur WhatsApp ou d&apos;autres canaux légitimes</li>
-              <li>Le montant minimum de retrait est de 500 FCFA</li>
-              <li>Les retraits sont traités via Wave ou Orange Money</li>
-            </ul>
-          </section>
+      <section id="paiements">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">6. Paiements et commissions</h2>
+        <ul className="list-disc pl-5 space-y-2">
+          <li>
+            <strong className="text-[#0A0A1A]/70">Répartition CPC :</strong> Tamtam prélève une commission de 25% sur chaque clic validé.
+            Les Échos reçoivent 75% du coût par clic (CPC) défini par le Batteur.
+            Cette répartition 75/25 est fixe et non négociable.
+          </li>
+          <li>Les rechargements Batteur se font via Wave ou Orange Money.</li>
+          <li>Tous les montants sont exprimés en FCFA (Franc CFA — XOF).</li>
+          <li>Les frais de transaction mobile money sont à la charge de l&apos;utilisateur.</li>
+        </ul>
+      </section>
 
-          <section>
-            <h2 className="text-lg font-bold text-white/80 mb-3">5. Règles pour les Batteurs</h2>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>Les campagnes doivent respecter la législation sénégalaise</li>
-              <li>Le contenu publicitaire ne doit pas être trompeur, offensant ou illégal</li>
-              <li>Le budget de campagne est débité lors de la création et remboursé (hors dépenses) en cas d&apos;annulation</li>
-              <li>Tamtam se réserve le droit de rejeter ou suspendre toute campagne</li>
-            </ul>
-          </section>
+      <section id="soldes">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">7. Soldes et retraits</h2>
+        <ul className="list-disc pl-5 space-y-2">
+          <li>
+            <strong className="text-[#0A0A1A]/70">Double solde :</strong> Les Échos disposent de deux soldes :
+            un solde disponible (retirable) et un solde en attente (en cours de validation).
+          </li>
+          <li>Le montant minimum de retrait est de 500 FCFA.</li>
+          <li>Les retraits sont traités via Wave ou Orange Money selon le moyen de paiement enregistré.</li>
+          <li>Les délais de traitement sont généralement instantanés via Wave, sous réserve de disponibilité du service.</li>
+          <li>Tamtam se réserve le droit de bloquer un retrait en cas de suspicion de fraude.</li>
+        </ul>
+      </section>
 
-          <section>
-            <h2 className="text-lg font-bold text-white/80 mb-3">6. Paiements et commissions</h2>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>Tamtam prélève une commission de 25% sur chaque clic validé</li>
-              <li>Les Échos reçoivent 75% du coût par clic (CPC) défini par le Batteur</li>
-              <li>Les rechargements se font via les méthodes de paiement disponibles (Wave, Orange Money)</li>
-              <li>Les montants sont exprimés en FCFA (Franc CFA)</li>
-            </ul>
-          </section>
+      <section id="antifraud">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">8. Anti-fraude</h2>
+        <p className="mb-3">
+          Tamtam utilise un système de détection de fraude avancé incluant l&apos;analyse des adresses IP,
+          des user-agents, des patterns de clics et du comportement utilisateur.
+        </p>
+        <ul className="list-disc pl-5 space-y-2">
+          <li>En cas de comportement suspect, le compte peut être signalé, suspendu ou définitivement banni.</li>
+          <li>Les gains issus de clics frauduleux ne seront pas versés et pourront être récupérés.</li>
+          <li>Les décisions de l&apos;équipe anti-fraude sont souveraines et non contestables.</li>
+        </ul>
+      </section>
 
-          <section>
-            <h2 className="text-lg font-bold text-white/80 mb-3">7. Anti-fraude</h2>
-            <p>
-              Tamtam utilise un système de détection de fraude avancé. En cas de comportement
-              suspect, votre compte peut être signalé, suspendu, ou définitivement banni.
-              Les fonds issus de clics frauduleux ne seront pas versés.
-            </p>
-          </section>
+      <section id="propriete">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">9. Propriété intellectuelle</h2>
+        <p>
+          Tout le contenu de la plateforme Tamtam (logo, design, code, textes) est la propriété
+          de Lupandu SARL. Les créatifs et contenus des campagnes restent la propriété de leurs
+          Batteurs respectifs. Toute reproduction non autorisée est interdite.
+        </p>
+      </section>
 
-          <section>
-            <h2 className="text-lg font-bold text-white/80 mb-3">8. Propriété intellectuelle</h2>
-            <p>
-              Tout le contenu de la plateforme Tamtam (logo, design, code) est la propriété
-              de Tamtam. Les créatifs des campagnes restent la propriété de leurs Batteurs respectifs.
-            </p>
-          </section>
+      <section id="responsabilite">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">10. Limitation de responsabilité</h2>
+        <p>
+          Tamtam (Lupandu SARL) ne peut être tenu responsable des pertes ou dommages résultant de
+          l&apos;utilisation de la plateforme, y compris les interruptions de service,
+          les erreurs techniques, les retards de paiement liés aux prestataires tiers (Wave, Orange Money),
+          ou les actes de fraude commis par des tiers.
+        </p>
+      </section>
 
-          <section>
-            <h2 className="text-lg font-bold text-white/80 mb-3">9. Limitation de responsabilité</h2>
-            <p>
-              Tamtam ne peut être tenu responsable des pertes ou dommages résultant de
-              l&apos;utilisation de la plateforme, y compris les interruptions de service,
-              les erreurs techniques ou les actes de fraude commis par des tiers.
-            </p>
-          </section>
+      <section id="modification">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">11. Modification des conditions</h2>
+        <p>
+          Lupandu SARL se réserve le droit de modifier ces conditions à tout moment.
+          Les utilisateurs seront informés des changements significatifs par email ou notification
+          dans l&apos;application. L&apos;utilisation continue de la plateforme après notification
+          vaut acceptation des nouvelles conditions.
+        </p>
+      </section>
 
-          <section>
-            <h2 className="text-lg font-bold text-white/80 mb-3">10. Modification des conditions</h2>
-            <p>
-              Tamtam se réserve le droit de modifier ces conditions à tout moment.
-              Les utilisateurs seront informés des changements significatifs.
-              L&apos;utilisation continue de la plateforme vaut acceptation des nouvelles conditions.
-            </p>
-          </section>
+      <section id="droit">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">12. Droit applicable</h2>
+        <p>
+          Les présentes conditions sont régies par le droit sénégalais. Tout litige relatif à
+          l&apos;interprétation ou à l&apos;exécution des présentes sera soumis aux tribunaux compétents
+          de Dakar, Sénégal. Les parties s&apos;engagent à tenter un règlement amiable avant toute
+          action judiciaire.
+        </p>
+      </section>
 
-          <section>
-            <h2 className="text-lg font-bold text-white/80 mb-3">11. Droit applicable</h2>
-            <p>
-              Les présentes conditions sont régies par le droit sénégalais. Tout litige sera
-              soumis aux tribunaux compétents de Dakar, Sénégal.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-bold text-white/80 mb-3">12. Contact</h2>
-            <p>
-              Pour toute question : <a href="mailto:contact@tamma.me" className="text-primary hover:underline">contact@tamma.me</a> ou{" "}
-              <a href="https://wa.me/221762799393" target="_blank" rel="noopener noreferrer" className="text-green-400 hover:underline">WhatsApp +221 76 279 93 93</a>
-            </p>
-          </section>
-        </div>
-      </main>
-
-      <Footer />
-    </div>
+      <section id="contact">
+        <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">13. Contact</h2>
+        <p>
+          Pour toute question relative aux présentes CGU :{" "}
+          <a href="mailto:contact@tamma.me" className="text-[#D35400] hover:underline font-semibold">
+            contact@tamma.me
+          </a>{" "}
+          ou{" "}
+          <a
+            href="https://wa.me/221762799393"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#1D9E75] hover:underline font-semibold"
+          >
+            WhatsApp +221 76 279 93 93
+          </a>
+        </p>
+        <p className="mt-4 text-xs text-black/30">
+          Lupandu SARL &middot; NINEA: [en cours] &middot; RC: [en cours] &middot; Siège: Dakar, Sénégal
+        </p>
+      </section>
+    </LegalLayout>
   );
 }
