@@ -118,7 +118,7 @@ export default function TermsPage() {
         <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">9. Propriété intellectuelle</h2>
         <p>
           Tout le contenu de la plateforme Tamtam (logo, design, code, textes) est la propriété
-          de Lupandu SARL. Les créatifs et contenus des campagnes restent la propriété de leurs
+          de Pandorus. Les créatifs et contenus des campagnes restent la propriété de leurs
           Batteurs respectifs. Toute reproduction non autorisée est interdite.
         </p>
       </section>
@@ -126,7 +126,7 @@ export default function TermsPage() {
       <section id="responsabilite">
         <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">10. Limitation de responsabilité</h2>
         <p>
-          Tamtam (Lupandu SARL) ne peut être tenu responsable des pertes ou dommages résultant de
+          Tamtam (Pandorus) ne peut être tenu responsable des pertes ou dommages résultant de
           l&apos;utilisation de la plateforme, y compris les interruptions de service,
           les erreurs techniques, les retards de paiement liés aux prestataires tiers (Wave, Orange Money),
           ou les actes de fraude commis par des tiers.
@@ -136,7 +136,7 @@ export default function TermsPage() {
       <section id="modification">
         <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">11. Modification des conditions</h2>
         <p>
-          Lupandu SARL se réserve le droit de modifier ces conditions à tout moment.
+          Pandorus se réserve le droit de modifier ces conditions à tout moment.
           Les utilisateurs seront informés des changements significatifs par email ou notification
           dans l&apos;application. L&apos;utilisation continue de la plateforme après notification
           vaut acceptation des nouvelles conditions.
@@ -171,7 +171,7 @@ export default function TermsPage() {
           </a>
         </p>
         <p className="mt-4 text-xs text-black/30">
-          Lupandu SARL &middot; NINEA: [en cours] &middot; RC: [en cours] &middot; Siège: Dakar, Sénégal
+          Pandorus &middot; NINEA: [en cours] &middot; RC: [en cours] &middot; Siège: Dakar, Sénégal
         </p>
       </section>
     </LegalLayout>

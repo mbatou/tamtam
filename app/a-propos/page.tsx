@@ -91,17 +91,30 @@ export default function AboutPage() {
       {/* Team */}
       <section className="px-4 sm:px-6 py-16 max-w-4xl mx-auto">
         <h2 className="text-2xl font-bold font-syne text-white mb-8 text-center">L&apos;équipe</h2>
-        <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-8 text-center max-w-lg mx-auto">
+        <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-8 text-center max-w-[480px] mx-auto">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#D35400] to-[#F39C12] flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl font-bold font-syne text-white">L</span>
+            <span className="text-2xl font-bold font-syne text-white">P</span>
           </div>
-          <h3 className="text-lg font-bold font-syne text-white">Lupandu SARL</h3>
-          <p className="text-sm text-white/35 font-dm mt-1">Dakar, Sénégal</p>
-          <p className="text-sm text-white/45 font-dm mt-4 leading-relaxed max-w-sm mx-auto">
-            Une équipe passionnée par la tech et l&apos;impact social, basée à Dakar.
-            Nous construisons des outils qui créent de la valeur pour les entreprises
-            et les communautés sénégalaises.
+          <p className="text-[15px] font-semibold text-white mb-2">Pandorus</p>
+          <p className="text-[13px] text-white/45">Dakar, Sénégal &middot; 2024</p>
+          <p className="text-[13px] text-white/35 mt-3 leading-relaxed">
+            Une startup tech africaine qui construit l&apos;infrastructure publicitaire
+            de demain pour l&apos;Afrique de l&apos;Ouest.
           </p>
+          <div className="mt-4 pt-4 border-t border-white/[0.07]">
+            <p className="text-[11px] text-white/30 leading-relaxed">
+              Tamtam est un produit{" "}
+              <a
+                href="https://lupandu.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#D35400] hover:underline underline-offset-2"
+              >
+                Lupandu
+              </a>
+              {" "}&mdash; une structure dédiée à la construction de produits tech africains.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -142,7 +155,7 @@ export default function AboutPage() {
       <footer className="px-4 sm:px-6 py-8 border-t border-white/[0.06] max-w-7xl mx-auto">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-white/20 font-dm">
-            Lupandu SARL &middot; Dakar, Sénégal
+            Pandorus &middot; Dakar, Sénégal
           </p>
           <div className="flex items-center gap-6">
             <Link href="/terms" className="text-xs text-white/25 hover:text-white/40 transition font-dm">

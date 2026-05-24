@@ -199,7 +199,7 @@ export function drawFooter(
   doc.setFontSize(8);
   doc.setTextColor(...COLORS.textSecondary);
   doc.setFont("helvetica", "bold");
-  doc.text("Tamtam — Lupandu SARL", 15, y);
+  doc.text("Tamtam — Pandorus", 15, y);
   doc.setFont("helvetica", "normal");
   doc.text("Dakar, Sénégal", 15, y + 4);
   doc.text("tamma.me", 15, y + 8);

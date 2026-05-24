@@ -57,7 +57,7 @@ function generateInvitationEmail({ firstName, companyName, signupUrl }: { firstN
         <a href="mailto:support@tamma.me" style="color:#888888;text-decoration:none;">support@tamma.me</a> &middot;
         <a href="https://wa.me/221762799393" style="color:#25D366;text-decoration:none;">WhatsApp</a>
       </p>
-      <p style="color:#444444;font-size:11px;">Built by Lupandu</p>
+      <p style="color:#444444;font-size:11px;">Built by Pandorus</p>
     </div>
   </div>
 </body>

@@ -35,7 +35,7 @@ export default function AuthLayout({ children, panel, accentColor = "orange" }: 
         </Link>
         <div className="max-w-md w-full">{panel}</div>
         <p className="absolute bottom-8 text-xs text-white/20 font-dm">
-          Lupandu SARL &middot; tamma.me
+          Pandorus &middot; tamma.me
         </p>
       </div>
 

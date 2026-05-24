@@ -111,7 +111,7 @@ export default function LegalLayout({ title, lastUpdated, toc, children }: Legal
             {/* Footer */}
             <div className="mt-16 pt-8 border-t border-black/[0.06]">
               <p className="text-xs text-black/30 font-dm">
-                Lupandu SARL &middot; Dakar, Sénégal &middot;{" "}
+                Pandorus &middot; Dakar, Sénégal &middot;{" "}
                 <a href="mailto:contact@tamma.me" className="text-[#D35400] hover:underline">
                   contact@tamma.me
                 </a>

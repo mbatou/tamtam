@@ -24,7 +24,7 @@ export default function PrivacyPage() {
       <section id="introduction">
         <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">1. Introduction</h2>
         <p>
-          Tamtam (accessible via tamma.me) est une plateforme de micro-influence opérée par Lupandu SARL,
+          Tamtam (accessible via tamma.me) est une plateforme de micro-influence opérée par Pandorus,
           société de droit sénégalais basée à Dakar. Nous nous engageons à protéger la vie privée
           de nos utilisateurs conformément à la loi n° 2008-12 du 25 janvier 2008 sur la protection
           des données à caractère personnel au Sénégal et aux réglementations de la Commission des
@@ -35,7 +35,7 @@ export default function PrivacyPage() {
       <section id="responsable">
         <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">2. Responsable du traitement</h2>
         <ul className="list-disc pl-5 space-y-2">
-          <li><strong className="text-[#0A0A1A]/70">Entité :</strong> Lupandu SARL</li>
+          <li><strong className="text-[#0A0A1A]/70">Entité :</strong> Pandorus</li>
           <li><strong className="text-[#0A0A1A]/70">Siège :</strong> Dakar, Sénégal</li>
           <li><strong className="text-[#0A0A1A]/70">Email :</strong> <a href="mailto:contact@tamma.me" className="text-[#D35400] hover:underline">contact@tamma.me</a></li>
           <li><strong className="text-[#0A0A1A]/70">Site :</strong> tamma.me</li>
@@ -183,7 +183,7 @@ export default function PrivacyPage() {
       <section id="modifications">
         <h2 className="text-lg font-bold text-[#0A0A1A] mb-3 font-syne">12. Modifications de cette politique</h2>
         <p>
-          Lupandu SARL se réserve le droit de modifier cette politique à tout moment.
+          Pandorus se réserve le droit de modifier cette politique à tout moment.
           Les utilisateurs seront informés des changements significatifs par email.
           La date de dernière mise à jour est indiquée en haut de cette page.
         </p>
@@ -207,7 +207,7 @@ export default function PrivacyPage() {
           </a>
         </p>
         <p className="mt-4 text-xs text-black/30">
-          Lupandu SARL &middot; Dakar, Sénégal &middot; Loi applicable : loi n° 2008-12 du 25 janvier 2008
+          Pandorus &middot; Dakar, Sénégal &middot; Loi applicable : loi n° 2008-12 du 25 janvier 2008
         </p>
       </section>
     </LegalLayout>
