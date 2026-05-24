@@ -2,16 +2,27 @@
 
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { formatFCFA, formatNumber } from "@/lib/utils";
 import { getBrandDisplayName } from "@/lib/display-utils";
-import { useTranslation } from "@/lib/i18n";
-import StatCard from "@/components/StatCard";
-import Badge from "@/components/ui/Badge";
-import Modal from "@/components/ui/Modal";
 import Pagination, { paginate } from "@/components/ui/Pagination";
 import { useToast } from "@/components/ui/Toast";
 import DateRangeSelector, { type DateRange } from "@/components/ui/DateRangeSelector";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import AdminStatCard from "@/components/superadmin/AdminStatCard";
+import AdminBadge from "@/components/superadmin/AdminBadge";
+import AdminDrawer from "@/components/superadmin/AdminDrawer";
+import {
+  Wallet,
+  TrendingUp,
+  ArrowDownToLine,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Scale,
+  ExternalLink,
+} from "lucide-react";
 
 interface StuckCampaign {
   id: string;
@@ -75,12 +86,19 @@ interface FinanceData {
 
 type FinanceTab = "payout_requests" | "payout_history" | "payments" | "pending_recharges";
 
+const tooltipStyle = {
+  background: "#111128",
+  border: "0.5px solid rgba(255,255,255,0.1)",
+  borderRadius: 12,
+  fontSize: 12,
+  color: "#fff",
+};
+
 export default function FinancePageWrapper() {
   return <Suspense><FinancePageContent /></Suspense>;
 }
 
 function FinancePageContent() {
-  const { t } = useTranslation();
   const [data, setData] = useState<FinanceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<FinanceTab>("payout_requests");
@@ -129,7 +147,7 @@ function FinancePageContent() {
         setStuckData(stuckJson);
       }
     } catch {
-      showToast(t("common.networkError"), "error");
+      showToast("Erreur de chargement", "error");
     }
     setLoading(false);
   }
@@ -172,46 +190,46 @@ function FinancePageContent() {
         body: JSON.stringify({ payout_id: confirmAction.payout.id, action: confirmAction.action, reason: confirmAction.reason }),
       });
       if (res.ok) {
-        showToast(confirmAction.action === "approve" ? t("common.sent") : t("common.rejected"), confirmAction.action === "approve" ? "success" : "info");
+        showToast(confirmAction.action === "approve" ? "Paiement envoyé" : "Demande rejetée", confirmAction.action === "approve" ? "success" : "info");
         setSelectedPayout(null);
         setRejectReason("");
         setConfirmAction(null);
         loadData();
       } else {
         const err = await res.json();
-        showToast(err.error || t("common.error"), "error");
+        showToast(err.error || "Erreur", "error");
       }
     } catch {
-      showToast(t("common.networkError"), "error");
+      showToast("Erreur réseau", "error");
     }
     setProcessing(false);
   }
 
-  async function handleRechargeAction(paymentId: string, action: "validate" | "reject", reason?: string) {
+  async function handleRechargeAction(paymentId: string, action: "validate" | "reject") {
     try {
       const res = await fetch("/api/superadmin/finance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payment_id: paymentId, action, reason }),
+        body: JSON.stringify({ payment_id: paymentId, action }),
       });
       if (res.ok) {
-        showToast(action === "validate" ? t("common.valid") : t("common.rejected"), action === "validate" ? "success" : "info");
+        showToast(action === "validate" ? "Recharge validée" : "Recharge rejetée", action === "validate" ? "success" : "info");
         loadData();
       } else {
         const err = await res.json();
-        showToast(err.error || t("common.error"), "error");
+        showToast(err.error || "Erreur", "error");
       }
     } catch {
-      showToast(t("common.networkError"), "error");
+      showToast("Erreur réseau", "error");
     }
   }
 
   if (loading || !data) {
     return (
       <div className="p-6 space-y-4">
-        <div className="skeleton h-8 w-64 rounded-xl" />
+        <div className="h-8 w-64 rounded-xl bg-white/5 animate-pulse" />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => <div key={i} className="skeleton h-24 rounded-xl" />)}
+          {[1, 2, 3, 4].map((i) => <div key={i} className="h-24 rounded-xl bg-white/5 animate-pulse" />)}
         </div>
       </div>
     );
@@ -228,168 +246,194 @@ function FinancePageContent() {
   const remainingPct = Math.max(0, 100 - platformPct - paidPct);
 
   return (
-    <div className="p-6 max-w-7xl">
+    <div className="p-6 max-w-[1400px]">
       {ToastComponent}
 
+      {/* Header with date range */}
       <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
-        <h1 className="text-2xl font-bold">{t("superadmin.finance.title")}</h1>
-        <DateRangeSelector value={dateRange.key} onChange={setDateRange} />
+        <div className="flex items-center gap-3">
+          <DateRangeSelector value={dateRange.key} onChange={setDateRange} />
+        </div>
+        <Link
+          href="/superadmin/wave-reconciliation"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl font-dm text-sm font-medium transition"
+          style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}
+        >
+          <Scale size={14} />
+          Réconciliation
+          <ExternalLink size={12} />
+        </Link>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label={t("superadmin.dashboard.grossRevenue")} value={formatFCFA(data.grossRevenue)} accent="orange" />
-        <StatCard label={t("superadmin.finance.commissionDetail", { percent: String(data.feePercent), clicks: formatNumber(data.validClicks) })} value={formatFCFA(data.platformCut)} accent="teal" />
-        <StatCard label={t("superadmin.dashboard.paidToEchos")} value={formatFCFA(data.sentTotal)} accent="purple" />
-        <StatCard label={t("common.pending")} value={formatFCFA(data.pendingTotal)} accent="red" />
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <AdminStatCard
+          label="Revenu brut"
+          value={formatFCFA(data.grossRevenue)}
+          icon={<Wallet size={16} />}
+          sub={`${formatNumber(data.validClicks)} clics valides`}
+        />
+        <AdminStatCard
+          label="Commission plateforme"
+          value={formatFCFA(data.platformCut)}
+          icon={<TrendingUp size={16} />}
+          accent="teal"
+          sub={`${data.feePercent}% de commission`}
+        />
+        <AdminStatCard
+          label="Versé aux Échos"
+          value={formatFCFA(data.sentTotal)}
+          icon={<ArrowDownToLine size={16} />}
+          accent="white"
+        />
+        <AdminStatCard
+          label="En attente"
+          value={formatFCFA(data.pendingTotal)}
+          icon={<Clock size={16} />}
+          accent={data.pendingTotal > 0 ? "orange" : "white"}
+        />
       </div>
 
       {/* Stuck Earnings Alert */}
       {stuckData && stuckData.stuck > 0 && !fixResult && (
-        <div className="mb-8 rounded-2xl border border-red-500/30 bg-red-500/5 overflow-hidden">
-          <div className="p-6">
+        <div className="mb-6 rounded-xl overflow-hidden" style={{ background: "rgba(226,75,74,0.05)", border: "0.5px solid rgba(226,75,74,0.2)" }}>
+          <div className="p-5">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center text-2xl shrink-0">
-                  &#9888;&#65039;
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(226,75,74,0.1)" }}>
+                  <AlertTriangle size={18} style={{ color: "#F09595" }} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-red-400 text-lg">Gains échos bloqués</h3>
-                  <p className="text-sm text-white/50 mt-0.5">
-                    {stuckData.stuck} écho(s) n&apos;ont pas reçu leurs gains après la fin de campagne(s)
+                  <h3 className="font-syne font-bold" style={{ color: "#F09595" }}>Gains échos bloqués</h3>
+                  <p className="font-dm text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
+                    {stuckData.stuck} écho(s) n&apos;ont pas reçu leurs gains
                   </p>
                 </div>
               </div>
               <div className="text-right shrink-0">
-                <div className="text-2xl font-black text-red-400">{formatFCFA(stuckData.total_fcfa)}</div>
-                <div className="text-xs text-white/30">à débloquer</div>
+                <div className="font-syne font-extrabold text-xl" style={{ color: "#F09595" }}>{formatFCFA(stuckData.total_fcfa)}</div>
+                <div className="font-dm text-[10px]" style={{ color: "rgba(255,255,255,0.25)" }}>à débloquer</div>
               </div>
             </div>
 
-            {/* Campaign breakdown */}
-            <div className="mt-4 space-y-2">
+            <div className="mt-4 space-y-1.5">
               {stuckData.campaigns.map((c) => (
-                <div key={c.id} className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-white/5">
+                <div key={c.id} className="flex items-center justify-between py-2.5 px-4 rounded-lg" style={{ background: "rgba(255,255,255,0.04)" }}>
                   <div className="flex items-center gap-3 min-w-0">
-                    <Badge status={c.status} />
-                    <span className="text-sm font-semibold truncate">{c.title}</span>
+                    <AdminBadge status={c.status === "active" ? "active" : c.status === "completed" ? "finished" : "pending"}>{c.status}</AdminBadge>
+                    <span className="font-dm text-sm font-semibold truncate text-white">{c.title}</span>
                   </div>
                   <div className="flex items-center gap-4 shrink-0">
-                    <span className="text-xs text-white/40">{c.echos} écho(s)</span>
-                    <span className="text-sm font-bold text-red-400">{formatFCFA(c.total_fcfa)}</span>
+                    <span className="font-dm text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{c.echos} écho(s)</span>
+                    <span className="font-syne font-bold text-sm" style={{ color: "#F09595" }}>{formatFCFA(c.total_fcfa)}</span>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="mt-5 flex items-center gap-3">
+            <div className="mt-4 flex items-center gap-3">
               <button
                 onClick={() => setShowFixConfirm(true)}
-                className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-sm hover:opacity-90 transition"
+                className="px-5 py-2.5 rounded-xl font-dm text-sm font-bold transition"
+                style={{ background: "rgba(29,158,117,0.15)", color: "#5DCAA5", border: "0.5px solid rgba(29,158,117,0.3)" }}
               >
                 Débloquer tous les gains
               </button>
-              <p className="text-xs text-white/30">
-                Transfère les gains en attente vers le solde disponible de chaque écho et les notifie par email/WhatsApp.
+              <p className="font-dm text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>
+                Transfère vers le solde disponible et notifie chaque écho.
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Fix Result Success */}
+      {/* Fix Result */}
       {fixResult && fixResult.fixed > 0 && (
-        <div className="mb-8 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-6">
+        <div className="mb-6 rounded-xl p-5" style={{ background: "rgba(29,158,117,0.05)", border: "0.5px solid rgba(29,158,117,0.2)" }}>
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-xl">&#10003;</div>
+            <CheckCircle2 size={18} style={{ color: "#5DCAA5" }} />
             <div>
-              <h3 className="font-bold text-emerald-400">Gains débloqués avec succès</h3>
-              <p className="text-sm text-white/50">{fixResult.fixed} écho(s) crédité(s) — {formatFCFA(fixResult.total_fcfa)} transférés</p>
+              <h3 className="font-syne font-bold" style={{ color: "#5DCAA5" }}>Gains débloqués</h3>
+              <p className="font-dm text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>{fixResult.fixed} écho(s) — {formatFCFA(fixResult.total_fcfa)}</p>
             </div>
           </div>
-          <div className="space-y-1.5 mt-3">
+          <div className="space-y-1.5">
             {fixResult.campaigns.map((c) => (
-              <div key={c.campaign_id} className="flex items-center justify-between text-sm py-1.5 px-3 rounded-lg bg-white/5">
-                <span className="text-white/60">{c.title}</span>
-                <span className="text-emerald-400 font-semibold">{c.echos_unlocked} écho(s) débloqué(s)</span>
+              <div key={c.campaign_id} className="flex items-center justify-between font-dm text-sm py-1.5 px-3 rounded-lg" style={{ background: "rgba(255,255,255,0.04)" }}>
+                <span style={{ color: "rgba(255,255,255,0.5)" }}>{c.title}</span>
+                <span className="font-semibold" style={{ color: "#5DCAA5" }}>{c.echos_unlocked} débloqué(s)</span>
               </div>
             ))}
           </div>
-          <button
-            onClick={() => setFixResult(null)}
-            className="mt-3 text-xs text-white/30 hover:text-white/50 transition"
-          >
+          <button onClick={() => setFixResult(null)} className="mt-3 font-dm text-xs transition" style={{ color: "rgba(255,255,255,0.25)" }}>
             Masquer
           </button>
         </div>
       )}
 
-      {/* Fix Confirmation Modal */}
-      <Modal
-        open={showFixConfirm}
-        onClose={() => setShowFixConfirm(false)}
-        title="Confirmer le déblocage des gains"
-      >
-        <div className="space-y-4">
-          <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
-            <p className="text-sm text-white/70 mb-3">
-              Cette action va transférer les gains bloqués vers le solde disponible de chaque écho concerné.
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-white">{stuckData?.stuck || 0}</div>
-                <div className="text-xs text-white/40">écho(s) à créditer</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-emerald-400">{formatFCFA(stuckData?.total_fcfa || 0)}</div>
-                <div className="text-xs text-white/40">FCFA à débloquer</div>
+      {/* Fix Confirmation Overlay */}
+      {showFixConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }}>
+          <div className="rounded-xl p-6 max-w-md w-full" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.1)" }}>
+            <h3 className="font-syne font-bold text-lg text-white mb-4">Confirmer le déblocage</h3>
+            <div className="rounded-xl p-4 mb-4" style={{ background: "rgba(29,158,117,0.05)", border: "0.5px solid rgba(29,158,117,0.15)" }}>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="text-center">
+                  <div className="font-syne font-bold text-2xl text-white">{stuckData?.stuck || 0}</div>
+                  <div className="font-dm text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>écho(s)</div>
+                </div>
+                <div className="text-center">
+                  <div className="font-syne font-bold text-2xl" style={{ color: "#5DCAA5" }}>{formatFCFA(stuckData?.total_fcfa || 0)}</div>
+                  <div className="font-dm text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>à débloquer</div>
+                </div>
               </div>
             </div>
-          </div>
-          <p className="text-xs text-white/40">
-            Chaque écho recevra une notification par email et WhatsApp pour l&apos;informer que ses gains sont disponibles au retrait.
-          </p>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowFixConfirm(false)}
-              className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 font-bold text-sm hover:bg-white/10 transition"
-            >
-              Annuler
-            </button>
-            <button
-              onClick={executeFixStuckEarnings}
-              disabled={fixingEarnings}
-              className="flex-1 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-sm hover:opacity-90 transition disabled:opacity-50"
-            >
-              {fixingEarnings ? "Déblocage en cours..." : "Confirmer le déblocage"}
-            </button>
+            <p className="font-dm text-xs mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>
+              Chaque écho sera notifié par email et WhatsApp.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowFixConfirm(false)}
+                className="flex-1 py-3 rounded-xl font-dm text-sm font-bold transition"
+                style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={executeFixStuckEarnings}
+                disabled={fixingEarnings}
+                className="flex-1 py-3 rounded-xl font-dm text-sm font-bold transition disabled:opacity-50"
+                style={{ background: "rgba(29,158,117,0.15)", border: "0.5px solid rgba(29,158,117,0.3)", color: "#5DCAA5" }}
+              >
+                {fixingEarnings ? "Déblocage..." : "Confirmer"}
+              </button>
+            </div>
           </div>
         </div>
-      </Modal>
+      )}
 
-      {/* Reconciliation Bar */}
-      <div className="glass-card p-6 mb-8">
-        <h3 className="text-sm font-bold mb-4">{t("superadmin.finance.revenueDistribution")}</h3>
-        <div className="flex h-6 rounded-full overflow-hidden mb-3">
-          <div className="bg-gradient-primary" style={{ width: `${platformPct}%` }} />
-          <div className="bg-accent" style={{ width: `${paidPct}%` }} />
-          <div className="bg-white/10" style={{ width: `${remainingPct}%` }} />
+      {/* Revenue Distribution Bar */}
+      <div className="rounded-xl p-5 mb-6" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.07)" }}>
+        <h3 className="font-dm text-sm font-semibold text-white/60 mb-4">Répartition du revenu</h3>
+        <div className="flex h-5 rounded-full overflow-hidden mb-3">
+          <div style={{ width: `${platformPct}%`, background: "#D35400" }} />
+          <div style={{ width: `${paidPct}%`, background: "#1D9E75" }} />
+          <div style={{ width: `${remainingPct}%`, background: "rgba(255,255,255,0.08)" }} />
         </div>
-        <div className="flex gap-4 text-xs">
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-gradient-primary" />
-            <span className="text-white/50">{t("superadmin.finance.platform")} ({Math.round(platformPct)}%)</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-accent" />
-            <span className="text-white/50">{t("superadmin.finance.paid")} ({Math.round(paidPct)}%)</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-white/10" />
-            <span className="text-white/50">{t("common.remaining")} ({Math.round(remainingPct)}%)</span>
-          </div>
+        <div className="flex gap-5 font-dm text-xs">
+          {[
+            { color: "#D35400", label: `Plateforme (${Math.round(platformPct)}%)` },
+            { color: "#1D9E75", label: `Versé (${Math.round(paidPct)}%)` },
+            { color: "rgba(255,255,255,0.15)", label: `Restant (${Math.round(remainingPct)}%)` },
+          ].map((item) => (
+            <div key={item.label} className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full" style={{ background: item.color }} />
+              <span style={{ color: "rgba(255,255,255,0.4)" }}>{item.label}</span>
+            </div>
+          ))}
         </div>
-        <div className="mt-3 text-xs text-white/30">
-          {t("superadmin.finance.echoShare")}: {formatFCFA(echoShare)} · {t("superadmin.finance.alreadyPaid")}: {formatFCFA(data.sentTotal)} · {t("common.pending")}: {formatFCFA(data.pendingTotal)}
+        <div className="mt-3 font-dm text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>
+          Part Échos : {formatFCFA(echoShare)} · Versé : {formatFCFA(data.sentTotal)} · En attente : {formatFCFA(data.pendingTotal)}
         </div>
       </div>
 
@@ -403,21 +447,21 @@ function FinancePageContent() {
         const netPosition = data.platformCut - proRatedCosts;
 
         return (
-          <div className="glass-card p-6 mb-8">
-            <h3 className="text-sm font-bold mb-4">{t("superadmin.finance.netPosition") || "Net Position"}</h3>
+          <div className="rounded-xl p-5 mb-6" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.07)" }}>
+            <h3 className="font-dm text-sm font-semibold text-white/60 mb-4">Position nette</h3>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <div className="text-xs text-white/40 mb-1">{t("superadmin.finance.commissionEarned") || "Commission Earned"}</div>
-                <div className="text-xl font-bold text-emerald-400">{formatFCFA(data.platformCut)}</div>
+                <div className="font-dm text-[10px] uppercase tracking-wider mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>Commission gagnée</div>
+                <div className="font-syne font-bold text-xl" style={{ color: "#5DCAA5" }}>{formatFCFA(data.platformCut)}</div>
               </div>
               <div>
-                <div className="text-xs text-white/40 mb-1">{t("superadmin.finance.fixedCosts") || "Estimated Fixed Costs"}</div>
-                <div className="text-xl font-bold text-red-400">{formatFCFA(proRatedCosts)}</div>
-                <div className="text-[10px] text-white/20">~{formatFCFA(MONTHLY_FIXED_COSTS)}/mo</div>
+                <div className="font-dm text-[10px] uppercase tracking-wider mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>Coûts fixes estimés</div>
+                <div className="font-syne font-bold text-xl" style={{ color: "#F09595" }}>{formatFCFA(proRatedCosts)}</div>
+                <div className="font-dm text-[10px]" style={{ color: "rgba(255,255,255,0.2)" }}>~{formatFCFA(MONTHLY_FIXED_COSTS)}/mois</div>
               </div>
               <div>
-                <div className="text-xs text-white/40 mb-1">{t("superadmin.finance.netPositionLabel") || "Net Position"}</div>
-                <div className={`text-xl font-bold ${netPosition >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                <div className="font-dm text-[10px] uppercase tracking-wider mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>Position nette</div>
+                <div className="font-syne font-bold text-xl" style={{ color: netPosition >= 0 ? "#5DCAA5" : "#F09595" }}>
                   {netPosition >= 0 ? "+" : ""}{formatFCFA(netPosition)}
                 </div>
               </div>
@@ -426,24 +470,24 @@ function FinancePageContent() {
         );
       })()}
 
-      {/* Daily Revenue Trend */}
+      {/* Daily Revenue Chart */}
       {data.dailyRevenue && data.dailyRevenue.length > 0 && (
-        <div className="glass-card p-6 mb-8">
-          <h3 className="text-sm font-bold mb-4">{t("superadmin.finance.dailyRevenue") || "Daily Revenue"}</h3>
+        <div className="rounded-xl p-5 mb-6" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.07)" }}>
+          <h3 className="font-dm text-sm font-semibold text-white/60 mb-4">Revenu quotidien</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={data.dailyRevenue}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
               <XAxis
                 dataKey="date"
-                tickFormatter={(v) => new Date(v).toLocaleDateString("en-US", { day: "numeric", month: "short" })}
+                tickFormatter={(v) => new Date(v).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
                 tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip
-                contentStyle={{ background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
-                labelFormatter={(v) => new Date(String(v)).toLocaleDateString("en-US", { day: "numeric", month: "long" })}
+                contentStyle={tooltipStyle}
+                labelFormatter={(v) => new Date(String(v)).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}
                 formatter={(value) => [formatFCFA(Number(value)), "Commission"]}
               />
               <Bar dataKey="revenue" name="Commission" fill="#D35400" radius={[4, 4, 0, 0]} />
@@ -453,97 +497,86 @@ function FinancePageContent() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 overflow-x-auto">
-        <button
-          onClick={() => setTab("payout_requests")}
-          className={`px-4 py-2 rounded-xl text-sm font-bold transition whitespace-nowrap flex items-center gap-2 ${
-            tab === "payout_requests" ? "bg-gradient-primary text-white" : "bg-white/5 text-white/40"
-          }`}
-        >
-          {t("superadmin.finance.payoutRequests")}
-          {pendingPayouts.length > 0 && (
-            <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-              {pendingPayouts.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setTab("payout_history")}
-          className={`px-4 py-2 rounded-xl text-sm font-bold transition whitespace-nowrap ${
-            tab === "payout_history" ? "bg-gradient-primary text-white" : "bg-white/5 text-white/40"
-          }`}
-        >
-          {t("superadmin.finance.payoutHistory")} ({completedPayouts.length})
-        </button>
-        <button
-          onClick={() => setTab("pending_recharges")}
-          className={`px-4 py-2 rounded-xl text-sm font-bold transition whitespace-nowrap flex items-center gap-2 ${
-            tab === "pending_recharges" ? "bg-gradient-primary text-white" : "bg-white/5 text-white/40"
-          }`}
-        >
-          {t("superadmin.finance.pendingRecharges")}
-          {pendingRecharges.length > 0 && (
-            <span className="bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-              {pendingRecharges.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setTab("payments")}
-          className={`px-4 py-2 rounded-xl text-sm font-bold transition whitespace-nowrap ${
-            tab === "payments" ? "bg-gradient-primary text-white" : "bg-white/5 text-white/40"
-          }`}
-        >
-          {t("superadmin.finance.payments")} ({processedRecharges.length})
-        </button>
+      <div className="flex gap-1 p-1 rounded-xl mb-6" style={{ background: "rgba(255,255,255,0.03)" }}>
+        {([
+          { key: "payout_requests" as FinanceTab, label: "Demandes de retrait", count: pendingPayouts.length, alert: pendingPayouts.length > 0 },
+          { key: "payout_history" as FinanceTab, label: "Historique retraits", count: completedPayouts.length },
+          { key: "pending_recharges" as FinanceTab, label: "Recharges en attente", count: pendingRecharges.length, alert: pendingRecharges.length > 0 },
+          { key: "payments" as FinanceTab, label: "Recharges traitées", count: processedRecharges.length },
+        ]).map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg font-dm text-xs font-medium transition-all whitespace-nowrap"
+            style={{
+              background: tab === t.key ? "rgba(211,84,0,0.12)" : "transparent",
+              color: tab === t.key ? "#D35400" : "rgba(255,255,255,0.4)",
+            }}
+          >
+            {t.label}
+            {t.alert && t.count > 0 && (
+              <span className="font-bold text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(226,75,74,0.15)", color: "#F09595" }}>
+                {t.count}
+              </span>
+            )}
+            {!t.alert && t.count > 0 && (
+              <span style={{ color: "rgba(255,255,255,0.25)" }}>{t.count}</span>
+            )}
+          </button>
+        ))}
       </div>
 
-      {/* Payout Requests Tab */}
+      {/* Payout Requests */}
       {tab === "payout_requests" && (
         <div>
           {pendingPayouts.length === 0 ? (
-            <div className="glass-card p-12 text-center">
-              <div className="text-4xl mb-3">&#10003;</div>
-              <h3 className="text-lg font-bold mb-1">{t("superadmin.finance.noPayoutRequests")}</h3>
-              <p className="text-sm text-white/40">{t("superadmin.finance.allPayoutsProcessed")}</p>
+            <div className="rounded-xl p-12 text-center" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.07)" }}>
+              <CheckCircle2 size={32} className="mx-auto mb-3" style={{ color: "rgba(29,158,117,0.5)" }} />
+              <h3 className="font-syne font-bold text-lg text-white mb-1">Aucune demande</h3>
+              <p className="font-dm text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>Toutes les demandes ont été traitées</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {pendingPayouts.map((payout) => (
                 <div
                   key={payout.id}
-                  className="glass-card p-4 flex items-center justify-between hover:bg-white/5 transition cursor-pointer"
+                  className="rounded-xl p-4 flex items-center justify-between cursor-pointer transition"
+                  style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.07)" }}
                   onClick={() => setSelectedPayout(payout)}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "#141420"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "#111128"; }}
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center text-sm font-bold text-white">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center font-dm text-sm font-bold text-white" style={{ background: "#D35400" }}>
                       {payout.users?.name?.charAt(0)?.toUpperCase() || "?"}
                     </div>
                     <div>
-                      <div className="font-bold">{payout.users?.name || "—"}</div>
-                      <div className="text-xs text-white/40">
-                        {payout.users?.phone || ""} · {payout.provider === "wave" ? t("common.wave") : t("common.orangeMoney")}
+                      <div className="font-dm text-sm font-semibold text-white">{payout.users?.name || "—"}</div>
+                      <div className="font-dm text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+                        {payout.users?.phone || ""} · {payout.provider === "wave" ? "Wave" : "Orange Money"}
                       </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold text-lg">{formatFCFA(payout.amount)}</div>
-                    <div className="text-xs text-white/30">
-                      {new Date(payout.created_at).toLocaleDateString("en-US")}
+                    <div className="font-syne font-bold text-lg text-white">{formatFCFA(payout.amount)}</div>
+                    <div className="font-dm text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>
+                      {new Date(payout.created_at).toLocaleDateString("fr-FR")}
                     </div>
                   </div>
                   <div className="flex gap-2 ml-4">
                     <button
                       onClick={(e) => { e.stopPropagation(); requestPayoutAction(payout, "approve"); }}
-                      className="px-4 py-2 rounded-xl bg-accent/10 border border-accent/30 text-accent text-xs font-bold hover:bg-accent/20 transition"
+                      className="px-4 py-2 rounded-xl font-dm text-xs font-bold transition"
+                      style={{ background: "rgba(29,158,117,0.1)", border: "0.5px solid rgba(29,158,117,0.3)", color: "#5DCAA5" }}
                     >
-                      {t("common.confirm")}
+                      Approuver
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); setSelectedPayout(payout); }}
-                      className="px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold hover:bg-red-500/20 transition"
+                      className="px-4 py-2 rounded-xl font-dm text-xs font-bold transition"
+                      style={{ background: "rgba(226,75,74,0.1)", border: "0.5px solid rgba(226,75,74,0.3)", color: "#F09595" }}
                     >
-                      {t("common.rejected")}
+                      Rejeter
                     </button>
                   </div>
                 </div>
@@ -553,212 +586,230 @@ function FinancePageContent() {
         </div>
       )}
 
-      {/* Payout History Tab */}
+      {/* Payout History */}
       {tab === "payout_history" && (
         <>
-        {completedPayouts.length > 0 && (
-          <div className="flex flex-wrap gap-4 mb-4 text-sm">
-            <div className="glass-card px-4 py-3">
-              <span className="text-white/40 text-xs">{t("superadmin.finance.withdrawalCount")}</span>
-              <div className="font-bold">{completedPayouts.length}</div>
-            </div>
-            <div className="glass-card px-4 py-3">
-              <span className="text-white/40 text-xs">{t("superadmin.finance.avgWithdrawal")}</span>
-              <div className="font-bold">{formatFCFA(Math.round(completedPayouts.reduce((s, p) => s + p.amount, 0) / completedPayouts.length))}</div>
-            </div>
-            <div className="glass-card px-4 py-3">
-              <span className="text-white/40 text-xs">{t("superadmin.finance.totalWithdrawals")}</span>
-              <div className="font-bold">{formatFCFA(completedPayouts.reduce((s, p) => s + p.amount, 0))}</div>
-            </div>
-          </div>
-        )}
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs text-white/30 border-b border-white/5">
-                <th className="pb-3 font-semibold">{t("common.date")}</th>
-                <th className="pb-3 font-semibold">{t("superadmin.finance.echo")}</th>
-                <th className="pb-3 font-semibold">{t("common.amount")}</th>
-                <th className="pb-3 font-semibold hidden md:table-cell">{t("superadmin.finance.provider")}</th>
-                <th className="pb-3 font-semibold">{t("common.status")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginate(completedPayouts, historyPage, PAGE_SIZE).map((payout) => (
-                <tr key={payout.id} className="border-b border-white/5">
-                  <td className="py-3 text-xs text-white/50">
-                    {new Date(payout.created_at).toLocaleDateString("en-US")}
-                  </td>
-                  <td className="py-3">
-                    <div className="font-semibold text-sm">{payout.users?.name || "—"}</div>
-                    <div className="text-xs text-white/30">{payout.users?.phone || ""}</div>
-                  </td>
-                  <td className="py-3 font-bold">{formatFCFA(payout.amount)}</td>
-                  <td className="py-3 hidden md:table-cell text-xs">
-                    {payout.provider === "wave" ? t("common.wave") : t("common.orangeMoney")}
-                  </td>
-                  <td className="py-3">
-                    <Badge status={payout.status} />
-                  </td>
-                </tr>
+          {completedPayouts.length > 0 && (
+            <div className="flex flex-wrap gap-3 mb-4">
+              {[
+                { label: "Nombre de retraits", value: String(completedPayouts.length) },
+                { label: "Retrait moyen", value: formatFCFA(Math.round(completedPayouts.reduce((s, p) => s + p.amount, 0) / completedPayouts.length)) },
+                { label: "Total retraits", value: formatFCFA(completedPayouts.reduce((s, p) => s + p.amount, 0)) },
+              ].map((s) => (
+                <div key={s.label} className="rounded-xl px-4 py-3" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.07)" }}>
+                  <span className="font-dm text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.35)" }}>{s.label}</span>
+                  <div className="font-syne font-bold text-white">{s.value}</div>
+                </div>
               ))}
-              {completedPayouts.length === 0 && (
-                <tr><td colSpan={5} className="py-6 text-center text-white/30 text-sm">{t("superadmin.finance.noHistory")}</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        <Pagination currentPage={historyPage} totalItems={completedPayouts.length} pageSize={PAGE_SIZE} onPageChange={setHistoryPage} />
+            </div>
+          )}
+          <div className="rounded-xl overflow-hidden" style={{ border: "0.5px solid rgba(255,255,255,0.07)" }}>
+            <table className="w-full">
+              <thead>
+                <tr style={{ background: "#111128" }}>
+                  {["Date", "Écho", "Montant", "Fournisseur", "Statut"].map((h, i) => (
+                    <th
+                      key={h}
+                      className={`text-left font-dm font-medium uppercase tracking-wider px-4 py-3 ${i === 3 ? "hidden md:table-cell" : ""}`}
+                      style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)" }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {paginate(completedPayouts, historyPage, PAGE_SIZE).map((payout) => (
+                  <tr key={payout.id} style={{ borderBottom: "0.5px solid rgba(255,255,255,0.05)" }}>
+                    <td className="px-4 py-3 font-dm text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
+                      {new Date(payout.created_at).toLocaleDateString("fr-FR")}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="font-dm text-sm font-semibold text-white">{payout.users?.name || "—"}</div>
+                      <div className="font-dm text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>{payout.users?.phone || ""}</div>
+                    </td>
+                    <td className="px-4 py-3 font-syne font-bold text-white">{formatFCFA(payout.amount)}</td>
+                    <td className="px-4 py-3 hidden md:table-cell font-dm text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
+                      {payout.provider === "wave" ? "Wave" : "Orange Money"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <AdminBadge status={payout.status === "sent" ? "active" : payout.status === "rejected" ? "rejected" : "pending"}>
+                        {payout.status === "sent" ? "Envoyé" : payout.status === "rejected" ? "Rejeté" : payout.status}
+                      </AdminBadge>
+                    </td>
+                  </tr>
+                ))}
+                {completedPayouts.length === 0 && (
+                  <tr><td colSpan={5} className="px-4 py-8 text-center font-dm text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>Aucun historique</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-4">
+            <Pagination currentPage={historyPage} totalItems={completedPayouts.length} pageSize={PAGE_SIZE} onPageChange={setHistoryPage} />
+          </div>
         </>
       )}
 
-      {/* Pending Recharges (Wave) Tab */}
+      {/* Pending Recharges */}
       {tab === "pending_recharges" && (
         <div>
           {pendingRecharges.length === 0 ? (
-            <div className="glass-card p-12 text-center">
-              <div className="text-4xl mb-3">&#10003;</div>
-              <h3 className="text-lg font-bold mb-1">{t("superadmin.finance.noRechargesPending")}</h3>
-              <p className="text-sm text-white/40">{t("superadmin.finance.allRechargesProcessed")}</p>
+            <div className="rounded-xl p-12 text-center" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.07)" }}>
+              <CheckCircle2 size={32} className="mx-auto mb-3" style={{ color: "rgba(29,158,117,0.5)" }} />
+              <h3 className="font-syne font-bold text-lg text-white mb-1">Aucune recharge en attente</h3>
+              <p className="font-dm text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>Toutes les recharges ont été traitées</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {pendingRecharges.map((payment) => (
-                <div key={payment.id} className="glass-card p-4 flex items-center justify-between">
+                <div key={payment.id} className="rounded-xl p-4 flex items-center justify-between transition"
+                  style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.07)" }}>
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-sm font-bold text-blue-400">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center font-dm text-sm font-bold" style={{ background: "rgba(96,165,250,0.15)", color: "#60A5FA" }}>
                       W
                     </div>
                     <div>
-                      <div className="font-bold">{payment.users ? getBrandDisplayName(payment.users) : "—"}</div>
-                      <div className="text-xs text-white/40">
+                      <div className="font-dm text-sm font-semibold text-white">{payment.users ? getBrandDisplayName(payment.users) : "—"}</div>
+                      <div className="font-dm text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
                         {payment.payment_method || "Wave"} · Ref: {payment.id.slice(0, 8)}
                       </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold text-lg">{formatFCFA(payment.amount)}</div>
-                    <div className="text-xs text-white/30">
-                      {new Date(payment.created_at).toLocaleDateString("en-US")}
+                    <div className="font-syne font-bold text-lg text-white">{formatFCFA(payment.amount)}</div>
+                    <div className="font-dm text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>
+                      {new Date(payment.created_at).toLocaleDateString("fr-FR")}
                     </div>
                   </div>
                   <div className="flex gap-2 ml-4">
                     <button
                       onClick={() => handleRechargeAction(payment.id, "validate")}
-                      className="px-4 py-2 rounded-xl bg-accent/10 border border-accent/30 text-accent text-xs font-bold hover:bg-accent/20 transition"
+                      className="px-4 py-2 rounded-xl font-dm text-xs font-bold transition"
+                      style={{ background: "rgba(29,158,117,0.1)", border: "0.5px solid rgba(29,158,117,0.3)", color: "#5DCAA5" }}
                     >
-                      {t("common.confirm")}
+                      Valider
                     </button>
                     <button
                       onClick={() => handleRechargeAction(payment.id, "reject")}
-                      className="px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold hover:bg-red-500/20 transition"
+                      className="px-4 py-2 rounded-xl font-dm text-xs font-bold transition"
+                      style={{ background: "rgba(226,75,74,0.1)", border: "0.5px solid rgba(226,75,74,0.3)", color: "#F09595" }}
                     >
-                      {t("common.rejected")}
+                      Rejeter
                     </button>
                   </div>
                 </div>
               ))}
             </div>
           )}
-          <div className="mt-4 p-4 rounded-xl bg-blue-500/5 border border-blue-500/10">
-            <p className="text-xs text-blue-300/60">
-              {t("superadmin.finance.waveVerifyNotice")}
+          <div className="mt-4 rounded-xl px-4 py-3" style={{ background: "rgba(96,165,250,0.04)", border: "0.5px solid rgba(96,165,250,0.1)" }}>
+            <p className="font-dm text-xs" style={{ color: "rgba(96,165,250,0.5)" }}>
+              Vérifiez les transactions Wave manuellement avant validation.
             </p>
           </div>
         </div>
       )}
 
-      {/* Processed Recharges History Tab */}
+      {/* Processed Recharges */}
       {tab === "payments" && (
         <>
-        {processedRecharges.length > 0 && (
-          <div className="flex flex-wrap gap-4 mb-4 text-sm">
-            <div className="glass-card px-4 py-3">
-              <span className="text-white/40 text-xs">{t("superadmin.finance.paymentCount")}</span>
-              <div className="font-bold">{processedRecharges.length}</div>
-            </div>
-            <div className="glass-card px-4 py-3">
-              <span className="text-white/40 text-xs">{t("superadmin.finance.avgPayment")}</span>
-              <div className="font-bold">{formatFCFA(Math.round(processedRecharges.reduce((s, p) => s + p.amount, 0) / processedRecharges.length))}</div>
-            </div>
-            <div className="glass-card px-4 py-3">
-              <span className="text-white/40 text-xs">{t("superadmin.finance.totalPayments")}</span>
-              <div className="font-bold">{formatFCFA(processedRecharges.reduce((s, p) => s + p.amount, 0))}</div>
-            </div>
-          </div>
-        )}
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs text-white/30 border-b border-white/5">
-                <th className="pb-3 font-semibold">{t("common.date")}</th>
-                <th className="pb-3 font-semibold">{t("superadmin.finance.batteur")}</th>
-                <th className="pb-3 font-semibold">{t("common.amount")}</th>
-                <th className="pb-3 font-semibold hidden md:table-cell">{t("superadmin.finance.method")}</th>
-                <th className="pb-3 font-semibold">{t("common.status")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginate(processedRecharges, paymentsPage, PAGE_SIZE).map((payment) => (
-                <tr key={payment.id} className="border-b border-white/5">
-                  <td className="py-3 text-xs text-white/50">
-                    {new Date(payment.created_at).toLocaleDateString("en-US")}
-                  </td>
-                  <td className="py-3 font-semibold text-sm">{payment.users ? getBrandDisplayName(payment.users) : "—"}</td>
-                  <td className="py-3 font-bold">{formatFCFA(payment.amount)}</td>
-                  <td className="py-3 hidden md:table-cell text-xs">
-                    {payment.payment_method === "admin_topup" ? (
-                      <span className="text-purple-400 font-bold">{t("superadmin.finance.adminTopup")}</span>
-                    ) : (
-                      payment.payment_method || payment.provider || "—"
-                    )}
-                  </td>
-                  <td className="py-3">
-                    <Badge status={payment.status} />
-                  </td>
-                </tr>
+          {processedRecharges.length > 0 && (
+            <div className="flex flex-wrap gap-3 mb-4">
+              {[
+                { label: "Total paiements", value: String(processedRecharges.length) },
+                { label: "Paiement moyen", value: formatFCFA(Math.round(processedRecharges.reduce((s, p) => s + p.amount, 0) / processedRecharges.length)) },
+                { label: "Total encaissé", value: formatFCFA(processedRecharges.reduce((s, p) => s + p.amount, 0)) },
+              ].map((s) => (
+                <div key={s.label} className="rounded-xl px-4 py-3" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.07)" }}>
+                  <span className="font-dm text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.35)" }}>{s.label}</span>
+                  <div className="font-syne font-bold text-white">{s.value}</div>
+                </div>
               ))}
-              {processedRecharges.length === 0 && (
-                <tr><td colSpan={5} className="py-6 text-center text-white/30 text-sm">{t("superadmin.finance.noRecharges")}</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        <Pagination currentPage={paymentsPage} totalItems={processedRecharges.length} pageSize={PAGE_SIZE} onPageChange={setPaymentsPage} />
+            </div>
+          )}
+          <div className="rounded-xl overflow-hidden" style={{ border: "0.5px solid rgba(255,255,255,0.07)" }}>
+            <table className="w-full">
+              <thead>
+                <tr style={{ background: "#111128" }}>
+                  {["Date", "Marque", "Montant", "Méthode", "Statut"].map((h, i) => (
+                    <th
+                      key={h}
+                      className={`text-left font-dm font-medium uppercase tracking-wider px-4 py-3 ${i === 3 ? "hidden md:table-cell" : ""}`}
+                      style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)" }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {paginate(processedRecharges, paymentsPage, PAGE_SIZE).map((payment) => (
+                  <tr key={payment.id} style={{ borderBottom: "0.5px solid rgba(255,255,255,0.05)" }}>
+                    <td className="px-4 py-3 font-dm text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
+                      {new Date(payment.created_at).toLocaleDateString("fr-FR")}
+                    </td>
+                    <td className="px-4 py-3 font-dm text-sm font-semibold text-white">
+                      {payment.users ? getBrandDisplayName(payment.users) : "—"}
+                    </td>
+                    <td className="px-4 py-3 font-syne font-bold text-white">{formatFCFA(payment.amount)}</td>
+                    <td className="px-4 py-3 hidden md:table-cell font-dm text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
+                      {payment.payment_method === "admin_topup" ? (
+                        <span style={{ color: "#C084FC" }} className="font-bold">Admin Topup</span>
+                      ) : (
+                        payment.payment_method || payment.provider || "—"
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <AdminBadge status={payment.status === "completed" ? "active" : payment.status === "rejected" ? "rejected" : "pending"}>
+                        {payment.status === "completed" ? "Validé" : payment.status === "rejected" ? "Rejeté" : payment.status}
+                      </AdminBadge>
+                    </td>
+                  </tr>
+                ))}
+                {processedRecharges.length === 0 && (
+                  <tr><td colSpan={5} className="px-4 py-8 text-center font-dm text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>Aucune recharge</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-4">
+            <Pagination currentPage={paymentsPage} totalItems={processedRecharges.length} pageSize={PAGE_SIZE} onPageChange={setPaymentsPage} />
+          </div>
         </>
       )}
 
-      {/* Payout Detail / Reject Modal */}
-      <Modal
+      {/* Payout Detail Drawer */}
+      <AdminDrawer
         open={!!selectedPayout}
         onClose={() => { setSelectedPayout(null); setRejectReason(""); }}
-        title={t("superadmin.finance.payoutRequests")}
+        title="Demande de retrait"
+        subtitle={selectedPayout?.users?.name || undefined}
       >
         {selectedPayout && (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-gradient-primary flex items-center justify-center text-xl font-bold text-white">
+              <div className="w-14 h-14 rounded-full flex items-center justify-center font-dm text-xl font-bold text-white" style={{ background: "#D35400" }}>
                 {selectedPayout.users?.name?.charAt(0)?.toUpperCase() || "?"}
               </div>
               <div>
-                <h3 className="font-bold text-lg">{selectedPayout.users?.name || "—"}</h3>
-                <p className="text-xs text-white/40">{selectedPayout.users?.phone || ""}</p>
+                <h3 className="font-syne font-bold text-lg text-white">{selectedPayout.users?.name || "—"}</h3>
+                <p className="font-dm text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>{selectedPayout.users?.phone || ""}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="glass-card p-4 text-center">
-                <div className="text-2xl font-bold">{formatFCFA(selectedPayout.amount)}</div>
-                <div className="text-[10px] text-white/40">{t("superadmin.finance.requestedAmount")}</div>
+              <div className="rounded-xl p-4 text-center" style={{ background: "rgba(255,255,255,0.04)" }}>
+                <div className="font-syne font-bold text-2xl text-white">{formatFCFA(selectedPayout.amount)}</div>
+                <div className="font-dm text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>Montant demandé</div>
               </div>
-              <div className="glass-card p-4 text-center">
-                <div className="text-lg font-bold">{selectedPayout.provider === "wave" ? t("common.wave") : t("common.orangeMoney")}</div>
-                <div className="text-[10px] text-white/40">{t("superadmin.finance.provider")}</div>
+              <div className="rounded-xl p-4 text-center" style={{ background: "rgba(255,255,255,0.04)" }}>
+                <div className="font-syne font-bold text-lg text-white">{selectedPayout.provider === "wave" ? "Wave" : "Orange Money"}</div>
+                <div className="font-dm text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>Fournisseur</div>
               </div>
             </div>
 
-            <div className="text-xs text-white/30">
-              {t("superadmin.finance.requestedOn")} {new Date(selectedPayout.created_at).toLocaleString("en-US", {
+            <div className="font-dm text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>
+              Demandé le {new Date(selectedPayout.created_at).toLocaleString("fr-FR", {
                 weekday: "long",
                 day: "numeric",
                 month: "long",
@@ -768,116 +819,111 @@ function FinancePageContent() {
               })}
             </div>
 
-            <div className="space-y-3 pt-2 border-t border-white/5">
+            <div className="space-y-3 pt-4" style={{ borderTop: "0.5px solid rgba(255,255,255,0.07)" }}>
               <button
                 onClick={() => requestPayoutAction(selectedPayout, "approve")}
-                className="w-full py-3 rounded-xl bg-accent/10 border border-accent/30 text-accent font-bold text-sm hover:bg-accent/20 transition"
+                className="w-full py-3 rounded-xl font-dm text-sm font-bold transition"
+                style={{ background: "rgba(29,158,117,0.12)", border: "0.5px solid rgba(29,158,117,0.3)", color: "#5DCAA5" }}
               >
-                {t("common.confirm")}
+                Approuver le retrait
               </button>
 
               <textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                placeholder={t("superadmin.finance.rejectReasonPlaceholder")}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition resize-none h-16"
+                placeholder="Raison du rejet (optionnel)..."
+                className="w-full rounded-xl px-4 py-3 font-dm text-sm resize-none h-16 focus:outline-none transition"
+                style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "#fff" }}
               />
               <button
                 onClick={() => requestPayoutAction(selectedPayout, "reject", rejectReason)}
-                className="w-full py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-bold text-sm hover:bg-red-500/20 transition"
+                className="w-full py-2.5 rounded-xl font-dm text-sm font-bold transition"
+                style={{ background: "rgba(226,75,74,0.1)", border: "0.5px solid rgba(226,75,74,0.3)", color: "#F09595" }}
               >
-                {t("common.rejected")}
+                Rejeter
               </button>
             </div>
           </div>
         )}
-      </Modal>
+      </AdminDrawer>
 
-      {/* Confirmation Modal (2nd step) */}
-      <Modal
-        open={!!confirmAction}
-        onClose={() => setConfirmAction(null)}
-        title={t("superadmin.finance.confirmActionTitle")}
-      >
-        {confirmAction && (
-          <div className="space-y-4">
-            <div className={`p-4 rounded-xl border ${
-              confirmAction.action === "approve"
-                ? "bg-accent/5 border-accent/20"
-                : "bg-red-500/5 border-red-500/20"
-            }`}>
+      {/* Confirmation Overlay */}
+      {confirmAction && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }}>
+          <div className="rounded-xl p-6 max-w-md w-full" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.1)" }}>
+            <div
+              className="rounded-xl p-4 mb-4"
+              style={{
+                background: confirmAction.action === "approve" ? "rgba(29,158,117,0.05)" : "rgba(226,75,74,0.05)",
+                border: `0.5px solid ${confirmAction.action === "approve" ? "rgba(29,158,117,0.15)" : "rgba(226,75,74,0.15)"}`,
+              }}
+            >
               <div className="flex items-center gap-3 mb-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
-                  confirmAction.action === "approve"
-                    ? "bg-accent/20 text-accent"
-                    : "bg-red-500/20 text-red-400"
-                }`}>
-                  {confirmAction.action === "approve" ? "✓" : "✕"}
-                </div>
+                {confirmAction.action === "approve" ? (
+                  <CheckCircle2 size={20} style={{ color: "#5DCAA5" }} />
+                ) : (
+                  <XCircle size={20} style={{ color: "#F09595" }} />
+                )}
                 <div>
-                  <div className="font-bold text-sm">
-                    {confirmAction.action === "approve"
-                      ? t("superadmin.finance.confirmApproveTitle")
-                      : t("superadmin.finance.confirmRejectTitle")}
+                  <div className="font-syne font-bold text-sm text-white">
+                    {confirmAction.action === "approve" ? "Confirmer l'approbation" : "Confirmer le rejet"}
                   </div>
-                  <div className="text-xs text-white/40">{t("superadmin.finance.confirmActionDesc")}</div>
+                  <div className="font-dm text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>Cette action est irréversible</div>
                 </div>
               </div>
 
-              <div className="space-y-2 text-sm">
+              <div className="space-y-2 font-dm text-sm">
                 <div className="flex justify-between">
-                  <span className="text-white/40">{t("superadmin.finance.echo")}</span>
-                  <span className="font-bold">{confirmAction.payout.users?.name || "—"}</span>
+                  <span style={{ color: "rgba(255,255,255,0.4)" }}>Écho</span>
+                  <span className="font-semibold text-white">{confirmAction.payout.users?.name || "—"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/40">{t("common.amount")}</span>
-                  <span className="font-bold">{formatFCFA(confirmAction.payout.amount)}</span>
+                  <span style={{ color: "rgba(255,255,255,0.4)" }}>Montant</span>
+                  <span className="font-semibold text-white">{formatFCFA(confirmAction.payout.amount)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/40">{t("superadmin.finance.provider")}</span>
-                  <span className="font-bold">{confirmAction.payout.provider === "wave" ? t("common.wave") : t("common.orangeMoney")}</span>
+                  <span style={{ color: "rgba(255,255,255,0.4)" }}>Fournisseur</span>
+                  <span className="font-semibold text-white">{confirmAction.payout.provider === "wave" ? "Wave" : "Orange Money"}</span>
                 </div>
                 {confirmAction.reason && (
-                  <div className="pt-2 border-t border-white/5">
-                    <span className="text-white/40 text-xs">{t("superadmin.finance.rejectionReason")}</span>
-                    <p className="text-sm mt-1">{confirmAction.reason}</p>
+                  <div className="pt-2" style={{ borderTop: "0.5px solid rgba(255,255,255,0.05)" }}>
+                    <span className="font-dm text-[10px] uppercase" style={{ color: "rgba(255,255,255,0.35)" }}>Raison du rejet</span>
+                    <p className="font-dm text-sm mt-1 text-white">{confirmAction.reason}</p>
                   </div>
                 )}
               </div>
             </div>
 
             {confirmAction.action === "reject" && (
-              <p className="text-xs text-red-400/70">
-                {t("superadmin.finance.rejectWarning")}
+              <p className="font-dm text-xs mb-4" style={{ color: "#F09595" }}>
+                Le montant sera recrédité sur le solde de l&apos;écho.
               </p>
             )}
 
             <div className="flex gap-3">
               <button
                 onClick={() => setConfirmAction(null)}
-                className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 font-bold text-sm hover:bg-white/10 transition"
+                className="flex-1 py-3 rounded-xl font-dm text-sm font-bold transition"
+                style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}
               >
-                {t("common.cancel")}
+                Annuler
               </button>
               <button
                 onClick={executePayoutAction}
                 disabled={processing}
-                className={`flex-1 py-3 rounded-xl font-bold text-sm transition disabled:opacity-50 ${
-                  confirmAction.action === "approve"
-                    ? "bg-accent/10 border border-accent/30 text-accent hover:bg-accent/20"
-                    : "bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20"
-                }`}
+                className="flex-1 py-3 rounded-xl font-dm text-sm font-bold transition disabled:opacity-50"
+                style={{
+                  background: confirmAction.action === "approve" ? "rgba(29,158,117,0.12)" : "rgba(226,75,74,0.1)",
+                  border: `0.5px solid ${confirmAction.action === "approve" ? "rgba(29,158,117,0.3)" : "rgba(226,75,74,0.3)"}`,
+                  color: confirmAction.action === "approve" ? "#5DCAA5" : "#F09595",
+                }}
               >
-                {processing
-                  ? t("common.loading")
-                  : confirmAction.action === "approve"
-                    ? t("superadmin.finance.confirmApproveButton")
-                    : t("superadmin.finance.confirmRejectButton")}
+                {processing ? "Traitement..." : confirmAction.action === "approve" ? "Confirmer l'envoi" : "Confirmer le rejet"}
               </button>
             </div>
           </div>
-        )}
-      </Modal>
+        </div>
+      )}
     </div>
   );
 }

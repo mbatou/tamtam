@@ -1,10 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { formatFCFA, formatNumber } from "@/lib/utils";
-import { useTranslation } from "@/lib/i18n";
-import StatCard from "@/components/StatCard";
+import {
+  Sparkles,
+  Users,
+  Megaphone,
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle2,
+  ArrowRight,
+  RefreshCw,
+  Clock,
+  Shield,
+  Wallet,
+  Target,
+} from "lucide-react";
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  ResponsiveContainer,
+} from "recharts";
+import AdminStatCard from "@/components/superadmin/AdminStatCard";
 
 interface BriefingData {
   daysSinceLaunch: number;
@@ -41,28 +61,61 @@ interface BriefingData {
   suggestedActions: { label: string; href: string; priority: "high" | "medium" | "low" }[];
 }
 
-export default function BriefingPage() {
-  const { t } = useTranslation();
-  const [data, setData] = useState<BriefingData | null>(null);
-  const [loading, setLoading] = useState(true);
+interface Stats {
+  activeEchos7d: number;
+  activeCampaigns: number;
+  clicksChart: { date: string; valid: number; fraud: number }[];
+  signupsChart: { date: string; count: number }[];
+  pendingPayoutsCount: number;
+}
 
-  useEffect(() => {
-    fetch("/api/superadmin/briefing")
-      .then((r) => r.json())
-      .then((d) => setData(d))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+
+export default function MorningBriefPage() {
+  const [data, setData] = useState<BriefingData | null>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [briefRes, statsRes] = await Promise.all([
+        fetch("/api/superadmin/briefing"),
+        fetch("/api/superadmin/stats"),
+      ]);
+      const [briefData, statsData] = await Promise.all([
+        briefRes.json(),
+        statsRes.json(),
+      ]);
+      setData(briefData);
+      setStats(statsData);
+      setLastUpdated(new Date());
+    } catch {
+      // silently fail
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  if (loading) {
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  if (loading && !data) {
     return (
-      <div className="p-6 space-y-4">
-        <div className="skeleton h-10 w-96 rounded-xl" />
-        <div className="skeleton h-6 w-48 rounded-xl" />
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-          {[1, 2, 3].map((i) => <div key={i} className="skeleton h-24 rounded-xl" />)}
+      <div className="p-6 max-w-6xl mx-auto space-y-4">
+        <div className="skeleton h-10 w-80 rounded-xl" />
+        <div className="skeleton h-5 w-48 rounded-lg" />
+        <div className="skeleton h-28 rounded-xl mt-6" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="skeleton h-24 rounded-xl" />
+          ))}
         </div>
-        <div className="skeleton h-32 rounded-xl mt-4" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+          <div className="skeleton h-64 rounded-xl" />
+          <div className="skeleton h-64 rounded-xl" />
+        </div>
       </div>
     );
   }
@@ -70,252 +123,467 @@ export default function BriefingPage() {
   if (!data) {
     return (
       <div className="p-6 text-center text-white/40">
-        {t("common.error")}
+        Erreur de chargement
       </div>
     );
   }
 
   const now = new Date(data.date);
-  const dateStr = now.toLocaleDateString("en-US", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-
   const hour = now.getHours();
-  const greetingKey = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
+  const greeting =
+    hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir";
 
-  // Build action required items
-  const actionItems: { text: string; href: string; severity: "red" | "orange" }[] = [];
-
-  if (data.actionRequired.newLeads > 0) {
-    actionItems.push({
-      text: t("superadmin.briefing.leadsAction", {
-        count: String(data.actionRequired.newLeads),
-        age: String(data.actionRequired.oldestLeadAge),
-      }),
-      href: "/superadmin/leads",
-      severity: data.actionRequired.oldestLeadAge > 24 ? "red" : "orange",
-    });
-  }
+  // Build action items
+  const actionItems: {
+    text: string;
+    href: string;
+    severity: "red" | "orange" | "blue";
+    icon: React.ReactNode;
+  }[] = [];
 
   if (data.actionRequired.pendingPayouts > 0) {
     actionItems.push({
-      text: t("superadmin.briefing.payoutsAction", {
-        count: String(data.actionRequired.pendingPayouts),
-        amount: formatFCFA(data.actionRequired.pendingPayoutAmount),
-      }),
+      text: `${data.actionRequired.pendingPayouts} retrait(s) en attente (${formatFCFA(data.actionRequired.pendingPayoutAmount)})`,
       href: "/superadmin/finance",
       severity: "orange",
+      icon: <Wallet size={14} />,
+    });
+  }
+
+  if (data.actionRequired.newLeads > 0) {
+    actionItems.push({
+      text: `${data.actionRequired.newLeads} nouveau(x) lead(s) en attente (plus ancien : ${data.actionRequired.oldestLeadAge}h)`,
+      href: "/superadmin/leads",
+      severity: data.actionRequired.oldestLeadAge > 24 ? "red" : "orange",
+      icon: <Target size={14} />,
     });
   }
 
   if (data.actionRequired.fraudRate > 15) {
     actionItems.push({
-      text: t("superadmin.briefing.fraudAction", { rate: String(data.actionRequired.fraudRate) }),
+      text: `Taux de fraude à ${data.actionRequired.fraudRate}% — vérification requise`,
       href: "/superadmin/fraud",
       severity: "red",
+      icon: <Shield size={14} />,
     });
   }
 
   if (data.actionRequired.activeCampaigns === 0) {
     actionItems.push({
-      text: t("superadmin.briefing.noCampaignsAction"),
+      text: "Aucune campagne active — la plateforme est inactive",
       href: "/superadmin/campaigns",
       severity: "red",
+      icon: <Megaphone size={14} />,
     });
   }
 
   if (data.actionRequired.ipsToBlock > 0) {
     actionItems.push({
-      text: t("superadmin.briefing.ipsAction", { count: String(data.actionRequired.ipsToBlock) }),
+      text: `${data.actionRequired.ipsToBlock} IP(s) suspecte(s) à bloquer`,
       href: "/superadmin/fraud",
       severity: "orange",
+      icon: <AlertTriangle size={14} />,
     });
   }
 
-  function TrendArrow({ delta }: { delta: number }) {
-    if (delta > 0) return <span className="text-green-400 font-bold">+{delta} &#9650;</span>;
-    if (delta < 0) return <span className="text-red-400 font-bold">{delta} &#9660;</span>;
-    return <span className="text-white/30 font-bold">= 0</span>;
-  }
+  const pendingActions =
+    (stats?.pendingPayoutsCount || data.actionRequired.pendingPayouts) +
+    data.actionRequired.newLeads;
 
-  const actionLabelMap: Record<string, { label: string; emoji: string }> = {
-    process_leads: { label: t("superadmin.briefing.suggestLeads"), emoji: "&#128233;" },
-    process_payouts: { label: t("superadmin.briefing.suggestPayouts"), emoji: "&#128176;" },
-    review_fraud: { label: t("superadmin.briefing.suggestFraud"), emoji: "&#128721;" },
-    no_campaigns: { label: t("superadmin.briefing.suggestCampaigns"), emoji: "&#128226;" },
-    block_ips: { label: t("superadmin.briefing.suggestBlockIps"), emoji: "&#128737;" },
-  };
+  // Sparkline data — last 7 days from charts
+  const clicksSparkline = (stats?.clicksChart || []).slice(-7);
+  const signupsSparkline = (stats?.signupsChart || []).slice(-7);
+  const revenueSparkline = clicksSparkline.map((d) => ({
+    date: d.date,
+    value: d.valid * 50,
+  }));
 
   return (
-    <div className="p-6 max-w-5xl">
+    <div className="p-6 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-black mb-1">
-          {t(`superadmin.briefing.greeting_${greetingKey}`)} — {t("superadmin.briefing.dayCount", { count: String(data.daysSinceLaunch) })}
-        </h1>
-        <p className="text-sm text-white/40 capitalize">{dateStr}</p>
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h1 className="font-syne font-bold text-xl text-white">
+            {greeting} 👋
+          </h1>
+          <p className="text-xs text-white/30 mt-1 font-dm">
+            Jour {data.daysSinceLaunch} depuis le lancement
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          {lastUpdated && (
+            <span className="text-[10px] text-white/20 font-dm">
+              Mis à jour il y a{" "}
+              {Math.round((Date.now() - lastUpdated.getTime()) / 60000)} min
+            </span>
+          )}
+          <button
+            onClick={loadData}
+            className="p-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] transition text-white/40 hover:text-white/60"
+            title="Rafraîchir"
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+          </button>
+        </div>
       </div>
 
-      {/* Action Required */}
-      {actionItems.length > 0 && (
-        <div className="mb-8 glass-card border border-red-500/20 bg-red-500/5 p-5 rounded-xl">
-          <h2 className="text-sm font-bold text-red-400 uppercase tracking-wider mb-3">
-            {t("superadmin.briefing.actionRequired")}
-          </h2>
-          <div className="space-y-2">
-            {actionItems.map((item, i) => (
-              <Link
-                key={i}
-                href={item.href}
-                className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition group"
-              >
-                <span className={`w-2 h-2 rounded-full shrink-0 ${
-                  item.severity === "red" ? "bg-red-400 animate-pulse" : "bg-orange-400"
-                }`} />
-                <span className="text-sm text-white/80 flex-1">{item.text}</span>
-                <span className="text-white/20 group-hover:text-white/50 transition">&rarr;</span>
-              </Link>
-            ))}
+      {/* AI Daily Brief card */}
+      <div
+        className="mb-6 rounded-xl p-5"
+        style={{
+          background: "#0F1A13",
+          border: "0.5px solid rgba(29,158,117,0.3)",
+        }}
+      >
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-[#1D9E75]/20 flex items-center justify-center shrink-0 mt-0.5">
+            <Sparkles size={16} className="text-[#5DCAA5]" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-syne font-bold text-sm text-[#5DCAA5] mb-2">
+              Résumé du jour
+            </h3>
+            <ul className="space-y-1.5 text-[13px] text-white/60 font-dm">
+              <li className="flex items-start gap-2">
+                <span className="text-[#5DCAA5] shrink-0 mt-0.5">•</span>
+                <span>
+                  {data.today.clicks} clics aujourd&apos;hui
+                  {data.trends.clicksDelta !== 0 && (
+                    <span
+                      className={
+                        data.trends.clicksDelta > 0
+                          ? "text-green-400"
+                          : "text-red-400"
+                      }
+                    >
+                      {" "}
+                      ({data.trends.clicksDelta > 0 ? "+" : ""}
+                      {data.trends.clicksDelta} vs hier)
+                    </span>
+                  )}
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-[#5DCAA5] shrink-0 mt-0.5">•</span>
+                <span>
+                  {data.today.signups} nouvelle(s) inscription(s)
+                  {data.trends.signupsDelta !== 0 && (
+                    <span
+                      className={
+                        data.trends.signupsDelta > 0
+                          ? "text-green-400"
+                          : "text-red-400"
+                      }
+                    >
+                      {" "}
+                      ({data.trends.signupsDelta > 0 ? "+" : ""}
+                      {data.trends.signupsDelta} vs hier)
+                    </span>
+                  )}
+                </span>
+              </li>
+              {data.actionRequired.activeCampaigns > 0 && (
+                <li className="flex items-start gap-2">
+                  <span className="text-[#5DCAA5] shrink-0 mt-0.5">•</span>
+                  <span>
+                    {data.actionRequired.activeCampaigns} campagne(s) active(s)
+                  </span>
+                </li>
+              )}
+              {data.actionRequired.fraudRate > 10 && (
+                <li className="flex items-start gap-2">
+                  <span className="text-yellow-400 shrink-0 mt-0.5">•</span>
+                  <span className="text-yellow-400/80">
+                    Taux de fraude à {data.actionRequired.fraudRate}%
+                  </span>
+                </li>
+              )}
+              {data.actionRequired.pendingPayouts > 0 && (
+                <li className="flex items-start gap-2">
+                  <span className="text-[#F0997B] shrink-0 mt-0.5">•</span>
+                  <span className="text-[#F0997B]/80">
+                    {data.actionRequired.pendingPayouts} paiement(s) en attente
+                  </span>
+                </li>
+              )}
+            </ul>
+            <Link
+              href="/superadmin"
+              className="inline-flex items-center gap-1.5 mt-3 text-xs font-medium text-[#5DCAA5] hover:text-[#5DCAA5]/80 transition"
+            >
+              Voir le rapport complet
+              <ArrowRight size={12} />
+            </Link>
           </div>
         </div>
-      )}
+      </div>
 
-      {actionItems.length === 0 && (
-        <div className="mb-8 glass-card border border-green-500/20 bg-green-500/5 p-5 rounded-xl">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">&#10003;</span>
+      {/* 4 KPI cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <AdminStatCard
+          label="Échos actifs"
+          value={formatNumber(stats?.activeEchos7d || data.totals.echos)}
+          icon={<Users size={16} />}
+          accent="white"
+          trend={
+            data.trends.signupsDelta !== 0
+              ? { value: data.trends.signupsDelta, label: "vs sem. dernière" }
+              : undefined
+          }
+        />
+        <AdminStatCard
+          label="Campagnes actives"
+          value={formatNumber(
+            stats?.activeCampaigns || data.actionRequired.activeCampaigns,
+          )}
+          icon={<Megaphone size={16} />}
+          accent="orange"
+        />
+        <AdminStatCard
+          label="Revenu aujourd'hui"
+          value={formatFCFA(data.today.revenue || data.today.clicks * 50)}
+          icon={<TrendingUp size={16} />}
+          accent="orange"
+          trend={
+            data.trends.clicksDelta !== 0
+              ? { value: data.trends.clicksDelta, label: "vs hier" }
+              : undefined
+          }
+        />
+        <AdminStatCard
+          label="Actions en attente"
+          value={pendingActions}
+          icon={<Clock size={16} />}
+          accent={pendingActions > 0 ? "red" : "teal"}
+        />
+      </div>
+
+      {/* Two-column grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Left — Needs attention */}
+        <div
+          className="rounded-xl p-5"
+          style={{
+            background: "#111128",
+            border: "0.5px solid rgba(255,255,255,0.07)",
+          }}
+        >
+          <h3 className="font-syne font-bold text-sm text-white mb-4">
+            Actions requises
+          </h3>
+
+          {actionItems.length === 0 ? (
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-[#1D9E75]/10">
+              <CheckCircle2 size={20} className="text-[#5DCAA5]" />
+              <div>
+                <p className="text-sm font-semibold text-[#5DCAA5]">
+                  Tout est en ordre
+                </p>
+                <p className="text-xs text-white/30">
+                  Aucune action urgente pour le moment.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {actionItems.map((item, i) => (
+                <Link
+                  key={i}
+                  href={item.href}
+                  className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition group"
+                >
+                  <div
+                    className="w-1 h-8 rounded-full shrink-0"
+                    style={{
+                      backgroundColor:
+                        item.severity === "red"
+                          ? "#F09595"
+                          : item.severity === "blue"
+                            ? "#60A5FA"
+                            : "#F0997B",
+                    }}
+                  />
+                  <span
+                    className={`shrink-0 ${
+                      item.severity === "red"
+                        ? "text-[#F09595]"
+                        : item.severity === "blue"
+                          ? "text-blue-400"
+                          : "text-[#F0997B]"
+                    }`}
+                  >
+                    {item.icon}
+                  </span>
+                  <span className="text-[13px] text-white/60 flex-1 font-dm">
+                    {item.text}
+                  </span>
+                  <ArrowRight
+                    size={14}
+                    className="text-white/10 group-hover:text-white/40 transition shrink-0"
+                  />
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Right — Sparklines */}
+        <div
+          className="rounded-xl p-5"
+          style={{
+            background: "#111128",
+            border: "0.5px solid rgba(255,255,255,0.07)",
+          }}
+        >
+          <h3 className="font-syne font-bold text-sm text-white mb-4">
+            7 derniers jours
+          </h3>
+
+          <div className="space-y-5">
+            {/* Clicks sparkline */}
             <div>
-              <h2 className="text-sm font-bold text-green-400">{t("superadmin.briefing.allClear")}</h2>
-              <p className="text-xs text-white/40">{t("superadmin.briefing.allClearDesc")}</p>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[11px] font-dm font-medium text-white/40 uppercase tracking-wider">
+                  Clics
+                </span>
+                <span className="text-sm font-syne font-bold text-white">
+                  {formatNumber(
+                    clicksSparkline.reduce((s, d) => s + d.valid, 0),
+                  )}
+                </span>
+              </div>
+              <div className="h-10">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={clicksSparkline}>
+                    <defs>
+                      <linearGradient
+                        id="clicksGrad"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="0%"
+                          stopColor="#D35400"
+                          stopOpacity={0.3}
+                        />
+                        <stop
+                          offset="100%"
+                          stopColor="#D35400"
+                          stopOpacity={0}
+                        />
+                      </linearGradient>
+                    </defs>
+                    <Area
+                      type="monotone"
+                      dataKey="valid"
+                      stroke="#D35400"
+                      strokeWidth={1.5}
+                      fill="url(#clicksGrad)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* Today's Numbers */}
-      <div className="mb-8">
-        <h2 className="text-sm font-bold text-white/50 uppercase tracking-wider mb-3">
-          {t("superadmin.briefing.todayNumbers")}
-        </h2>
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-          <StatCard
-            label={t("superadmin.briefing.signupsToday")}
-            value={formatNumber(data.today.signups)}
-            accent="purple"
-          />
-          <StatCard
-            label={t("superadmin.briefing.clicksToday")}
-            value={formatNumber(data.today.clicks)}
-            accent="teal"
-          />
-          <StatCard
-            label={t("superadmin.briefing.activeCampaigns")}
-            value={formatNumber(data.actionRequired.activeCampaigns)}
-            accent="orange"
-          />
-        </div>
+            {/* Signups sparkline */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[11px] font-dm font-medium text-white/40 uppercase tracking-wider">
+                  Inscriptions
+                </span>
+                <span className="text-sm font-syne font-bold text-white">
+                  {formatNumber(
+                    signupsSparkline.reduce((s, d) => s + d.count, 0),
+                  )}
+                </span>
+              </div>
+              <div className="h-10">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={signupsSparkline}>
+                    <defs>
+                      <linearGradient
+                        id="signupsGrad"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="0%"
+                          stopColor="#1D9E75"
+                          stopOpacity={0.3}
+                        />
+                        <stop
+                          offset="100%"
+                          stopColor="#1D9E75"
+                          stopOpacity={0}
+                        />
+                      </linearGradient>
+                    </defs>
+                    <Area
+                      type="monotone"
+                      dataKey="count"
+                      stroke="#1D9E75"
+                      strokeWidth={1.5}
+                      fill="url(#signupsGrad)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
 
-        {/* Totals below */}
-        <div className="grid grid-cols-3 gap-4 mt-3">
-          <div className="glass-card p-3 text-center">
-            <p className="text-xs text-white/30 mb-1">{t("superadmin.briefing.totalEchos")}</p>
-            <p className="text-lg font-bold">{formatNumber(data.totals.echos)}</p>
-          </div>
-          <div className="glass-card p-3 text-center">
-            <p className="text-xs text-white/30 mb-1">{t("superadmin.briefing.totalValidClicks")}</p>
-            <p className="text-lg font-bold">{formatNumber(data.totals.clicks)}</p>
-          </div>
-          <div className="glass-card p-3 text-center">
-            <p className="text-xs text-white/30 mb-1">{t("superadmin.briefing.totalPaid")}</p>
-            <p className="text-lg font-bold">{formatFCFA(data.totals.paid)}</p>
+            {/* Revenue sparkline */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[11px] font-dm font-medium text-white/40 uppercase tracking-wider">
+                  Revenu
+                </span>
+                <span className="text-sm font-syne font-bold text-[#D35400]">
+                  {formatFCFA(data.financial.grossRevenue)}
+                </span>
+              </div>
+              <div className="h-10">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={revenueSparkline}>
+                    <Bar
+                      dataKey="value"
+                      fill="#D35400"
+                      radius={[2, 2, 0, 0]}
+                      opacity={0.6}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Trends vs Yesterday */}
-      <div className="mb-8">
-        <h2 className="text-sm font-bold text-white/50 uppercase tracking-wider mb-3">
-          {t("superadmin.briefing.trendsTitle")}
-        </h2>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="glass-card p-4">
-            <p className="text-xs text-white/30 mb-2">{t("superadmin.briefing.signupsToday")}</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold">{data.today.signups}</span>
-              <TrendArrow delta={data.trends.signupsDelta} />
-            </div>
-            <p className="text-[10px] text-white/20 mt-1">{t("superadmin.briefing.vsYesterday")}</p>
-          </div>
-          <div className="glass-card p-4">
-            <p className="text-xs text-white/30 mb-2">{t("superadmin.briefing.clicksToday")}</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold">{data.today.clicks}</span>
-              <TrendArrow delta={data.trends.clicksDelta} />
-            </div>
-            <p className="text-[10px] text-white/20 mt-1">{t("superadmin.briefing.vsYesterday")}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Financial Snapshot */}
-      <div className="mb-8">
-        <h2 className="text-sm font-bold text-white/50 uppercase tracking-wider mb-3">
-          {t("superadmin.briefing.financialSnapshot")}
-        </h2>
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-          <StatCard
-            label={t("superadmin.briefing.commissionEarned")}
+      {/* Financial snapshot */}
+      <div className="mt-6">
+        <h3 className="text-[11px] font-dm font-medium text-white/30 uppercase tracking-wider mb-3">
+          Aperçu financier
+        </h3>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+          <AdminStatCard
+            label="Commission gagnée"
             value={formatFCFA(data.financial.commission)}
             accent="teal"
           />
-          <StatCard
-            label={t("superadmin.briefing.pendingPayoutsLabel")}
+          <AdminStatCard
+            label="Retraits en attente"
             value={formatFCFA(data.financial.pendingPayouts)}
-            accent={data.financial.pendingPayouts > 0 ? "red" : "purple"}
+            accent={data.financial.pendingPayouts > 0 ? "red" : "teal"}
           />
-          <StatCard
-            label={t("superadmin.briefing.grossRevenue")}
+          <AdminStatCard
+            label="Revenu brut"
             value={formatFCFA(data.financial.grossRevenue)}
             accent="orange"
           />
         </div>
       </div>
-
-      {/* Suggested Actions */}
-      {data.suggestedActions.length > 0 && (
-        <div>
-          <h2 className="text-sm font-bold text-white/50 uppercase tracking-wider mb-3">
-            {t("superadmin.briefing.suggestedActions")}
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {data.suggestedActions.slice(0, 3).map((action, i) => {
-              const info = actionLabelMap[action.label] || { label: action.label, emoji: "&#128279;" };
-              return (
-                <Link
-                  key={i}
-                  href={action.href}
-                  className={`glass-card p-4 hover:bg-white/10 transition group rounded-xl border ${
-                    action.priority === "high"
-                      ? "border-red-500/20"
-                      : "border-white/5"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl" dangerouslySetInnerHTML={{ __html: info.emoji }} />
-                    <span className="text-sm font-semibold text-white/70 group-hover:text-white/90 transition">
-                      {info.label}
-                    </span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }
