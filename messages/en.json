@@ -368,7 +368,17 @@
       "enableNotif": "Enable",
       "later": "Later",
       "notifNewRythme": "Want to know when a new campaign is available?",
-      "enableNotifEarnings": "Enable notifications — you won't miss any earning opportunity."
+      "enableNotifEarnings": "Enable notifications — you won't miss any earning opportunity.",
+      "suspendedTitle": "Account suspended",
+      "suspendedDesc": "Your account has been suspended due to activities detected as non-compliant. During this period, you can no longer earn revenue from campaigns.",
+      "clickQuality": "Your click quality",
+      "totalClicks": "Total clicks",
+      "validClicks2": "Valid",
+      "invalidClicks": "Invalid",
+      "validityRate": "Validity rate:",
+      "suspendedAppeal": "If you believe this is an error, contact our support team to discuss it.",
+      "contactSupport": "Contact support",
+      "suspendedWhatsApp": "Hello, my echo account has been suspended. Can you help me?"
     },
     "earnings": {
       "title": "My Earnings",

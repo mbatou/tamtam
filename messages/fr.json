@@ -368,7 +368,17 @@
       "enableNotif": "Activer",
       "later": "Plus tard",
       "notifNewRythme": "Tu veux savoir quand un nouveau rythme est disponible?",
-      "enableNotifEarnings": "Active les notifications — tu ne rateras plus aucune opportunité de gagner."
+      "enableNotifEarnings": "Active les notifications — tu ne rateras plus aucune opportunité de gagner.",
+      "suspendedTitle": "Compte suspendu",
+      "suspendedDesc": "Ton compte a été suspendu en raison d'activités détectées comme non conformes. Pendant cette période, tu ne peux plus gagner de revenus sur les campagnes.",
+      "clickQuality": "Qualité de tes clics",
+      "totalClicks": "Total clics",
+      "validClicks2": "Valides",
+      "invalidClicks": "Invalides",
+      "validityRate": "Taux de validité :",
+      "suspendedAppeal": "Si tu penses qu'il s'agit d'une erreur, contacte notre équipe support pour en discuter.",
+      "contactSupport": "Contacter le support",
+      "suspendedWhatsApp": "Bonjour, mon compte écho a été suspendu. Pouvez-vous m'aider ?"
     },
     "earnings": {
       "title": "Mes Gains",
