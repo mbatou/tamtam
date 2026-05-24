@@ -114,6 +114,7 @@ function Navbar() {
     { label: t("landing.nav.brands"), href: "#marques" },
     { label: t("landing.nav.becomeEcho"), href: "#echos" },
     { label: t("landing.nav.faq"), href: "#faq" },
+    { label: "Developers", href: "/developers", badge: "API" },
   ];
 
   return (
@@ -137,15 +138,30 @@ function Navbar() {
         </Link>
 
         <div className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="text-[13px] font-dm text-white/55 hover:text-white transition-colors"
-            >
-              {link.label}
-            </a>
-          ))}
+          {navLinks.map((link) =>
+            link.href.startsWith("/") ? (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="flex items-center gap-1.5 text-[13px] font-dm text-white/55 hover:text-white transition-colors"
+              >
+                {link.label}
+                {link.badge && (
+                  <span className="text-[9px] bg-[rgba(211,84,0,0.15)] text-[#F0997B] px-1.5 py-0.5 rounded font-medium tracking-wide">
+                    {link.badge}
+                  </span>
+                )}
+              </Link>
+            ) : (
+              <a
+                key={link.href}
+                href={link.href}
+                className="text-[13px] font-dm text-white/55 hover:text-white transition-colors"
+              >
+                {link.label}
+              </a>
+            )
+          )}
         </div>
 
         <div className="hidden md:flex items-center gap-3">
@@ -181,16 +197,32 @@ function Navbar() {
             className="md:hidden bg-tt-night/95 backdrop-blur-xl border-b border-white/[0.07] overflow-hidden"
           >
             <div className="px-5 py-4 space-y-3">
-              {navLinks.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMenuOpen(false)}
-                  className="block text-sm font-dm text-white/60 hover:text-white py-2"
-                >
-                  {link.label}
-                </a>
-              ))}
+              {navLinks.map((link) =>
+                link.href.startsWith("/") ? (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2 text-sm font-dm text-white/60 hover:text-white py-2"
+                  >
+                    {link.label}
+                    {link.badge && (
+                      <span className="text-[9px] bg-[rgba(211,84,0,0.15)] text-[#F0997B] px-1.5 py-0.5 rounded font-medium tracking-wide">
+                        {link.badge}
+                      </span>
+                    )}
+                  </Link>
+                ) : (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMenuOpen(false)}
+                    className="block text-sm font-dm text-white/60 hover:text-white py-2"
+                  >
+                    {link.label}
+                  </a>
+                )
+              )}
               <div className="flex flex-col gap-2 pt-3 border-t border-white/[0.07]">
                 <Link
                   href={`/register${qs}`}
@@ -1143,11 +1175,18 @@ function Footer() {
                 { label: t("landing.footer.useCases"), href: "#marques" },
                 { label: t("landing.footer.pixel"), href: "#pixel" },
                 { label: t("landing.footer.faq"), href: "#faq" },
+                { label: "Developers", href: "/developers" },
               ].map((link, i) => (
                 <li key={i}>
-                  <a href={link.href} className="font-dm text-[13px] text-white/40 hover:text-white transition-colors">
-                    {link.label}
-                  </a>
+                  {link.href.startsWith("/") ? (
+                    <Link href={link.href} className="font-dm text-[13px] text-white/40 hover:text-white transition-colors">
+                      {link.label}
+                    </Link>
+                  ) : (
+                    <a href={link.href} className="font-dm text-[13px] text-white/40 hover:text-white transition-colors">
+                      {link.label}
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>

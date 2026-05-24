@@ -79,6 +79,11 @@ export default function Footer() {
                   {t("footer.brandSpace")}
                 </Link>
               </li>
+              <li>
+                <Link href="/developers" className="text-sm text-white/30 hover:text-white/60 transition">
+                  Developers
+                </Link>
+              </li>
             </ul>
           </div>
 
