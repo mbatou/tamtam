@@ -2,6 +2,7 @@ import EchoBottomNav from "@/components/EchoBottomNav";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { getActiveTheme, THEME_COLORS } from "@/lib/theme";
 import OnboardingGuard from "@/components/echo/OnboardingGuard";
+import PwaSetup from "@/components/echo/PwaSetup";
 
 export default function EchoLayout({ children }: { children: React.ReactNode }) {
   const theme = getActiveTheme();
@@ -24,6 +25,7 @@ export default function EchoLayout({ children }: { children: React.ReactNode }) 
       )}
       <main className="max-w-[560px] mx-auto">{children}</main>
       <OnboardingGuard />
+      <PwaSetup />
       <InstallPrompt />
       <EchoBottomNav />
     </div>

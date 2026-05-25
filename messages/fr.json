@@ -662,6 +662,28 @@
       "welcomeDesc": "Ton profil est prêt. Découvre les rythmes disponibles et commence à gagner.",
       "welcomeCta": "Voir les Rythmes →",
       "welcomeDismiss": "Compris"
+    },
+    "push": {
+      "title": "Restez informé",
+      "body": "Activez les notifications pour être alerté des nouvelles campagnes en premier.",
+      "enable": "Activer les notifications",
+      "skip": "Plus tard",
+      "enabled": "Notifications activées",
+      "disabled": "Notifications désactivées",
+      "notificationsLabel": "Notifications push",
+      "statusEnabled": "Activées",
+      "statusDisabled": "Désactivées"
+    },
+    "leaderboard": {
+      "title": "Classement",
+      "weekly": "Cette semaine",
+      "monthly": "Ce mois",
+      "clicks": "clics",
+      "yourRank": "Votre position",
+      "empty": "Aucun classement disponible pour le moment.",
+      "join": "Rejoignez une campagne pour apparaître dans le classement.",
+      "seeAll": "Voir tout",
+      "backToDashboard": "Retour"
     }
   },
   "admin": {

@@ -662,6 +662,28 @@
       "welcomeDesc": "Your profile is ready. Discover available campaigns and start earning.",
       "welcomeCta": "See Rythmes →",
       "welcomeDismiss": "Got it"
+    },
+    "push": {
+      "title": "Stay informed",
+      "body": "Enable notifications to be first to know about new campaigns.",
+      "enable": "Enable notifications",
+      "skip": "Later",
+      "enabled": "Notifications enabled",
+      "disabled": "Notifications disabled",
+      "notificationsLabel": "Push notifications",
+      "statusEnabled": "Enabled",
+      "statusDisabled": "Disabled"
+    },
+    "leaderboard": {
+      "title": "Leaderboard",
+      "weekly": "This week",
+      "monthly": "This month",
+      "clicks": "clicks",
+      "yourRank": "Your rank",
+      "empty": "No leaderboard data yet.",
+      "join": "Join a campaign to appear on the leaderboard.",
+      "seeAll": "See all",
+      "backToDashboard": "Back"
     }
   },
   "admin": {

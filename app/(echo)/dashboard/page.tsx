@@ -12,6 +12,8 @@ import { requestNotificationPermission, canAskNotification } from "@/lib/notific
 import { getActiveTheme } from "@/lib/theme";
 import CampaignMiniCard from "@/components/echo/CampaignMiniCard";
 import WelcomeBanner from "@/components/echo/onboarding/WelcomeBanner";
+import PushPermissionPrompt from "@/components/echo/PushPermissionPrompt";
+import Leaderboard from "@/components/echo/Leaderboard";
 
 export default function EchoDashboard() {
   const [user, setUser] = useState<User | null>(null);
@@ -22,6 +24,7 @@ export default function EchoDashboard() {
   const [selectedLink, setSelectedLink] = useState<TrackedLinkWithCampaign | null>(null);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
+  const [showPushPrompt, setShowPushPrompt] = useState(false);
   const [clickStats, setClickStats] = useState<{ total: number; valid: number; invalid: number; validity_rate: number } | null>(null);
   const supabase = createClient();
   const { showToast, ToastComponent } = useToast();
@@ -70,6 +73,16 @@ export default function EchoDashboard() {
 
     return () => { supabase.removeChannel(channel); };
   }, [loadData, supabase]);
+
+  useEffect(() => {
+    if (!user) return;
+    const dismissed = localStorage.getItem("push_prompt_dismissed");
+    const permission = "Notification" in window ? Notification.permission : "denied";
+    if (!dismissed && permission === "default" && user.interests_completed_at) {
+      const timer = setTimeout(() => setShowPushPrompt(true), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
 
   async function acceptCampaign(campaignId: string) {
     setAccepting(campaignId);
@@ -289,6 +302,20 @@ export default function EchoDashboard() {
         </div>
       </div>
 
+      {/* Push notification prompt */}
+      {showPushPrompt && (
+        <PushPermissionPrompt
+          onEnabled={() => {
+            setShowPushPrompt(false);
+            showToast(t("echo.push.enabled"), "success");
+          }}
+          onSkip={() => {
+            localStorage.setItem("push_prompt_dismissed", "true");
+            setShowPushPrompt(false);
+          }}
+        />
+      )}
+
       {/* Active campaigns strip */}
       {activeLinks.length > 0 && (
         <div className="mb-5">
@@ -378,6 +405,13 @@ export default function EchoDashboard() {
               </button>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Leaderboard */}
+      {user && (
+        <div className="mb-5">
+          <Leaderboard currentUserId={user.id} />
         </div>
       )}
 
