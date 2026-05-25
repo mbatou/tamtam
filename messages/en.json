@@ -676,18 +676,18 @@
       "statusDisabled": "Disabled"
     },
     "leaderboard": {
-      "title": "Leaderboard",
-      "weekly": "This week",
-      "monthly": "This month",
-      "all": "All time",
+      "eyebrow": "All-time ranking",
+      "heroTitle": "Top Échos 🔥",
+      "ranked": "{count} Échos ranked",
       "clicks": "clicks",
       "campaigns": "campaigns",
       "yourRank": "Your rank",
-      "foundingEcho": "Founding Echo",
-      "empty": "No leaderboard data yet.",
-      "join": "Join a campaign to appear on the leaderboard.",
-      "seeAll": "See all",
-      "backToDashboard": "Back"
+      "founding": "Founding",
+      "nextRank": "🎯 {clicks} more clicks to reach rank #{rank}",
+      "topPercent": "You're in the top {percent}% of Échos!",
+      "emptyTitle": "No rankings yet",
+      "emptyDesc": "Join a campaign and be the first on the podium!",
+      "seeCampaigns": "See campaigns →"
     }
   },
   "admin": {

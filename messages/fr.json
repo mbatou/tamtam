@@ -676,18 +676,18 @@
       "statusDisabled": "Désactivées"
     },
     "leaderboard": {
-      "title": "Classement",
-      "weekly": "Cette semaine",
-      "monthly": "Ce mois",
-      "all": "Tout le temps",
+      "eyebrow": "Classement général",
+      "heroTitle": "Top Échos 🔥",
+      "ranked": "{count} Échos dans le classement",
       "clicks": "clics",
       "campaigns": "campagnes",
-      "yourRank": "Votre position",
-      "foundingEcho": "Écho Fondateur",
-      "empty": "Aucun classement disponible pour le moment.",
-      "join": "Rejoignez une campagne pour apparaître dans le classement.",
-      "seeAll": "Voir tout",
-      "backToDashboard": "Retour"
+      "yourRank": "Votre rang",
+      "founding": "Fondateur",
+      "nextRank": "🎯 Encore {clicks} clics pour passer au rang #{rank}",
+      "topPercent": "Vous êtes dans le top {percent}% des Échos !",
+      "emptyTitle": "Le classement est vide",
+      "emptyDesc": "Rejoignez une campagne et soyez le premier sur le podium !",
+      "seeCampaigns": "Voir les campagnes →"
     }
   },
   "admin": {
