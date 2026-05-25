@@ -55,7 +55,7 @@ export default function StepPlatforms({ selected, onChange, onNext, onSkip }: St
                 </span>
               )}
               <span className="text-sm font-bold block" style={{ color: isSelected ? platform.color : "rgba(255,255,255,0.7)" }}>
-                {platform.label}
+                {platform.id === "other" ? t("echo.onboarding.platformOther") : platform.label}
               </span>
             </button>
           );

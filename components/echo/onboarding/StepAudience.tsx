@@ -3,6 +3,13 @@
 import { AUDIENCE_SIZES } from "@/lib/onboarding";
 import { useTranslation } from "@/lib/i18n";
 
+const AUDIENCE_I18N_KEYS: Record<string, { label: string; sublabel: string }> = {
+  small: { label: "echo.onboarding.audienceSmallLabel", sublabel: "echo.onboarding.audienceSmallSublabel" },
+  medium: { label: "echo.onboarding.audienceMediumLabel", sublabel: "echo.onboarding.audienceMediumSublabel" },
+  growing: { label: "echo.onboarding.audienceGrowingLabel", sublabel: "echo.onboarding.audienceGrowingSublabel" },
+  large: { label: "echo.onboarding.audienceLargeLabel", sublabel: "echo.onboarding.audienceLargeSublabel" },
+};
+
 interface StepAudienceProps {
   primaryPlatformLabel: string;
   selected: string | null;
@@ -30,6 +37,7 @@ export default function StepAudience({ primaryPlatformLabel, selected, onChange,
       <div className="space-y-3 mb-6">
         {AUDIENCE_SIZES.map((size) => {
           const isSelected = selected === size.id;
+          const keys = AUDIENCE_I18N_KEYS[size.id];
           return (
             <button
               key={size.id}
@@ -43,9 +51,9 @@ export default function StepAudience({ primaryPlatformLabel, selected, onChange,
               <span className="text-2xl">{size.emoji}</span>
               <div className="flex-1 min-w-0">
                 <p className={`text-sm font-bold ${isSelected ? "text-[#1D9E75]" : "text-white"}`}>
-                  {size.label}
+                  {keys ? t(keys.label) : size.label}
                 </p>
-                <p className="text-xs text-white/40 mt-0.5">{size.sublabel}</p>
+                <p className="text-xs text-white/40 mt-0.5">{keys ? t(keys.sublabel) : size.sublabel}</p>
               </div>
               {isSelected && (
                 <span className="text-[#1D9E75] text-sm font-bold shrink-0">✓</span>
