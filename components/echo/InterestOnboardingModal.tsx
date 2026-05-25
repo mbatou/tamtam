@@ -196,7 +196,7 @@ export default function InterestOnboardingModal({
 
               {/* Signals */}
               <div className="mb-6">
-                <h4 className="text-sm font-bold mb-1">Contenu partag&eacute; sur WhatsApp Status</h4>
+                <h4 className="text-sm font-bold mb-1">Contenu partag&eacute; sur vos r&eacute;seaux</h4>
                 <p className="text-xs text-white/40 mb-3">Choisis jusqu&apos;&agrave; 3 types</p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {signals.map((sig) => {
@@ -346,7 +346,7 @@ export default function InterestOnboardingModal({
         {step === 2 && (
           <>
             <div className="mb-4">
-              <h3 className="text-sm font-bold mb-1">Qu&apos;est-ce que tu partages sur ton WhatsApp Status d&apos;habitude?</h3>
+              <h3 className="text-sm font-bold mb-1">Qu&apos;est-ce que tu partages sur tes r&eacute;seaux d&apos;habitude?</h3>
               <p className="text-xs text-white/40 mb-3">Choisis jusqu&apos;&agrave; 3 types de contenu</p>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">

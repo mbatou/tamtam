@@ -167,15 +167,6 @@ export default function RythmesPage() {
         ))}
       </div>
 
-      {/* Snapchat coming soon banner */}
-      <div className="bg-gradient-to-r from-yellow-400/10 to-yellow-600/10 border border-yellow-400/20 rounded-xl p-3 mb-4 flex items-center gap-3">
-        <span className="text-xl">👻</span>
-        <div>
-          <span className="text-yellow-300 font-bold text-xs">{t("snapchat.arrivingNextWeek")}</span>
-          <span className="text-gray-400 text-[10px] block">{t("snapchat.doubleYourEarnings")}</span>
-        </div>
-      </div>
-
       {/* TAB: Available campaigns */}
       {activeTab === "available" && (
         <div className="space-y-3">
@@ -346,18 +337,6 @@ export default function RythmesPage() {
                         📱 {t("common.shareWhatsAppHint")}
                       </p>
                     )}
-                    <div className="mt-3 bg-yellow-400/10 border border-yellow-400/20 rounded-xl p-3 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl">👻</span>
-                        <div>
-                          <span className="text-yellow-300 text-sm font-medium">{t("snapchat.name")}</span>
-                          <span className="text-white/30 text-xs block">{t("snapchat.shareOnSnap")}</span>
-                        </div>
-                      </div>
-                      <span className="bg-yellow-400/20 text-yellow-300 text-xs px-2.5 py-1 rounded-full font-medium">
-                        {t("snapchat.comingSoon")}
-                      </span>
-                    </div>
                   </div>
                 </div>
               );

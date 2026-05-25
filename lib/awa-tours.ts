@@ -102,8 +102,8 @@ export const TOURS: Tour[] = [
       {
         target: "[data-tour='objective-awareness']",
         message: {
-          fr: "Notoriété : maximisez la visibilité de votre marque sur les Status WhatsApp.",
-          en: "Awareness: maximize your brand visibility on WhatsApp Status.",
+          fr: "Notoriété : maximisez la visibilité de votre marque sur les réseaux.",
+          en: "Awareness: maximize your brand visibility on social networks.",
         },
         position: "right",
       },
