@@ -7,7 +7,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: {
-    default: "Tamtam — La publicité WhatsApp Status, débloquée.",
+    default: "Tamtam — La publicité sociale, débloquée.",
     template: "%s | Tamtam",
   },
   description:
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     locale: "fr_SN",
     url: "https://tamma.me",
     siteName: "Tamtam",
-    title: "Tamtam — La publicité WhatsApp Status, débloquée.",
+    title: "Tamtam — La publicité sociale, débloquée.",
     description:
       "Touchez vos clients là où ils sont vraiment : WhatsApp. 5 à 10× moins cher que Facebook Ads.",
     images: [
@@ -56,13 +56,13 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Tamtam — La publicité WhatsApp Status, débloquée.",
+        alt: "Tamtam — La publicité sociale, débloquée.",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Tamtam — La publicité WhatsApp Status, débloquée.",
+    title: "Tamtam — La publicité sociale, débloquée.",
     description:
       "Touchez vos clients là où ils sont vraiment : WhatsApp. 5 à 10× moins cher que Facebook Ads.",
     images: ["/og-image.png"],

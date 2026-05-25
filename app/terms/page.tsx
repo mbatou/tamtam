@@ -35,7 +35,7 @@ export default function TermsPage() {
         <p>
           Tamtam est une plateforme de micro-influence qui met en relation des annonceurs
           (&laquo; Batteurs &raquo;) et des partageurs (&laquo; Échos &raquo;). Les Batteurs créent des campagnes
-          publicitaires et les Échos partagent les liens sur WhatsApp et autres canaux pour générer
+          publicitaires et les Échos partagent les liens sur les réseaux sociaux et autres canaux pour générer
           du trafic qualifié. La rémunération est basée sur les clics validés (CPC — coût par clic).
         </p>
       </section>
@@ -56,7 +56,7 @@ export default function TermsPage() {
         <ul className="list-disc pl-5 space-y-2">
           <li>Les clics doivent provenir de personnes réelles et uniques.</li>
           <li>Toute forme de fraude (clics artificiels, bots, auto-clics, fermes à clics) est strictement interdite.</li>
-          <li>Les liens doivent être partagés sur WhatsApp ou d&apos;autres canaux de communication légitimes.</li>
+          <li>Les liens doivent être partagés sur les réseaux sociaux ou d&apos;autres canaux de communication légitimes.</li>
           <li>Le spam, l&apos;envoi en masse non sollicité et le partage dans des groupes non pertinents sont interdits.</li>
           <li>En cas de fraude avérée, le compte sera suspendu et les gains confisqués.</li>
         </ul>

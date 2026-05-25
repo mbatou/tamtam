@@ -86,9 +86,9 @@ Never ask for all steps at once. One question at a time.
 
 METRIC EXPLANATIONS:
 - CPC = 50 FCFA per real verified click (not impression, not bot)
-- Total reach = people who saw the link on WhatsApp Status
+- Total reach = people who saw the link on social Status
 - Real visitors = verified human clicks only
-- Échos = real people who share campaigns on their WhatsApp Status
+- Échos = real people who share campaigns on their social networks
 - Pixel = tracks conversions after the click (sign-ups, activations, purchases)
 
 IMPORTANT RULES:

@@ -396,24 +396,6 @@ export default function EchoDashboard() {
         </div>
       )}
 
-      {/* Multi-platform preview */}
-      <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4 mb-5">
-        <h4 className="text-white font-bold text-sm mb-3">{t("snapchat.yourPlatforms")}</h4>
-        <div className="flex gap-3">
-          <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2.5 flex-1">
-            <span className="text-lg">💬</span>
-            <span className="text-green-400 text-sm font-medium">WhatsApp</span>
-            <span className="text-green-400 text-xs ml-auto">{t("snapchat.active")} ✓</span>
-          </div>
-          <div className="flex items-center gap-2 bg-yellow-400/10 border border-yellow-400/20 rounded-lg px-3 py-2.5 flex-1 opacity-75">
-            <span className="text-lg">👻</span>
-            <span className="text-yellow-300 text-sm font-medium">Snapchat</span>
-            <span className="text-yellow-300 text-xs ml-auto">{t("snapchat.comingSoon")}</span>
-          </div>
-        </div>
-        <p className="text-gray-500 text-xs mt-2">{t("snapchat.morePlatforms")}</p>
-      </div>
-
       {/* Push notification prompt */}
       {showNotifPrompt && (
         <div className="fixed bottom-0 left-0 right-0 bg-[#111128] border-t border-[#1D9E75]/20 p-4 z-50 safe-area-bottom">

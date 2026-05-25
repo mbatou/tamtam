@@ -350,7 +350,7 @@ function HowItWorks() {
             {/* Box 1 */}
             <div className="bg-[#0A0A1A] border border-white/[0.07] rounded-xl p-5 w-[180px] text-center shrink-0">
               <p className="text-[11px] font-code text-[#D35400] mb-2">Visitor</p>
-              <p className="text-[12px] font-dm text-white/50">Clicks WhatsApp Status link</p>
+              <p className="text-[12px] font-dm text-white/50">Clicks shared link</p>
             </div>
             {/* Arrow */}
             <div className="flex-1 flex items-center">

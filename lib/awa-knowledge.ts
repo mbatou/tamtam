@@ -2,8 +2,8 @@ export const awaKnowledge = `
 TAMTAM PLATFORM — COMPLETE KNOWLEDGE BASE
 
 ## What is Tamtam?
-Tamtam (tamtam.africa) is a WhatsApp Status micro-influencer advertising platform.
-Brands pay to have their links shared by real people (called Échos) on their WhatsApp Status.
+Tamtam (tamtam.africa) is a micro-influencer advertising platform.
+Brands pay to have their links shared by real people (called Échos) on their social networks.
 Brands pay 50 FCFA per verified click. Échos earn money for every click their shared link generates.
 Built by Pandorus, based in Dakar, Senegal. Pan-African.
 
@@ -13,7 +13,7 @@ Built by Pandorus, based in Dakar, Senegal. Pan-African.
 The Tamtam word for a campaign. Brands create Rythmes with a name, URL, budget, and objective.
 
 ### Écho
-A real person who shares campaign links on their WhatsApp Status and earns money per click.
+A real person who shares campaign links on their social networks and earns money per click.
 Platform has 1 400+ active Échos across 40+ cities. Minimum ~774 available at any time.
 
 ### CPC (Cost Per Click)

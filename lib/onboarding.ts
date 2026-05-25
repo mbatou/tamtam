@@ -19,7 +19,7 @@ export function getPrimaryPlatform(platforms: string[]): string {
 }
 
 export const PLATFORM_LIST = [
-  { id: "whatsapp", label: "WhatsApp Status", color: "#25D366", bg: "rgba(37,211,102,0.1)", border: "rgba(37,211,102,0.3)" },
+  { id: "whatsapp", label: "WhatsApp", color: "#25D366", bg: "rgba(37,211,102,0.1)", border: "rgba(37,211,102,0.3)" },
   { id: "instagram", label: "Instagram", color: "#E1306C", bg: "rgba(225,48,108,0.1)", border: "rgba(225,48,108,0.3)" },
   { id: "tiktok", label: "TikTok", color: "#ffffff", bg: "rgba(255,255,255,0.06)", border: "rgba(255,255,255,0.15)" },
   { id: "facebook", label: "Facebook", color: "#1877F2", bg: "rgba(24,119,242,0.1)", border: "rgba(24,119,242,0.3)" },

@@ -623,7 +623,7 @@ function LeadGenCampaignPage() {
               </button>
             </div>
             <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple onChange={handleUpload} className="hidden" />
-            <p className="text-xs text-white/30">Image utilisee par les Echos pour promouvoir votre campagne sur WhatsApp Status</p>
+            <p className="text-xs text-white/30">Image utilisee par les Echos pour promouvoir votre campagne sur leurs reseaux</p>
           </div>
           <div>
             <label className="block text-xs font-semibold text-white/40 mb-2">Audience cible *</label>
