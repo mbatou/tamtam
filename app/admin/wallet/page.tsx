@@ -9,13 +9,23 @@ import {
   AreaChart, Area,
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
+import { useBrandContext } from "@/lib/brand-context-client";
+import PermissionDenied from "@/components/dashboard/PermissionDenied";
 
 export default function AdminWalletWrapper() {
   return (
     <Suspense fallback={<WalletSkeleton />}>
-      <AdminWalletPage />
+      <AdminWalletGate />
     </Suspense>
   );
+}
+
+function AdminWalletGate() {
+  const brandCtx = useBrandContext();
+  if (!brandCtx.can("VIEW_WALLET")) {
+    return <PermissionDenied message="Seul le propriétaire ou un admin peut accéder au portefeuille." />;
+  }
+  return <AdminWalletPage />;
 }
 
 function WalletSkeleton() {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { getEffectiveBrandId } from "@/lib/brand-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -14,28 +15,18 @@ export async function GET() {
   }
 
   const supabase = createServiceClient();
+  const ownerId = await getEffectiveBrandId(supabase, session.user.id);
 
-  // Determine the brand owner ID
-  const { data: currentUser } = await supabase
-    .from("users")
-    .select("id, brand_owner_id")
-    .eq("id", session.user.id)
-    .single();
-
-  if (!currentUser) {
-    return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
-  }
-
-  const ownerId = currentUser.brand_owner_id || currentUser.id;
+  const isOwner = ownerId === session.user.id;
 
   const { data: members } = await supabase
     .from("brand_team_members")
     .select("*")
     .eq("brand_owner_id", ownerId)
     .neq("status", "removed")
+    .is("removed_at", null)
     .order("invited_at", { ascending: true });
 
-  // Get member user details for accepted members
   const memberDetails = [];
   for (const member of members || []) {
     if (member.member_user_id) {
@@ -51,7 +42,7 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    isOwner: !currentUser.brand_owner_id,
+    isOwner,
     ownerId,
     members: memberDetails,
   });

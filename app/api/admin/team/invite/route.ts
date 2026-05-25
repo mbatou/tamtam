@@ -14,10 +14,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
-  const { email } = await request.json();
+  const { email, role: inviteRole } = await request.json();
   if (!email) {
     return NextResponse.json({ error: "Email requis" }, { status: 400 });
   }
+
+  const validRoles = ["admin", "member", "viewer"];
+  const teamRole = validRoles.includes(inviteRole) ? inviteRole : "member";
 
   const supabase = createServiceClient();
 
@@ -69,6 +72,7 @@ export async function POST(request: NextRequest) {
       brand_owner_id: currentUser.id,
       member_user_id: existingUser?.id || null,
       email: email.toLowerCase(),
+      role: teamRole,
       status: existingUser ? "active" : "invited",
       accepted_at: existingUser ? new Date().toISOString() : null,
       invited_by: currentUser.id,
