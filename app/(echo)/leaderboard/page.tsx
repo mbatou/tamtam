@@ -11,7 +11,6 @@ interface LeaderboardEntry {
   is_founding_echo?: boolean
   total_clicks: number
   rank: number
-  tier?: string
   campaigns_joined?: number
 }
 
@@ -19,7 +18,6 @@ interface UserEntry {
   echo_id: string
   name: string
   rank: number
-  tier?: string
   total_clicks: number
   campaigns_joined: number
 }
@@ -57,24 +55,6 @@ export default function LeaderboardPage() {
 
   const medals = ['', '\u{1F947}', '\u{1F948}', '\u{1F949}']
 
-  function getTierLabel(tier?: string) {
-    switch (tier) {
-      case 'silver': return t('echo.leaderboard.tierSilver')
-      case 'gold': return t('echo.leaderboard.tierGold')
-      case 'diamond': return t('echo.leaderboard.tierDiamond')
-      default: return t('echo.leaderboard.tierBronze')
-    }
-  }
-
-  function getTierColor(tier?: string) {
-    switch (tier) {
-      case 'silver': return 'text-gray-300'
-      case 'gold': return 'text-yellow-400'
-      case 'diamond': return 'text-cyan-300'
-      default: return 'text-orange-400'
-    }
-  }
-
   return (
     <div className="px-4 py-5 min-h-screen">
       <h1 className="text-xl font-bold font-syne mb-5">{t('echo.leaderboard.title')}</h1>
@@ -104,18 +84,13 @@ export default function LeaderboardPage() {
               {userEntry.name?.charAt(0)?.toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-[#1D9E75] truncate">{userEntry.name}</span>
-                <span className={`text-[10px] font-bold ${getTierColor(userEntry.tier)}`}>
-                  {getTierLabel(userEntry.tier)}
-                </span>
-              </div>
+              <span className="text-sm font-bold text-[#1D9E75] truncate block">{userEntry.name}</span>
               <span className="text-[10px] text-white/30">
                 {t('echo.leaderboard.yourRank')}: <span className="font-bold text-white/60">#{userEntry.rank}</span>
               </span>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-[#1D9E75]/10">
+          <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-[#1D9E75]/10">
             <div className="text-center">
               <span className="text-sm font-black block">{userEntry.total_clicks}</span>
               <span className="text-[9px] text-white/35">{t('echo.leaderboard.clicks')}</span>
@@ -123,12 +98,6 @@ export default function LeaderboardPage() {
             <div className="text-center">
               <span className="text-sm font-black block">{userEntry.campaigns_joined}</span>
               <span className="text-[9px] text-white/35">{t('echo.leaderboard.campaigns')}</span>
-            </div>
-            <div className="text-center">
-              <span className={`text-sm font-black block ${getTierColor(userEntry.tier)}`}>
-                {getTierLabel(userEntry.tier)}
-              </span>
-              <span className="text-[9px] text-white/35">{t('echo.leaderboard.tier')}</span>
             </div>
           </div>
         </div>

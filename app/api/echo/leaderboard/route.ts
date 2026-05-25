@@ -91,7 +91,6 @@ export async function GET(request: NextRequest) {
       r: {
         echo_id: string;
         name: string;
-        tier: string;
         total_clicks: number;
         campaigns_joined: number;
       },
@@ -100,7 +99,6 @@ export async function GET(request: NextRequest) {
       rank: index + 1,
       echo_id: r.echo_id,
       name: r.name,
-      tier: r.tier,
       total_clicks: Number(r.total_clicks),
       campaigns_joined: Number(r.campaigns_joined),
       city: userDetails[r.echo_id]?.city || null,
@@ -108,13 +106,11 @@ export async function GET(request: NextRequest) {
     }),
   );
 
-  // Build current user's entry for the pinned card
   let userEntry = null;
   if (userIndex >= 0) {
     const r = results[userIndex] as {
       echo_id: string;
       name: string;
-      tier: string;
       total_clicks: number;
       campaigns_joined: number;
     };
@@ -122,7 +118,6 @@ export async function GET(request: NextRequest) {
       rank: userIndex + 1,
       echo_id: r.echo_id,
       name: r.name,
-      tier: r.tier,
       total_clicks: Number(r.total_clicks),
       campaigns_joined: Number(r.campaigns_joined),
     };
