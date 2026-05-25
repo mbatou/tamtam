@@ -488,7 +488,8 @@
       "validityRate": "Validity rate:",
       "suspendedAppeal": "If you believe this is an error, contact our support team to discuss it.",
       "contactSupport": "Contact support",
-      "suspendedWhatsApp": "Hello, my echo account has been suspended. Can you help me?"
+      "suspendedWhatsApp": "Hello, my echo account has been suspended. Can you help me?",
+      "seeAll": "See all"
     },
     "earnings": {
       "title": "My Earnings",

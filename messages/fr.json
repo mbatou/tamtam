@@ -488,7 +488,8 @@
       "validityRate": "Taux de validité :",
       "suspendedAppeal": "Si tu penses qu'il s'agit d'une erreur, contacte notre équipe support pour en discuter.",
       "contactSupport": "Contacter le support",
-      "suspendedWhatsApp": "Bonjour, mon compte écho a été suspendu. Pouvez-vous m'aider ?"
+      "suspendedWhatsApp": "Bonjour, mon compte écho a été suspendu. Pouvez-vous m'aider ?",
+      "seeAll": "Tout voir"
     },
     "earnings": {
       "title": "Mes Gains",
