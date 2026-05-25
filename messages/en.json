@@ -141,6 +141,7 @@
     "pulse": "Pulse",
     "rythmes": "Rythmes",
     "earnings": "Earnings",
+    "leaderboard": "Ranking",
     "profile": "Profile",
     "overview": "Overview",
     "analytics": "Analytics",
@@ -662,6 +663,31 @@
       "welcomeDesc": "Your profile is ready. Discover available campaigns and start earning.",
       "welcomeCta": "See Rythmes →",
       "welcomeDismiss": "Got it"
+    },
+    "push": {
+      "title": "Stay informed",
+      "body": "Enable notifications to be first to know about new campaigns.",
+      "enable": "Enable notifications",
+      "skip": "Later",
+      "enabled": "Notifications enabled",
+      "disabled": "Notifications disabled",
+      "notificationsLabel": "Push notifications",
+      "statusEnabled": "Enabled",
+      "statusDisabled": "Disabled"
+    },
+    "leaderboard": {
+      "eyebrow": "All-time ranking",
+      "heroTitle": "Top Échos 🔥",
+      "ranked": "{count} Échos ranked",
+      "clicks": "clicks",
+      "campaigns": "campaigns",
+      "yourRank": "Your rank",
+      "founding": "Founding",
+      "nextRank": "🎯 {clicks} more clicks to reach rank #{rank}",
+      "topPercent": "You're in the top {percent}% of Échos!",
+      "emptyTitle": "No rankings yet",
+      "emptyDesc": "Join a campaign and be the first on the podium!",
+      "seeCampaigns": "See campaigns →"
     }
   },
   "admin": {

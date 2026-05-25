@@ -141,6 +141,7 @@
     "pulse": "Pulse",
     "rythmes": "Rythmes",
     "earnings": "Gains",
+    "leaderboard": "Classement",
     "profile": "Profil",
     "overview": "Vue d'ensemble",
     "analytics": "Analytics",
@@ -662,6 +663,31 @@
       "welcomeDesc": "Ton profil est prêt. Découvre les rythmes disponibles et commence à gagner.",
       "welcomeCta": "Voir les Rythmes →",
       "welcomeDismiss": "Compris"
+    },
+    "push": {
+      "title": "Restez informé",
+      "body": "Activez les notifications pour être alerté des nouvelles campagnes en premier.",
+      "enable": "Activer les notifications",
+      "skip": "Plus tard",
+      "enabled": "Notifications activées",
+      "disabled": "Notifications désactivées",
+      "notificationsLabel": "Notifications push",
+      "statusEnabled": "Activées",
+      "statusDisabled": "Désactivées"
+    },
+    "leaderboard": {
+      "eyebrow": "Classement général",
+      "heroTitle": "Top Échos 🔥",
+      "ranked": "{count} Échos dans le classement",
+      "clicks": "clics",
+      "campaigns": "campagnes",
+      "yourRank": "Votre rang",
+      "founding": "Fondateur",
+      "nextRank": "🎯 Encore {clicks} clics pour passer au rang #{rank}",
+      "topPercent": "Vous êtes dans le top {percent}% des Échos !",
+      "emptyTitle": "Le classement est vide",
+      "emptyDesc": "Rejoignez une campagne et soyez le premier sur le podium !",
+      "seeCampaigns": "Voir les campagnes →"
     }
   },
   "admin": {
