@@ -47,6 +47,9 @@ interface UserRow {
   is_dual_role?: boolean;
   has_echo_activity?: boolean;
   has_batteur_activity?: boolean;
+  platforms?: string[] | null;
+  primary_platform?: string | null;
+  audience_size_range?: string | null;
 }
 
 interface CampaignHistory {
@@ -100,6 +103,7 @@ function UsersPageContent() {
   const [filter, setFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
   const [activityFilter, setActivityFilter] = useState<"all" | "active" | "inactive">("all");
+  const [platformFilter, setPlatformFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<UserRow | null>(null);
   const [loading, setLoading] = useState(true);
@@ -319,6 +323,9 @@ function UsersPageContent() {
     }
     if (activityFilter === "active" && u.click_stats.total === 0) return false;
     if (activityFilter === "inactive" && u.click_stats.total > 0) return false;
+    if (platformFilter !== "all") {
+      if (!u.platforms || !u.platforms.includes(platformFilter)) return false;
+    }
     return true;
   });
 
@@ -396,6 +403,22 @@ function UsersPageContent() {
           ))}
         </div>
 
+        {/* Platform filter */}
+        <select
+          value={platformFilter}
+          onChange={(e) => { setPlatformFilter(e.target.value); setPage(1); }}
+          className="px-3 py-2 rounded-xl font-dm text-xs font-medium transition-all focus:outline-none"
+          style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: platformFilter === "all" ? "rgba(255,255,255,0.4)" : "#5DCAA5" }}
+        >
+          <option value="all">Plateforme</option>
+          <option value="whatsapp">WhatsApp</option>
+          <option value="instagram">Instagram</option>
+          <option value="tiktok">TikTok</option>
+          <option value="facebook">Facebook</option>
+          <option value="snapchat">Snapchat</option>
+          <option value="other">Autre</option>
+        </select>
+
         {/* Search */}
         <div className="relative flex-1 max-w-sm">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "rgba(255,255,255,0.25)" }} />
@@ -449,12 +472,12 @@ function UsersPageContent() {
           <table className="w-full">
             <thead>
               <tr style={{ background: "#111128" }}>
-                {["Utilisateur", "Rôle", "Statut", "Clics", "Gains", "Qualité", "Solde", "Inscrit"].map((h, i) => (
+                {["Utilisateur", "Rôle", "Statut", "Plateformes", "Clics", "Gains", "Qualité", "Solde", "Inscrit"].map((h, i) => (
                   <th
                     key={h}
                     className={`text-left font-dm font-medium uppercase tracking-wider px-4 py-3 ${
-                      i >= 3 && i <= 5 ? "hidden md:table-cell" : ""
-                    } ${i >= 6 ? "hidden lg:table-cell" : ""}`}
+                      i >= 3 && i <= 6 ? "hidden md:table-cell" : ""
+                    } ${i >= 7 ? "hidden lg:table-cell" : ""}`}
                     style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)" }}
                   >
                     {h}
@@ -515,6 +538,27 @@ function UsersPageContent() {
                          "Actif"}
                       </AdminBadge>
                     </td>
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      {user.platforms && user.platforms.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {user.platforms.slice(0, 3).map((p) => (
+                            <span key={p} className="font-dm text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(29,158,117,0.12)", color: "#5DCAA5" }}>
+                              {p === "whatsapp" ? "WA" : p === "instagram" ? "IG" : p === "tiktok" ? "TT" : p === "facebook" ? "FB" : p === "snapchat" ? "SC" : p}
+                            </span>
+                          ))}
+                          {user.platforms.length > 3 && (
+                            <span className="font-dm text-[9px] px-1 py-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>+{user.platforms.length - 3}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <span style={{ color: "rgba(255,255,255,0.15)" }}>—</span>
+                      )}
+                      {user.audience_size_range && (
+                        <div className="font-dm text-[9px] mt-0.5" style={{ color: "rgba(255,255,255,0.25)" }}>
+                          {user.audience_size_range === "small" ? "<200" : user.audience_size_range === "medium" ? "200-500" : user.audience_size_range === "growing" ? "500-2k" : "2k+"}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-3 hidden md:table-cell font-dm text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
                       {user.click_stats.total > 0 ? (
                         <span>{user.click_stats.total} <span style={{ color: user.click_stats.rate > 20 ? "#F09595" : "rgba(255,255,255,0.3)" }}>({user.click_stats.rate}% fraude)</span></span>
@@ -546,7 +590,7 @@ function UsersPageContent() {
               })}
               {displayUsers.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center font-dm text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  <td colSpan={9} className="px-4 py-12 text-center font-dm text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>
                     Aucun utilisateur trouvé
                   </td>
                 </tr>

@@ -591,7 +591,11 @@
       "modify": "Modify",
       "interestRewardSuccess": "100 FCFA credited + Founding Echo badge!",
       "interestSaved": "Preferences saved!",
-      "interestUpdated": "Preferences updated"
+      "interestUpdated": "Preferences updated",
+      "sharingProfile": "My sharing profile",
+      "platforms": "Platforms",
+      "audience": "Audience",
+      "contacts": "contacts"
     },
     "rythmes": {
       "title": "Rythmes",
@@ -632,6 +636,23 @@
     "modal": {
       "earned": "Earned",
       "disabledMessage": "This campaign is {status} — sharing is disabled."
+    },
+    "onboarding": {
+      "platformsTitle": "Where do you share content?",
+      "platformsDesc": "Select the platforms where you usually share.",
+      "audienceTitle": "How big is your audience?",
+      "audienceDesc": "How many people see your posts on {platform}?",
+      "interestsTitle": "What are you interested in?",
+      "interestsDesc": "Choose up to 5 categories to receive the best campaigns.",
+      "signalsTitle": "What content do you share?",
+      "signalsDesc": "Choose up to 3 types of content you usually share.",
+      "skip": "Later",
+      "continue": "Continue →",
+      "finish": "Done ✓",
+      "welcomeTitle": "Welcome to Tamtam!",
+      "welcomeDesc": "Your profile is ready. Discover available campaigns and start earning.",
+      "welcomeCta": "See Rythmes →",
+      "welcomeDismiss": "Got it"
     }
   },
   "admin": {

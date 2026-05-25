@@ -92,7 +92,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Protect echo routes
-  if (pathname.startsWith("/dashboard") || pathname.startsWith("/rythmes") || pathname.startsWith("/earnings") || pathname.startsWith("/profil")) {
+  if (pathname.startsWith("/dashboard") || pathname.startsWith("/rythmes") || pathname.startsWith("/earnings") || pathname.startsWith("/profil") || pathname.startsWith("/onboarding")) {
     if (!user) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
@@ -186,6 +186,7 @@ export const config = {
     "/rythmes/:path*",
     "/earnings/:path*",
     "/profil/:path*",
+    "/onboarding/:path*",
     "/admin/:path*",
     "/superadmin/:path*",
     "/api/superadmin/:path*",
