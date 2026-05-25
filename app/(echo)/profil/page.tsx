@@ -24,18 +24,15 @@ export default function ProfilPage() {
   const [acceptingTerms, setAcceptingTerms] = useState(false);
   const [referralEnabled, setReferralEnabled] = useState(true);
 
-  // Password change
   const [showPassword, setShowPassword] = useState(false);
   const [passwords, setPasswords] = useState({ new_password: "", confirm: "" });
   const [pwSaving, setPwSaving] = useState(false);
 
-  // Interest onboarding
   const [showInterestModal, setShowInterestModal] = useState(false);
   const [interestEditMode, setInterestEditMode] = useState(false);
   const [userInterests, setUserInterests] = useState<{ id: string; emoji: string; name_fr: string }[]>([]);
   const [userSignals, setUserSignals] = useState<{ id: string; emoji: string; name_fr: string }[]>([]);
 
-  // Account deletion
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [deleting, setDeleting] = useState(false);
@@ -83,7 +80,6 @@ export default function ProfilPage() {
       setReferralEnabled(settingsData.referral_program_enabled !== false);
     }
 
-    // Load interest data
     try {
       const interestRes = await fetch("/api/echo/interests");
       if (interestRes.ok) {
@@ -192,7 +188,7 @@ export default function ProfilPage() {
 
   if (loading) {
     return (
-      <div className="px-4 py-5 max-w-lg mx-auto space-y-3">
+      <div className="px-4 py-5 space-y-3">
         <div className="skeleton h-6 w-28 rounded-xl" />
         <div className="skeleton h-24 rounded-xl" />
         <div className="grid grid-cols-3 gap-2">
@@ -204,35 +200,32 @@ export default function ProfilPage() {
     );
   }
 
-  // Member since
   const memberSinceDate = user?.created_at ? new Date(user.created_at) : null;
   const daysSinceJoined = memberSinceDate
     ? Math.floor((Date.now() - memberSinceDate.getTime()) / 86400000)
     : 0;
 
   return (
-    <div className="px-4 py-5 max-w-lg mx-auto">
-      <h1 className="text-xl font-bold mb-5">{t("echo.profile.title")}</h1>
+    <div className="px-4 py-5">
+      <h1 className="text-xl font-bold font-syne mb-5">{t("echo.profile.title")}</h1>
 
-      {/* Terms acceptance alert for existing users */}
+      {/* Terms acceptance alert */}
       {user && !user.terms_accepted_at && (
         <div className="mb-4 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
           <div className="flex items-start gap-3">
             <span className="text-lg shrink-0">&#9888;&#65039;</span>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-yellow-400 mb-1">
-                {t("echo.profile.termsRequired")}
-              </p>
+              <p className="text-sm font-semibold text-yellow-400 mb-1">{t("echo.profile.termsRequired")}</p>
               <p className="text-xs text-white/40 mb-3">
                 {t("echo.profile.termsRequiredDesc")}{" "}
-                <Link href="/terms" target="_blank" className="text-primary font-semibold hover:underline">
+                <Link href="/terms" target="_blank" className="text-[#1D9E75] font-semibold hover:underline">
                   {t("echo.profile.readTerms")}
                 </Link>
               </p>
               <button
                 onClick={handleAcceptTerms}
                 disabled={acceptingTerms}
-                className="px-4 py-2 rounded-xl bg-gradient-primary text-white text-xs font-bold hover:opacity-90 transition disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-[#1D9E75] text-white text-xs font-bold hover:opacity-90 transition disabled:opacity-50"
               >
                 {acceptingTerms ? "..." : t("echo.profile.acceptTerms")}
               </button>
@@ -241,25 +234,25 @@ export default function ProfilPage() {
         </div>
       )}
 
-      {/* Interest onboarding banner — show if not completed */}
+      {/* Interest onboarding banner */}
       {user && !user.interests_completed_at && (
-        <div className="mb-4 p-4 rounded-xl bg-[#D35400]/10 border border-[#D35400]/20">
+        <div className="mb-4 p-4 rounded-xl bg-[#1D9E75]/10 border border-[#1D9E75]/20">
           <div className="flex items-start gap-3">
             <span className="text-lg shrink-0">&#128221;</span>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-[#D35400] mb-1">
-                Compl&egrave;te tes centres d&apos;int&eacute;r&ecirc;t
+              <p className="text-sm font-semibold text-[#1D9E75] mb-1">
+                {t("echo.profile.completeInterests")}
               </p>
               <p className="text-xs text-white/40 mb-3">
                 {new Date() <= new Date("2026-04-30T23:59:59Z")
-                  ? "Gagne 100 FCFA + badge \"Écho Fondateur\" (jusqu'au 30 avril)"
-                  : "Dis-nous ce que tu aimes pour voir de meilleures campagnes"}
+                  ? t("echo.profile.interestRewardText")
+                  : t("echo.profile.interestDefaultText")}
               </p>
               <button
                 onClick={() => { setInterestEditMode(false); setShowInterestModal(true); }}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#D35400] to-[#E67E22] text-white text-xs font-bold hover:opacity-90 transition"
+                className="px-4 py-2 rounded-xl bg-[#1D9E75] text-white text-xs font-bold hover:opacity-90 transition"
               >
-                Commencer &rarr;
+                {t("echo.profile.startButton")}
               </button>
             </div>
           </div>
@@ -268,28 +261,24 @@ export default function ProfilPage() {
 
       {/* Feedback */}
       {error && (
-        <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-          {error}
-        </div>
+        <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>
       )}
       {success && (
-        <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">
-          {success}
-        </div>
+        <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">{success}</div>
       )}
 
-      {/* Profile card */}
-      <div className="glass-card p-5 mb-5">
+      {/* Profile card — teal avatar */}
+      <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-5 mb-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-gradient-primary flex items-center justify-center text-xl font-black shrink-0">
+            <div className="w-14 h-14 rounded-full bg-[#1D9E75]/20 border border-[#1D9E75]/30 flex items-center justify-center text-xl font-black text-[#1D9E75] shrink-0">
               {user?.name?.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <h2 className="text-lg font-bold truncate">{user?.name}</h2>
                 {user?.is_founding_echo && (
-                  <span className="text-sm" title="Écho Fondateur — Fait partie des premiers Échos de Tamtam">&#129351;</span>
+                  <span className="text-sm" title="Écho Fondateur">&#129351;</span>
                 )}
               </div>
               <p className="text-xs text-white/40">{user?.phone}</p>
@@ -299,20 +288,19 @@ export default function ProfilPage() {
           {!editing && (
             <button
               onClick={() => { setEditing(true); setError(""); setSuccess(""); }}
-              className="text-xs text-primary font-semibold hover:underline shrink-0"
+              className="text-xs text-[#1D9E75] font-semibold hover:underline shrink-0"
             >
               {t("echo.profile.edit")}
             </button>
           )}
         </div>
-        {/* Member since + tenure badge */}
         {memberSinceDate && (
           <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
             <p className="text-[10px] text-white/30">
               {t("echo.profile.memberSince")} {memberSinceDate.toLocaleDateString("fr-FR")} — {daysSinceJoined} {t("echo.profile.days")}
             </p>
             {daysSinceJoined <= 30 && (
-              <span className="text-[10px] text-primary font-bold">🌟 {t("echo.profile.earlyMember")}</span>
+              <span className="text-[10px] text-[#1D9E75] font-bold">🌟 {t("echo.profile.earlyMember")}</span>
             )}
           </div>
         )}
@@ -320,7 +308,7 @@ export default function ProfilPage() {
 
       {/* Edit form */}
       {editing && (
-        <div className="glass-card p-5 mb-5 space-y-4">
+        <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-5 mb-5 space-y-4">
           <h3 className="text-sm font-bold">{t("echo.profile.editProfile")}</h3>
           <div>
             <label className="block text-xs font-semibold text-white/40 mb-1">{t("echo.profile.nameRequired")}</label>
@@ -328,7 +316,7 @@ export default function ProfilPage() {
               type="text"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#1D9E75] transition"
             />
           </div>
           <div>
@@ -338,7 +326,7 @@ export default function ProfilPage() {
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
               placeholder="+221 77 000 00 00"
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#1D9E75] transition"
             />
           </div>
           <div>
@@ -360,7 +348,7 @@ export default function ProfilPage() {
                   onClick={() => setForm({ ...form, mobile_money_provider: option.id })}
                   className={`p-3 rounded-xl border-2 transition-all text-left ${
                     form.mobile_money_provider === option.id
-                      ? "border-primary bg-primary/10"
+                      ? "border-[#1D9E75] bg-[#1D9E75]/10"
                       : "border-white/10 bg-white/5 hover:border-white/20"
                   }`}
                 >
@@ -373,7 +361,7 @@ export default function ProfilPage() {
             <button
               onClick={handleSaveProfile}
               disabled={saving || !form.name}
-              className="flex-1 py-3 rounded-btn font-bold text-white bg-gradient-primary disabled:opacity-50 transition"
+              className="flex-1 py-3 rounded-xl font-bold text-white bg-[#1D9E75] hover:bg-[#178a65] transition disabled:opacity-50"
             >
               {saving ? t("echo.profile.saveLoading") : t("echo.profile.saveButton")}
             </button>
@@ -387,7 +375,7 @@ export default function ProfilPage() {
                   mobile_money_provider: user?.mobile_money_provider || "",
                 });
               }}
-              className="px-6 py-3 rounded-btn border border-white/10 text-sm font-semibold text-white/60 hover:bg-white/5 transition"
+              className="px-6 py-3 rounded-xl border border-white/10 text-sm font-semibold text-white/60 hover:bg-white/5 transition"
             >
               {t("common.cancel")}
             </button>
@@ -397,28 +385,28 @@ export default function ProfilPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 mb-5">
-        <div className="glass-card p-3 text-center">
+        <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 text-center">
           <p className="text-lg font-black">{stats.totalClicks}</p>
           <p className="text-[9px] text-white/40 font-semibold">{t("echo.dashboard.validClicks")}</p>
         </div>
-        <div className="glass-card p-3 text-center">
+        <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 text-center">
           <p className="text-lg font-black">{stats.activeCampaigns}</p>
           <p className="text-[9px] text-white/40 font-semibold">{t("echo.dashboard.rythmesJoined")}</p>
         </div>
-        <div className="glass-card p-3 text-center">
-          <p className="text-lg font-black text-accent">{formatFCFA(stats.totalEarned)}</p>
+        <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 text-center">
+          <p className="text-lg font-black text-[#D35400]">{formatFCFA(stats.totalEarned)}</p>
           <p className="text-[9px] text-white/40 font-semibold">{t("common.earned")}</p>
         </div>
       </div>
 
       {/* Écho Fondateur badge */}
       {user?.is_founding_echo && (
-        <div className="glass-card p-4 mb-5 border border-[#FDEF42]/20 bg-[#FDEF42]/5">
+        <div className="rounded-xl bg-white/[0.03] border border-[#FDEF42]/20 p-4 mb-5">
           <div className="flex items-center gap-3">
             <span className="text-3xl">&#129351;</span>
             <div className="flex-1">
-              <h3 className="text-sm font-bold text-[#FDEF42]">&Eacute;cho Fondateur</h3>
-              <p className="text-[10px] text-white/40">Fait partie des premiers 1 152 &Eacute;chos de Tamtam. Ce badge est exclusif et ne sera jamais redistribu&eacute;.</p>
+              <h3 className="text-sm font-bold text-[#FDEF42]">{t("echo.profile.foundingEchoTitle")}</h3>
+              <p className="text-[10px] text-white/40">{t("echo.profile.foundingEchoDesc")}</p>
             </div>
           </div>
         </div>
@@ -426,20 +414,20 @@ export default function ProfilPage() {
 
       {/* Mes centres d'intérêt */}
       {user?.interests_completed_at && (userInterests.length > 0 || userSignals.length > 0) && (
-        <div className="glass-card p-4 mb-5">
+        <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4 mb-5">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold">Mes centres d&apos;int&eacute;r&ecirc;t</h3>
+            <h3 className="text-sm font-bold">{t("echo.profile.myInterests")}</h3>
             <button
               onClick={() => { setInterestEditMode(true); setShowInterestModal(true); }}
-              className="text-xs text-primary font-semibold hover:underline"
+              className="text-xs text-[#1D9E75] font-semibold hover:underline"
             >
-              Modifier
+              {t("echo.profile.modify")}
             </button>
           </div>
           {userInterests.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-3">
               {userInterests.map((cat) => (
-                <span key={cat.id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#D35400]/10 border border-[#D35400]/20 text-xs">
+                <span key={cat.id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#1D9E75]/10 border border-[#1D9E75]/20 text-xs">
                   <span>{cat.emoji}</span>
                   <span className="font-semibold">{cat.name_fr}</span>
                 </span>
@@ -460,7 +448,7 @@ export default function ProfilPage() {
       )}
 
       {/* Referral section */}
-      <div className={`glass-card p-4 mb-5 ${!referralEnabled ? "opacity-50" : ""}`}>
+      <div className={`rounded-xl bg-white/[0.03] border border-white/[0.06] p-4 mb-5 ${!referralEnabled ? "opacity-50" : ""}`}>
         <h3 className="text-sm font-bold mb-2">🤝 {t("echo.profile.inviteFriends")}</h3>
         {!referralEnabled && (
           <div className="flex items-center gap-2 mb-3 py-2 px-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
@@ -492,14 +480,14 @@ export default function ProfilPage() {
       </div>
 
       {/* Details */}
-      <div className="glass-card divide-y divide-white/5 mb-5">
+      <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] divide-y divide-white/5 mb-5">
         <div className="flex justify-between px-4 py-3">
           <span className="text-xs text-white/40">{t("echo.profile.balance")}</span>
-          <span className="text-xs font-bold text-primary">{formatFCFA(user?.balance || 0)}</span>
+          <span className="text-xs font-bold text-[#D35400]">{formatFCFA(user?.balance || 0)}</span>
         </div>
         <div className="flex justify-between px-4 py-3">
           <span className="text-xs text-white/40">{t("echo.profile.totalEarned")}</span>
-          <span className="text-xs font-bold text-accent">{formatFCFA(user?.total_earned || 0)}</span>
+          <span className="text-xs font-bold text-[#D35400]">{formatFCFA(user?.total_earned || 0)}</span>
         </div>
         <div className="flex justify-between px-4 py-3">
           <span className="text-xs text-white/40">{t("echo.profile.paymentMethod")}</span>
@@ -514,13 +502,13 @@ export default function ProfilPage() {
       </div>
 
       {/* Password change */}
-      <div className="glass-card p-5 mb-5">
+      <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-5 mb-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-bold">{t("common.password")}</h3>
           {!showPassword && (
             <button
               onClick={() => { setShowPassword(true); setError(""); setSuccess(""); }}
-              className="text-xs text-primary font-semibold hover:underline"
+              className="text-xs text-[#1D9E75] font-semibold hover:underline"
             >
               {t("echo.profile.changePassword")}
             </button>
@@ -535,7 +523,7 @@ export default function ProfilPage() {
                 value={passwords.new_password}
                 onChange={(e) => setPasswords({ ...passwords, new_password: e.target.value })}
                 placeholder={t("common.minChars")}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#1D9E75] transition"
               />
             </div>
             <div>
@@ -545,7 +533,7 @@ export default function ProfilPage() {
                 value={passwords.confirm}
                 onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
                 placeholder={t("common.repeatPassword")}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#1D9E75] transition"
                 onKeyDown={(e) => e.key === "Enter" && !pwSaving && passwords.new_password && passwords.confirm && handleChangePassword()}
               />
             </div>
@@ -553,13 +541,13 @@ export default function ProfilPage() {
               <button
                 onClick={handleChangePassword}
                 disabled={pwSaving || !passwords.new_password || !passwords.confirm}
-                className="flex-1 py-3 rounded-btn font-bold text-white bg-gradient-primary disabled:opacity-50 transition"
+                className="flex-1 py-3 rounded-xl font-bold text-white bg-[#1D9E75] hover:bg-[#178a65] transition disabled:opacity-50"
               >
                 {pwSaving ? t("common.updating") : t("common.update")}
               </button>
               <button
                 onClick={() => { setShowPassword(false); setPasswords({ new_password: "", confirm: "" }); }}
-                className="px-6 py-3 rounded-btn border border-white/10 text-sm font-semibold text-white/60 hover:bg-white/5 transition"
+                className="px-6 py-3 rounded-xl border border-white/10 text-sm font-semibold text-white/60 hover:bg-white/5 transition"
               >
                 {t("common.cancel")}
               </button>
@@ -577,9 +565,7 @@ export default function ProfilPage() {
       {/* Danger zone */}
       <div className="mt-8 border-t border-red-500/20 pt-6 mb-5">
         <h3 className="text-red-400 font-bold text-sm mb-2">{t("echo.profile.dangerZone")}</h3>
-        <p className="text-white/30 text-xs mb-3">
-          {t("echo.profile.deleteDescription")}
-        </p>
+        <p className="text-white/30 text-xs mb-3">{t("echo.profile.deleteDescription")}</p>
         <button
           onClick={() => setShowDeleteModal(true)}
           className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-2 rounded-xl text-xs hover:bg-red-500/20 transition"
@@ -591,17 +577,13 @@ export default function ProfilPage() {
       {/* Delete confirmation modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 border border-red-500/30 rounded-xl p-6 max-w-md w-full">
+          <div className="bg-[#111128] border border-red-500/30 rounded-xl p-6 max-w-md w-full">
             <h3 className="text-red-400 font-bold text-lg mb-2">{t("echo.profile.deleteConfirm")}</h3>
-            <p className="text-white/40 text-sm mb-4">
-              {t("echo.profile.deleteIrreversible")}
-            </p>
+            <p className="text-white/40 text-sm mb-4">{t("echo.profile.deleteIrreversible")}</p>
 
             {deleteError === "balance_remaining" && (
-              <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3 mb-4">
-                <div className="text-orange-400 text-sm">
-                  {t("echo.profile.balanceWarning")}
-                </div>
+              <div className="bg-[#D35400]/10 border border-[#D35400]/30 rounded-lg p-3 mb-4">
+                <div className="text-[#D35400] text-sm">{t("echo.profile.balanceWarning")}</div>
               </div>
             )}
 
@@ -612,9 +594,7 @@ export default function ProfilPage() {
             )}
 
             <div className="mb-4">
-              <label className="text-white/30 text-xs mb-1 block">
-                {t("echo.profile.typeToConfirm")}
-              </label>
+              <label className="text-white/30 text-xs mb-1 block">{t("echo.profile.typeToConfirm")}</label>
               <input
                 type="text"
                 value={deleteConfirmation}
@@ -668,12 +648,11 @@ export default function ProfilPage() {
 
       <button
         onClick={handleLogout}
-        className="w-full py-3 rounded-btn border border-red-500/20 text-red-400 text-sm font-semibold active:bg-red-500/10 transition"
+        className="w-full py-3 rounded-xl border border-red-500/20 text-red-400 text-sm font-semibold active:bg-red-500/10 transition"
       >
         {t("echo.profile.logout")}
       </button>
 
-      {/* Interest onboarding/edit modal */}
       <InterestOnboardingModal
         isOpen={showInterestModal}
         onClose={() => setShowInterestModal(false)}
@@ -684,7 +663,6 @@ export default function ProfilPage() {
           } else {
             setUser((prev) => prev ? { ...prev, interests_completed_at: new Date().toISOString() } : prev);
           }
-          // Reload interest data
           fetch("/api/echo/interests").then(r => r.json()).then(data => {
             const allCats = data.categories || [];
             const allSigs = data.signals || [];
@@ -692,10 +670,10 @@ export default function ProfilPage() {
             setUserSignals(allSigs.filter((s: { id: string }) => (data.selectedSignals || []).includes(s.id)));
           }).catch(() => {});
           if (!interestEditMode) {
-            setSuccess(reward.credited ? "100 FCFA crédités + badge Écho Fondateur !" : "Préférences enregistrées !");
+            setSuccess(reward.credited ? t("echo.profile.interestRewardSuccess") : t("echo.profile.interestSaved"));
             setTimeout(() => setSuccess(""), 5000);
           } else {
-            setSuccess("Préférences mises à jour");
+            setSuccess(t("echo.profile.interestUpdated"));
             setTimeout(() => setSuccess(""), 3000);
           }
         }}

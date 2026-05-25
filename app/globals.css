@@ -336,6 +336,16 @@ h1, h2, h3 {
   border-top: 1px solid rgba(255,255,255,0.06);
   z-index: 50;
 }
+.echo-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(10, 10, 26, 0.97);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(29, 158, 117, 0.12);
+  z-index: 50;
+}
 
 /* Safe area for iPhone notch/home indicator */
 .safe-bottom {
@@ -424,6 +434,25 @@ h1, h2, h3 {
 .font-syne { font-family: 'Syne', sans-serif; }
 .font-dm { font-family: 'DM Sans', sans-serif; }
 .font-code { font-family: 'Fira Code', monospace; }
+
+/* Bottom sheet animations */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slide-up-sheet {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.animate-fade-in { animation: fade-in 0.2s ease-out; }
+.animate-slide-up-sheet { animation: slide-up-sheet 0.3s ease-out; }
+
+/* Teal earnings card for Écho */
+.echo-earnings-bg {
+  background: linear-gradient(135deg, rgba(29,158,117,0.15), rgba(93,202,165,0.08), rgba(29,158,117,0.15));
+  background-size: 200% 200%;
+  animation: gradient-shift 6s ease-in-out infinite;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .animate-marquee,
