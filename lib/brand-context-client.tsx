@@ -59,7 +59,7 @@ export function BrandProvider({
         can: (permission) => can(currentRole, permission),
       }}
     >
-      {children}
+      <div key={currentBrand.id}>{children}</div>
     </BrandContext.Provider>
   );
 }
