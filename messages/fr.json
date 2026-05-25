@@ -591,7 +591,11 @@
       "modify": "Modifier",
       "interestRewardSuccess": "100 FCFA crédités + badge Écho Fondateur !",
       "interestSaved": "Préférences enregistrées !",
-      "interestUpdated": "Préférences mises à jour"
+      "interestUpdated": "Préférences mises à jour",
+      "sharingProfile": "Mon profil de partage",
+      "platforms": "Plateformes",
+      "audience": "Audience",
+      "contacts": "contacts"
     },
     "rythmes": {
       "title": "Rythmes",
@@ -632,6 +636,23 @@
     "modal": {
       "earned": "Gagné",
       "disabledMessage": "Cette campagne est {status} — le partage est désactivé."
+    },
+    "onboarding": {
+      "platformsTitle": "Où partages-tu du contenu ?",
+      "platformsDesc": "Sélectionne les plateformes où tu partages habituellement.",
+      "audienceTitle": "Quelle est la taille de ton audience ?",
+      "audienceDesc": "Combien de personnes voient tes publications sur {platform} ?",
+      "interestsTitle": "Qu'est-ce qui t'intéresse ?",
+      "interestsDesc": "Choisis jusqu'à 5 catégories pour recevoir les meilleures campagnes.",
+      "signalsTitle": "Quel contenu partages-tu ?",
+      "signalsDesc": "Choisis jusqu'à 3 types de contenu que tu partages habituellement.",
+      "skip": "Plus tard",
+      "continue": "Continuer →",
+      "finish": "Terminer ✓",
+      "welcomeTitle": "Bienvenue sur Tamtam !",
+      "welcomeDesc": "Ton profil est prêt. Découvre les rythmes disponibles et commence à gagner.",
+      "welcomeCta": "Voir les Rythmes →",
+      "welcomeDismiss": "Compris"
     }
   },
   "admin": {

@@ -11,6 +11,7 @@ import type { User, TrackedLinkWithCampaign, Campaign } from "@/lib/types";
 import { requestNotificationPermission, canAskNotification } from "@/lib/notifications";
 import { getActiveTheme } from "@/lib/theme";
 import CampaignMiniCard from "@/components/echo/CampaignMiniCard";
+import WelcomeBanner from "@/components/echo/onboarding/WelcomeBanner";
 
 export default function EchoDashboard() {
   const [user, setUser] = useState<User | null>(null);
@@ -220,6 +221,11 @@ export default function EchoDashboard() {
           <h3 className="text-white font-bold text-lg">{t("echo.dashboard.independenceTitle")}</h3>
           <p className="text-gray-300 text-sm">{t("echo.dashboard.independenceDesc")}</p>
         </div>
+      )}
+
+      {/* Welcome banner for users who just completed onboarding */}
+      {user && user.interests_completed_at && user.platforms && user.platforms.length > 0 && activeLinks.length === 0 && (
+        <WelcomeBanner />
       )}
 
       {/* Earnings hero card — teal identity */}

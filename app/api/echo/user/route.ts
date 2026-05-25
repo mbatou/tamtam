@@ -55,13 +55,16 @@ export async function PUT(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { name, phone, city, mobile_money_provider } = body;
+  const { name, phone, city, mobile_money_provider, platforms, primary_platform, audience_size_range } = body;
 
   const updates: Record<string, unknown> = {};
   if (name !== undefined) updates.name = name;
   if (phone !== undefined) updates.phone = phone || null;
   if (city !== undefined) updates.city = normalizeCity(city);
   if (mobile_money_provider !== undefined) updates.mobile_money_provider = mobile_money_provider || null;
+  if (platforms !== undefined) updates.platforms = Array.isArray(platforms) ? platforms : [];
+  if (primary_platform !== undefined) updates.primary_platform = primary_platform || null;
+  if (audience_size_range !== undefined) updates.audience_size_range = audience_size_range || null;
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "Aucune modification" }, { status: 400 });

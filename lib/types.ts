@@ -32,6 +32,9 @@ export interface User {
   interests_completed_at?: string | null;
   is_founding_echo?: boolean;
   interests_prompt_dismissed_at?: string | null;
+  platforms?: string[] | null;
+  primary_platform?: string | null;
+  audience_size_range?: string | null;
   signup_tm_ref?: string | null;
   created_at: string;
 }
