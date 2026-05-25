@@ -9,13 +9,28 @@ import {
   AreaChart, Area,
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
+import { useBrandContext } from "@/lib/brand-context-client";
+import PermissionDenied from "@/components/dashboard/PermissionDenied";
 
 export default function AdminWalletWrapper() {
   return (
     <Suspense fallback={<WalletSkeleton />}>
-      <AdminWalletPage />
+      <AdminWalletGate />
     </Suspense>
   );
+}
+
+function AdminWalletGate() {
+  const brandCtx = useBrandContext();
+  if (!brandCtx.can("VIEW_WALLET")) {
+    return <PermissionDeniedWithI18n />;
+  }
+  return <AdminWalletPage />;
+}
+
+function PermissionDeniedWithI18n() {
+  const { t } = useTranslation();
+  return <PermissionDenied message={t("workspace.walletDenied")} />;
 }
 
 function WalletSkeleton() {

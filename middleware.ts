@@ -102,6 +102,13 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Protect brand picker route
+  if (pathname === "/brand-picker") {
+    if (!user) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+  }
+
   // Protect admin routes
   if (pathname.startsWith("/admin")) {
     if (!user) {
@@ -190,5 +197,6 @@ export const config = {
     "/admin/:path*",
     "/superadmin/:path*",
     "/api/superadmin/:path*",
+    "/brand-picker",
   ],
 };

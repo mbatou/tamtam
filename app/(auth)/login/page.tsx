@@ -68,6 +68,18 @@ function LoginContent() {
           return;
         }
         if (userData.role === "batteur" || userData.role === "admin") {
+          try {
+            const wsRes = await fetch("/api/brand/workspaces", {
+              headers: { Authorization: `Bearer ${loginData.session!.access_token}` },
+            });
+            if (wsRes.ok) {
+              const wsData = await wsRes.json();
+              if ((wsData.brands?.length || 0) > 1 || (wsData.pending?.length || 0) > 0) {
+                window.location.href = "/brand-picker";
+                return;
+              }
+            }
+          } catch {}
           window.location.href = "/admin/dashboard";
           return;
         }

@@ -52,8 +52,9 @@ export default function AdminSettingsPage() {
     notify_new_echos: false,
   });
 
-  const [team, setTeam] = useState<{ isOwner: boolean; ownerId: string; members: Array<{ id: string; email: string; status: string; user: { id: string; name: string; email: string } | null }> }>({ isOwner: false, ownerId: "", members: [] });
+  const [team, setTeam] = useState<{ isOwner: boolean; ownerId: string; members: Array<{ id: string; email: string; status: string; role?: string; user: { id: string; name: string; email: string } | null }> }>({ isOwner: false, ownerId: "", members: [] });
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<string>("member");
   const [inviting, setInviting] = useState(false);
   const [teamError, setTeamError] = useState<string | null>(null);
 
@@ -107,7 +108,7 @@ export default function AdminSettingsPage() {
       const res = await fetch("/api/admin/team/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: inviteEmail }),
+        body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
       });
       const data = await res.json();
       if (!res.ok) { setTeamError(data.error || t("admin.settings.inviteError")); }
@@ -506,24 +507,46 @@ export default function AdminSettingsPage() {
               <p className="text-[10px] font-dm font-semibold uppercase tracking-wider mb-4" style={{ color: "rgba(255,255,255,0.3)" }}>{t("admin.settings.myTeam")}</p>
 
               {team.isOwner && (
-                <div className="flex gap-2 mb-5">
-                  <input
-                    type="email"
-                    value={inviteEmail}
-                    onChange={(e) => { setInviteEmail(e.target.value); setTeamError(null); }}
-                    placeholder={t("admin.settings.memberEmail")}
-                    className="flex-1 rounded-xl px-4 py-2.5 text-sm text-white font-dm focus:outline-none min-w-0"
-                    style={INP}
-                    onKeyDown={(e) => e.key === "Enter" && !inviting && inviteEmail && handleInvite()}
-                  />
-                  <button
-                    onClick={handleInvite}
-                    disabled={inviting || !inviteEmail}
-                    className="shrink-0 px-5 py-2.5 rounded-xl text-xs font-dm font-semibold text-white transition-all hover:brightness-110 disabled:opacity-30"
-                    style={{ background: "#D35400" }}
-                  >
-                    {inviting ? t("admin.settings.inviting") : t("admin.settings.inviteMember")}
-                  </button>
+                <div className="mb-5 space-y-3">
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(e) => { setInviteEmail(e.target.value); setTeamError(null); }}
+                      placeholder={t("admin.settings.memberEmail")}
+                      className="flex-1 rounded-xl px-4 py-2.5 text-sm text-white font-dm focus:outline-none min-w-0"
+                      style={INP}
+                      onKeyDown={(e) => e.key === "Enter" && !inviting && inviteEmail && handleInvite()}
+                    />
+                    <button
+                      onClick={handleInvite}
+                      disabled={inviting || !inviteEmail}
+                      className="shrink-0 px-5 py-2.5 rounded-xl text-xs font-dm font-semibold text-white transition-all hover:brightness-110 disabled:opacity-30"
+                      style={{ background: "#D35400" }}
+                    >
+                      {inviting ? t("admin.settings.inviting") : t("admin.settings.inviteMember")}
+                    </button>
+                  </div>
+                  <div className="flex gap-2">
+                    {[
+                      { role: "admin", labelKey: "workspace.roleAdmin", descKey: "workspace.roleAdminDesc" },
+                      { role: "member", labelKey: "workspace.roleMember", descKey: "workspace.roleMemberDesc" },
+                      { role: "viewer", labelKey: "workspace.roleViewer", descKey: "workspace.roleViewerDesc" },
+                    ].map((r) => (
+                      <button
+                        key={r.role}
+                        onClick={() => setInviteRole(r.role)}
+                        className="flex-1 px-3 py-2 rounded-lg border text-left transition-all"
+                        style={{
+                          background: inviteRole === r.role ? "rgba(211,84,0,0.08)" : "rgba(255,255,255,0.02)",
+                          borderColor: inviteRole === r.role ? "rgba(211,84,0,0.35)" : "rgba(255,255,255,0.07)",
+                        }}
+                      >
+                        <p className="text-[11px] font-dm font-semibold text-white">{t(r.labelKey)}</p>
+                        <p className="text-[9px] font-dm" style={{ color: "rgba(255,255,255,0.3)" }}>{t(r.descKey)}</p>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -535,37 +558,45 @@ export default function AdminSettingsPage() {
 
               {team.members.length > 0 ? (
                 <div className="space-y-2">
-                  {team.members.map((member) => (
-                    <div key={member.id} className="flex items-center justify-between rounded-xl px-4 py-3" style={{ background: "rgba(255,255,255,0.02)", border: "0.5px solid rgba(255,255,255,0.04)" }}>
-                      <div>
-                        <div className="text-sm font-dm font-semibold text-white">{member.user?.name || member.email}</div>
-                        <div className="text-[10px] font-dm flex items-center gap-2" style={{ color: "rgba(255,255,255,0.3)" }}>
-                          {member.email}
-                          {member.status === "invited" && (
-                            <span className="inline-flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(211,84,0,0.1)", color: "#D35400" }}>
-                              <span className="w-1 h-1 rounded-full" style={{ background: "#D35400" }} />
-                              {t("admin.settings.inviteSent")}
-                            </span>
-                          )}
-                          {member.status === "active" && (
-                            <span className="inline-flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(29,158,117,0.1)", color: "#1D9E75" }}>
-                              <span className="w-1 h-1 rounded-full" style={{ background: "#1D9E75" }} />
-                              {t("common.active")}
-                            </span>
-                          )}
+                  {team.members.map((member) => {
+                    const roleCfg: Record<string, { label: string; bg: string; color: string }> = {
+                      admin: { label: "Admin", bg: "rgba(211,84,0,0.12)", color: "#F0997B" },
+                      member: { label: "Membre", bg: "rgba(29,158,117,0.12)", color: "#5DCAA5" },
+                      viewer: { label: "Lecteur", bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" },
+                    };
+                    const rc = roleCfg[member.role || "member"] || roleCfg.member;
+                    return (
+                      <div key={member.id} className="flex items-center justify-between rounded-xl px-4 py-3" style={{ background: "rgba(255,255,255,0.02)", border: "0.5px solid rgba(255,255,255,0.04)" }}>
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold flex-shrink-0" style={{ background: "rgba(29,158,117,0.12)", color: "#5DCAA5" }}>
+                            {member.user?.name?.charAt(0) || member.email.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-sm font-dm font-semibold text-white truncate">{member.user?.name || member.email}</div>
+                            <div className="text-[10px] font-dm flex items-center gap-2" style={{ color: "rgba(255,255,255,0.3)" }}>
+                              {member.email}
+                              <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: rc.bg, color: rc.color }}>{rc.label}</span>
+                              {member.status === "invited" && (
+                                <span className="inline-flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(211,84,0,0.1)", color: "#D35400" }}>
+                                  <span className="w-1 h-1 rounded-full" style={{ background: "#D35400" }} />
+                                  {t("admin.settings.inviteSent")}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
+                        {team.isOwner && (
+                          <button
+                            onClick={() => handleRemoveMember(member.id, member.email)}
+                            className="text-[11px] font-dm font-semibold transition hover:brightness-110 shrink-0 ml-2"
+                            style={{ color: "#EF4444" }}
+                          >
+                            {t("admin.settings.remove")}
+                          </button>
+                        )}
                       </div>
-                      {team.isOwner && (
-                        <button
-                          onClick={() => handleRemoveMember(member.id, member.email)}
-                          className="text-[11px] font-dm font-semibold transition hover:brightness-110"
-                          style={{ color: "#EF4444" }}
-                        >
-                          {t("admin.settings.remove")}
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8">

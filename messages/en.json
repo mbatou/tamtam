@@ -1271,6 +1271,26 @@
       "resp422": "Event not allowed for this pixel"
     }
   },
+  "workspace": {
+    "currentWorkspace": "Current workspace",
+    "manageWorkspaces": "Manage workspaces",
+    "pickerTitle": "Which account to work on?",
+    "pickerSubtitle": "Select a workspace to continue.",
+    "pendingInvitations": "Pending invitations",
+    "myWorkspaces": "My workspaces",
+    "invitationRole": "Invitation · Role: {role}",
+    "accept": "Accept",
+    "decline": "Decline",
+    "noWorkspaces": "No workspace available.",
+    "roleOwner": "Owner",
+    "roleAdmin": "Admin",
+    "roleMember": "Member",
+    "roleViewer": "Viewer",
+    "roleAdminDesc": "Full access except wallet",
+    "roleMemberDesc": "Campaigns + analytics",
+    "roleViewerDesc": "Read only",
+    "walletDenied": "Only the owner or an admin can access the wallet."
+  },
   "superadmin": {
     "dashboard": {
       "title": "Command Center",

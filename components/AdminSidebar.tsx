@@ -11,6 +11,7 @@ import {
   Settings, MessageCircle, LogOut,
 } from "lucide-react";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
+import BrandSwitcher from "@/components/dashboard/BrandSwitcher";
 
 const NAV_GROUPS = [
   {
@@ -64,9 +65,12 @@ export default function AdminSidebar() {
         }}
       >
         <div className="p-5 pb-0">
-          <Link href="/admin/dashboard" className="block mb-8">
+          <Link href="/admin/dashboard" className="block mb-4">
             <Image src="/brand/tamtam-horizontal-orange.png" alt="Tamtam" width={110} height={28} priority className="h-7 w-auto" />
           </Link>
+          <div className="mb-4">
+            <BrandSwitcher />
+          </div>
         </div>
 
         <nav className="flex-1 px-3 space-y-5">
@@ -121,14 +125,17 @@ export default function AdminSidebar() {
       </aside>
 
       {/* Mobile top bar */}
-      <div className="lg:hidden flex items-center justify-between p-4" style={{ borderBottom: "0.5px solid rgba(255,255,255,0.07)" }}>
-        <Image src="/brand/tamtam-horizontal-orange.png" alt="Tamtam" width={100} height={26} priority className="h-6 w-auto" />
-        <div className="flex items-center gap-3">
-          <LanguageSwitcher />
-          <button onClick={handleLogout} className="text-red-400/60 hover:text-red-400 transition">
-            <LogOut size={16} />
-          </button>
+      <div className="lg:hidden p-4" style={{ borderBottom: "0.5px solid rgba(255,255,255,0.07)" }}>
+        <div className="flex items-center justify-between mb-2">
+          <Image src="/brand/tamtam-horizontal-orange.png" alt="Tamtam" width={100} height={26} priority className="h-6 w-auto" />
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher />
+            <button onClick={handleLogout} className="text-red-400/60 hover:text-red-400 transition">
+              <LogOut size={16} />
+            </button>
+          </div>
         </div>
+        <BrandSwitcher />
       </div>
 
       {/* Mobile bottom nav */}
