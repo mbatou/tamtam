@@ -2,6 +2,7 @@
 
 import { formatFCFA } from "@/lib/utils";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
+import { useTranslation } from "@/lib/i18n";
 import type { TrackedLinkWithCampaign } from "@/lib/types";
 
 interface CampaignMiniCardProps {
@@ -10,6 +11,7 @@ interface CampaignMiniCardProps {
 }
 
 export default function CampaignMiniCard({ link, onClick }: CampaignMiniCardProps) {
+  const { t } = useTranslation();
   const earned = Math.floor(link.click_count * (link.campaigns?.cpc || 0) * ECHO_SHARE_PERCENT / 100);
   const isActive = link.campaigns?.status === "active";
 
@@ -32,7 +34,7 @@ export default function CampaignMiniCard({ link, onClick }: CampaignMiniCardProp
       <div className="min-w-0 flex-1">
         <p className="text-xs font-bold truncate">{link.campaigns?.title}</p>
         <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-[10px] text-white/40">{link.click_count} clics</span>
+          <span className="text-[10px] text-white/40">{link.click_count} {t("echo.rythmes.clicks")}</span>
           <span className="text-[10px] font-bold text-[#D35400]">{formatFCFA(earned)}</span>
         </div>
       </div>

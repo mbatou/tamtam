@@ -489,7 +489,11 @@
       "suspendedAppeal": "If you believe this is an error, contact our support team to discuss it.",
       "contactSupport": "Contact support",
       "suspendedWhatsApp": "Hello, my echo account has been suspended. Can you help me?",
-      "seeAll": "See all"
+      "seeAll": "See all",
+      "pendingBalance": "+{amount} pending",
+      "moreAvailable": "({count} more)",
+      "independenceTitle": "Happy Independence Day!",
+      "independenceDesc": "April 4 — Senegal celebrates 66 years of independence"
     },
     "earnings": {
       "title": "My Earnings",
@@ -523,7 +527,18 @@
       "referrals": "Referrals",
       "monthlyPotential": "Your potential this month",
       "potentialDesc": "If you share 5 campaigns and generate 50 clicks, you could earn approximately",
-      "topEchosEarnings": "Top Échos earn {amount}+ FCFA per week!"
+      "topEchosEarnings": "Top Échos earn {amount}+ FCFA per week!",
+      "pendingEarnings": "Pending earnings",
+      "totalAll": "Total earnings",
+      "clicks": "clicks",
+      "acceptToStart": "Accept a campaign to start",
+      "hideExplanation": "Hide explanation",
+      "whyPending": "Why are my earnings pending?",
+      "explanationP1": "Your earnings from each campaign are unlocked at the end of it. This allows us to verify that all your clicks are valid.",
+      "explanationP2": "Maximum 30 days wait. If a campaign is long, your earnings are unlocked every 30 days automatically.",
+      "potentialTitle": "Your potential this month",
+      "potentialBody": "If you share 5 campaigns and generate 50 clicks, you could earn approximately",
+      "topEchosWeekly": "Top Échos earn {amount}+ FCFA per week!"
     },
     "profile": {
       "title": "My Profile",
@@ -565,7 +580,18 @@
       "typeToConfirm": "Type SUPPRIMER to confirm",
       "deleteButton": "Delete permanently",
       "deleting": "Deleting...",
-      "balanceWarning": "You have a positive balance. Request a withdrawal before deleting your account."
+      "balanceWarning": "You have a positive balance. Request a withdrawal before deleting your account.",
+      "completeInterests": "Complete your interests",
+      "interestRewardText": "Earn 100 FCFA + \"Founding Echo\" badge (until April 30)",
+      "interestDefaultText": "Tell us what you like to see better campaigns",
+      "startButton": "Start →",
+      "foundingEchoTitle": "Founding Echo",
+      "foundingEchoDesc": "Part of the first 1,152 Tamtam Echos. This badge is exclusive and will never be redistributed.",
+      "myInterests": "My interests",
+      "modify": "Modify",
+      "interestRewardSuccess": "100 FCFA credited + Founding Echo badge!",
+      "interestSaved": "Preferences saved!",
+      "interestUpdated": "Preferences updated"
     },
     "rythmes": {
       "title": "Rythmes",
@@ -584,7 +610,24 @@
       "notifFirstToShare": "Be the first to share — enable notifications to get notified.",
       "notifActivated": "Notifications enabled!",
       "enableNotifications": "Enable notifications",
-      "notifGranted": "You'll be notified when a new campaign becomes available."
+      "notifGranted": "You'll be notified when a new campaign becomes available.",
+      "tabAvailable": "Available",
+      "tabMine": "My Rythmes",
+      "tabDone": "Finished",
+      "awarenessHint": "Awareness Campaign — Share the visual + link together",
+      "shareVisualLink": "Share visual + link",
+      "noFinished": "No finished campaigns",
+      "finishedHint": "Your finished campaigns will appear here",
+      "clicks": "clicks",
+      "referralBonus": "+150 FCFA",
+      "imageMissing": "Image missing — contact support"
+    },
+    "status": {
+      "active": "Active",
+      "completed": "Finished",
+      "paused": "Paused",
+      "pending": "Pending",
+      "new": "New"
     },
     "modal": {
       "earned": "Earned",

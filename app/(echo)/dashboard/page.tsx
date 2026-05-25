@@ -217,8 +217,8 @@ export default function EchoDashboard() {
       {/* Independence Day banner */}
       {theme === "independence_day" && (
         <div className="bg-gradient-to-r from-green-600/30 via-yellow-500/20 to-red-600/30 border border-green-500/30 rounded-xl p-4 mb-5 text-center">
-          <h3 className="text-white font-bold text-lg">Bonne F&ecirc;te de l&apos;Ind&eacute;pendance !</h3>
-          <p className="text-gray-300 text-sm">4 avril &mdash; Le S&eacute;n&eacute;gal c&eacute;l&egrave;bre 66 ans d&apos;ind&eacute;pendance</p>
+          <h3 className="text-white font-bold text-lg">{t("echo.dashboard.independenceTitle")}</h3>
+          <p className="text-gray-300 text-sm">{t("echo.dashboard.independenceDesc")}</p>
         </div>
       )}
 
@@ -230,7 +230,7 @@ export default function EchoDashboard() {
             <p className="text-3xl font-black tracking-tight text-[#D35400]">{formatFCFA(balance)}</p>
             {pendingBalance > 0 && (
               <p className="text-[10px] text-[#1D9E75]/70 mt-0.5 font-semibold">
-                +{formatFCFA(pendingBalance)} en cours
+                {t("echo.dashboard.pendingBalance", { amount: formatFCFA(pendingBalance) })}
               </p>
             )}
             <p className="text-[10px] text-white/30 mt-0.5">
@@ -368,7 +368,7 @@ export default function EchoDashboard() {
                 onClick={() => window.location.href = "/rythmes"}
                 className="w-full py-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-sm font-semibold text-[#1D9E75] transition hover:bg-white/[0.05]"
               >
-                {t("echo.dashboard.seeAll")} ({availableCampaigns.length - 2} de plus)
+                {t("echo.dashboard.seeAll")} {t("echo.dashboard.moreAvailable", { count: availableCampaigns.length - 2 })}
               </button>
             )}
           </div>

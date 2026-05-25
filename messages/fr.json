@@ -489,7 +489,11 @@
       "suspendedAppeal": "Si tu penses qu'il s'agit d'une erreur, contacte notre équipe support pour en discuter.",
       "contactSupport": "Contacter le support",
       "suspendedWhatsApp": "Bonjour, mon compte écho a été suspendu. Pouvez-vous m'aider ?",
-      "seeAll": "Tout voir"
+      "seeAll": "Tout voir",
+      "pendingBalance": "+{amount} en cours",
+      "moreAvailable": "({count} de plus)",
+      "independenceTitle": "Bonne Fête de l'Indépendance !",
+      "independenceDesc": "4 avril — Le Sénégal célèbre 66 ans d'indépendance"
     },
     "earnings": {
       "title": "Mes Gains",
@@ -523,7 +527,18 @@
       "referrals": "Parrainages",
       "monthlyPotential": "Ton potentiel ce mois",
       "potentialDesc": "Si tu partages 5 rythmes et génères 50 clics, tu pourrais gagner environ",
-      "topEchosEarnings": "Les meilleurs Échos gagnent {amount}+ FCFA par semaine!"
+      "topEchosEarnings": "Les meilleurs Échos gagnent {amount}+ FCFA par semaine!",
+      "pendingEarnings": "Gains en cours",
+      "totalAll": "Gains totaux",
+      "clicks": "clics",
+      "acceptToStart": "Acceptez une campagne pour commencer",
+      "hideExplanation": "Masquer l'explication",
+      "whyPending": "Pourquoi mes gains sont en attente ?",
+      "explanationP1": "Vos gains de chaque campagne sont débloqués à la fin de celle-ci. Cela nous permet de vérifier que tous vos clics sont valides.",
+      "explanationP2": "Maximum 30 jours d'attente. Si une campagne est longue, vos gains sont débloqués tous les 30 jours automatiquement.",
+      "potentialTitle": "Ton potentiel ce mois",
+      "potentialBody": "Si tu partages 5 rythmes et génères 50 clics, tu pourrais gagner environ",
+      "topEchosWeekly": "Les meilleurs Échos gagnent {amount}+ FCFA par semaine!"
     },
     "profile": {
       "title": "Mon Profil",
@@ -565,7 +580,18 @@
       "typeToConfirm": "Tapez SUPPRIMER pour confirmer",
       "deleteButton": "Supprimer définitivement",
       "deleting": "Suppression...",
-      "balanceWarning": "Vous avez un solde positif. Demandez un retrait avant de supprimer votre compte."
+      "balanceWarning": "Vous avez un solde positif. Demandez un retrait avant de supprimer votre compte.",
+      "completeInterests": "Complète tes centres d'intérêt",
+      "interestRewardText": "Gagne 100 FCFA + badge \"Écho Fondateur\" (jusqu'au 30 avril)",
+      "interestDefaultText": "Dis-nous ce que tu aimes pour voir de meilleures campagnes",
+      "startButton": "Commencer →",
+      "foundingEchoTitle": "Écho Fondateur",
+      "foundingEchoDesc": "Fait partie des premiers 1 152 Échos de Tamtam. Ce badge est exclusif et ne sera jamais redistribué.",
+      "myInterests": "Mes centres d'intérêt",
+      "modify": "Modifier",
+      "interestRewardSuccess": "100 FCFA crédités + badge Écho Fondateur !",
+      "interestSaved": "Préférences enregistrées !",
+      "interestUpdated": "Préférences mises à jour"
     },
     "rythmes": {
       "title": "Rythmes",
@@ -584,7 +610,24 @@
       "notifFirstToShare": "Sois le premier à partager — active les notifications pour être prévenu.",
       "notifActivated": "Notifications activées!",
       "enableNotifications": "Activer les notifications",
-      "notifGranted": "Tu seras notifié dès qu'un nouveau rythme sera disponible."
+      "notifGranted": "Tu seras notifié dès qu'un nouveau rythme sera disponible.",
+      "tabAvailable": "Disponibles",
+      "tabMine": "Mes Rythmes",
+      "tabDone": "Terminés",
+      "awarenessHint": "Campagne Notoriété — Partage le visuel + lien ensemble",
+      "shareVisualLink": "Partager le visuel + lien",
+      "noFinished": "Aucun rythme terminé",
+      "finishedHint": "Tes campagnes terminées apparaitront ici",
+      "clicks": "clics",
+      "referralBonus": "+150 FCFA",
+      "imageMissing": "Image manquante — contactez le support"
+    },
+    "status": {
+      "active": "Actif",
+      "completed": "Terminé",
+      "paused": "Pause",
+      "pending": "En attente",
+      "new": "Nouveau"
     },
     "modal": {
       "earned": "Gagné",

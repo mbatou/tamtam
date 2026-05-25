@@ -249,11 +249,11 @@ export default function EarningsPage() {
         <div className="rounded-2xl p-5 mb-5 bg-white/[0.03] border border-[#D35400]/20">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-[10px] text-white/40 font-semibold uppercase tracking-wider mb-0.5">Gains en cours</p>
+              <p className="text-[10px] text-white/40 font-semibold uppercase tracking-wider mb-0.5">{t("echo.earnings.pendingEarnings")}</p>
               <p className="text-2xl font-black text-[#D35400]">{formatFCFA(pendingBalance)}</p>
             </div>
             <div className="text-right">
-              <p className="text-[10px] text-white/30">Gains totaux</p>
+              <p className="text-[10px] text-white/30">{t("echo.earnings.totalAll")}</p>
               <p className="text-sm font-bold text-white/60">{formatFCFA(availableBalance + pendingBalance)}</p>
             </div>
           </div>
@@ -264,7 +264,7 @@ export default function EarningsPage() {
                 <div key={pe.campaign_name} className="flex justify-between items-center text-sm py-1.5 border-t border-white/5 first:border-0">
                   <div>
                     <span className="text-white/60 text-xs">{pe.campaign_name}</span>
-                    <span className="text-white/20 text-[10px] ml-1.5">{pe.click_count} clics</span>
+                    <span className="text-white/20 text-[10px] ml-1.5">{pe.click_count} {t("echo.earnings.clicks")}</span>
                   </div>
                   <div className="text-right">
                     <span className="text-white font-semibold text-xs">{formatFCFA(pe.amount_fcfa)}</span>
@@ -278,7 +278,7 @@ export default function EarningsPage() {
           )}
 
           {pendingBalance > 0 && balanceData?.pending_campaigns.length === 0 && (
-            <p className="text-xs text-white/30 mt-2">Acceptez une campagne pour commencer</p>
+            <p className="text-xs text-white/30 mt-2">{t("echo.earnings.acceptToStart")}</p>
           )}
         </div>
       )}
@@ -288,19 +288,13 @@ export default function EarningsPage() {
         onClick={() => setShowExplanation(!showExplanation)}
         className="text-xs text-white/30 hover:text-white/50 transition w-full text-center mb-4"
       >
-        {showExplanation ? "Masquer l'explication" : "Pourquoi mes gains sont en attente ?"}
+        {showExplanation ? t("echo.earnings.hideExplanation") : t("echo.earnings.whyPending")}
       </button>
 
       {showExplanation && (
         <div className="rounded-xl bg-white/[0.03] border-l-4 border-[#1D9E75] p-4 mb-5 text-xs text-white/50 space-y-2">
-          <p>
-            Vos gains de chaque campagne sont d&eacute;bloqu&eacute;s &agrave; la fin de celle-ci.
-            Cela nous permet de v&eacute;rifier que tous vos clics sont valides.
-          </p>
-          <p>
-            Maximum 30 jours d&apos;attente. Si une campagne est longue, vos gains
-            sont d&eacute;bloqu&eacute;s tous les 30 jours automatiquement.
-          </p>
+          <p>{t("echo.earnings.explanationP1")}</p>
+          <p>{t("echo.earnings.explanationP2")}</p>
         </div>
       )}
 
@@ -309,7 +303,7 @@ export default function EarningsPage() {
         <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-5 mb-5">
           <h3 className="text-white font-bold mb-3">{t("echo.earnings.earningsDetail")}</h3>
           <div className="space-y-2">
-            <div className="text-xs text-white/30 uppercase tracking-wider">Campagnes</div>
+            <div className="text-xs text-white/30 uppercase tracking-wider">{t("echo.earnings.campaigns")}</div>
             {campaignEarnings.map((c) => (
               <div key={c.id} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
                 <div className="flex items-center gap-3">
@@ -319,11 +313,11 @@ export default function EarningsPage() {
                   )}
                   <div>
                     <div className="text-white text-sm">{c.name}</div>
-                    <div className="text-white/30 text-xs">{c.myClicks} clics</div>
+                    <div className="text-white/30 text-xs">{c.myClicks} {t("echo.earnings.clicks")}</div>
                   </div>
                 </div>
                 <span className="text-[#D35400] font-bold text-sm">
-                  {c.myEarnings.toLocaleString("fr-FR")} FCFA
+                  {formatFCFA(c.myEarnings)}
                 </span>
               </div>
             ))}
@@ -334,16 +328,16 @@ export default function EarningsPage() {
       {/* Earning potential — shown when balance is low */}
       {balance < 500 && (
         <div className="bg-gradient-to-r from-[#D35400]/10 to-yellow-500/10 border border-[#D35400]/20 rounded-xl p-4 mb-5">
-          <h4 className="text-white font-bold text-sm mb-2">💡 Ton potentiel ce mois</h4>
+          <h4 className="text-white font-bold text-sm mb-2">💡 {t("echo.earnings.potentialTitle")}</h4>
           <p className="text-gray-400 text-sm">
-            Si tu partages 5 rythmes et g&eacute;n&egrave;res 50 clics, tu pourrais gagner environ{" "}
+            {t("echo.earnings.potentialBody")}{" "}
             <span className="text-[#D35400] font-bold">
-              {(avgCpc * 50 * ECHO_SHARE_PERCENT / 100).toLocaleString("fr-FR")} FCFA
+              {formatFCFA(avgCpc * 50 * ECHO_SHARE_PERCENT / 100)}
             </span>
           </p>
           {topEchoEarnings > 0 && (
             <p className="text-gray-500 text-xs mt-2">
-              Les meilleurs &Eacute;chos gagnent {topEchoEarnings.toLocaleString("fr-FR")}+ FCFA par semaine!
+              {t("echo.earnings.topEchosWeekly", { amount: formatFCFA(topEchoEarnings) })}
             </p>
           )}
         </div>

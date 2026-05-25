@@ -241,18 +241,18 @@ export default function ProfilPage() {
             <span className="text-lg shrink-0">&#128221;</span>
             <div className="flex-1">
               <p className="text-sm font-semibold text-[#1D9E75] mb-1">
-                Compl&egrave;te tes centres d&apos;int&eacute;r&ecirc;t
+                {t("echo.profile.completeInterests")}
               </p>
               <p className="text-xs text-white/40 mb-3">
                 {new Date() <= new Date("2026-04-30T23:59:59Z")
-                  ? "Gagne 100 FCFA + badge \"Écho Fondateur\" (jusqu'au 30 avril)"
-                  : "Dis-nous ce que tu aimes pour voir de meilleures campagnes"}
+                  ? t("echo.profile.interestRewardText")
+                  : t("echo.profile.interestDefaultText")}
               </p>
               <button
                 onClick={() => { setInterestEditMode(false); setShowInterestModal(true); }}
                 className="px-4 py-2 rounded-xl bg-[#1D9E75] text-white text-xs font-bold hover:opacity-90 transition"
               >
-                Commencer &rarr;
+                {t("echo.profile.startButton")}
               </button>
             </div>
           </div>
@@ -405,8 +405,8 @@ export default function ProfilPage() {
           <div className="flex items-center gap-3">
             <span className="text-3xl">&#129351;</span>
             <div className="flex-1">
-              <h3 className="text-sm font-bold text-[#FDEF42]">&Eacute;cho Fondateur</h3>
-              <p className="text-[10px] text-white/40">Fait partie des premiers 1 152 &Eacute;chos de Tamtam. Ce badge est exclusif et ne sera jamais redistribu&eacute;.</p>
+              <h3 className="text-sm font-bold text-[#FDEF42]">{t("echo.profile.foundingEchoTitle")}</h3>
+              <p className="text-[10px] text-white/40">{t("echo.profile.foundingEchoDesc")}</p>
             </div>
           </div>
         </div>
@@ -416,12 +416,12 @@ export default function ProfilPage() {
       {user?.interests_completed_at && (userInterests.length > 0 || userSignals.length > 0) && (
         <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4 mb-5">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold">Mes centres d&apos;int&eacute;r&ecirc;t</h3>
+            <h3 className="text-sm font-bold">{t("echo.profile.myInterests")}</h3>
             <button
               onClick={() => { setInterestEditMode(true); setShowInterestModal(true); }}
               className="text-xs text-[#1D9E75] font-semibold hover:underline"
             >
-              Modifier
+              {t("echo.profile.modify")}
             </button>
           </div>
           {userInterests.length > 0 && (
@@ -670,10 +670,10 @@ export default function ProfilPage() {
             setUserSignals(allSigs.filter((s: { id: string }) => (data.selectedSignals || []).includes(s.id)));
           }).catch(() => {});
           if (!interestEditMode) {
-            setSuccess(reward.credited ? "100 FCFA crédités + badge Écho Fondateur !" : "Préférences enregistrées !");
+            setSuccess(reward.credited ? t("echo.profile.interestRewardSuccess") : t("echo.profile.interestSaved"));
             setTimeout(() => setSuccess(""), 5000);
           } else {
-            setSuccess("Préférences mises à jour");
+            setSuccess(t("echo.profile.interestUpdated"));
             setTimeout(() => setSuccess(""), 3000);
           }
         }}
