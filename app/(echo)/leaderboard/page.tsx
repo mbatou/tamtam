@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, ArrowLeft } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
 
 interface LeaderboardEntry {
@@ -48,15 +48,7 @@ export default function LeaderboardPage() {
 
   return (
     <div className="px-4 py-5 min-h-screen">
-      <div className="flex items-center gap-3 mb-6">
-        <button
-          onClick={() => window.location.href = '/dashboard'}
-          className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition shrink-0"
-        >
-          <ArrowLeft className="w-4 h-4 text-white/60" />
-        </button>
-        <h1 className="text-xl font-bold font-syne">{t('echo.leaderboard.title')}</h1>
-      </div>
+      <h1 className="text-xl font-bold font-syne mb-6">{t('echo.leaderboard.title')}</h1>
 
       <div className="flex gap-2 mb-5">
         <button

@@ -13,7 +13,7 @@ import { getActiveTheme } from "@/lib/theme";
 import CampaignMiniCard from "@/components/echo/CampaignMiniCard";
 import WelcomeBanner from "@/components/echo/onboarding/WelcomeBanner";
 import PushPermissionPrompt from "@/components/echo/PushPermissionPrompt";
-import Leaderboard from "@/components/echo/Leaderboard";
+
 
 export default function EchoDashboard() {
   const [user, setUser] = useState<User | null>(null);
@@ -405,13 +405,6 @@ export default function EchoDashboard() {
               </button>
             )}
           </div>
-        </div>
-      )}
-
-      {/* Leaderboard */}
-      {user && (
-        <div className="mb-5">
-          <Leaderboard currentUserId={user.id} />
         </div>
       )}
 
