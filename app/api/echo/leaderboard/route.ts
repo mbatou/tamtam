@@ -31,7 +31,12 @@ export async function GET(request: NextRequest) {
   }
 
   const period = request.nextUrl.searchParams.get("period") || "weekly";
-  const sinceDate = period === "monthly" ? getStartOfMonth() : getStartOfWeek();
+  const sinceDate =
+    period === "all"
+      ? "1970-01-01T00:00:00.000Z"
+      : period === "monthly"
+        ? getStartOfMonth()
+        : getStartOfWeek();
 
   const supabase = createServiceClient();
 
@@ -103,9 +108,30 @@ export async function GET(request: NextRequest) {
     }),
   );
 
+  // Build current user's entry for the pinned card
+  let userEntry = null;
+  if (userIndex >= 0) {
+    const r = results[userIndex] as {
+      echo_id: string;
+      name: string;
+      tier: string;
+      total_clicks: number;
+      campaigns_joined: number;
+    };
+    userEntry = {
+      rank: userIndex + 1,
+      echo_id: r.echo_id,
+      name: r.name,
+      tier: r.tier,
+      total_clicks: Number(r.total_clicks),
+      campaigns_joined: Number(r.campaigns_joined),
+    };
+  }
+
   return NextResponse.json({
     leaderboard,
     userRank,
+    userEntry,
     period,
     startDate: sinceDate,
   });

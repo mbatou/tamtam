@@ -15,12 +15,23 @@ interface LeaderboardEntry {
   campaigns_joined?: number
 }
 
+interface UserEntry {
+  echo_id: string
+  name: string
+  rank: number
+  tier?: string
+  total_clicks: number
+  campaigns_joined: number
+}
+
+type Period = 'weekly' | 'monthly' | 'all'
+
 export default function LeaderboardPage() {
   const { t } = useTranslation()
-  const [period, setPeriod] = useState<'weekly' | 'monthly'>('weekly')
+  const [period, setPeriod] = useState<Period>('weekly')
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [userRank, setUserRank] = useState<number | null>(null)
+  const [userEntry, setUserEntry] = useState<UserEntry | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -35,52 +46,95 @@ export default function LeaderboardPage() {
   useEffect(() => {
     setLoading(true)
     fetch(`/api/echo/leaderboard?period=${period}`)
-      .then(res => res.ok ? res.json() : { leaderboard: [], userRank: null })
+      .then(res => res.ok ? res.json() : { leaderboard: [], userRank: null, userEntry: null })
       .then(data => {
         setEntries(data.leaderboard || [])
-        setUserRank(data.userRank)
+        setUserEntry(data.userEntry || null)
       })
       .catch(() => setEntries([]))
       .finally(() => setLoading(false))
   }, [period, currentUserId])
 
-  const medals = ['', '🥇', '🥈', '🥉']
+  const medals = ['', '\u{1F947}', '\u{1F948}', '\u{1F949}']
+
+  function getTierLabel(tier?: string) {
+    switch (tier) {
+      case 'silver': return t('echo.leaderboard.tierSilver')
+      case 'gold': return t('echo.leaderboard.tierGold')
+      case 'diamond': return t('echo.leaderboard.tierDiamond')
+      default: return t('echo.leaderboard.tierBronze')
+    }
+  }
+
+  function getTierColor(tier?: string) {
+    switch (tier) {
+      case 'silver': return 'text-gray-300'
+      case 'gold': return 'text-yellow-400'
+      case 'diamond': return 'text-cyan-300'
+      default: return 'text-orange-400'
+    }
+  }
 
   return (
     <div className="px-4 py-5 min-h-screen">
-      <h1 className="text-xl font-bold font-syne mb-6">{t('echo.leaderboard.title')}</h1>
+      <h1 className="text-xl font-bold font-syne mb-5">{t('echo.leaderboard.title')}</h1>
 
+      {/* Period pills */}
       <div className="flex gap-2 mb-5">
-        <button
-          onClick={() => setPeriod('weekly')}
-          className={`px-4 py-2 rounded-full text-xs font-semibold transition ${
-            period === 'weekly'
-              ? 'bg-[#1D9E75] text-white'
-              : 'bg-white/5 text-white/40 hover:bg-white/10'
-          }`}
-        >
-          {t('echo.leaderboard.weekly')}
-        </button>
-        <button
-          onClick={() => setPeriod('monthly')}
-          className={`px-4 py-2 rounded-full text-xs font-semibold transition ${
-            period === 'monthly'
-              ? 'bg-[#1D9E75] text-white'
-              : 'bg-white/5 text-white/40 hover:bg-white/10'
-          }`}
-        >
-          {t('echo.leaderboard.monthly')}
-        </button>
+        {(['weekly', 'monthly', 'all'] as Period[]).map(p => (
+          <button
+            key={p}
+            onClick={() => setPeriod(p)}
+            className={`px-4 py-2 rounded-full text-xs font-semibold transition ${
+              period === p
+                ? 'bg-[#1D9E75] text-white'
+                : 'bg-white/5 text-white/40 hover:bg-white/10'
+            }`}
+          >
+            {t(`echo.leaderboard.${p}`)}
+          </button>
+        ))}
       </div>
 
-      {userRank && userRank > 20 && (
-        <div className="mb-4 px-4 py-3 rounded-xl bg-[#1D9E75]/10 border border-[#1D9E75]/20 flex items-center justify-between">
-          <span className="text-xs text-[#1D9E75] font-semibold">
-            {t('echo.leaderboard.yourRank')}: #{userRank}
-          </span>
+      {/* Pinned user card */}
+      {userEntry && (
+        <div className="mb-5 rounded-2xl bg-[#1D9E75]/5 border border-[#1D9E75]/20 p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-full bg-[#1D9E75]/20 border-2 border-[#1D9E75]/40 flex items-center justify-center text-sm font-bold text-[#1D9E75] shrink-0">
+              {userEntry.name?.charAt(0)?.toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-[#1D9E75] truncate">{userEntry.name}</span>
+                <span className={`text-[10px] font-bold ${getTierColor(userEntry.tier)}`}>
+                  {getTierLabel(userEntry.tier)}
+                </span>
+              </div>
+              <span className="text-[10px] text-white/30">
+                {t('echo.leaderboard.yourRank')}: <span className="font-bold text-white/60">#{userEntry.rank}</span>
+              </span>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-[#1D9E75]/10">
+            <div className="text-center">
+              <span className="text-sm font-black block">{userEntry.total_clicks}</span>
+              <span className="text-[9px] text-white/35">{t('echo.leaderboard.clicks')}</span>
+            </div>
+            <div className="text-center">
+              <span className="text-sm font-black block">{userEntry.campaigns_joined}</span>
+              <span className="text-[9px] text-white/35">{t('echo.leaderboard.campaigns')}</span>
+            </div>
+            <div className="text-center">
+              <span className={`text-sm font-black block ${getTierColor(userEntry.tier)}`}>
+                {getTierLabel(userEntry.tier)}
+              </span>
+              <span className="text-[9px] text-white/35">{t('echo.leaderboard.tier')}</span>
+            </div>
+          </div>
         </div>
       )}
 
+      {/* Leaderboard list */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-6 h-6 animate-spin text-white/30" />
@@ -115,7 +169,7 @@ export default function LeaderboardPage() {
                         {entry.name}
                       </span>
                       {entry.is_founding_echo && (
-                        <span className="text-xs" title="Écho Fondateur">&#129351;</span>
+                        <span className="text-xs" title={t('echo.leaderboard.foundingEcho')}>&#129351;</span>
                       )}
                     </div>
                     {entry.city && (
