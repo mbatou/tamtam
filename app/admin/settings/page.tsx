@@ -529,9 +529,9 @@ export default function AdminSettingsPage() {
                   </div>
                   <div className="flex gap-2">
                     {[
-                      { role: "admin", label: "Admin", desc: "Accès complet sauf wallet" },
-                      { role: "member", label: "Membre", desc: "Campagnes + analytics" },
-                      { role: "viewer", label: "Lecteur", desc: "Lecture seule" },
+                      { role: "admin", labelKey: "workspace.roleAdmin", descKey: "workspace.roleAdminDesc" },
+                      { role: "member", labelKey: "workspace.roleMember", descKey: "workspace.roleMemberDesc" },
+                      { role: "viewer", labelKey: "workspace.roleViewer", descKey: "workspace.roleViewerDesc" },
                     ].map((r) => (
                       <button
                         key={r.role}
@@ -542,8 +542,8 @@ export default function AdminSettingsPage() {
                           borderColor: inviteRole === r.role ? "rgba(211,84,0,0.35)" : "rgba(255,255,255,0.07)",
                         }}
                       >
-                        <p className="text-[11px] font-dm font-semibold text-white">{r.label}</p>
-                        <p className="text-[9px] font-dm" style={{ color: "rgba(255,255,255,0.3)" }}>{r.desc}</p>
+                        <p className="text-[11px] font-dm font-semibold text-white">{t(r.labelKey)}</p>
+                        <p className="text-[9px] font-dm" style={{ color: "rgba(255,255,255,0.3)" }}>{t(r.descKey)}</p>
                       </button>
                     ))}
                   </div>

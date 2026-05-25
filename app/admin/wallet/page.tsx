@@ -23,9 +23,14 @@ export default function AdminWalletWrapper() {
 function AdminWalletGate() {
   const brandCtx = useBrandContext();
   if (!brandCtx.can("VIEW_WALLET")) {
-    return <PermissionDenied message="Seul le propriétaire ou un admin peut accéder au portefeuille." />;
+    return <PermissionDeniedWithI18n />;
   }
   return <AdminWalletPage />;
+}
+
+function PermissionDeniedWithI18n() {
+  const { t } = useTranslation();
+  return <PermissionDenied message={t("workspace.walletDenied")} />;
 }
 
 function WalletSkeleton() {

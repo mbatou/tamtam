@@ -6,6 +6,7 @@ import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import RoleBadge from "@/components/dashboard/RoleBadge";
 import { ACTIVE_BRAND_COOKIE } from "@/lib/brand-types";
+import { useTranslation } from "@/lib/i18n";
 import type { BrandAccess } from "@/lib/brand-types";
 
 interface PendingInvitation {
@@ -21,14 +22,9 @@ interface PendingInvitation {
   };
 }
 
-const roleLabels: Record<string, string> = {
-  admin: "Admin",
-  member: "Membre",
-  viewer: "Lecteur",
-};
-
 export default function BrandPickerPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [brands, setBrands] = useState<BrandAccess[]>([]);
   const [pending, setPending] = useState<PendingInvitation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,6 +86,13 @@ export default function BrandPickerPage() {
     setProcessingInvite(null);
   }
 
+  const roleKeys: Record<string, string> = {
+    admin: "workspace.roleAdmin",
+    member: "workspace.roleMember",
+    viewer: "workspace.roleViewer",
+    owner: "workspace.roleOwner",
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0A0A1A] flex items-center justify-center">
@@ -105,40 +108,40 @@ export default function BrandPickerPage() {
         height={28}
         width={110}
         alt="Tamtam"
-        className="mb-8 h-7 w-auto"
+        className="mb-10 h-7 w-auto"
         priority
       />
 
-      <h1 className="text-[22px] font-black text-white text-center mb-1 font-syne">
-        Sur quel compte travailler ?
+      <h1 className="text-[22px] font-black text-white text-center mb-1.5 font-syne">
+        {t("workspace.pickerTitle")}
       </h1>
-      <p className="text-[13px] text-white/40 text-center mb-8">
-        Sélectionnez un espace de travail pour continuer.
+      <p className="text-[13px] text-white/35 text-center mb-10">
+        {t("workspace.pickerSubtitle")}
       </p>
 
-      <div className="w-full max-w-[420px] flex flex-col gap-3">
+      <div className="w-full max-w-[400px] flex flex-col gap-2">
         {pending.length > 0 && (
-          <div className="mb-2">
-            <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-[#F0997B] mb-2">
-              Invitations en attente
+          <div className="mb-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#F0997B] mb-3 px-1">
+              {t("workspace.pendingInvitations")}
             </p>
             {pending.map((inv) => (
               <div
                 key={inv.id}
-                className="w-full p-4 bg-[rgba(211,84,0,0.06)] border border-[rgba(211,84,0,0.25)] rounded-[14px] mb-2"
+                className="w-full p-4 bg-[rgba(211,84,0,0.04)] border border-[rgba(211,84,0,0.2)] rounded-2xl mb-2"
               >
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-[8px] bg-[rgba(211,84,0,0.1)] flex items-center justify-center text-[14px] font-black text-[#F0997B] flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-[rgba(211,84,0,0.08)] flex items-center justify-center text-[14px] font-black text-[#F0997B] flex-shrink-0">
                     {inv.brand.company_name?.charAt(0) ||
                       inv.brand.name?.charAt(0) ||
                       "?"}
                   </div>
-                  <div>
-                    <p className="text-[13px] font-bold text-white">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-bold text-white truncate">
                       {inv.brand.company_name || inv.brand.name}
                     </p>
-                    <p className="text-[11px] text-white/40">
-                      Invitation · Rôle : {roleLabels[inv.role] || inv.role}
+                    <p className="text-[11px] text-white/35">
+                      {t("workspace.invitationRole", { role: t(roleKeys[inv.role] || "workspace.roleMember") })}
                     </p>
                   </div>
                 </div>
@@ -146,16 +149,16 @@ export default function BrandPickerPage() {
                   <button
                     onClick={() => handleAccept(inv.id)}
                     disabled={processingInvite === inv.id}
-                    className="flex-1 bg-[#1D9E75] text-white text-[12px] font-bold py-2.5 rounded-[10px] disabled:opacity-50 transition"
+                    className="flex-1 bg-[#1D9E75] hover:bg-[#1D9E75]/90 text-white text-[12px] font-bold py-2.5 rounded-xl disabled:opacity-50 transition"
                   >
-                    {processingInvite === inv.id ? "..." : "Accepter"}
+                    {processingInvite === inv.id ? "..." : t("workspace.accept")}
                   </button>
                   <button
                     onClick={() => handleDecline(inv.id)}
                     disabled={processingInvite === inv.id}
-                    className="flex-1 bg-white/[0.05] border border-white/[0.1] text-white/50 text-[12px] font-medium py-2.5 rounded-[10px] disabled:opacity-50 transition"
+                    className="flex-1 bg-white/[0.04] border border-white/[0.08] text-white/40 hover:text-white/60 hover:border-white/[0.15] text-[12px] font-medium py-2.5 rounded-xl disabled:opacity-50 transition"
                   >
-                    Refuser
+                    {t("workspace.decline")}
                   </button>
                 </div>
               </div>
@@ -166,49 +169,49 @@ export default function BrandPickerPage() {
         {brands.length > 0 && (
           <div>
             {pending.length > 0 && (
-              <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-white/30 mb-2">
-                Mes espaces
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/25 mb-3 px-1">
+                {t("workspace.myWorkspaces")}
               </p>
             )}
             {brands.map((brand) => (
               <button
                 key={brand.id}
                 onClick={() => handleSelect(brand.id)}
-                className="w-full flex items-center gap-4 p-4 bg-[#111128] border border-white/[0.07] rounded-[14px] hover:border-[rgba(211,84,0,0.3)] hover:bg-[#141420] transition-all group mb-2"
+                className="w-full flex items-center gap-3.5 p-4 bg-[#111128] border border-white/[0.06] rounded-2xl hover:border-[rgba(211,84,0,0.25)] hover:bg-[#13132a] transition-all group mb-2"
               >
-                <div className="w-12 h-12 rounded-[10px] bg-[rgba(211,84,0,0.1)] border border-[rgba(211,84,0,0.2)] flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <div className="w-11 h-11 rounded-xl bg-[rgba(211,84,0,0.08)] border border-[rgba(211,84,0,0.15)] flex items-center justify-center flex-shrink-0 overflow-hidden">
                   {brand.logo_url ? (
                     <Image
                       src={brand.logo_url}
-                      width={48}
-                      height={48}
-                      className="rounded-[10px] object-cover"
+                      width={44}
+                      height={44}
+                      className="rounded-xl object-cover"
                       alt={brand.name}
                     />
                   ) : (
-                    <span className="text-[16px] font-black text-[#F0997B]">
+                    <span className="text-[15px] font-black text-[#F0997B]">
                       {brand.name?.charAt(0).toUpperCase()}
                     </span>
                   )}
                 </div>
-                <div className="flex-1 text-left">
-                  <p className="text-[14px] font-bold text-white">
+                <div className="flex-1 text-left min-w-0">
+                  <p className="text-[14px] font-bold text-white truncate">
                     {brand.name}
                   </p>
-                  <div className="flex items-center gap-2 mt-0.5">
+                  <div className="mt-1">
                     <RoleBadge role={brand.role} />
                   </div>
                 </div>
-                <ArrowRight className="w-4 h-4 text-white/20 group-hover:text-[#D35400] transition-colors" />
+                <ArrowRight className="w-4 h-4 text-white/15 group-hover:text-[#D35400] group-hover:translate-x-0.5 transition-all" />
               </button>
             ))}
           </div>
         )}
 
         {brands.length === 0 && pending.length === 0 && (
-          <div className="text-center py-8">
-            <p className="text-white/40 text-sm">
-              Aucun espace de travail disponible.
+          <div className="text-center py-12">
+            <p className="text-white/30 text-sm">
+              {t("workspace.noWorkspaces")}
             </p>
           </div>
         )}

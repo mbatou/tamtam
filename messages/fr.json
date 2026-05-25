@@ -1271,6 +1271,26 @@
       "resp422": "Événement non autorisé pour ce pixel"
     }
   },
+  "workspace": {
+    "currentWorkspace": "Espace actuel",
+    "manageWorkspaces": "Gérer mes espaces",
+    "pickerTitle": "Sur quel compte travailler ?",
+    "pickerSubtitle": "Sélectionnez un espace de travail pour continuer.",
+    "pendingInvitations": "Invitations en attente",
+    "myWorkspaces": "Mes espaces",
+    "invitationRole": "Invitation · Rôle : {role}",
+    "accept": "Accepter",
+    "decline": "Refuser",
+    "noWorkspaces": "Aucun espace de travail disponible.",
+    "roleOwner": "Propriétaire",
+    "roleAdmin": "Admin",
+    "roleMember": "Membre",
+    "roleViewer": "Lecteur",
+    "roleAdminDesc": "Accès complet sauf portefeuille",
+    "roleMemberDesc": "Campagnes + analytics",
+    "roleViewerDesc": "Lecture seule",
+    "walletDenied": "Seul le propriétaire ou un admin peut accéder au portefeuille."
+  },
   "superadmin": {
     "dashboard": {
       "title": "Centre de commande",

@@ -6,9 +6,11 @@ import Image from "next/image";
 import { ChevronDown, Check, LayoutGrid } from "lucide-react";
 import RoleBadge from "@/components/dashboard/RoleBadge";
 import { useBrandContext } from "@/lib/brand-context-client";
+import { useTranslation } from "@/lib/i18n";
 
 export default function BrandSwitcher() {
   const { currentBrand, allBrands, switchBrand } = useBrandContext();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const ref = useRef<HTMLDivElement>(null);
@@ -29,7 +31,7 @@ export default function BrandSwitcher() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2.5 bg-[#111128] border border-white/[0.08] rounded-[10px] px-3 py-2 hover:border-[rgba(211,84,0,0.3)] transition-all"
+        className="w-full flex items-center gap-2 bg-[#111128] border border-white/[0.08] rounded-[10px] px-2.5 py-2 hover:border-[rgba(211,84,0,0.3)] transition-all"
       >
         <div className="w-6 h-6 rounded-[5px] bg-[rgba(211,84,0,0.12)] flex items-center justify-center flex-shrink-0 overflow-hidden">
           {currentBrand.logo_url ? (
@@ -47,24 +49,22 @@ export default function BrandSwitcher() {
           )}
         </div>
 
-        <span className="text-[13px] font-medium text-white max-w-[120px] truncate">
+        <span className="text-[12px] font-medium text-white truncate flex-1 text-left min-w-0">
           {currentBrand.name}
         </span>
 
-        <RoleBadge role={currentBrand.role} />
-
         <ChevronDown
-          className={`w-3.5 h-3.5 text-white/30 transition-transform ${
+          className={`w-3 h-3 text-white/30 flex-shrink-0 transition-transform ${
             open ? "rotate-180" : ""
           }`}
         />
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 mt-2 w-[260px] bg-[#0D0D1F] border border-white/[0.08] rounded-[12px] shadow-xl z-50 overflow-hidden">
+        <div className="absolute top-full left-0 mt-2 w-[240px] bg-[#0D0D1F] border border-white/[0.08] rounded-[12px] shadow-xl z-50 overflow-hidden">
           <div className="px-3 py-2 border-b border-white/[0.06]">
             <p className="text-[10px] text-white/25 uppercase tracking-wide">
-              Espace actuel
+              {t("workspace.currentWorkspace")}
             </p>
           </div>
 
@@ -75,21 +75,21 @@ export default function BrandSwitcher() {
                 switchBrand(brand.id);
                 setOpen(false);
               }}
-              className={`w-full flex items-center gap-3 px-3 py-3 hover:bg-white/[0.04] transition-colors ${
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-white/[0.04] transition-colors ${
                 brand.id === currentBrand.id ? "bg-[rgba(211,84,0,0.06)]" : ""
               }`}
             >
-              <div className="w-8 h-8 rounded-[7px] bg-[rgba(211,84,0,0.1)] flex items-center justify-center flex-shrink-0 overflow-hidden">
+              <div className="w-7 h-7 rounded-[6px] bg-[rgba(211,84,0,0.1)] flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {brand.logo_url ? (
                   <Image
                     src={brand.logo_url}
-                    width={32}
-                    height={32}
-                    className="rounded-[7px] object-cover"
+                    width={28}
+                    height={28}
+                    className="rounded-[6px] object-cover"
                     alt={brand.name}
                   />
                 ) : (
-                  <span className="text-[12px] font-black text-[#F0997B]">
+                  <span className="text-[11px] font-black text-[#F0997B]">
                     {brand.name?.charAt(0).toUpperCase()}
                   </span>
                 )}
@@ -106,16 +106,16 @@ export default function BrandSwitcher() {
             </button>
           ))}
 
-          <div className="border-t border-white/[0.06] p-2">
+          <div className="border-t border-white/[0.06] p-1.5">
             <button
               onClick={() => {
                 setOpen(false);
                 router.push("/brand-picker");
               }}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-[8px] hover:bg-white/[0.04] text-[11px] text-white/35 transition-colors"
+              className="w-full flex items-center gap-2 px-2.5 py-2 rounded-[8px] hover:bg-white/[0.04] text-[11px] text-white/35 transition-colors"
             >
               <LayoutGrid className="w-3.5 h-3.5" />
-              Gérer mes espaces
+              {t("workspace.manageWorkspaces")}
             </button>
           </div>
         </div>
