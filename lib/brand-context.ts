@@ -74,7 +74,7 @@ export async function getPendingInvitations(
     .select(
       "id, brand_owner_id, role, invited_at"
     )
-    .eq("email", userEmail.toLowerCase())
+    .eq("email", userEmail.toLowerCase().trim())
     .in("status", ["invited", "pending"])
     .is("removed_at", null);
 

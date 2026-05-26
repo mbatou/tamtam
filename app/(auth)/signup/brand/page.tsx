@@ -160,8 +160,8 @@ function BrandSignupContent() {
               <span className="text-xs text-[#D35400]">2</span>
             </div>
             <div>
-              <p className="text-sm font-semibold text-white font-dm">Réseau WhatsApp</p>
-              <p className="text-xs text-white/35 font-dm">Touchez votre cible via le canal le plus utilisé au Sénégal.</p>
+              <p className="text-sm font-semibold text-white font-dm">Réseau social</p>
+              <p className="text-xs text-white/35 font-dm">Touchez votre audience via les réseaux sociaux les plus populaires.</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
@@ -188,7 +188,7 @@ function BrandSignupContent() {
         </div>
         <div className="w-px h-8 bg-white/10" />
         <div>
-          <p className="text-2xl font-bold font-syne text-white">15 FCFA</p>
+          <p className="text-2xl font-bold font-syne text-white">50 FCFA</p>
           <p className="text-xs text-white/30 font-dm">CPC moyen</p>
         </div>
       </div>
@@ -254,21 +254,8 @@ function BrandSignupContent() {
             onChange={(v) => update("email", v)}
             placeholder="contact@entreprise.sn"
             accentColor="orange"
-            error={emailCheck && !emailCheck.valid && !emailCheck.suggestion ? emailCheck.error : undefined}
+            error={emailCheck && !emailCheck.valid ? emailCheck.error : undefined}
           />
-          {emailCheck && !emailCheck.valid && emailCheck.suggestion && (
-            <button
-              type="button"
-              onClick={() => {
-                const localPart = form.email.split("@")[0];
-                update("email", `${localPart}@${emailCheck.suggestion}`);
-                setEmailCheck({ valid: true });
-              }}
-              className="mt-1.5 text-xs text-[#D35400] hover:text-[#F39C12] transition font-dm"
-            >
-              Vouliez-vous dire <span className="font-bold underline">@{emailCheck.suggestion}</span> ?
-            </button>
-          )}
           {emailCheck?.valid && (
             <p className="mt-1.5 text-xs text-[#1D9E75] font-dm">{"✓"}</p>
           )}

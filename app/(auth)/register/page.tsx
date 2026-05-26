@@ -50,13 +50,6 @@ function RegisterPageContent() {
     return () => { if (emailDebounceRef.current) clearTimeout(emailDebounceRef.current); };
   }, [email]);
 
-  function applyEmailSuggestion() {
-    if (!emailCheck?.suggestion) return;
-    const localPart = email.split("@")[0];
-    setEmail(`${localPart}@${emailCheck.suggestion}`);
-    setEmailCheck({ valid: true });
-  }
-
   async function handleStep1() {
     if (!name.trim() || !email.trim() || !password.trim()) {
       setError(t("auth.registerFillAll"));
@@ -146,7 +139,7 @@ function RegisterPageContent() {
           <span className="gradient-text-teal">en partageant.</span>
         </h2>
         <p className="text-sm text-white/40 font-dm leading-relaxed max-w-xs mx-auto">
-          Rejoins les 2 500+ Échos qui monétisent leur réseau WhatsApp chaque jour.
+          Rejoins les 2 500+ Échos qui monétisent leur réseau social chaque jour.
         </p>
       </div>
 
@@ -255,17 +248,8 @@ function RegisterPageContent() {
               onChange={setEmail}
               placeholder={t("auth.registerEmailPlaceholder")}
               accentColor="teal"
-              error={emailCheck && !emailCheck.valid && !emailCheck.suggestion ? emailCheck.error : undefined}
+              error={emailCheck && !emailCheck.valid ? emailCheck.error : undefined}
             />
-            {emailCheck && !emailCheck.valid && emailCheck.suggestion && (
-              <button
-                type="button"
-                onClick={applyEmailSuggestion}
-                className="mt-1.5 text-xs text-[#D35400] hover:text-[#F39C12] transition font-dm"
-              >
-                Vouliez-vous dire <span className="font-bold underline">@{emailCheck.suggestion}</span> ?
-              </button>
-            )}
             {emailCheck?.valid && (
               <p className="mt-1.5 text-xs text-[#1D9E75] font-dm">{"✓"}</p>
             )}
