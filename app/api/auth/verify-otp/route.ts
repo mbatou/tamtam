@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
         .from("brand_team_members")
         .select("id, brand_owner_id, email")
         .eq("id", teamInviteId)
-        .eq("status", "invited")
+        .in("status", ["pending", "invited"])
         .single();
 
       if (invite && invite.email === email.toLowerCase()) {

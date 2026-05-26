@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       member_user_id: existingUser?.id || null,
       email: email.toLowerCase(),
       role: teamRole,
-      status: existingUser ? "active" : "invited",
+      status: existingUser ? "active" : "pending",
       accepted_at: existingUser ? new Date().toISOString() : null,
       invited_by: currentUser.id,
     })

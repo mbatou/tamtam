@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     .from("brand_team_members")
     .select("id, email, brand_owner_id")
     .eq("id", invitationId)
-    .eq("email", session.user.email?.toLowerCase())
+    .eq("email", session.user.email?.toLowerCase().trim())
     .in("status", ["invited", "pending"])
     .is("removed_at", null)
     .single();
