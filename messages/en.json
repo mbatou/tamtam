@@ -166,7 +166,9 @@
       "becomeEcho": "Become an Echo",
       "faq": "FAQ",
       "iAmBrand": "I'm a brand",
-      "becomeEchoShort": "Become an Echo"
+      "becomeEchoShort": "Become an Echo",
+      "login": "Log in",
+      "developers": "Developers"
     },
     "hero": {
       "badgeText": "1,400+ active Echos · 40+ cities · 50 FCFA per click",
@@ -183,6 +185,8 @@
       "ctaBrandAria": "I'm a brand — create a Tamtam account",
       "ctaEchoAria": "Become an Echo — create a free Tamtam account",
       "helperText": "Not sure which one you are? Scroll down to understand the difference",
+      "alreadyMember": "Already a member?",
+      "loginLink": "Log in",
       "chip1": "268 verified clicks · Tiak-Tiak",
       "chip2": "Moussa · Echo · Thiès",
       "chip3": "+500 FCFA · Wave ✓",
@@ -348,7 +352,7 @@
       "terms": "Terms of service",
       "privacy": "Privacy policy",
       "about": "About",
-      "copyright": "© 2026 Lupandu SARL · tamma.me · All rights reserved"
+      "copyright": "© 2026 Pandorus · tamma.me · All rights reserved"
     }
   },
   "auth": {
