@@ -48,10 +48,6 @@ WHERE expires_at IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_streak_rewards_user_id
 ON streak_rewards (user_id);
 
--- fraud_echo_analysis — paginate by fraud score
-CREATE INDEX IF NOT EXISTS idx_fraud_echo_analysis_risk
-ON fraud_echo_analysis (risk_level);
-
 -- ============================================================
 -- 2. SUPERADMIN METRICS VIEW
 -- Single source of truth for all dashboard numbers

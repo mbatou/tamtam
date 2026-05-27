@@ -122,13 +122,13 @@ export async function GET(request: NextRequest) {
     // Active brands/echos (had activity today)
     const { data: activeBrands } = await supabaseAdmin
       .from("campaigns")
-      .select("user_id")
+      .select("batteur_id")
       .eq("status", "active");
-    const brandsActive = new Set((activeBrands || []).map((c: { user_id: string }) => c.user_id)).size;
+    const brandsActive = new Set((activeBrands || []).map((c: { batteur_id: string }) => c.batteur_id)).size;
 
     const { count: echosActive } = await supabaseAdmin
       .from("clicks")
-      .select("user_id", { count: "exact", head: true })
+      .select("*", { count: "exact", head: true })
       .eq("is_valid", true)
       .gte("created_at", startOfDay)
       .lte("created_at", endOfDay);
