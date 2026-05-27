@@ -41,6 +41,8 @@ export interface User {
 
 export type CampaignObjective = "awareness" | "traffic" | "lead_generation";
 
+export type PricingModel = "cpc" | "cpa";
+
 export interface Campaign {
   id: string;
   batteur_id: string;
@@ -53,6 +55,9 @@ export interface Campaign {
   spent: number;
   status: "draft" | "active" | "paused" | "completed" | "rejected";
   objective: CampaignObjective;
+  pricing_model: PricingModel;
+  cpa_amount?: number | null;
+  cpa_event?: string | null;
   moderation_status?: "pending" | "approved" | "rejected";
   moderation_reason?: string | null;
   moderated_by?: string | null;
