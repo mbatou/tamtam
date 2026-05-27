@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
   // Fetch campaigns for this brand
   const { data: campaigns } = await supabase
     .from("campaigns")
-    .select("id, title, status, budget, cpc, created_at, moderation_status, target_cities")
+    .select("id, title, status, budget, spent, cpc, created_at, moderation_status, target_cities")
     .eq("batteur_id", userId)
     .order("created_at", { ascending: false })
     .limit(20);
@@ -68,10 +68,7 @@ export async function GET(request: NextRequest) {
     .order("created_at", { ascending: false })
     .limit(20);
 
-  // Compute total spent (negative transactions = spending)
-  const totalSpent = (transactions || [])
-    .filter(t => t.amount < 0)
-    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  const totalSpent = (campaigns || []).reduce((sum, c) => sum + (c.spent || 0), 0);
 
   // Compute total recharged
   const totalRecharged = (payments || [])
