@@ -6,7 +6,7 @@ ALTER TABLE campaigns
   ADD COLUMN IF NOT EXISTS pricing_model text NOT NULL DEFAULT 'cpc'
     CHECK (pricing_model IN ('cpc', 'cpa')),
   ADD COLUMN IF NOT EXISTS cpa_amount integer DEFAULT NULL
-    CHECK (cpa_amount IS NULL OR cpa_amount >= 500),
+    CHECK (cpa_amount IS NULL OR cpa_amount >= 150),
   ADD COLUMN IF NOT EXISTS cpa_event text DEFAULT NULL
     CHECK (cpa_event IS NULL OR cpa_event ~ '^[a-z_]+$');
 
@@ -21,7 +21,7 @@ ALTER TABLE conversions
 -- 3. Enforce: CPA campaigns must have cpa_amount and cpa_event
 -- (application-level validation handles this, but add a comment for clarity)
 COMMENT ON COLUMN campaigns.pricing_model IS 'cpc = pay per click, cpa = pay per conversion action';
-COMMENT ON COLUMN campaigns.cpa_amount IS 'Cost per action in FCFA (min 500). Only for pricing_model=cpa';
+COMMENT ON COLUMN campaigns.cpa_amount IS 'Cost per action in FCFA (min 150). Only for pricing_model=cpa';
 COMMENT ON COLUMN campaigns.cpa_event IS 'Which conversion event triggers payment (e.g. purchase, signup). Only for pricing_model=cpa';
 COMMENT ON COLUMN conversions.payment_status IS 'CPA payment status: none=not CPA, pending=awaiting, paid=echo credited, failed=error';
 
