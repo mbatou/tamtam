@@ -166,7 +166,9 @@
       "becomeEcho": "Devenir Écho",
       "faq": "FAQ",
       "iAmBrand": "Je suis une marque",
-      "becomeEchoShort": "Devenir Écho"
+      "becomeEchoShort": "Devenir Écho",
+      "login": "Se connecter",
+      "developers": "Developers"
     },
     "hero": {
       "badgeText": "1 400+ Échos actifs · 40+ villes · 50 FCFA par clic",
@@ -183,6 +185,8 @@
       "ctaBrandAria": "Je suis une marque — créer un compte Tamtam",
       "ctaEchoAria": "Devenir Écho — créer un compte Tamtam gratuit",
       "helperText": "Pas sûr de votre profil ? Faites défiler pour comprendre la différence",
+      "alreadyMember": "Déjà membre ?",
+      "loginLink": "Se connecter",
       "chip1": "268 clics vérifiés · Tiak-Tiak",
       "chip2": "Moussa · Écho · Thiès",
       "chip3": "+500 FCFA · Wave ✓",
@@ -348,7 +352,7 @@
       "terms": "Conditions d'utilisation",
       "privacy": "Confidentialité",
       "about": "À propos",
-      "copyright": "© 2026 Lupandu SARL · tamma.me · Tous droits réservés"
+      "copyright": "© 2026 Pandorus · tamma.me · Tous droits réservés"
     }
   },
   "auth": {

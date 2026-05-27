@@ -114,7 +114,7 @@ function Navbar() {
     { label: t("landing.nav.brands"), href: "#marques" },
     { label: t("landing.nav.becomeEcho"), href: "#echos" },
     { label: t("landing.nav.faq"), href: "#faq" },
-    { label: "Developers", href: "/developers", badge: "API" },
+    { label: t("landing.nav.developers"), href: "/developers", badge: "API" },
   ];
 
   return (
@@ -165,6 +165,13 @@ function Navbar() {
         </div>
 
         <div className="hidden md:flex items-center gap-3">
+          <Link
+            href="/login"
+            className="text-[13px] font-dm font-medium text-white/50 hover:text-white transition-colors"
+          >
+            {t("landing.nav.login")}
+          </Link>
+          <div className="w-px h-4 bg-white/10" />
           <Link
             href={`/register${qs}`}
             className="text-[12px] font-dm font-semibold bg-tt-orange text-white px-4 py-2 rounded-lg hover:bg-tt-orange-dark transition-colors"
@@ -224,6 +231,13 @@ function Navbar() {
                 )
               )}
               <div className="flex flex-col gap-2 pt-3 border-t border-white/[0.07]">
+                <Link
+                  href="/login"
+                  onClick={() => setMenuOpen(false)}
+                  className="text-[14px] font-dm font-medium text-white/60 py-2"
+                >
+                  {t("landing.nav.login")} →
+                </Link>
                 <Link
                   href={`/register${qs}`}
                   className="text-sm font-dm font-semibold bg-tt-orange text-white text-center px-4 py-2.5 rounded-lg"
@@ -389,6 +403,15 @@ function Hero() {
           <p className="text-[11px] font-dm text-white/30">
             {t("landing.hero.helperText")} <ChevronDown size={12} className="inline" />
           </p>
+          <p className="text-[12px] font-dm text-white/25 mt-2">
+            {t("landing.hero.alreadyMember")}{" "}
+            <Link
+              href="/login"
+              className="text-white/45 hover:text-white/70 underline underline-offset-2 transition-colors"
+            >
+              {t("landing.hero.loginLink")} →
+            </Link>
+          </p>
         </FadeUp>
       </div>
 
@@ -408,7 +431,7 @@ function Hero() {
 
 function SocialProofStrip() {
   const { t } = useTranslation();
-  const brands = ["Tiak-Tiak", "Boostmate", "SIAME", "Linguema", "Sikili"];
+  const brands = ["Tiak-Tiak", "Boostmate", "Sikili"];
 
   return (
     <section className="bg-[#111128] border-y border-white/[0.07] py-5">
@@ -1175,7 +1198,7 @@ function Footer() {
                 { label: t("landing.footer.useCases"), href: "#marques" },
                 { label: t("landing.footer.pixel"), href: "#pixel" },
                 { label: t("landing.footer.faq"), href: "#faq" },
-                { label: "Developers", href: "/developers" },
+                { label: t("landing.nav.developers"), href: "/developers" },
               ].map((link, i) => (
                 <li key={i}>
                   {link.href.startsWith("/") ? (
