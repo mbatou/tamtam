@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import { setSignupIntent } from "@/lib/signup-intent";
 
 interface GoogleButtonProps {
   role: "echo" | "batteur";
@@ -13,6 +14,7 @@ export default function GoogleButton({ role, label = "Continuer avec Google", cl
   const supabase = createClient();
 
   async function handleClick() {
+    setSignupIntent(role === "batteur" ? "brand" : "echo");
     let redirectUrl = `${window.location.origin}/auth/callback?role=${role}`;
     if (tmRef) redirectUrl += `&tm_ref=${encodeURIComponent(tmRef)}`;
     const { error } = await supabase.auth.signInWithOAuth({

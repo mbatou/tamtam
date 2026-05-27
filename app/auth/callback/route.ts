@@ -1,27 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { trackConversion } from "@/lib/tracking/track-conversion";
+import { SIGNUP_INTENT_COOKIE } from "@/lib/signup-intent";
+
+function redirectAndClearIntent(url: URL) {
+  const response = NextResponse.redirect(url);
+  response.cookies.set(SIGNUP_INTENT_COOKIE, "", { path: "/", maxAge: 0 });
+  return response;
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  const role = searchParams.get("role") as "echo" | "batteur" | null;
+  const roleParam = searchParams.get("role") as "echo" | "batteur" | null;
   const next = searchParams.get("next");
   const tmRef = searchParams.get("tm_ref");
 
+  const intentFromCookie = request.cookies.get(SIGNUP_INTENT_COOKIE)?.value as "brand" | "echo" | undefined;
+  const role = roleParam || (intentFromCookie === "brand" ? "batteur" : intentFromCookie === "echo" ? "echo" : null);
+
   if (!code) {
-    return NextResponse.redirect(new URL("/login?error=auth_failed", request.url));
+    return redirectAndClearIntent(new URL("/login?error=auth_failed", request.url));
   }
 
   const supabase = createClient();
   const { error, data } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !data.user) {
-    return NextResponse.redirect(new URL("/login?error=auth_failed", request.url));
+    return redirectAndClearIntent(new URL("/login?error=auth_failed", request.url));
   }
 
   if (next) {
-    return NextResponse.redirect(new URL(next, request.url));
+    return redirectAndClearIntent(new URL(next, request.url));
   }
 
   const userId = data.user.id;
@@ -35,12 +45,12 @@ export async function GET(request: NextRequest) {
 
   if (existingUser) {
     if (existingUser.role === "superadmin") {
-      return NextResponse.redirect(new URL("/superadmin", request.url));
+      return redirectAndClearIntent(new URL("/superadmin", request.url));
     }
     if (existingUser.role === "batteur" || existingUser.role === "admin") {
-      return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+      return redirectAndClearIntent(new URL("/admin/dashboard", request.url));
     }
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return redirectAndClearIntent(new URL("/dashboard", request.url));
   }
 
   const assignedRole = role === "batteur" ? "batteur" : "echo";
@@ -73,7 +83,6 @@ export async function GET(request: NextRequest) {
     ...(tmRef ? { signup_tm_ref: tmRef } : {}),
   });
 
-  // Fire signup conversion via the PUBLIC Pixel API (non-blocking, echo only)
   if (assignedRole === "echo") {
     trackConversion({
       event: "signup",
@@ -84,7 +93,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (assignedRole === "batteur") {
-    return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+    return redirectAndClearIntent(new URL("/admin/dashboard", request.url));
   }
-  return NextResponse.redirect(new URL("/dashboard", request.url));
+  return redirectAndClearIntent(new URL("/dashboard", request.url));
 }
