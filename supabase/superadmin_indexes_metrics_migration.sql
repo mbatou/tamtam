@@ -23,18 +23,14 @@ CREATE INDEX IF NOT EXISTS idx_brand_leads_created_at
 ON brand_leads (created_at DESC);
 
 -- payouts — finances page
-CREATE INDEX IF NOT EXISTS idx_payouts_user_id
-ON payouts (user_id);
+CREATE INDEX IF NOT EXISTS idx_payouts_echo_id
+ON payouts (echo_id);
 
 CREATE INDEX IF NOT EXISTS idx_payouts_status
 ON payouts (status);
 
 CREATE INDEX IF NOT EXISTS idx_payouts_created_at
 ON payouts (created_at DESC);
-
--- gamification_milestones
-CREATE INDEX IF NOT EXISTS idx_gamification_milestones_user_id
-ON gamification_milestones (user_id);
 
 -- blocked_ips — fraud detection
 CREATE INDEX IF NOT EXISTS idx_blocked_ips_ip
@@ -45,8 +41,8 @@ ON blocked_ips (expires_at)
 WHERE expires_at IS NOT NULL;
 
 -- streak_rewards
-CREATE INDEX IF NOT EXISTS idx_streak_rewards_user_id
-ON streak_rewards (user_id);
+CREATE INDEX IF NOT EXISTS idx_streak_rewards_echo_id
+ON streak_rewards (echo_id);
 
 -- ============================================================
 -- 2. SUPERADMIN METRICS VIEW
