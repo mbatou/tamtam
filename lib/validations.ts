@@ -4,7 +4,7 @@ export const createCampaignSchema = z.object({
   title: z.string().min(3, "Titre trop court").max(200).trim(),
   description: z.string().max(1000).optional().nullable(),
   destination_url: z.string().url("URL invalide"),
-  cpc: z.coerce.number().int().min(10, "CPC minimum 10 FCFA").max(1000),
+  cpc: z.coerce.number().int().min(0).max(1000),
   budget: z.coerce.number().int().min(1000, "Budget minimum 1000 FCFA").max(10000000),
   creative_urls: z.array(z.string().url()).optional(),
   starts_at: z.string().optional().nullable(),
@@ -13,6 +13,25 @@ export const createCampaignSchema = z.object({
   save_as_draft: z.boolean().optional(),
   objective: z.enum(["awareness", "traffic", "lead_generation"]).optional(),
   pixel_id: z.string().max(50).optional().nullable(),
+  pricing_model: z.enum(["cpc", "cpa"]).optional(),
+  cpa_amount: z.coerce.number().int().min(500, "CPA minimum 500 FCFA").max(1000000).optional().nullable(),
+  cpa_event: z.string().min(1).max(30).regex(/^[a-z_]+$/, "Événement invalide").optional().nullable(),
+}).superRefine((data, ctx) => {
+  if (data.pricing_model === "cpa") {
+    if (!data.cpa_amount) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Montant CPA requis", path: ["cpa_amount"] });
+    }
+    if (!data.cpa_event) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Événement CPA requis", path: ["cpa_event"] });
+    }
+    if (!data.pixel_id) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Pixel requis pour les campagnes CPA", path: ["pixel_id"] });
+    }
+  } else {
+    if (data.cpc < 10) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "CPC minimum 10 FCFA", path: ["cpc"] });
+    }
+  }
 });
 
 export const updateCampaignSchema = z.object({
@@ -20,7 +39,7 @@ export const updateCampaignSchema = z.object({
   title: z.string().min(3).max(200).trim().optional(),
   description: z.string().max(1000).optional().nullable(),
   destination_url: z.string().url().optional(),
-  cpc: z.coerce.number().int().min(10).max(1000).optional(),
+  cpc: z.coerce.number().int().min(0).max(1000).optional(),
   budget: z.coerce.number().int().min(1000).max(10000000).optional(),
   creative_urls: z.array(z.string().url()).optional(),
   starts_at: z.string().optional().nullable(),
@@ -30,6 +49,9 @@ export const updateCampaignSchema = z.object({
   moderation_status: z.enum(["pending", "approved", "rejected"]).optional(),
   objective: z.enum(["awareness", "traffic", "lead_generation"]).optional(),
   pixel_id: z.string().max(50).optional().nullable(),
+  pricing_model: z.enum(["cpc", "cpa"]).optional(),
+  cpa_amount: z.coerce.number().int().min(500).max(1000000).optional().nullable(),
+  cpa_event: z.string().min(1).max(30).regex(/^[a-z_]+$/).optional().nullable(),
 });
 
 export const deleteCampaignSchema = z.object({

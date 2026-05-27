@@ -5,6 +5,7 @@ export async function getCampaignList(supabase: SupabaseClient) {
     .from("campaigns")
     .select(
       `id, title, status, budget, spent, cpc,
+       pricing_model, cpa_amount, cpa_event,
        created_at, starts_at, ends_at,
        moderation_status,
        brand:users!batteur_id (

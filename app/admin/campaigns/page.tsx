@@ -6,13 +6,13 @@ import { createClient } from "@/lib/supabase/client";
 import { formatFCFA, timeAgo } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import type { Campaign } from "@/lib/types";
-import { ECHO_SHARE_PERCENT, SITE_URL, LEAD_GEN_SETUP_FEE_FCFA } from "@/lib/constants";
+import { ECHO_SHARE_PERCENT, ECHO_CPA_SHARE_PERCENT, SITE_URL, LEAD_GEN_SETUP_FEE_FCFA } from "@/lib/constants";
 import { SENEGAL_CITIES } from "@/lib/cities";
 import { trackEvent } from "@/lib/analytics";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import ConversionFunnel, { CostCards, AttributionBreakdown } from "@/components/ConversionFunnel";
 
-import type { CampaignObjective } from "@/lib/types";
+import type { CampaignObjective, PricingModel } from "@/lib/types";
 
 type View = "list" | "detail" | "objective" | "form";
 
@@ -41,6 +41,9 @@ export default function AdminCampaignsPage() {
   const [avgCpc, setAvgCpc] = useState<number>(0);
   const [imageFormatHint, setImageFormatHint] = useState<{ type: "warning" | "success"; message: string } | null>(null);
   const [objective, setObjective] = useState<CampaignObjective>("traffic");
+  const [pricingModel, setPricingModel] = useState<PricingModel>("cpc");
+  const [cpaAmount, setCpaAmount] = useState("");
+  const [cpaEvent, setCpaEvent] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [perf, setPerf] = useState<{
     totalClicks: number; validClicks: number; activeEchos: number; costPerVisitor: number;
@@ -178,6 +181,10 @@ export default function AdminCampaignsPage() {
     setCitySearch("");
     setEditingId(null);
     setObjective("traffic");
+    setPricingModel("cpc");
+    setCpaAmount("");
+    setCpaEvent("");
+    setSelectedPixelId(null);
     setError(null);
     setShowRechargePrompt(false);
     setShowCancelConfirm(false);
@@ -207,6 +214,10 @@ export default function AdminCampaignsPage() {
     setTargetCities(campaign.target_cities || []);
     setEditingId(campaign.id);
     setObjective(campaign.objective || "traffic");
+    setPricingModel(campaign.pricing_model || "cpc");
+    setCpaAmount(campaign.cpa_amount?.toString() || "");
+    setCpaEvent(campaign.cpa_event || "");
+    setSelectedPixelId(campaign.pixel_id || null);
     setError(null);
     setShowRechargePrompt(false);
     setView("form");
@@ -263,13 +274,15 @@ export default function AdminCampaignsPage() {
         title: form.title,
         description: form.description || null,
         destination_url: form.destination_url,
-        cpc: form.cpc,
+        cpc: pricingModel === "cpa" ? 0 : form.cpc,
         budget: form.budget,
         starts_at: form.starts_at || null,
         ends_at: form.ends_at || null,
         creative_urls: creativeUrls,
         target_cities: targetCities,
         objective,
+        pricing_model: pricingModel,
+        ...(pricingModel === "cpa" ? { cpa_amount: cpaAmount, cpa_event: cpaEvent } : {}),
         ...(selectedPixelId ? { pixel_id: selectedPixelId } : {}),
         ...(!editingId && asDraft ? { save_as_draft: true } : {}),
       };
@@ -538,6 +551,11 @@ export default function AdminCampaignsPage() {
                   : { label: t("admin.campaigns.objectiveTraffic"), color: "#1D9E75", bg: "rgba(29,158,117,0.1)" };
                 return <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ background: oc.bg, color: oc.color }}>{oc.label}</span>;
               })()}
+              {(c.pricing_model || "cpc") === "cpa" && (
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(211,84,0,0.12)", color: "#D35400" }}>
+                  {t("admin.campaigns.cpaBadge")} · {c.cpa_event} · {formatFCFA(c.cpa_amount || 0)}/{t("admin.campaigns.cpaPerAction")}
+                </span>
+              )}
             </div>
             {c.description && <p className="text-sm max-w-xl font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{c.description}</p>}
             {c.target_cities && c.target_cities.length > 0 && (
@@ -1482,31 +1500,122 @@ export default function AdminCampaignsPage() {
               <p className="text-xs text-white/20 mt-1">{t("admin.campaigns.visualFormats")}</p>
             </div>
 
-            <div>
-              <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.cpcLabel")}</label>
-              <input type="number" value={form.cpc} onChange={(e) => setForm({ ...form, cpc: e.target.value })} placeholder="25" className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
-              {avgCpc > 0 && (
-                <div className="mt-2">
-                  <p className="text-xs text-white/40">
-                    {t("admin.campaigns.avgCpcHint", { avg: formatFCFA(avgCpc) })}
-                  </p>
-                  {Number(form.cpc) > 0 && Number(form.cpc) < avgCpc && (
-                    <p className="text-xs text-yellow-400 mt-1">
-                      {t("admin.campaigns.cpcBelowAvg", { recommended: formatFCFA(Math.round(avgCpc * 1.25)) })}
+            {/* Pricing Model Selector */}
+            {(objective === "traffic" || objective === "awareness") && (
+              <div className="md:col-span-2">
+                <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.pricingModelLabel")}</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPricingModel("cpc")}
+                    className="text-left p-4 rounded-xl transition-all"
+                    style={{
+                      background: pricingModel === "cpc" ? "rgba(211,84,0,0.08)" : "rgba(255,255,255,0.02)",
+                      border: pricingModel === "cpc" ? "1.5px solid #D35400" : "0.5px solid rgba(255,255,255,0.08)",
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-bold text-white font-syne">{t("admin.campaigns.pricingCpc")}</span>
+                      {pricingModel === "cpc" && (
+                        <span className="w-4 h-4 rounded-full flex items-center justify-center" style={{ background: "#D35400" }}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.4)" }}>{t("admin.campaigns.pricingCpcDesc")}</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (brandPixels.filter(p => p.is_active).length === 0) return;
+                      setPricingModel("cpa");
+                      setShowPixelSection(true);
+                    }}
+                    className="text-left p-4 rounded-xl transition-all"
+                    style={{
+                      background: pricingModel === "cpa" ? "rgba(211,84,0,0.08)" : "rgba(255,255,255,0.02)",
+                      border: pricingModel === "cpa" ? "1.5px solid #D35400" : "0.5px solid rgba(255,255,255,0.08)",
+                      opacity: brandPixels.filter(p => p.is_active).length === 0 ? 0.4 : 1,
+                      cursor: brandPixels.filter(p => p.is_active).length === 0 ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-bold text-white font-syne">{t("admin.campaigns.pricingCpa")}</span>
+                      {pricingModel === "cpa" && (
+                        <span className="w-4 h-4 rounded-full flex items-center justify-center" style={{ background: "#D35400" }}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.4)" }}>
+                      {brandPixels.filter(p => p.is_active).length === 0
+                        ? t("admin.campaigns.cpaNoPixel")
+                        : t("admin.campaigns.pricingCpaDesc")
+                      }
                     </p>
-                  )}
-                  {Number(form.cpc) >= avgCpc && (
-                    <p className="text-xs text-emerald-400 mt-1">
-                      {t("admin.campaigns.cpcAboveAvg")}
-                    </p>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {pricingModel === "cpc" ? (
+              <>
+                <div>
+                  <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.cpcLabel")}</label>
+                  <input type="number" value={form.cpc} onChange={(e) => setForm({ ...form, cpc: e.target.value })} placeholder="25" className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
+                  {avgCpc > 0 && (
+                    <div className="mt-2">
+                      <p className="text-xs text-white/40">
+                        {t("admin.campaigns.avgCpcHint", { avg: formatFCFA(avgCpc) })}
+                      </p>
+                      {Number(form.cpc) > 0 && Number(form.cpc) < avgCpc && (
+                        <p className="text-xs text-yellow-400 mt-1">
+                          {t("admin.campaigns.cpcBelowAvg", { recommended: formatFCFA(Math.round(avgCpc * 1.25)) })}
+                        </p>
+                      )}
+                      {Number(form.cpc) >= avgCpc && (
+                        <p className="text-xs text-emerald-400 mt-1">
+                          {t("admin.campaigns.cpcAboveAvg")}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
-            <div>
-              <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.budgetLabel")}</label>
-              <input type="number" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="100000" className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
-            </div>
+                <div>
+                  <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.budgetLabel")}</label>
+                  <input type="number" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="100000" className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.cpaAmountLabel")}</label>
+                  <input type="number" value={cpaAmount} onChange={(e) => setCpaAmount(e.target.value)} placeholder="500" className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
+                  <p className="text-[10px] mt-1" style={{ color: "rgba(255,255,255,0.25)" }}>Min. 500 FCFA</p>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.cpaEventLabel")}</label>
+                  <select
+                    value={cpaEvent}
+                    onChange={(e) => setCpaEvent(e.target.value)}
+                    className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }}
+                  >
+                    <option value="">{t("admin.campaigns.cpaEventPlaceholder")}</option>
+                    <option value="purchase">{t("admin.campaigns.cpaEventPurchase")}</option>
+                    <option value="signup">{t("admin.campaigns.cpaEventSignup")}</option>
+                    <option value="install">{t("admin.campaigns.cpaEventInstall")}</option>
+                    <option value="activation">{t("admin.campaigns.cpaEventActivation")}</option>
+                    <option value="subscription">{t("admin.campaigns.cpaEventSubscription")}</option>
+                    <option value="lead">{t("admin.campaigns.cpaEventLead")}</option>
+                  </select>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.budgetLabel")}</label>
+                  <input type="number" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="100000" className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
+                </div>
+              </>
+            )}
             <div>
               <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.startDate")}</label>
               <input type="datetime-local" value={form.starts_at} onChange={(e) => setForm({ ...form, starts_at: e.target.value })} className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
@@ -1595,9 +1704,33 @@ export default function AdminCampaignsPage() {
           )}
 
           {/* Estimation section */}
-          {Number(form.cpc) > 0 && Number(form.budget) > 0 && (() => {
-            const cpc = Number(form.cpc);
+          {((pricingModel === "cpc" && Number(form.cpc) > 0) || (pricingModel === "cpa" && Number(cpaAmount) >= 500)) && Number(form.budget) > 0 && (() => {
             const budget = Number(form.budget);
+            if (pricingModel === "cpa") {
+              const cpa = Number(cpaAmount);
+              const estimatedConversions = Math.floor(budget / cpa);
+              const echoEarningsPerAction = Math.floor(cpa * ECHO_CPA_SHARE_PERCENT / 100);
+              return (
+                <div className="mt-5 p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+                  <h4 className="text-sm font-bold font-syne text-white mb-3 flex items-center gap-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#D35400" }}><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+                    {t("admin.campaigns.estimationTitle")}
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.03)" }}>
+                      <p className="text-lg font-black font-syne" style={{ color: "#D35400" }}>{estimatedConversions.toLocaleString()}</p>
+                      <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.estConversions")}</p>
+                    </div>
+                    <div className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.03)" }}>
+                      <p className="text-lg font-black font-syne" style={{ color: "#D35400" }}>{formatFCFA(echoEarningsPerAction)}</p>
+                      <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.echoEarnsPerAction")}</p>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-white/25 mt-2 text-center">{t("admin.campaigns.cpaEstNote")}</p>
+                </div>
+              );
+            }
+            const cpc = Number(form.cpc);
             const estimatedClicks = Math.floor(budget / cpc);
             const echoEarningsPerClick = Math.floor(cpc * ECHO_SHARE_PERCENT / 100);
             const isAboveAvg = avgCpc > 0 && cpc >= avgCpc;
@@ -1655,7 +1788,7 @@ export default function AdminCampaignsPage() {
                 <button
                   type="button"
                   onClick={() => handleSubmit(true)}
-                  disabled={submitting || !form.title || !form.destination_url || !form.cpc || !form.budget || (objective === "awareness" && creativeUrls.length === 0)}
+                  disabled={submitting || !form.title || !form.destination_url || !form.budget || (pricingModel === "cpc" && !form.cpc) || (pricingModel === "cpa" && (!cpaAmount || !cpaEvent || !selectedPixelId)) || (objective === "awareness" && creativeUrls.length === 0)}
                   className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 font-semibold text-sm hover:bg-white/10 transition disabled:opacity-40"
                 >
                   {submitting ? "..." : t("admin.campaigns.saveDraft")}
@@ -1664,7 +1797,7 @@ export default function AdminCampaignsPage() {
               <button
                 type="button"
                 onClick={() => handleSubmit(false)}
-                disabled={submitting || !form.title || !form.destination_url || !form.cpc || !form.budget || (objective === "awareness" && creativeUrls.length === 0)}
+                disabled={submitting || !form.title || !form.destination_url || !form.budget || (pricingModel === "cpc" && !form.cpc) || (pricingModel === "cpa" && (!cpaAmount || !cpaEvent || !selectedPixelId)) || (objective === "awareness" && creativeUrls.length === 0)}
                 className="px-8 py-3 rounded-xl text-sm font-bold text-white transition disabled:opacity-40" style={{ background: "#D35400" }}
               >
                 {submitting ? t("common.saving") : editingId ? t("common.save") : t("admin.campaigns.launchRythme")}
@@ -1906,8 +2039,21 @@ export default function AdminCampaignsPage() {
                   <div className="flex items-center gap-1 text-[9px]" style={{ color: "rgba(255,255,255,0.4)" }}>
                     <span className="font-medium text-white">{estimatedClicks.toLocaleString()} {t("common.clicks")}</span>
                     <span style={{ color: "rgba(255,255,255,0.12)" }}>·</span>
-                    <span>{formatFCFA(actualCPC)}/{t("admin.campaigns.perClick")}</span>
+                    {(campaign.pricing_model || "cpc") === "cpa" ? (
+                      <span>{formatFCFA(campaign.cpa_amount || 0)}/{t("admin.campaigns.cpaPerAction")}</span>
+                    ) : (
+                      <span>{formatFCFA(actualCPC)}/{t("admin.campaigns.perClick")}</span>
+                    )}
                   </div>
+
+                  {/* CPA badge */}
+                  {(campaign.pricing_model || "cpc") === "cpa" && (
+                    <div className="mt-1">
+                      <span className="text-[8px] font-semibold px-1.5 py-px rounded-full" style={{ background: "rgba(211,84,0,0.12)", color: "#D35400" }}>
+                        {t("admin.campaigns.cpaBadge")}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Best CPC badge */}
                   {bestCPCId === campaign.id && allFinishedCampaigns.length > 1 && (

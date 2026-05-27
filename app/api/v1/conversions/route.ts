@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/rate-limit";
 import bcrypt from "bcryptjs";
+import { ECHO_CPA_SHARE_PERCENT } from "@/lib/constants";
+import { logWalletTransaction } from "@/lib/wallet-transactions";
 
 export const dynamic = "force-dynamic";
 
@@ -316,6 +318,63 @@ export async function POST(request: NextRequest) {
     return json({ error: "Failed to record conversion" }, 500);
   }
 
+  // CPA payment processing: if the campaign uses CPA pricing and the event matches, pay the echo
+  let cpaPaid = false;
+  if (attributed && campaign_id && echo_id) {
+    const { data: cpaCampaign } = await supabase
+      .from("campaigns")
+      .select("pricing_model, cpa_amount, cpa_event, budget, spent, status")
+      .eq("id", campaign_id)
+      .single();
+
+    if (cpaCampaign?.pricing_model === "cpa" && cpaCampaign.cpa_event === event && cpaCampaign.status === "active") {
+      const cpaAmount = cpaCampaign.cpa_amount;
+      const echoEarning = Math.floor((cpaAmount * ECHO_CPA_SHARE_PERCENT) / 100);
+
+      const { data: rpcResult } = await supabase.rpc("process_cpa_conversion", {
+        p_conversion_id: conversion.id,
+        p_campaign_id: campaign_id,
+        p_echo_id: echo_id,
+        p_cpa_amount: cpaAmount,
+        p_echo_earning: echoEarning,
+      });
+
+      if (rpcResult === true) {
+        cpaPaid = true;
+
+        logWalletTransaction({
+          supabase,
+          userId: echo_id,
+          amount: echoEarning,
+          type: "click_earning",
+          description: `Conversion CPA — ${event}`,
+          sourceId: campaign_id,
+          sourceType: "campaign",
+        }).catch(console.error);
+
+        // Check if campaign budget is now exhausted
+        const remaining = cpaCampaign.budget - (cpaCampaign.spent + cpaAmount);
+        if (remaining < cpaAmount) {
+          supabase
+            .from("campaigns")
+            .update({ status: "completed" })
+            .eq("id", campaign_id)
+            .eq("status", "active")
+            .then(() => {});
+        }
+      } else {
+        // Mark as pending if RPC returns null (function might not exist yet)
+        if (rpcResult === null) {
+          supabase
+            .from("conversions")
+            .update({ payment_status: "pending", payment_amount: cpaAmount, echo_earning: echoEarning })
+            .eq("id", conversion.id)
+            .then(() => {});
+        }
+      }
+    }
+  }
+
   // Update pixel totals (non-blocking)
   supabase
     .from("pixels")
@@ -340,6 +399,7 @@ export async function POST(request: NextRequest) {
     attributed,
     attribution_type,
     click_to_conversion: clickLabel,
+    ...(cpaPaid ? { cpa_paid: true } : {}),
   });
 }
 

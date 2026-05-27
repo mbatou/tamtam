@@ -53,6 +53,9 @@ interface Campaign {
   landing_page_id?: string | null;
   creative_urls?: string[] | null;
   deleted_at?: string | null;
+  pricing_model?: string | null;
+  cpa_amount?: number | null;
+  cpa_event?: string | null;
 }
 
 interface Batteur {
@@ -478,7 +481,7 @@ function CampaignPageContent() {
           <table className="w-full">
             <thead>
               <tr style={{ background: "#111128" }}>
-                {["Campagne", "Statut", "Budget", "CPC", "Échos", "Clics", "Date"].map((h, i) => (
+                {["Campagne", "Statut", "Budget", "CPC/CPA", "Échos", "Clics", "Date"].map((h, i) => (
                   <th
                     key={h}
                     className={`text-left font-dm font-medium uppercase tracking-wider px-4 py-3 ${
@@ -497,7 +500,8 @@ function CampaignPageContent() {
                 const obj = OBJ_MAP[(campaign.objective || "traffic")] || OBJ_MAP.traffic;
                 const pct = campaign.budget > 0 ? Math.min(100, (campaign.spent / campaign.budget) * 100) : 0;
                 const remaining = campaign.budget - (campaign.spent || 0);
-                const lowBudget = campaign.status === "active" && remaining < campaign.cpc;
+                const unitCost = (campaign.pricing_model || "cpc") === "cpa" ? (campaign.cpa_amount || 0) : campaign.cpc;
+                const lowBudget = campaign.status === "active" && unitCost > 0 && remaining < unitCost;
 
                 return (
                   <tr
@@ -563,7 +567,7 @@ function CampaignPageContent() {
                           <AdminBadge status="error">Supprimée</AdminBadge>
                         )}
                         {lowBudget && (
-                          <span className="text-[10px] font-dm font-bold" style={{ color: "#F09595" }}>Budget &lt; CPC</span>
+                          <span className="text-[10px] font-dm font-bold" style={{ color: "#F09595" }}>Budget &lt; {(campaign.pricing_model || "cpc") === "cpa" ? "CPA" : "CPC"}</span>
                         )}
                       </div>
                     </td>
@@ -574,7 +578,14 @@ function CampaignPageContent() {
                       </div>
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell font-dm text-sm text-white/70">
-                      {campaign.cpc} FCFA
+                      {(campaign.pricing_model || "cpc") === "cpa" ? (
+                        <div>
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full mr-1" style={{ background: "rgba(211,84,0,0.12)", color: "#D35400" }}>CPA</span>
+                          {campaign.cpa_amount} FCFA
+                        </div>
+                      ) : (
+                        <>{campaign.cpc} FCFA</>
+                      )}
                     </td>
                     <td
                       className="px-4 py-3 hidden lg:table-cell font-dm text-sm cursor-pointer transition"
@@ -666,7 +677,16 @@ function CampaignPageContent() {
                     </span>
                   </InfoField>
                   <InfoField label="Budget" value={formatFCFA(selected.budget)} />
-                  <InfoField label="CPC" value={`${selected.cpc} FCFA`} />
+                  {(selected.pricing_model || "cpc") === "cpa" ? (
+                    <>
+                      <InfoField label="Modèle">
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(211,84,0,0.12)", color: "#D35400" }}>CPA</span>
+                      </InfoField>
+                      <InfoField label="CPA" value={`${selected.cpa_amount || 0} FCFA / ${selected.cpa_event || "—"}`} />
+                    </>
+                  ) : (
+                    <InfoField label="CPC" value={`${selected.cpc} FCFA`} />
+                  )}
 
                   {(selected.objective || "traffic") === "lead_generation" && (
                     <>

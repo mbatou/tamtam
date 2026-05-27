@@ -12,22 +12,19 @@ export const dynamic = "force-dynamic";
 async function notifyCampaignCompleted(campaignId: string) {
   try {
     const supabase = createServiceClient();
-    // Get campaign info
     const { data: campaign } = await supabase
       .from("campaigns")
-      .select("title, cpc")
+      .select("title, cpc, pricing_model")
       .eq("id", campaignId)
       .single();
     if (!campaign) return;
 
-    // Get all echos who participated (have tracked links)
     const { data: links } = await supabase
       .from("tracked_links")
       .select("echo_id, click_count")
       .eq("campaign_id", campaignId);
     if (!links?.length) return;
 
-    // Get echo details
     const echoIds = links.map((l) => l.echo_id);
     const { data: echos } = await supabase
       .from("users")
@@ -41,10 +38,30 @@ async function notifyCampaignCompleted(campaignId: string) {
 
     const clickMap = new Map(links.map((l) => [l.echo_id, l.click_count]));
 
+    // For CPA campaigns, get actual earnings from paid conversions
+    let cpaEarningsMap: Map<string, number> | null = null;
+    if (campaign.pricing_model === "cpa") {
+      const { data: conversions } = await supabase
+        .from("conversions")
+        .select("echo_id, echo_earning")
+        .eq("campaign_id", campaignId)
+        .eq("payment_status", "paid");
+      if (conversions) {
+        cpaEarningsMap = new Map();
+        for (const conv of conversions) {
+          if (conv.echo_id) {
+            cpaEarningsMap.set(conv.echo_id, (cpaEarningsMap.get(conv.echo_id) || 0) + (conv.echo_earning || 0));
+          }
+        }
+      }
+    }
+
     for (const echo of echos) {
       const email = emailMap.get(echo.id);
       const clicks = clickMap.get(echo.id) || 0;
-      const earnings = Math.floor(clicks * campaign.cpc * ECHO_SHARE_PERCENT / 100);
+      const earnings = cpaEarningsMap
+        ? (cpaEarningsMap.get(echo.id) || 0)
+        : Math.floor(clicks * campaign.cpc * ECHO_SHARE_PERCENT / 100);
       if (email) {
         sendCampaignCompletedToEcho({
           to: email,
@@ -111,7 +128,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls, target_cities, save_as_draft, objective, pixel_id } = parsed.data;
+  const { title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls, target_cities, save_as_draft, objective, pixel_id, pricing_model, cpa_amount, cpa_event } = parsed.data;
+
+  const pricingModel = pricing_model || "cpc";
+  const effectiveCpc = pricingModel === "cpa" ? 0 : cpc;
 
   const supabase = createServiceClient();
   const brandId = await getEffectiveBrandId(supabase, session.user.id);
@@ -124,7 +144,7 @@ export async function POST(request: NextRequest) {
       description: description || null,
       destination_url,
       creative_urls: creative_urls || [],
-      cpc,
+      cpc: effectiveCpc,
       budget,
       status: "draft",
       moderation_status: null,
@@ -132,6 +152,8 @@ export async function POST(request: NextRequest) {
       ends_at: ends_at || null,
       target_cities: target_cities && target_cities.length > 0 ? target_cities : null,
       objective: objective || "traffic",
+      pricing_model: pricingModel,
+      ...(pricingModel === "cpa" ? { cpa_amount, cpa_event } : {}),
       ...(pixel_id ? { pixel_id } : {}),
     }).select().single();
 
@@ -168,7 +190,7 @@ export async function POST(request: NextRequest) {
     description: description || null,
     destination_url,
     creative_urls: creative_urls || [],
-    cpc,
+    cpc: effectiveCpc,
     budget,
     status: "draft",
     moderation_status: "pending",
@@ -176,6 +198,8 @@ export async function POST(request: NextRequest) {
     ends_at: ends_at || null,
     target_cities: target_cities && target_cities.length > 0 ? target_cities : null,
     objective: objective || "traffic",
+    pricing_model: pricingModel,
+    ...(pricingModel === "cpa" ? { cpa_amount, cpa_event } : {}),
     ...(pixel_id ? { pixel_id } : {}),
   }).select().single();
 
@@ -234,7 +258,7 @@ export async function POST(request: NextRequest) {
           <p><strong>Marque:</strong> ${brand?.name || "—"}</p>
           <p><strong>Campagne:</strong> ${title}</p>
           <p><strong>Budget:</strong> ${budget.toLocaleString()} FCFA</p>
-          <p><strong>CPC:</strong> ${cpc} FCFA</p>
+          <p><strong>${pricingModel === "cpa" ? "CPA" : "CPC"}:</strong> ${pricingModel === "cpa" ? cpa_amount : effectiveCpc} FCFA</p>
           <p style="margin-top: 20px;">
             <a href="https://www.tamma.me/superadmin/campaigns" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Valider maintenant →</a>
           </p>
@@ -265,7 +289,7 @@ export async function PUT(request: NextRequest) {
     );
   }
 
-  const { id, title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls, target_cities, status, moderation_status, objective, pixel_id } = parsed.data;
+  const { id, title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls, target_cities, status, moderation_status, objective, pixel_id, pricing_model, cpa_amount, cpa_event } = parsed.data;
 
   const supabase = createServiceClient();
   const brandId = await getEffectiveBrandId(supabase, session.user.id);
@@ -289,6 +313,9 @@ export async function PUT(request: NextRequest) {
   if (moderation_status !== undefined) updates.moderation_status = moderation_status;
   if (objective !== undefined) updates.objective = objective;
   if (pixel_id !== undefined) updates.pixel_id = pixel_id;
+  if (pricing_model !== undefined) updates.pricing_model = pricing_model;
+  if (cpa_amount !== undefined) updates.cpa_amount = cpa_amount;
+  if (cpa_event !== undefined) updates.cpa_event = cpa_event;
 
   // Allow rejected campaigns to be resubmitted
   const isResubmission = moderation_status === "pending" && existing.status === "rejected";

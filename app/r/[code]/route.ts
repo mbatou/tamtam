@@ -112,6 +112,9 @@ export async function GET(
 
   // If valid click, update counters (with budget guard)
   if (valid) {
+    // CPA campaigns: clicks are free, no CPC debit
+    const isCpa = campaign.pricing_model === "cpa";
+
     // Check if echo is suspended — don't credit suspended users
     const { data: echoUser } = await supabase
       .from("users")
@@ -127,6 +130,18 @@ export async function GET(
         .eq("ip_address", ip)
         .order("created_at", { ascending: false })
         .limit(1);
+
+      return NextResponse.redirect(appendTmRef(destinationUrl, tmRef));
+    }
+
+    if (isCpa) {
+      // CPA: just count the click, no balance operations
+      supabase.from("tracked_links")
+        .update({ click_count: (link.click_count || 0) + 1 })
+        .eq("id", link.id)
+        .then(() => {});
+
+      supabase.rpc("increment_echo_clicks", { p_echo_id: link.echo_id }).then(() => {});
 
       return NextResponse.redirect(appendTmRef(destinationUrl, tmRef));
     }

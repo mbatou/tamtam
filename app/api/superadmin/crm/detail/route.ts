@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
   // Fetch campaigns for this brand
   const { data: campaigns } = await supabase
     .from("campaigns")
-    .select("id, title, status, budget, spent, cpc, created_at, moderation_status, target_cities")
+    .select("id, title, status, budget, spent, cpc, pricing_model, cpa_amount, cpa_event, created_at, moderation_status, target_cities")
     .eq("batteur_id", userId)
     .order("created_at", { ascending: false })
     .limit(20);
