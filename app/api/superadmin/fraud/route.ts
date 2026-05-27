@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
     const [crRes, ipRes, echoRes] = await Promise.all([
       supabase.from("carrier_ip_ranges").select("*"),
       supabase.from("fraud_ip_analysis").select("*").order("total_clicks", { ascending: false }).limit(100),
-      supabase.from("fraud_echo_analysis").select("*").order("total_clicks", { ascending: false }).limit(50),
+      supabase.from("fraud_echo_analysis").select("*").order("valid_rate_pct", { ascending: true }).limit(50),
     ]);
     carrierRanges = crRes.data;
     ipAnalysis = ipRes.data;

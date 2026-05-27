@@ -13,6 +13,7 @@ import {
   MousePointerClick,
   Percent,
   ChevronRight,
+  RefreshCw,
 } from "lucide-react";
 import DateRangeSelector, { type DateRange, getPresetRange } from "@/components/ui/DateRangeSelector";
 import {
@@ -21,6 +22,7 @@ import {
 } from "recharts";
 import AdminStatCard from "@/components/superadmin/AdminStatCard";
 import AdminBadge from "@/components/superadmin/AdminBadge";
+import { PageSkeleton } from "@/components/superadmin/AdminSkeleton";
 
 interface Stats {
   totalEchos: number;
@@ -90,6 +92,7 @@ const tooltipStyle = {
 export default function SuperAdminOverview() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [dateRange, setDateRange] = useState<DateRange>(() => getPresetRange("all"));
   const [chartTab, setChartTab] = useState<"clicks" | "revenue" | "echos" | "campaigns">("clicks");
   const [treasury, setTreasury] = useState<{
@@ -99,7 +102,7 @@ export default function SuperAdminOverview() {
     upcoming_unlocks: { campaign: string; date: string; total: number; echos: number }[];
   } | null>(null);
 
-  useEffect(() => {
+  function fetchData() {
     const params = new URLSearchParams();
     if (dateRange.from) params.set("from", dateRange.from);
     if (dateRange.to) params.set("to", dateRange.to);
@@ -111,21 +114,21 @@ export default function SuperAdminOverview() {
     ]).then(([statsData, treasuryData]) => {
       setStats(statsData);
       if (!treasuryData.error) setTreasury(treasuryData);
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch(() => {}).finally(() => {
+      setLoading(false);
+      setLastRefresh(new Date());
+    });
+  }
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 60000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRange]);
 
   if (loading || !stats) {
-    return (
-      <div className="p-6 max-w-7xl mx-auto space-y-4">
-        <div className="skeleton h-8 w-72 rounded-xl" />
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="skeleton h-24 rounded-xl" />
-          ))}
-        </div>
-        <div className="skeleton h-64 rounded-xl" />
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   const avgCpc = stats.validClicks > 0 ? Math.round(stats.grossRevenue / stats.validClicks) : 0;
@@ -142,7 +145,19 @@ export default function SuperAdminOverview() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div />
-        <DateRangeSelector value={dateRange.key} onChange={setDateRange} />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchData}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white/40 hover:text-white/70 hover:bg-white/[0.04] transition disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+            <span className="text-[11px] font-dm">
+              {lastRefresh.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+            </span>
+          </button>
+          <DateRangeSelector value={dateRange.key} onChange={setDateRange} />
+        </div>
       </div>
 
       {/* Top stats row — 6 cards */}
