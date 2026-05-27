@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
   let clicksQuery = supabase.from("clicks").select("*", { count: "exact", head: true });
   let validClicksQuery = supabase.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", true);
   let fraudClicksQuery = supabase.from("clicks").select("*", { count: "exact", head: true }).eq("is_valid", false);
-  let echoSignupsQuery = supabase.from("users").select("id, name, phone, city, created_at").eq("role", "echo").order("created_at", { ascending: false }).limit(5);
+  let echoSignupsQuery = supabase.from("users").select("id, name, phone, city, created_at").eq("role", "echo").is("deleted_at", null).order("created_at", { ascending: false }).limit(5);
   let campaignsListQuery = supabase.from("campaigns").select("id, title, status, budget, spent, cpc, created_at").order("created_at", { ascending: false }).limit(5);
   let recentClicksQuery = supabase.from("clicks").select("id, ip_address, is_valid, created_at, link_id").order("created_at", { ascending: false }).limit(20);
   let sentPayoutsQuery = supabase.from("payouts").select("amount").eq("status", "sent").limit(5000);
@@ -108,8 +108,8 @@ export async function GET(request: NextRequest) {
     { count: brandsBefore },
     { data: activeCampaignsList },
   ] = await Promise.all([
-    supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "echo"),
-    supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "batteur"),
+    supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "echo").is("deleted_at", null),
+    supabase.from("users").select("*", { count: "exact", head: true }).in("role", ["batteur", "brand"]).is("deleted_at", null),
     supabase.from("campaigns").select("*", { count: "exact", head: true }),
     supabase.from("campaigns").select("*", { count: "exact", head: true }).eq("status", "active"),
     clicksQuery,
@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
     supabase.from("payouts").select("*", { count: "exact", head: true }).eq("status", "pending"),
     echoSignupsQuery,
     campaignsListQuery,
-    supabase.from("users").select("id, name, total_earned, balance").eq("role", "echo").order("total_earned", { ascending: false }).limit(10),
+    supabase.from("users").select("id, name, total_earned, balance").eq("role", "echo").is("deleted_at", null).order("total_earned", { ascending: false }).limit(10),
     recentClicksQuery,
     supabase.from("payouts").select("id, echo_id, amount, provider, status, created_at, users!echo_id(name, phone)").eq("status", "pending").order("created_at", { ascending: false }).limit(10),
     supabase.from("campaigns").select("spent, budget, status").limit(5000),
@@ -127,15 +127,15 @@ export async function GET(request: NextRequest) {
     // Active echos query (was sequential)
     activeEchoQuery,
     // Signups chart query (was sequential)
-    supabase.from("users").select("created_at").eq("role", "echo")
+    supabase.from("users").select("created_at").eq("role", "echo").is("deleted_at", null)
       .gte("created_at", chartFrom.toISOString()).lte("created_at", chartTo.toISOString()).limit(50000),
     // Acquisition queries (were sequential)
-    supabase.from("users").select("created_at").eq("role", "echo")
+    supabase.from("users").select("created_at").eq("role", "echo").is("deleted_at", null)
       .gte("created_at", acqFrom.toISOString()).lte("created_at", chartTo.toISOString()).limit(50000),
-    supabase.from("users").select("created_at").eq("role", "batteur")
+    supabase.from("users").select("created_at").in("role", ["batteur", "brand"]).is("deleted_at", null)
       .gte("created_at", acqFrom.toISOString()).lte("created_at", chartTo.toISOString()).limit(50000),
-    supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "echo").lt("created_at", acqFrom.toISOString()),
-    supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "batteur").lt("created_at", acqFrom.toISOString()),
+    supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "echo").is("deleted_at", null).lt("created_at", acqFrom.toISOString()),
+    supabase.from("users").select("*", { count: "exact", head: true }).in("role", ["batteur", "brand"]).is("deleted_at", null).lt("created_at", acqFrom.toISOString()),
     // Active campaigns list (was sequential)
     supabase.from("campaigns").select("id, title, budget, spent, cpc, status").eq("status", "active"),
   ]);

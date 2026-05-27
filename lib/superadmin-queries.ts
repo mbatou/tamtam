@@ -36,7 +36,7 @@ export async function getBrandList(supabase: SupabaseClient) {
        available_balance,
        created_at`
     )
-    .in("role", ["batteur", "brand", "admin"])
+    .in("role", ["batteur", "brand"])
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
 }
@@ -56,8 +56,8 @@ export async function getPendingPayouts(supabase: SupabaseClient) {
   return supabase
     .from("payouts")
     .select(
-      `id, user_id, amount, provider, status, created_at,
-       users (name, phone)`
+      `id, echo_id, amount, provider, status, created_at,
+       users!echo_id (name, phone)`
     )
     .eq("status", "pending")
     .order("created_at", { ascending: false });

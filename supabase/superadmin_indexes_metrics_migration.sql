@@ -53,10 +53,10 @@ CREATE OR REPLACE VIEW superadmin_metrics AS
 SELECT
   -- Brands
   (SELECT COUNT(*) FROM users
-   WHERE role IN ('batteur', 'brand', 'admin')
+   WHERE role IN ('batteur', 'brand')
    AND deleted_at IS NULL) AS total_brands,
   (SELECT COUNT(*) FROM users
-   WHERE role IN ('batteur', 'brand', 'admin')
+   WHERE role IN ('batteur', 'brand')
    AND deleted_at IS NULL
    AND created_at >= date_trunc('month', NOW())) AS new_brands_this_month,
 
