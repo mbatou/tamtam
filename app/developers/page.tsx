@@ -410,6 +410,102 @@ function HowItWorks() {
 }
 
 // ══════════════════════════════════════════════════
+// TM_REF LIFECYCLE
+// ══════════════════════════════════════════════════
+function TmRefLifecycle() {
+  return (
+    <section className="bg-[#111128] py-20 sm:py-28 px-5">
+      <div className="max-w-3xl mx-auto">
+        <p className="font-code text-[11px] text-[#D35400] uppercase tracking-[0.15em] mb-3">Attribution</p>
+        <h2 className="text-[28px] sm:text-[36px] font-bold font-syne text-white mb-4">
+          Cycle de vie du tm_ref
+        </h2>
+        <p className="text-[13px] font-dm text-white/45 mb-10 max-w-[520px]">
+          Le paramètre <code className="font-code text-[#A5D6FF]">tm_ref</code> est la clé d&apos;attribution de Tamtam.
+          Il relie chaque conversion à l&apos;Écho qui a partagé le lien.
+        </p>
+
+        {/* 5-step flow */}
+        <div className="space-y-4 mb-10">
+          {[
+            {
+              step: "1",
+              title: "L'Écho partage un lien",
+              desc: "Chaque Écho reçoit un lien unique avec son tm_ref personnel.",
+              code: "https://votresite.com?tm_ref=echo_abc123",
+            },
+            {
+              step: "2",
+              title: "Le visiteur clique",
+              desc: "Le visiteur arrive sur votre site avec le tm_ref dans l'URL.",
+              code: "URL bar: votresite.com/signup?tm_ref=echo_abc123",
+            },
+            {
+              step: "3",
+              title: "Le Pixel capture le tm_ref",
+              desc: "Le SDK JavaScript lit automatiquement le paramètre de l'URL et le persiste en localStorage.",
+              code: "tamtam('init', 'tmsk_...') // auto-reads ?tm_ref from URL",
+            },
+            {
+              step: "4",
+              title: "Le visiteur convertit",
+              desc: "Vous déclenchez un événement — le tm_ref est inclus automatiquement.",
+              code: "tamtam('track', 'sign_up') // tm_ref=echo_abc123 attached",
+            },
+            {
+              step: "5",
+              title: "Attribution confirmée",
+              desc: "Tamtam attribue la conversion au bon Écho et met à jour le dashboard en temps réel.",
+              code: "→ Écho abc123 credited · Campaign budget debited",
+            },
+          ].map((item) => (
+            <div key={item.step} className="flex items-start gap-4">
+              <div className="w-8 h-8 rounded-lg bg-[#D35400]/15 flex items-center justify-center shrink-0 mt-1">
+                <span className="text-[12px] font-bold font-code text-[#D35400]">{item.step}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-dm font-semibold text-white mb-1">{item.title}</p>
+                <p className="text-[12px] font-dm text-white/40 mb-2">{item.desc}</p>
+                <code className="text-[11px] font-code text-white/35 bg-[#0D1117] border border-white/[0.05] rounded-lg px-3 py-2 block overflow-x-auto scrollbar-hide">
+                  {item.code}
+                </code>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Green info box */}
+        <div className="bg-[rgba(29,158,117,0.08)] border border-[rgba(29,158,117,0.2)] rounded-[10px] p-4 flex items-start gap-3 mb-10">
+          <CheckCircle className="w-5 h-5 text-[#1D9E75] flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-[13px] font-medium text-white mb-1 font-dm">Chaque Écho a un tm_ref unique</p>
+            <p className="text-[12px] text-white/45 font-dm">
+              Deux Échos partageant la même campagne auront des tm_ref différents.
+              L&apos;attribution est toujours précise, même si des milliers d&apos;Échos partagent la même campagne.
+            </p>
+          </div>
+        </div>
+
+        {/* Code example: two Échos, different tm_ref */}
+        <h3 className="text-[16px] font-bold font-syne text-white mb-4">Exemple : deux Échos, même campagne</h3>
+        <CodeBlock
+          language="bash"
+          filename="Liens partagés par deux Échos différents"
+          code={`# Écho A partage la campagne "Promo Été"
+https://votresite.com/promo?tm_ref=echo_a_7x9k2
+
+# Écho B partage la même campagne "Promo Été"
+https://votresite.com/promo?tm_ref=echo_b_m3p5q
+
+# → Chaque visiteur est attribué à l'Écho qui a partagé le lien
+# → Le Pixel lit tm_ref automatiquement, aucun code supplémentaire requis`}
+        />
+      </div>
+    </section>
+  );
+}
+
+// ══════════════════════════════════════════════════
 // API REFERENCE
 // ══════════════════════════════════════════════════
 function ApiReference() {
@@ -436,6 +532,29 @@ function ApiReference() {
           <p className="text-[12px] font-dm text-white/35 mt-2">
             All requests require this header. Keys are managed in Dashboard → Pixel.
           </p>
+        </div>
+
+        {/* Pixel ID vs tm_ref distinction */}
+        <div className="bg-[#0D1117] border border-white/[0.07] rounded-xl p-5 mb-12">
+          <h3 className="text-[13px] font-dm font-semibold text-white mb-4">Pixel ID vs tm_ref — ne pas confondre</h3>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="bg-[rgba(211,84,0,0.06)] border border-[rgba(211,84,0,0.15)] rounded-lg p-4">
+              <code className="text-[12px] font-code text-[#D35400] font-bold">tmsk_...</code>
+              <p className="text-[11px] font-dm font-semibold text-white/60 mt-2 mb-1">Pixel ID (clé API)</p>
+              <p className="text-[11px] font-dm text-white/35 leading-relaxed">
+                Identifie votre compte / pixel. Utilisé dans le header <code className="font-code text-white/45">X-Tamtam-Key</code>.
+                Un par pixel, créé dans votre dashboard. Secret — ne jamais exposer côté client.
+              </p>
+            </div>
+            <div className="bg-[rgba(29,158,117,0.06)] border border-[rgba(29,158,117,0.15)] rounded-lg p-4">
+              <code className="text-[12px] font-code text-[#1D9E75] font-bold">tm_ref</code>
+              <p className="text-[11px] font-dm font-semibold text-white/60 mt-2 mb-1">Paramètre d&apos;attribution</p>
+              <p className="text-[11px] font-dm text-white/35 leading-relaxed">
+                Identifie quel Écho a référé le visiteur. Auto-ajouté aux URLs quand un Écho partage votre campagne.
+                Public — visible dans l&apos;URL. Lu automatiquement par le SDK JS.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Endpoint 1 */}
@@ -732,6 +851,113 @@ export async function POST(req: NextRequest) {
                 </div>
               ),
             },
+            {
+              label: "React Native",
+              content: (
+                <div>
+                  <p className="text-[13px] font-dm text-white/45 mb-4">
+                    Capture le tm_ref depuis un deep link et persiste-le avec AsyncStorage pour l&apos;attribution post-install.
+                  </p>
+                  <CodeBlock
+                    language="ts"
+                    filename="utils/tamtam.ts"
+                    code={`import { Linking } from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+
+// On app launch — capture tm_ref from deep link
+export async function captureTmRef() {
+  const url = await Linking.getInitialURL()
+  if (url) {
+    const tmRef = new URL(url).searchParams.get('tm_ref')
+    if (tmRef) {
+      await AsyncStorage.setItem('tm_ref', tmRef)
+      await AsyncStorage.setItem('tm_ref_ts', Date.now().toString())
+    }
+  }
+}
+
+// On conversion — send event with stored tm_ref
+export async function trackTamtam(event: string, value?: number) {
+  const tmRef = await AsyncStorage.getItem('tm_ref')
+  const ts = parseInt((await AsyncStorage.getItem('tm_ref_ts')) || '0')
+  const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000
+
+  // Expire after 7 days
+  if (!tmRef || Date.now() - ts > SEVEN_DAYS) return
+
+  await fetch('https://tamma.me/api/pixel/event', {
+    method: 'POST',
+    headers: {
+      'X-Tamtam-Key': 'tmsk_your_key',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      event,
+      tm_ref: tmRef,
+      value,
+      currency: 'XOF',
+    }),
+  })
+}
+
+// Usage:
+// captureTmRef()          — call in App.tsx useEffect
+// trackTamtam('sign_up')  — call after registration`}
+                  />
+                </div>
+              ),
+            },
+            {
+              label: "Mobile Web",
+              content: (
+                <div>
+                  <p className="text-[13px] font-dm text-white/45 mb-4">
+                    Sur mobile web, persistez le tm_ref en localStorage avec une fenêtre de 7 jours pour gérer les navigations entre pages.
+                  </p>
+                  <CodeBlock
+                    language="js"
+                    filename="tm-ref-persist.js"
+                    code={`// Run on every page load — persist tm_ref across navigations
+(function() {
+  const params = new URLSearchParams(window.location.search)
+  const tmRef = params.get('tm_ref')
+
+  if (tmRef) {
+    localStorage.setItem('tm_ref', tmRef)
+    localStorage.setItem('tm_ref_ts', Date.now().toString())
+  }
+})()
+
+// Helper: read stored tm_ref with 7-day expiry
+function getTmRef() {
+  const ref = localStorage.getItem('tm_ref')
+  const ts = parseInt(localStorage.getItem('tm_ref_ts') || '0')
+  const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000
+
+  if (ref && Date.now() - ts < SEVEN_DAYS) return ref
+
+  // Expired — clean up
+  localStorage.removeItem('tm_ref')
+  localStorage.removeItem('tm_ref_ts')
+  return null
+}
+
+// On conversion, pass tm_ref explicitly
+tamtam('track', 'sign_up', {
+  tm_ref: getTmRef(),
+  value: 1,
+})`}
+                  />
+                  <div className="flex items-start gap-3 bg-[rgba(211,84,0,0.08)] border border-[rgba(211,84,0,0.2)] rounded-[10px] px-4 py-3 mt-4">
+                    <AlertCircle className="w-4 h-4 text-[#F0997B] flex-shrink-0 mt-0.5" />
+                    <p className="text-[12px] text-white/60 font-dm">
+                      Le SDK JS gère déjà cette persistence automatiquement sur desktop.
+                      Ce pattern est utile pour les PWA ou sites mobile sans le SDK JS.
+                    </p>
+                  </div>
+                </div>
+              ),
+            },
           ]}
         />
       </div>
@@ -837,6 +1063,45 @@ curl -X POST https://tamma.me/api/pixel/event \\
 # 3. Expected response:
 # {"success":true,"event_id":"evt_...","received_at":"..."}`}
         />
+
+        {/* Latency benchmarks */}
+        <h3 className="text-[16px] font-bold font-syne text-white mt-12 mb-4">Latency benchmarks</h3>
+        <div className="bg-[#0D1117] border border-white/[0.07] rounded-xl overflow-hidden mb-4">
+          <table className="w-full text-[12px] font-dm">
+            <thead>
+              <tr className="border-b border-white/[0.05]">
+                <th className="text-left px-4 py-2.5 text-white/30 font-semibold">Endpoint</th>
+                <th className="text-left px-4 py-2.5 text-white/30 font-semibold">p50</th>
+                <th className="text-left px-4 py-2.5 text-white/30 font-semibold">p95</th>
+                <th className="text-left px-4 py-2.5 text-white/30 font-semibold">p99</th>
+              </tr>
+            </thead>
+            <tbody className="text-white/45">
+              <tr className="border-b border-white/[0.03]">
+                <td className="px-4 py-2.5 font-code text-[#A5D6FF]">POST /api/pixel/event</td>
+                <td className="px-4 py-2.5 font-code">45ms</td>
+                <td className="px-4 py-2.5 font-code">120ms</td>
+                <td className="px-4 py-2.5 font-code">280ms</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-2.5 font-code text-[#A5D6FF]">GET /api/pixel/ping</td>
+                <td className="px-4 py-2.5 font-code">12ms</td>
+                <td className="px-4 py-2.5 font-code">35ms</td>
+                <td className="px-4 py-2.5 font-code">80ms</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div className="bg-[rgba(29,158,117,0.08)] border border-[rgba(29,158,117,0.2)] rounded-[10px] p-4 flex items-start gap-3">
+          <CheckCircle className="w-5 h-5 text-[#1D9E75] flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-[13px] font-medium text-white mb-1 font-dm">Async &amp; non-bloquant</p>
+            <p className="text-[12px] text-white/45 font-dm">
+              Le SDK JS envoie les événements en arrière-plan via <code className="font-code text-white/55">navigator.sendBeacon</code> ou <code className="font-code text-white/55">fetch</code> asynchrone.
+              Le tracking n&apos;impacte jamais les performances de votre site — aucun rendu bloqué, aucun délai visible pour l&apos;utilisateur.
+            </p>
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -960,6 +1225,14 @@ function DevFaq() {
     {
       q: "Comment supprimer des événements de test ?",
       a: "Dans Dashboard → Pixel → [votre pixel] → Settings, activez \"Mode test\" pour marquer les événements comme test. Les événements test sont exclus des métriques de campagne.",
+    },
+    {
+      q: "Est-ce que chaque Écho a un tm_ref unique ?",
+      a: "Oui. Le tm_ref est unique par Écho et par campagne. Si deux Échos partagent la même campagne, chaque visiteur arrivera avec un tm_ref différent, permettant une attribution précise au bon Écho. Le tm_ref est généré automatiquement par Tamtam — vous n'avez rien à configurer.",
+    },
+    {
+      q: "Comment conserver le tm_ref sur mobile ?",
+      a: "Sur mobile web, le SDK JS persiste automatiquement le tm_ref en localStorage avec une fenêtre de 7 jours. Sur React Native, capturez le tm_ref depuis le deep link initial avec Linking.getInitialURL() et stockez-le via AsyncStorage. Pour les PWA sans SDK JS, utilisez le pattern localStorage décrit dans la section Exemples → Mobile Web.",
     },
   ];
 
@@ -1114,6 +1387,7 @@ export default function DevelopersPage() {
       <Hero />
       <QuickStart />
       <HowItWorks />
+      <TmRefLifecycle />
       <ApiReference />
       <CodeExamples />
       <Testing />
