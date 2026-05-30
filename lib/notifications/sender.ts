@@ -72,6 +72,14 @@ function buildPayload(type: string, payload: Record<string, unknown>) {
         url: "/earnings",
         tag: "payout",
       };
+    case "manual":
+    case "reengagement":
+      return {
+        title: String(payload.title || "Tamtam"),
+        body: String(payload.body || ""),
+        url: String(payload.url || "/rythmes"),
+        tag: String(payload.tag || "manual"),
+      };
     default:
       return {
         title: "Tamtam",

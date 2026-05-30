@@ -1,15 +1,21 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Bell, Send, Ban, AlertTriangle, Clock, RefreshCw } from "lucide-react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Bell, Send, Ban, Clock, RefreshCw, TrendingUp, Users, ArrowRight } from "lucide-react";
 
 interface Stats {
   pending: number;
   sentToday: number;
+  suppressedToday: number;
   sent7d: number;
   suppressed7d: number;
   failed7d: number;
+  pushSubscribers: number;
+  deliveryRate: number;
   byType: Record<string, { sent: number; suppressed: number; failed: number; pending: number }>;
+  dailyChart: { date: string; sent: number; suppressed: number; failed: number }[];
   recent: Array<{
     id: string;
     echo_id: string;
@@ -19,6 +25,7 @@ interface Stats {
     sent_at: string | null;
     suppression_reason: string | null;
     created_at: string;
+    payload: Record<string, unknown>;
   }>;
 }
 
@@ -30,18 +37,21 @@ const TYPE_LABELS: Record<string, string> = {
   streak_danger: "Série en danger",
   streak_milestone: "Jalon de série",
   payout_ready: "Paiement prêt",
+  manual: "Manuel",
+  reengagement: "Réengagement",
 };
 
-const STATUS_COLORS: Record<string, string> = {
+const STATUS_STYLES: Record<string, string> = {
   sent: "bg-emerald-500/15 text-emerald-400",
   pending: "bg-amber-500/15 text-amber-400",
   failed: "bg-red-500/15 text-red-400",
   suppressed: "bg-white/10 text-white/40",
 };
 
-export default function NotificationsPage() {
+export default function NotificationsOverview() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   const load = useCallback(() => {
     setLoading(true);
@@ -59,182 +69,179 @@ export default function NotificationsPage() {
   }, [load]);
 
   if (!stats && loading) {
-    return (
-      <div className="p-6 text-white/40 text-sm">Chargement...</div>
-    );
+    return <div className="p-6 text-white/40 text-sm">Chargement...</div>;
   }
-
   if (!stats) {
-    return (
-      <div className="p-6 text-red-400 text-sm">Erreur de chargement</div>
-    );
+    return <div className="p-6 text-red-400 text-sm">Erreur de chargement</div>;
   }
 
-  const typeEntries = Object.entries(stats.byType);
+  const maxChart = Math.max(...stats.dailyChart.map((d) => d.sent + d.suppressed + d.failed), 1);
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-syne font-bold text-white">
-            Notifications Push
-          </h1>
-          <p className="text-xs text-white/30 mt-1">
-            Système de notifications automatisées
-          </p>
+          <h1 className="text-xl font-syne font-bold text-white">Notifications</h1>
+          <p className="text-xs text-white/30 mt-1">Centre de contrôle des notifications push et email</p>
         </div>
-        <button
-          onClick={load}
-          disabled={loading}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] transition text-xs text-white/50"
-        >
-          <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
-          Rafraîchir
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={load}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] transition text-xs text-white/50"
+          >
+            <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+            Rafraîchir
+          </button>
+        </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <KpiCard
-          icon={<Clock size={16} />}
-          label="En attente"
-          value={stats.pending}
-          color="text-amber-400"
-        />
-        <KpiCard
-          icon={<Send size={16} />}
-          label="Envoyées aujourd'hui"
-          value={stats.sentToday}
-          color="text-emerald-400"
-        />
-        <KpiCard
-          icon={<Bell size={16} />}
-          label="Envoyées (7j)"
-          value={stats.sent7d}
-          color="text-blue-400"
-        />
-        <KpiCard
-          icon={<Ban size={16} />}
-          label="Supprimées (7j)"
-          value={stats.suppressed7d}
-          color="text-white/40"
-        />
-        <KpiCard
-          icon={<AlertTriangle size={16} />}
-          label="Échouées (7j)"
-          value={stats.failed7d}
-          color="text-red-400"
-        />
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left: Stats + Chart */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* KPI Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <KpiCard icon={<Send size={16} />} label="Envoyées aujourd'hui" value={stats.sentToday} color="text-[#5DCAA5]" />
+            <KpiCard icon={<TrendingUp size={16} />} label="Taux de livraison" value={`${stats.deliveryRate}%`} color="text-[#D35400]" />
+            <KpiCard icon={<Users size={16} />} label="Abonnés push" value={stats.pushSubscribers} color="text-white/70" />
+            <KpiCard icon={<Ban size={16} />} label="Suppressions (caps)" value={stats.suppressedToday} color="text-white/30" />
+          </div>
 
-      {/* By Type breakdown */}
-      {typeEntries.length > 0 && (
-        <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
-          <h2 className="text-sm font-bold text-white mb-3">Par type (30 jours)</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-white/30 border-b border-white/[0.06]">
-                  <th className="text-left py-2 pr-4">Type</th>
-                  <th className="text-right py-2 px-3">Envoyées</th>
-                  <th className="text-right py-2 px-3">Supprimées</th>
-                  <th className="text-right py-2 px-3">Échouées</th>
-                  <th className="text-right py-2 px-3">En attente</th>
-                </tr>
-              </thead>
-              <tbody>
-                {typeEntries.map(([type, counts]) => (
-                  <tr key={type} className="border-b border-white/[0.03]">
-                    <td className="py-2 pr-4 text-white/70">{TYPE_LABELS[type] || type}</td>
-                    <td className="text-right py-2 px-3 text-emerald-400">{counts.sent}</td>
-                    <td className="text-right py-2 px-3 text-white/30">{counts.suppressed}</td>
-                    <td className="text-right py-2 px-3 text-red-400">{counts.failed}</td>
-                    <td className="text-right py-2 px-3 text-amber-400">{counts.pending}</td>
+          {/* Delivery chart */}
+          <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
+            <h2 className="text-sm font-bold text-white mb-4">Livraison (7 jours)</h2>
+            <div className="flex items-end gap-1.5 h-32">
+              {stats.dailyChart.map((day) => {
+                const total = day.sent + day.suppressed + day.failed;
+                const sentH = (day.sent / maxChart) * 100;
+                const supH = (day.suppressed / maxChart) * 100;
+                const failH = (day.failed / maxChart) * 100;
+                const dayLabel = new Date(day.date).toLocaleDateString("fr-FR", { weekday: "short" });
+                return (
+                  <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
+                    <div className="w-full flex flex-col-reverse gap-px" style={{ height: "100px" }}>
+                      <div className="bg-[#D35400]/70 rounded-t-sm transition-all" style={{ height: `${sentH}%`, minHeight: total > 0 ? "2px" : 0 }} title={`${day.sent} envoyées`} />
+                      <div className="bg-white/10 rounded-sm transition-all" style={{ height: `${supH}%` }} title={`${day.suppressed} supprimées`} />
+                      <div className="bg-red-500/50 rounded-sm transition-all" style={{ height: `${failH}%` }} title={`${day.failed} échouées`} />
+                    </div>
+                    <span className="text-[9px] text-white/30">{dayLabel}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex items-center gap-4 mt-3 pt-2 border-t border-white/[0.04]">
+              <span className="flex items-center gap-1.5 text-[10px] text-white/40"><span className="w-2 h-2 rounded-sm bg-[#D35400]/70" /> Envoyées</span>
+              <span className="flex items-center gap-1.5 text-[10px] text-white/40"><span className="w-2 h-2 rounded-sm bg-white/10" /> Supprimées</span>
+              <span className="flex items-center gap-1.5 text-[10px] text-white/40"><span className="w-2 h-2 rounded-sm bg-red-500/50" /> Échouées</span>
+            </div>
+          </div>
+
+          {/* Recent activity */}
+          <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-white">Activité récente</h2>
+              <Link href="/superadmin/notifications/history" className="text-[10px] text-[#D35400] hover:text-[#F0997B] flex items-center gap-1">
+                Tout voir <ArrowRight size={10} />
+              </Link>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-white/30 border-b border-white/[0.06]">
+                    <th className="text-left py-2 pr-3">Heure</th>
+                    <th className="text-left py-2 px-3">Type</th>
+                    <th className="text-left py-2 px-3">Statut</th>
+                    <th className="text-left py-2 px-3 hidden md:table-cell">Raison</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {stats.recent.slice(0, 20).map((n) => (
+                    <tr key={n.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
+                      <td className="py-2 pr-3 text-white/40">
+                        {new Date(n.created_at).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      </td>
+                      <td className="py-2 px-3 text-white/70">{TYPE_LABELS[n.type] || n.type}</td>
+                      <td className="py-2 px-3">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${STATUS_STYLES[n.status] || "text-white/30"}`}>
+                          {n.status}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 text-white/25 hidden md:table-cell">{n.suppression_reason || "—"}</td>
+                    </tr>
+                  ))}
+                  {stats.recent.length === 0 && (
+                    <tr><td colSpan={4} className="py-8 text-center text-white/20">Aucune notification</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Recent notifications */}
-      <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
-        <h2 className="text-sm font-bold text-white mb-3">
-          Notifications récentes
-        </h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-white/30 border-b border-white/[0.06]">
-                <th className="text-left py-2 pr-3">Type</th>
-                <th className="text-left py-2 px-3">Statut</th>
-                <th className="text-left py-2 px-3">Programmé</th>
-                <th className="text-left py-2 px-3">Envoyé</th>
-                <th className="text-left py-2 px-3">Raison</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stats.recent.map((n) => (
-                <tr key={n.id} className="border-b border-white/[0.03]">
-                  <td className="py-2 pr-3 text-white/70">
-                    {TYPE_LABELS[n.type] || n.type}
-                  </td>
-                  <td className="py-2 px-3">
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${STATUS_COLORS[n.status] || "text-white/30"}`}>
-                      {n.status}
-                    </span>
-                  </td>
-                  <td className="py-2 px-3 text-white/40">
-                    {new Date(n.scheduled_for).toLocaleString("fr-FR", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </td>
-                  <td className="py-2 px-3 text-white/40">
-                    {n.sent_at
-                      ? new Date(n.sent_at).toLocaleString("fr-FR", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : "—"}
-                  </td>
-                  <td className="py-2 px-3 text-white/30">
-                    {n.suppression_reason || "—"}
-                  </td>
-                </tr>
+        {/* Right: Quick send + Nav */}
+        <div className="space-y-4">
+          {/* Quick send */}
+          <div className="rounded-2xl bg-[#111128] border border-[rgba(211,84,0,0.2)] p-4">
+            <p className="text-xs font-bold text-white mb-3">Envoi rapide</p>
+            <div className="flex flex-col gap-2">
+              {[
+                { type: "new_campaign", label: "Nouvelle campagne", icon: "🥁" },
+                { type: "share_reminder", label: "Rappel de partage", icon: "📲" },
+                { type: "reengagement", label: "Réengagement inactifs", icon: "🔄" },
+                { type: "custom", label: "Message personnalisé", icon: "✏️" },
+              ].map((item) => (
+                <button
+                  key={item.type}
+                  onClick={() => router.push(`/superadmin/notifications/send?type=${item.type}`)}
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] transition text-left"
+                >
+                  <span className="text-sm">{item.icon}</span>
+                  <span className="text-xs text-white/70">{item.label}</span>
+                </button>
               ))}
-              {stats.recent.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-white/20">
-                    Aucune notification
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4 space-y-2">
+            <p className="text-[10px] font-medium text-white/30 uppercase tracking-wider mb-2">Sections</p>
+            {[
+              { href: "/superadmin/notifications/send", label: "Composer", icon: Send },
+              { href: "/superadmin/notifications/history", label: "Historique", icon: Clock },
+              { href: "/superadmin/notifications/sequences", label: "Séquences", icon: ArrowRight },
+              { href: "/superadmin/notifications/settings", label: "Paramètres", icon: Bell },
+            ].map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-white/[0.04] transition text-xs text-white/50 hover:text-white/70"
+              >
+                <item.icon size={13} />
+                {item.label}
+              </Link>
+            ))}
+          </div>
+
+          {/* By type stats */}
+          {Object.keys(stats.byType).length > 0 && (
+            <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
+              <p className="text-xs font-bold text-white mb-3">Par type (30j)</p>
+              {Object.entries(stats.byType).map(([type, counts]) => (
+                <div key={type} className="flex items-center justify-between py-1.5 border-b border-white/[0.03] last:border-0">
+                  <span className="text-[11px] text-white/50">{TYPE_LABELS[type] || type}</span>
+                  <span className="text-[11px] text-emerald-400 font-medium">{counts.sent}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function KpiCard({
-  icon,
-  label,
-  value,
-  color,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  color: string;
-}) {
+function KpiCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: number | string; color: string }) {
   return (
     <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3">
       <div className={`flex items-center gap-1.5 mb-2 ${color}`}>
@@ -242,7 +249,7 @@ function KpiCard({
         <span className="text-[10px] text-white/30">{label}</span>
       </div>
       <div className={`text-xl font-bold font-syne ${color}`}>
-        {value.toLocaleString("fr-FR")}
+        {typeof value === "number" ? value.toLocaleString("fr-FR") : value}
       </div>
     </div>
   );
