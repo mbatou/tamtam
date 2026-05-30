@@ -39,6 +39,13 @@ export default function ProfilPage() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [pushEnabled, setPushEnabled] = useState(false);
+  const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>({
+    new_campaign: true,
+    share_reminder: true,
+    inactivity: true,
+    campaign_ending: true,
+    streak_danger: true,
+  });
 
   const supabase = createClient();
   const router = useRouter();
@@ -89,6 +96,14 @@ export default function ProfilPage() {
         setPushEnabled(!!sub);
       } catch {}
     }
+
+    try {
+      const prefsRes = await fetch("/api/echo/notification-prefs");
+      if (prefsRes.ok) {
+        const prefs = await prefsRes.json();
+        setNotifPrefs(prefs);
+      }
+    } catch {}
 
     try {
       const interestRes = await fetch("/api/echo/interests");
@@ -663,6 +678,40 @@ export default function ProfilPage() {
               }`} />
             </button>
           </div>
+
+          {/* Granular notification preferences */}
+          {pushEnabled && (
+            <div className="mt-3 pt-3 border-t border-white/[0.06] space-y-2">
+              <p className="text-[10px] text-white/30 mb-2">{t("echo.push.prefsTitle")}</p>
+              {(["new_campaign", "share_reminder", "inactivity", "campaign_ending", "streak_danger"] as const).map((key) => (
+                <div key={key} className="flex items-center justify-between py-1">
+                  <span className="text-xs text-white/60">{t(`echo.push.pref_${key}`)}</span>
+                  <button
+                    onClick={async () => {
+                      const newVal = !notifPrefs[key];
+                      setNotifPrefs((prev) => ({ ...prev, [key]: newVal }));
+                      try {
+                        await fetch("/api/echo/notification-prefs", {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ [key]: newVal }),
+                        });
+                      } catch {
+                        setNotifPrefs((prev) => ({ ...prev, [key]: !newVal }));
+                      }
+                    }}
+                    className={`relative w-9 h-5 rounded-full transition-colors ${
+                      notifPrefs[key] ? "bg-[#1D9E75]" : "bg-white/10"
+                    }`}
+                  >
+                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                      notifPrefs[key] ? "translate-x-[18px]" : "translate-x-0.5"
+                    }`} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

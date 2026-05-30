@@ -51,6 +51,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/superadmin/email-campaigns": "Email Campaigns",
   "/superadmin/roadmap": "Roadmap",
   "/superadmin/pipeline": "Pipeline",
+  "/superadmin/notifications": "Notifications",
 };
 
 // Mobile nav items (flat list)

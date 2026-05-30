@@ -22,6 +22,18 @@ interface EchoStrings {
     custom: {
       defaultTitle: string;
     };
+    shareReminder: {
+      title: string;
+      body: (campaignTitle: string, cpc: number) => string;
+    };
+    inactivity: {
+      title: (amount: number) => string;
+      body: string;
+    };
+    campaignEnding: {
+      title: (hoursLeft: number) => string;
+      body: (campaignTitle: string) => string;
+    };
   };
   // Leaderboard strings
   leaderboard: {
@@ -59,6 +71,21 @@ const strings: Record<EchoLang, EchoStrings> = {
       },
       custom: {
         defaultTitle: "Tamtam",
+      },
+      shareReminder: {
+        title: "Partagez et gagnez",
+        body: (campaignTitle: string, cpc: number) =>
+          `Ton lien ${campaignTitle} attend d'être partagé — ${cpc} FCFA par clic vérifié`,
+      },
+      inactivity: {
+        title: (amount: number) =>
+          `${amount.toLocaleString("fr-FR")} FCFA t'attendent`,
+        body: "Partage aujourd'hui pour débloquer tes gains en attente",
+      },
+      campaignEnding: {
+        title: (hoursLeft: number) => `Plus que ${hoursLeft}h — dernière chance !`,
+        body: (campaignTitle: string) =>
+          `La campagne "${campaignTitle}" se termine bientôt. Partage maintenant.`,
       },
     },
     leaderboard: {
@@ -102,6 +129,21 @@ const strings: Record<EchoLang, EchoStrings> = {
       },
       custom: {
         defaultTitle: "Tamtam",
+      },
+      shareReminder: {
+        title: "Share and earn",
+        body: (campaignTitle: string, cpc: number) =>
+          `Your ${campaignTitle} link is waiting to be shared — ${cpc} FCFA per verified click`,
+      },
+      inactivity: {
+        title: (amount: number) =>
+          `${amount.toLocaleString("en")} FCFA waiting for you`,
+        body: "Share today to unlock your pending earnings",
+      },
+      campaignEnding: {
+        title: (hoursLeft: number) => `Only ${hoursLeft}h left — last chance!`,
+        body: (campaignTitle: string) =>
+          `Campaign "${campaignTitle}" ends soon. Share now.`,
       },
     },
     leaderboard: {
