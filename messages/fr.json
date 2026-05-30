@@ -677,7 +677,14 @@
       "disabled": "Notifications désactivées",
       "notificationsLabel": "Notifications push",
       "statusEnabled": "Activées",
-      "statusDisabled": "Désactivées"
+      "statusDisabled": "Désactivées",
+      "prefsTitle": "Types de notifications",
+      "prefsDesc": "Choisis les notifications que tu veux recevoir",
+      "pref_new_campaign": "Nouvelles campagnes",
+      "pref_share_reminder": "Rappels de partage",
+      "pref_inactivity": "Réactivation",
+      "pref_campaign_ending": "Campagnes qui expirent",
+      "pref_streak_danger": "Série en danger"
     },
     "leaderboard": {
       "eyebrow": "Classement général",

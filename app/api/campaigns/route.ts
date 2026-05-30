@@ -6,6 +6,8 @@ import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { getEffectiveBrandId } from "@/lib/brand-utils";
 import { unlockCampaignEarnings } from "@/lib/unlock-earnings";
+import { triggerNewCampaign } from "@/lib/notifications/engine";
+import { processNotificationQueue } from "@/lib/notifications/sender";
 
 export const dynamic = "force-dynamic";
 
@@ -238,6 +240,10 @@ export async function POST(request: NextRequest) {
       .eq("id", data.id);
     data.moderation_status = "approved";
     data.status = "active";
+    // Smart push notifications for auto-approved campaign
+    triggerNewCampaign(supabase, data.id)
+      .then(() => processNotificationQueue(supabase))
+      .catch(() => {});
   }
 
   // Get brand name for notification

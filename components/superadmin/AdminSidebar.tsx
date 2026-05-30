@@ -18,6 +18,7 @@ import {
   Search,
   FlaskConical,
   HeartPulse,
+  Bell,
   Users2,
   Settings,
   ChevronDown,
@@ -106,6 +107,7 @@ const sections: NavSection[] = [
     label: "System",
     storageKey: "sa_sidebar_system",
     items: [
+      { label: "Notifications", href: "/superadmin/notifications", icon: Bell, superadminOnly: true },
       { label: "Platform Health", href: "/superadmin/health", icon: HeartPulse, permKey: "health" },
       { label: "Team", href: "/superadmin/team", icon: Users2, superadminOnly: true },
       { label: "Settings", href: "/superadmin/settings", icon: Settings, superadminOnly: true },

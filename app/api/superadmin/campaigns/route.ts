@@ -3,6 +3,8 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { sendNewCampaignNotification, sendCampaignLiveToBrand } from "@/lib/email";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { unlockCampaignEarnings } from "@/lib/unlock-earnings";
+import { triggerNewCampaign } from "@/lib/notifications/engine";
+import { processNotificationQueue } from "@/lib/notifications/sender";
 
 export const dynamic = "force-dynamic";
 
@@ -593,6 +595,10 @@ export async function POST(request: NextRequest) {
         }
         // Notify echos about new campaign
         notifyEchosNewCampaign(supabase, campaignFull.title, campaignFull.cpc);
+        // Smart push notifications — enqueue + send
+        triggerNewCampaign(supabase, campaign_id)
+          .then(() => processNotificationQueue(supabase))
+          .catch(() => {});
       }
     } catch { /* non-blocking */ }
   }

@@ -677,7 +677,14 @@
       "disabled": "Notifications disabled",
       "notificationsLabel": "Push notifications",
       "statusEnabled": "Enabled",
-      "statusDisabled": "Disabled"
+      "statusDisabled": "Disabled",
+      "prefsTitle": "Notification types",
+      "prefsDesc": "Choose which notifications you want to receive",
+      "pref_new_campaign": "New campaigns",
+      "pref_share_reminder": "Share reminders",
+      "pref_inactivity": "Re-engagement",
+      "pref_campaign_ending": "Campaigns ending soon",
+      "pref_streak_danger": "Streak at risk"
     },
     "leaderboard": {
       "eyebrow": "All-time ranking",
