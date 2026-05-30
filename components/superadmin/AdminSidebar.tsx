@@ -78,6 +78,7 @@ const sections: NavSection[] = [
       { label: "Live Overview", href: "/superadmin", icon: Activity, exact: true, permKey: "overview" },
       { label: "Campaigns", href: "/superadmin/campaigns", icon: Megaphone, badgeKey: "campaigns", permKey: "campaigns" },
       { label: "Finances", href: "/superadmin/finance", icon: Wallet, badgeKey: "payouts", permKey: "finance" },
+      { label: "Notifications", href: "/superadmin/notifications", icon: Bell, superadminOnly: true },
     ],
   },
   {
@@ -107,7 +108,6 @@ const sections: NavSection[] = [
     label: "System",
     storageKey: "sa_sidebar_system",
     items: [
-      { label: "Notifications", href: "/superadmin/notifications", icon: Bell, superadminOnly: true },
       { label: "Platform Health", href: "/superadmin/health", icon: HeartPulse, permKey: "health" },
       { label: "Team", href: "/superadmin/team", icon: Users2, superadminOnly: true },
       { label: "Settings", href: "/superadmin/settings", icon: Settings, superadminOnly: true },
