@@ -90,11 +90,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing type or payload" }, { status: 400 });
   }
 
-  // Configure web-push
+  // Configure web-push — normalize keys to base64url
+  const vapidPub = process.env.VAPID_PUBLIC_KEY;
+  const vapidPriv = process.env.VAPID_PRIVATE_KEY;
+  if (!vapidPub || !vapidPriv) {
+    return NextResponse.json({ error: "VAPID keys not configured" }, { status: 500 });
+  }
+  const toBase64Url = (k: string) => k.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "").trim();
   webpush.setVapidDetails(
     "mailto:contact@tamtam.africa",
-    process.env.VAPID_PUBLIC_KEY!,
-    process.env.VAPID_PRIVATE_KEY!,
+    toBase64Url(vapidPub),
+    toBase64Url(vapidPriv),
   );
 
   const supabase = createServiceClient();

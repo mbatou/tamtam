@@ -4,6 +4,22 @@ import { getEchoStrings, type EchoLang } from "@/lib/echo-i18n";
 
 export const MAX_DAILY_PUSHES = 2;
 
+function normalizeVapidKey(key: string): string {
+  return key.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "").trim();
+}
+
+function initVapid(): boolean {
+  const pub = process.env.VAPID_PUBLIC_KEY;
+  const priv = process.env.VAPID_PRIVATE_KEY;
+  if (!pub || !priv) return false;
+  webpush.setVapidDetails(
+    "mailto:contact@tamtam.africa",
+    normalizeVapidKey(pub),
+    normalizeVapidKey(priv),
+  );
+  return true;
+}
+
 interface NotificationRow {
   id: string;
   echo_id: string;
@@ -139,7 +155,7 @@ export async function sendSinglePush(
     payload: Record<string, unknown>;
   },
 ): Promise<"sent" | "failed" | "suppressed"> {
-  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+  if (!initVapid()) {
     await supabase.from("notification_queue").insert({
       ...entry,
       campaign_id: entry.campaign_id || null,
@@ -149,12 +165,6 @@ export async function sendSinglePush(
     });
     return "failed";
   }
-
-  webpush.setVapidDetails(
-    "mailto:contact@tamtam.africa",
-    process.env.VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY,
-  );
 
   const canSend = await checkDailyCap(supabase, entry.echo_id);
   if (!canSend) {
@@ -232,8 +242,7 @@ export async function sendSinglePush(
 export async function processNotificationQueue(
   supabase: SupabaseClient,
 ): Promise<{ sent: number; failed: number; suppressed: number }> {
-  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
-    // Mark all pending as failed — VAPID not configured
+  if (!initVapid()) {
     const now = new Date().toISOString();
     const { data: pending } = await supabase
       .from("notification_queue")
@@ -251,12 +260,6 @@ export async function processNotificationQueue(
 
     return { sent: 0, failed: pending?.length || 0, suppressed: 0 };
   }
-
-  webpush.setVapidDetails(
-    "mailto:contact@tamtam.africa",
-    process.env.VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY,
-  );
 
   const now = new Date().toISOString();
 
