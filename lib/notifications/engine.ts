@@ -95,7 +95,7 @@ async function getScheduledFor(
 }
 
 function scheduleNow(): string {
-  return new Date(Date.now() + 60_000).toISOString();
+  return new Date().toISOString();
 }
 
 async function enqueue(

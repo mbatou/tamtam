@@ -51,6 +51,8 @@ const STATUS_STYLES: Record<string, string> = {
 export default function NotificationsOverview() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
+  const [processResult, setProcessResult] = useState<string | null>(null);
   const router = useRouter();
 
   const load = useCallback(() => {
@@ -86,6 +88,29 @@ export default function NotificationsOverview() {
           <p className="text-xs text-white/30 mt-1">Centre de contrôle des notifications push et email</p>
         </div>
         <div className="flex items-center gap-2">
+          {stats && stats.pending > 0 && (
+            <button
+              onClick={async () => {
+                setProcessing(true);
+                setProcessResult(null);
+                try {
+                  const res = await fetch("/api/superadmin/notifications/process", { method: "POST" });
+                  const data = await res.json();
+                  setProcessResult(`${data.sent || 0} envoyées, ${data.failed || 0} échouées, ${data.suppressed || 0} supprimées`);
+                  setTimeout(() => setProcessResult(null), 5000);
+                  load();
+                } catch {
+                  setProcessResult("Erreur");
+                }
+                setProcessing(false);
+              }}
+              disabled={processing}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#D35400]/15 hover:bg-[#D35400]/25 border border-[#D35400]/30 transition text-xs text-[#D35400] font-medium"
+            >
+              <Send size={12} className={processing ? "animate-pulse" : ""} />
+              {processing ? "Envoi..." : `Envoyer ${stats.pending} en attente`}
+            </button>
+          )}
           <button
             onClick={load}
             disabled={loading}
@@ -96,6 +121,12 @@ export default function NotificationsOverview() {
           </button>
         </div>
       </div>
+
+      {processResult && (
+        <div className="px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
+          {processResult}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Stats + Chart */}

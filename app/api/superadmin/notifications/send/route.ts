@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
         const dt = await getNextNotifyDatetime(supabase, echoId);
         scheduledFor = dt.toISOString();
       } else if (scheduledAt === "now") {
-        scheduledFor = new Date(Date.now() + 30_000).toISOString();
+        scheduledFor = new Date().toISOString();
       } else {
         scheduledFor = scheduledAt;
       }
@@ -90,7 +90,10 @@ export async function POST(request: NextRequest) {
 
     // Process immediately if sending now
     if (scheduledAt === "now") {
-      processNotificationQueue(supabase).catch(() => {});
+      try {
+        const queueResult = await processNotificationQueue(supabase);
+        pushQueued = queueResult.sent;
+      } catch {}
     }
   }
 
