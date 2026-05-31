@@ -96,11 +96,15 @@ export default function NotificationsOverview() {
                 try {
                   const res = await fetch("/api/superadmin/notifications/process", { method: "POST" });
                   const data = await res.json();
-                  setProcessResult(`${data.sent || 0} envoyées, ${data.failed || 0} échouées, ${data.suppressed || 0} supprimées`);
-                  setTimeout(() => setProcessResult(null), 5000);
+                  if (data.error) {
+                    setProcessResult(`Erreur: ${data.error}`);
+                  } else {
+                    setProcessResult(`${data.sent || 0} envoyées, ${data.failed || 0} échouées, ${data.suppressed || 0} supprimées`);
+                  }
+                  setTimeout(() => setProcessResult(null), 8000);
                   load();
-                } catch {
-                  setProcessResult("Erreur");
+                } catch (err) {
+                  setProcessResult(`Erreur réseau: ${err instanceof Error ? err.message : "connexion échouée"}`);
                 }
                 setProcessing(false);
               }}

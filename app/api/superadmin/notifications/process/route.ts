@@ -19,10 +19,12 @@ export async function POST() {
   const auth = await requireSuperadmin();
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const result = await processNotificationQueue(auth.supabase);
-
-  return NextResponse.json({
-    ok: true,
-    ...result,
-  });
+  try {
+    const result = await processNotificationQueue(auth.supabase);
+    return NextResponse.json({ ok: true, ...result });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[process-queue] Error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
