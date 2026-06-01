@@ -8,16 +8,33 @@ function normalizeVapidKey(key: string): string {
   return key.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "").trim();
 }
 
+let vapidError: string | null = null;
+
 function initVapid(): boolean {
   const pub = process.env.VAPID_PUBLIC_KEY;
   const priv = process.env.VAPID_PRIVATE_KEY;
-  if (!pub || !priv) return false;
-  webpush.setVapidDetails(
-    "mailto:contact@tamtam.africa",
-    normalizeVapidKey(pub),
-    normalizeVapidKey(priv),
-  );
-  return true;
+  if (!pub || !priv) {
+    vapidError = "VAPID keys not configured";
+    return false;
+  }
+  try {
+    webpush.setVapidDetails(
+      "mailto:contact@tamtam.africa",
+      normalizeVapidKey(pub),
+      normalizeVapidKey(priv),
+    );
+    vapidError = null;
+    return true;
+  } catch (err) {
+    const rawLen = pub.trim().length;
+    vapidError = `VAPID init failed (pub key ${rawLen} chars): ${err instanceof Error ? err.message : String(err)}`;
+    console.error("[vapid]", vapidError);
+    return false;
+  }
+}
+
+export function getVapidError(): string | null {
+  return vapidError;
 }
 
 interface NotificationRow {
