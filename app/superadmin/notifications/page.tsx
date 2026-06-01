@@ -89,31 +89,71 @@ export default function NotificationsOverview() {
         </div>
         <div className="flex items-center gap-2">
           {stats && stats.pending > 0 && (
-            <button
-              onClick={async () => {
-                setProcessing(true);
-                setProcessResult(null);
-                try {
-                  const res = await fetch("/api/superadmin/notifications/process", { method: "POST" });
-                  const data = await res.json();
-                  if (data.error) {
-                    setProcessResult(`Erreur: ${data.error}`);
-                  } else {
-                    setProcessResult(`${data.sent || 0} envoyées, ${data.failed || 0} échouées, ${data.suppressed || 0} supprimées`);
+            <>
+              <button
+                onClick={async () => {
+                  setProcessing(true);
+                  setProcessResult(null);
+                  try {
+                    const res = await fetch("/api/superadmin/notifications/process", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({}),
+                    });
+                    const text = await res.text();
+                    let data;
+                    try { data = JSON.parse(text); } catch { data = { error: text.slice(0, 100) }; }
+                    if (data.error) {
+                      setProcessResult(`Erreur: ${data.error}`);
+                    } else {
+                      setProcessResult(`${data.sent || 0} envoyées, ${data.failed || 0} échouées, ${data.suppressed || 0} supprimées`);
+                    }
+                    setTimeout(() => setProcessResult(null), 8000);
+                    load();
+                  } catch (err) {
+                    setProcessResult(`Erreur réseau: ${err instanceof Error ? err.message : "connexion échouée"}`);
                   }
-                  setTimeout(() => setProcessResult(null), 8000);
-                  load();
-                } catch (err) {
-                  setProcessResult(`Erreur réseau: ${err instanceof Error ? err.message : "connexion échouée"}`);
-                }
-                setProcessing(false);
-              }}
-              disabled={processing}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#D35400]/15 hover:bg-[#D35400]/25 border border-[#D35400]/30 transition text-xs text-[#D35400] font-medium"
-            >
-              <Send size={12} className={processing ? "animate-pulse" : ""} />
-              {processing ? "Envoi..." : `Envoyer ${stats.pending} en attente`}
-            </button>
+                  setProcessing(false);
+                }}
+                disabled={processing}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#D35400]/15 hover:bg-[#D35400]/25 border border-[#D35400]/30 transition text-xs text-[#D35400] font-medium"
+              >
+                <Send size={12} className={processing ? "animate-pulse" : ""} />
+                {processing ? "Envoi..." : `Envoyer ${stats.pending} en attente`}
+              </button>
+              <button
+                onClick={async () => {
+                  if (!confirm(`Annuler les ${stats.pending} notifications en attente ?`)) return;
+                  setProcessing(true);
+                  setProcessResult(null);
+                  try {
+                    const res = await fetch("/api/superadmin/notifications/process", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ action: "cancel_pending" }),
+                    });
+                    const text = await res.text();
+                    let data;
+                    try { data = JSON.parse(text); } catch { data = { error: text.slice(0, 100) }; }
+                    if (data.error) {
+                      setProcessResult(`Erreur: ${data.error}`);
+                    } else {
+                      setProcessResult(`${data.cancelled || 0} notifications annulées`);
+                    }
+                    setTimeout(() => setProcessResult(null), 8000);
+                    load();
+                  } catch (err) {
+                    setProcessResult(`Erreur réseau: ${err instanceof Error ? err.message : "connexion échouée"}`);
+                  }
+                  setProcessing(false);
+                }}
+                disabled={processing}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition text-xs text-white/30"
+              >
+                <Ban size={12} />
+                Annuler
+              </button>
+            </>
           )}
           <button
             onClick={load}
