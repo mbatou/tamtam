@@ -2,7 +2,40 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import webpush from "web-push";
 import { getEchoStrings, type EchoLang } from "@/lib/echo-i18n";
 
-const MAX_DAILY_PUSHES = 2;
+export const MAX_DAILY_PUSHES = 2;
+
+function normalizeVapidKey(key: string): string {
+  return key.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "").trim();
+}
+
+let vapidError: string | null = null;
+
+function initVapid(): boolean {
+  const pub = process.env.VAPID_PUBLIC_KEY;
+  const priv = process.env.VAPID_PRIVATE_KEY;
+  if (!pub || !priv) {
+    vapidError = "VAPID keys not configured";
+    return false;
+  }
+  try {
+    webpush.setVapidDetails(
+      "mailto:contact@tamtam.africa",
+      normalizeVapidKey(pub),
+      normalizeVapidKey(priv),
+    );
+    vapidError = null;
+    return true;
+  } catch (err) {
+    const rawLen = pub.trim().length;
+    vapidError = `VAPID init failed (pub key ${rawLen} chars): ${err instanceof Error ? err.message : String(err)}`;
+    console.error("[vapid]", vapidError);
+    return false;
+  }
+}
+
+export function getVapidError(): string | null {
+  return vapidError;
+}
 
 interface NotificationRow {
   id: string;
@@ -12,7 +45,7 @@ interface NotificationRow {
   payload: Record<string, unknown>;
 }
 
-function buildPayload(type: string, payload: Record<string, unknown>) {
+export function buildPayload(type: string, payload: Record<string, unknown>) {
   const lang = (payload.lang as EchoLang) || "fr";
   const s = getEchoStrings(lang);
 
@@ -130,14 +163,120 @@ async function checkDailyCap(
   return !data || data.send_count < MAX_DAILY_PUSHES;
 }
 
+export async function sendSinglePush(
+  supabase: SupabaseClient,
+  entry: {
+    echo_id: string;
+    type: string;
+    campaign_id?: string | null;
+    payload: Record<string, unknown>;
+  },
+): Promise<"sent" | "failed" | "suppressed"> {
+  if (!initVapid()) {
+    await supabase.from("notification_queue").insert({
+      ...entry,
+      campaign_id: entry.campaign_id || null,
+      scheduled_for: new Date().toISOString(),
+      status: "failed",
+      suppression_reason: "vapid_not_configured",
+    });
+    return "failed";
+  }
+
+  const canSend = await checkDailyCap(supabase, entry.echo_id);
+  if (!canSend) {
+    await supabase.from("notification_queue").insert({
+      ...entry,
+      campaign_id: entry.campaign_id || null,
+      scheduled_for: new Date().toISOString(),
+      status: "suppressed",
+      suppression_reason: "daily_cap_reached",
+    });
+    return "suppressed";
+  }
+
+  const { data: subs } = await supabase
+    .from("push_subscriptions")
+    .select("id, subscription")
+    .eq("user_id", entry.echo_id);
+
+  if (!subs || subs.length === 0) {
+    await supabase.from("notification_queue").insert({
+      ...entry,
+      campaign_id: entry.campaign_id || null,
+      scheduled_for: new Date().toISOString(),
+      status: "suppressed",
+      suppression_reason: "no_push_subscription",
+    });
+    return "suppressed";
+  }
+
+  const pushPayload = buildPayload(entry.type, entry.payload);
+  let anySent = false;
+  const expiredSubIds: string[] = [];
+
+  for (const sub of subs) {
+    try {
+      await webpush.sendNotification(
+        sub.subscription as webpush.PushSubscription,
+        JSON.stringify(pushPayload),
+      );
+      anySent = true;
+    } catch (err: unknown) {
+      const pushError = err as { statusCode?: number };
+      if (pushError.statusCode === 410 || pushError.statusCode === 404) {
+        expiredSubIds.push(sub.id);
+      }
+    }
+  }
+
+  if (expiredSubIds.length > 0) {
+    await supabase.from("push_subscriptions").delete().in("id", expiredSubIds);
+  }
+
+  const now = new Date().toISOString();
+  if (anySent) {
+    await supabase.from("notification_queue").insert({
+      ...entry,
+      campaign_id: entry.campaign_id || null,
+      scheduled_for: now,
+      status: "sent",
+      sent_at: now,
+    });
+    await incrementDailyCap(supabase, entry.echo_id);
+    return "sent";
+  }
+
+  await supabase.from("notification_queue").insert({
+    ...entry,
+    campaign_id: entry.campaign_id || null,
+    scheduled_for: now,
+    status: "failed",
+  });
+  return "failed";
+}
+
 export async function processNotificationQueue(
   supabase: SupabaseClient,
 ): Promise<{ sent: number; failed: number; suppressed: number }> {
-  webpush.setVapidDetails(
-    "mailto:contact@tamtam.africa",
-    process.env.VAPID_PUBLIC_KEY!,
-    process.env.VAPID_PRIVATE_KEY!,
-  );
+  if (!initVapid()) {
+    const now = new Date().toISOString();
+    const { data: pending } = await supabase
+      .from("notification_queue")
+      .select("id")
+      .eq("status", "pending")
+      .lte("scheduled_for", now)
+      .limit(200);
+
+    if (pending && pending.length > 0) {
+      await supabase
+        .from("notification_queue")
+        .update({ status: "failed", suppression_reason: "vapid_not_configured" })
+        .in("id", pending.map((n) => n.id));
+    }
+
+    return { sent: 0, failed: pending?.length || 0, suppressed: 0 };
+  }
 
   const now = new Date().toISOString();
 

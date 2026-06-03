@@ -63,7 +63,7 @@ function SendPage() {
   const [loadingAudience, setLoadingAudience] = useState(false);
   const [sending, setSending] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [result, setResult] = useState<{ pushQueued: number; emailSent: number; emailFailed: number } | null>(null);
+  const [result, setResult] = useState<{ pushSent?: number; pushFailed?: number; pushSuppressed?: number; pushQueued?: number; emailSent: number; emailFailed: number } | null>(null);
 
   // Pre-fill defaults when type changes
   useEffect(() => {
@@ -130,7 +130,7 @@ function SendPage() {
       setResult(data);
       setShowConfirm(false);
     } catch {
-      setResult({ pushQueued: 0, emailSent: 0, emailFailed: 0 });
+      setResult({ pushSent: 0, emailSent: 0, emailFailed: 0 });
     } finally {
       setSending(false);
     }
@@ -144,8 +144,11 @@ function SendPage() {
         <div className="text-4xl mb-4">✅</div>
         <h2 className="text-lg font-bold text-white mb-2">Envoi terminé</h2>
         <div className="space-y-1 text-sm text-white/50 mb-6">
-          {result.pushQueued > 0 && <p>{result.pushQueued} notifications push en file d&apos;attente</p>}
-          {result.emailSent > 0 && <p>{result.emailSent} emails envoyés</p>}
+          {(result.pushSent || 0) > 0 && <p className="text-emerald-400">{result.pushSent} notifications push envoyées</p>}
+          {(result.pushQueued || 0) > 0 && <p>{result.pushQueued} notifications push programmées</p>}
+          {(result.pushSuppressed || 0) > 0 && <p className="text-white/30">{result.pushSuppressed} push supprimées (caps/pas d&apos;abonnement)</p>}
+          {(result.pushFailed || 0) > 0 && <p className="text-red-400">{result.pushFailed} push échouées</p>}
+          {result.emailSent > 0 && <p className="text-emerald-400">{result.emailSent} emails envoyés</p>}
           {result.emailFailed > 0 && <p className="text-red-400">{result.emailFailed} emails échoués</p>}
         </div>
         <button onClick={() => router.push("/superadmin/notifications")} className="px-6 py-2 rounded-xl bg-white/[0.06] text-white/70 text-sm hover:bg-white/[0.1] transition">

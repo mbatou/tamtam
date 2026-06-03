@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getNextNotifyDatetime } from "@/lib/notifications/smart-timing";
-import { processNotificationQueue } from "@/lib/notifications/sender";
+import { sendSinglePush } from "@/lib/notifications/sender";
 import {
   sendNotificationEmail,
   buildReengagementEmail,
@@ -47,50 +47,65 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No channels selected" }, { status: 400 });
   }
 
+  let pushSent = 0;
+  let pushFailed = 0;
+  let pushSuppressed = 0;
   let pushQueued = 0;
   let emailSent = 0;
   let emailFailed = 0;
 
-  // Queue push notifications
+  const resolvedType = notificationType === "custom" ? "manual" : notificationType || "manual";
+  const pushPayload = {
+    title: pushTitle || "Tamtam",
+    body: pushBody || "",
+    url: pushUrl || "/rythmes",
+    tag: `manual-${Date.now()}`,
+    lang: lang || "fr",
+  };
+
+  // Process notifications per echo — push and email together
   if (channels.includes("push")) {
-    const entries = [];
-    for (const echoId of echoIds) {
-      let scheduledFor: string;
-      if (scheduledAt === "smart") {
-        const dt = await getNextNotifyDatetime(supabase, echoId);
-        scheduledFor = dt.toISOString();
-      } else if (scheduledAt === "now") {
-        scheduledFor = new Date(Date.now() + 30_000).toISOString();
-      } else {
-        scheduledFor = scheduledAt;
+    if (scheduledAt === "now") {
+      // Send immediately, one by one
+      for (const echoId of echoIds) {
+        const result = await sendSinglePush(supabase, {
+          echo_id: echoId,
+          type: resolvedType,
+          campaign_id: campaignId || null,
+          payload: pushPayload,
+        });
+        if (result === "sent") pushSent++;
+        else if (result === "failed") pushFailed++;
+        else pushSuppressed++;
+      }
+    } else {
+      // Schedule for later — queue as pending
+      const entries = [];
+      for (const echoId of echoIds) {
+        let scheduledFor: string;
+        if (scheduledAt === "smart") {
+          const dt = await getNextNotifyDatetime(supabase, echoId);
+          scheduledFor = dt.toISOString();
+        } else {
+          scheduledFor = scheduledAt;
+        }
+
+        entries.push({
+          echo_id: echoId,
+          type: resolvedType,
+          campaign_id: campaignId || null,
+          scheduled_for: scheduledFor,
+          status: "pending",
+          payload: pushPayload,
+        });
       }
 
-      entries.push({
-        echo_id: echoId,
-        type: notificationType === "custom" ? "manual" : notificationType || "manual",
-        campaign_id: campaignId || null,
-        scheduled_for: scheduledFor,
-        status: "pending",
-        payload: {
-          title: pushTitle || "Tamtam",
-          body: pushBody || "",
-          url: pushUrl || "/rythmes",
-          tag: `manual-${Date.now()}`,
-          lang: lang || "fr",
-        },
-      });
-    }
-
-    const BATCH = 100;
-    for (let i = 0; i < entries.length; i += BATCH) {
-      const batch = entries.slice(i, i + BATCH);
-      const { error } = await supabase.from("notification_queue").insert(batch);
-      if (!error) pushQueued += batch.length;
-    }
-
-    // Process immediately if sending now
-    if (scheduledAt === "now") {
-      processNotificationQueue(supabase).catch(() => {});
+      const BATCH = 100;
+      for (let i = 0; i < entries.length; i += BATCH) {
+        const batch = entries.slice(i, i + BATCH);
+        const { error } = await supabase.from("notification_queue").insert(batch);
+        if (!error) pushQueued += batch.length;
+      }
     }
   }
 
@@ -158,6 +173,9 @@ export async function POST(request: NextRequest) {
         channels,
         notificationType,
         recipientCount: echoIds.length,
+        pushSent,
+        pushFailed,
+        pushSuppressed,
         pushQueued,
         emailSent,
         emailFailed,
@@ -168,6 +186,9 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     success: true,
+    pushSent,
+    pushFailed,
+    pushSuppressed,
     pushQueued,
     emailSent,
     emailFailed,

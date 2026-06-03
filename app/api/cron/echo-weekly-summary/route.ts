@@ -134,10 +134,11 @@ export async function GET(request: NextRequest) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const webpush = require("web-push");
+      const toB64Url = (k: string) => k.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "").trim();
       webpush.setVapidDetails(
         "mailto:support@tamma.me",
-        process.env.VAPID_PUBLIC_KEY,
-        process.env.VAPID_PRIVATE_KEY
+        toB64Url(process.env.VAPID_PUBLIC_KEY),
+        toB64Url(process.env.VAPID_PRIVATE_KEY)
       );
 
       for (const sub of subscriptions) {
