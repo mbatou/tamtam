@@ -25,6 +25,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 
@@ -88,6 +89,7 @@ const sections: NavSection[] = [
     items: [
       { label: "Échos", href: "/superadmin/users", icon: Users, permKey: "users" },
       { label: "Brands", href: "/superadmin/crm", icon: Building2, badgeKey: "leads", permKey: "leads" },
+      { label: "Pixels", href: "/superadmin/pixels", icon: Zap, permKey: "leads" },
       { label: "Support", href: "/superadmin/support", icon: MessageCircle, permKey: "support" },
       { label: "CRM & Leads", href: "/superadmin/leads", icon: Target, permKey: "leads" },
     ],
