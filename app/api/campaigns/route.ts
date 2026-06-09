@@ -134,6 +134,8 @@ export async function POST(request: NextRequest) {
 
   const pricingModel = pricing_model || "cpc";
   const effectiveCpc = pricingModel === "cpa" ? 0 : cpc;
+  const effectiveCpaAmount = pricingModel === "cpa" && cpa_amount ? Math.round(Number(cpa_amount)) : null;
+  const effectiveCpaEvent = pricingModel === "cpa" && cpa_event ? cpa_event : null;
 
   const supabase = createServiceClient();
   const brandId = await getEffectiveBrandId(supabase, session.user.id);
@@ -155,7 +157,8 @@ export async function POST(request: NextRequest) {
       target_cities: target_cities && target_cities.length > 0 ? target_cities : null,
       objective: objective || "traffic",
       pricing_model: pricingModel,
-      ...(pricingModel === "cpa" ? { cpa_amount, cpa_event } : {}),
+      cpa_amount: effectiveCpaAmount,
+      cpa_event: effectiveCpaEvent,
       ...(pixel_id ? { pixel_id } : {}),
     }).select().single();
 
@@ -201,7 +204,8 @@ export async function POST(request: NextRequest) {
     target_cities: target_cities && target_cities.length > 0 ? target_cities : null,
     objective: objective || "traffic",
     pricing_model: pricingModel,
-    ...(pricingModel === "cpa" ? { cpa_amount, cpa_event } : {}),
+    cpa_amount: effectiveCpaAmount,
+    cpa_event: effectiveCpaEvent,
     ...(pixel_id ? { pixel_id } : {}),
   }).select().single();
 
@@ -320,8 +324,8 @@ export async function PUT(request: NextRequest) {
   if (objective !== undefined) updates.objective = objective;
   if (pixel_id !== undefined) updates.pixel_id = pixel_id;
   if (pricing_model !== undefined) updates.pricing_model = pricing_model;
-  if (cpa_amount !== undefined) updates.cpa_amount = cpa_amount;
-  if (cpa_event !== undefined) updates.cpa_event = cpa_event;
+  if (cpa_amount !== undefined) updates.cpa_amount = cpa_amount ? Math.round(Number(cpa_amount)) : null;
+  if (cpa_event !== undefined) updates.cpa_event = cpa_event || null;
 
   // Allow rejected campaigns to be resubmitted
   const isResubmission = moderation_status === "pending" && existing.status === "rejected";
