@@ -56,6 +56,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/superadmin/notifications/history": "Historique",
   "/superadmin/notifications/sequences": "Séquences",
   "/superadmin/notifications/settings": "Paramètres notifs",
+  "/superadmin/pixels": "Pixels",
 };
 
 // Mobile nav items (flat list)
