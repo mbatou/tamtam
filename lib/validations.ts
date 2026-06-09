@@ -14,7 +14,7 @@ export const createCampaignSchema = z.object({
   objective: z.enum(["awareness", "traffic", "lead_generation"]).optional(),
   pixel_id: z.string().max(50).optional().nullable(),
   pricing_model: z.enum(["cpc", "cpa"]).optional(),
-  cpa_amount: z.coerce.number().int().min(150, "CPA minimum 150 FCFA").max(1000000).optional().nullable(),
+  cpa_amount: z.coerce.number().int().min(500, "CPA minimum 500 FCFA").max(1000000).optional().nullable(),
   cpa_event: z.string().min(1).max(30).regex(/^[a-z_]+$/, "Événement invalide").optional().nullable(),
 }).superRefine((data, ctx) => {
   if (data.pricing_model === "cpa") {
@@ -50,7 +50,7 @@ export const updateCampaignSchema = z.object({
   objective: z.enum(["awareness", "traffic", "lead_generation"]).optional(),
   pixel_id: z.string().max(50).optional().nullable(),
   pricing_model: z.enum(["cpc", "cpa"]).optional(),
-  cpa_amount: z.coerce.number().int().min(150).max(1000000).optional().nullable(),
+  cpa_amount: z.coerce.number().int().min(500).max(1000000).optional().nullable(),
   cpa_event: z.string().min(1).max(30).regex(/^[a-z_]+$/).optional().nullable(),
 });
 
