@@ -1590,8 +1590,8 @@ export default function AdminCampaignsPage() {
               <>
                 <div>
                   <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.cpaAmountLabel")}</label>
-                  <input type="number" value={cpaAmount} onChange={(e) => setCpaAmount(e.target.value)} placeholder="150" className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
-                  <p className="text-[10px] mt-1" style={{ color: "rgba(255,255,255,0.25)" }}>Min. 150 FCFA</p>
+                  <input type="number" value={cpaAmount} onChange={(e) => setCpaAmount(e.target.value)} placeholder="100" className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
+                  <p className="text-[10px] mt-1" style={{ color: "rgba(255,255,255,0.25)" }}>Min. 100 FCFA</p>
                 </div>
                 <div>
                   <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.cpaEventLabel")}</label>
@@ -1704,7 +1704,7 @@ export default function AdminCampaignsPage() {
           )}
 
           {/* Estimation section */}
-          {((pricingModel === "cpc" && Number(form.cpc) > 0) || (pricingModel === "cpa" && Number(cpaAmount) >= 150)) && Number(form.budget) > 0 && (() => {
+          {((pricingModel === "cpc" && Number(form.cpc) > 0) || (pricingModel === "cpa" && Number(cpaAmount) >= 100)) && Number(form.budget) > 0 && (() => {
             const budget = Number(form.budget);
             if (pricingModel === "cpa") {
               const cpa = Number(cpaAmount);

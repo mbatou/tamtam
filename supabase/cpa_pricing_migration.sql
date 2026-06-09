@@ -6,7 +6,7 @@ ALTER TABLE campaigns
   ADD COLUMN IF NOT EXISTS pricing_model text NOT NULL DEFAULT 'cpc'
     CHECK (pricing_model IN ('cpc', 'cpa')),
   ADD COLUMN IF NOT EXISTS cpa_amount integer DEFAULT NULL
-    CHECK (cpa_amount IS NULL OR cpa_amount >= 150),
+    CHECK (cpa_amount IS NULL OR cpa_amount >= 100),
   ADD COLUMN IF NOT EXISTS cpa_event text DEFAULT NULL
     CHECK (cpa_event IS NULL OR cpa_event ~ '^[a-z_]+$');
 
