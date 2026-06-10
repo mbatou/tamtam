@@ -7,6 +7,7 @@ let currentTab = null;
 let mappedEvents = [];
 let isMapperActive = false;
 let isInjected = false;
+let pixelTestPassed = false;
 
 document.addEventListener("DOMContentLoaded", async () => {
   currentTab = await getCurrentTab();
@@ -21,10 +22,11 @@ async function getCurrentTab() {
 }
 
 async function loadState() {
-  const data = await chrome.storage.local.get(["pixelId", "mappedEvents", "mapperActive"]);
+  const data = await chrome.storage.local.get(["pixelId", "mappedEvents", "mapperActive", "pixelTestPassed"]);
   pixelId = data.pixelId || null;
   mappedEvents = data.mappedEvents || [];
   isMapperActive = data.mapperActive || false;
+  pixelTestPassed = data.pixelTestPassed || false;
 }
 
 async function saveState() {
@@ -61,23 +63,23 @@ async function updateInjectionStatus() {
     const response = await chrome.tabs.sendMessage(currentTab.id, {
       action: "isInjected",
     });
-
-    if (response?.injected) {
-      isInjected = true;
-      statusEl.textContent = "Injecte";
-      statusEl.className = "injection-status injected";
-      statusEl.title = "Pixel actif sur cette page";
-      dotEl.className = "status-dot active";
-    } else {
-      isInjected = false;
-      statusEl.textContent = "Non injecte";
-      statusEl.className = "injection-status not-injected";
-      statusEl.title = "Cliquez sur Script > Injecter maintenant";
-      dotEl.className = "status-dot";
-    }
+    isInjected = !!response?.injected;
   } catch {
     isInjected = false;
-    statusEl.textContent = "...";
+  }
+
+  if (isInjected) {
+    statusEl.textContent = "Injecte";
+    statusEl.className = "injection-status injected";
+    statusEl.title = "Pixel actif sur cette page";
+    dotEl.className = "status-dot active";
+  } else if (pixelTestPassed) {
+    statusEl.textContent = "Integre";
+    statusEl.className = "injection-status injected";
+    statusEl.title = "Pixel actif via integration externe";
+    dotEl.className = "status-dot injected";
+  } else {
+    statusEl.textContent = "Non injecte";
     statusEl.className = "injection-status not-injected";
     statusEl.title = "Cliquez sur Script > Injecter maintenant";
     dotEl.className = "status-dot";
@@ -113,7 +115,7 @@ function updateStatusBar() {
 
   step1.className = "status-step done";
 
-  if (isInjected) {
+  if (isInjected || pixelTestPassed) {
     step2.className = "status-step done";
     step2icon.textContent = "✓";
   } else {
@@ -291,8 +293,10 @@ function setupEventListeners() {
   });
 
   // Change pixel ID
-  document.getElementById("btnChangePixel")?.addEventListener("click", () => {
+  document.getElementById("btnChangePixel")?.addEventListener("click", async () => {
     pixelId = null;
+    pixelTestPassed = false;
+    await chrome.storage.local.set({ pixelTestPassed: false });
     saveState();
     showView("viewSetup");
   });
@@ -338,8 +342,13 @@ async function testPixel() {
     const data = await response.json();
 
     if (response.ok && data.success) {
+      pixelTestPassed = true;
+      await chrome.storage.local.set({ pixelTestPassed: true });
       showTestResult("success", "Pixel actif - Latence: " + data.latency_ms + "ms");
+      updateInjectionStatus();
     } else {
+      pixelTestPassed = false;
+      await chrome.storage.local.set({ pixelTestPassed: false });
       showTestResult("error", data.error || "Pixel ID invalide");
     }
   } catch (err) {
