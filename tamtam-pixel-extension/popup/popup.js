@@ -235,16 +235,7 @@ function setupEventListeners() {
 async function injectPixel() {
   await chrome.scripting.executeScript({
     target: { tabId: currentTab.id },
-    func: (pxId, domain) => {
-      document.querySelector("#tamtam-pixel-script")?.remove();
-
-      const script = document.createElement("script");
-      script.id = "tamtam-pixel-script";
-      script.src = domain + "/api/pixel/pixel.js";
-      script.setAttribute("data-pixel-id", pxId);
-      script.async = true;
-      document.head.appendChild(script);
-
+    func: (pxId) => {
       const params = new URLSearchParams(window.location.search);
       const tmRef = params.get("tm_ref");
       if (tmRef) {
@@ -255,37 +246,30 @@ async function injectPixel() {
       window.__tamtamInjected = true;
       window.__tamtamPixelId = pxId;
     },
-    args: [pixelId, TAMTAM_DOMAIN],
+    args: [pixelId],
   });
 }
 
 async function testPixel() {
-  const testEventId = "ext_test_" + Date.now();
-  const startTime = Date.now();
-
   try {
-    const response = await fetch(TAMTAM_DOMAIN + "/api/pixel/event", {
+    const response = await fetch(TAMTAM_DOMAIN + "/api/v1/pixel-check", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Tamtam-Key": pixelId,
-      },
-      body: JSON.stringify({
-        event: "test",
-        event_id: testEventId,
-        value: 0,
-        currency: "XOF",
-        source: "chrome_extension",
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pixel_id: pixelId }),
     });
 
-    const latency = Date.now() - startTime;
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      showTestResult("error", "Reponse inattendue du serveur (" + response.status + ")");
+      return;
+    }
+
     const data = await response.json();
 
     if (response.ok && data.success) {
-      showTestResult("success", "Pixel actif - Latence: " + latency + "ms");
+      showTestResult("success", "Pixel actif - Latence: " + data.latency_ms + "ms");
     } else {
-      showTestResult("error", "Erreur: " + (data.error || "Pixel ID invalide"));
+      showTestResult("error", data.error || "Pixel ID invalide");
     }
   } catch (err) {
     showTestResult("error", "Erreur reseau: " + err.message);
