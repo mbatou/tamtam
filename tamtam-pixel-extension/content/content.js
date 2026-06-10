@@ -38,6 +38,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 function activateVisualMapper(mode) {
   if (mapperActive) return;
   mapperActive = true;
+  chrome.storage.local.set({ mapperActive: true });
 
   const toolbar = document.createElement("div");
   toolbar.id = "tamtam-mapper-toolbar";
@@ -277,6 +278,7 @@ function injectMappedEvents(events) {
 
 function deactivateVisualMapper() {
   mapperActive = false;
+  chrome.storage.local.set({ mapperActive: false });
   document.getElementById("tamtam-mapper-toolbar")?.remove();
   document.getElementById("tamtam-highlight-overlay")?.remove();
   document.getElementById("tamtam-event-modal")?.remove();
