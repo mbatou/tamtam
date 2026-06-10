@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+  <title>Tamtam Pixel</title>
+</head>
+<body>
+  <div id="app">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">
+        <img src="../assets/tamtam-logo.png" height="20" alt="Tamtam" />
+      </div>
+      <div class="status-dot" id="statusDot"></div>
+    </div>
+
+    <!-- View: Setup (no pixel ID configured) -->
+    <div id="viewSetup" class="view">
+      <p class="label">Pixel ID</p>
+      <input
+        type="text"
+        id="pixelIdInput"
+        placeholder="px_xxxxxxxxxxxxxxxx"
+        class="input"
+      />
+      <p class="hint">
+        Found in your Tamtam dashboard &rarr; Developers &rarr; Pixel
+      </p>
+      <button id="btnSavePixelId" class="btn btn-primary">
+        Enregistrer &rarr;
+      </button>
+    </div>
+
+    <!-- View: Main (pixel ID configured) -->
+    <div id="viewMain" class="view hidden">
+
+      <!-- Current site info -->
+      <div class="site-card">
+        <div class="site-info">
+          <p class="site-domain" id="siteDomain">Loading...</p>
+          <p class="pixel-id-display" id="pixelIdDisplay"></p>
+        </div>
+        <div class="injection-status" id="injectionStatus">
+        </div>
+      </div>
+
+      <!-- Mode tabs -->
+      <div class="tabs">
+        <button class="tab active" data-tab="visual">
+          Mapper visuel
+        </button>
+        <button class="tab" data-tab="script">
+          Script
+        </button>
+      </div>
+
+      <!-- Tab: Visual Mapper -->
+      <div id="tabVisual" class="tab-content">
+        <p class="section-label">EVENEMENTS CONFIGURES</p>
+        <div id="eventsList" class="events-list">
+        </div>
+        <button id="btnAddEvent" class="btn btn-secondary">
+          + Mapper un element
+        </button>
+        <div class="divider"></div>
+        <button id="btnActivateMapper" class="btn btn-primary">
+          Activer le mapper
+        </button>
+      </div>
+
+      <!-- Tab: Script Injector -->
+      <div id="tabScript" class="tab-content hidden">
+        <p class="section-label">INJECTION AUTOMATIQUE</p>
+        <p class="description">
+          Injecte le script Tamtam Pixel sur cette page.
+          Le Pixel capturera automatiquement les parametres
+          <code>tm_ref</code> depuis l'URL.
+        </p>
+        <div class="toggle-row">
+          <span>Injection automatique</span>
+          <label class="toggle">
+            <input type="checkbox" id="toggleAutoInject" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="divider"></div>
+        <button id="btnInjectNow" class="btn btn-primary">
+          Injecter maintenant
+        </button>
+        <button id="btnTestPixel" class="btn btn-secondary">
+          Tester le Pixel
+        </button>
+      </div>
+
+      <!-- Footer: test result -->
+      <div id="testResult" class="test-result hidden"></div>
+
+      <!-- Footer actions -->
+      <div class="footer-actions">
+        <button id="btnChangePixel" class="btn-link">
+          Changer de Pixel ID
+        </button>
+        <button id="btnOpenDashboard" class="btn-link">
+          Dashboard &rarr;
+        </button>
+      </div>
+    </div>
+
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
