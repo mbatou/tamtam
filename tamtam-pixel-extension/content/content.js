@@ -99,7 +99,9 @@ function handleMouseOut(e) {
 
 function handleElementClick(e) {
   if (!mapperActive) return;
-  if (e.target.closest("#tamtam-mapper-toolbar") || e.target.closest("#tamtam-event-modal")) return;
+  if (document.getElementById("tamtam-event-modal")) return;
+  if (e.target.closest("#tamtam-event-modal")) return;
+  if (e.target.closest("#tamtam-mapper-toolbar")) return;
 
   e.preventDefault();
   e.stopPropagation();
@@ -159,6 +161,28 @@ function showEventAssignModal(element) {
   `;
   document.body.appendChild(modal);
 
+  // Suspend mapper listeners so they don't intercept modal clicks
+  document.removeEventListener("mouseover", handleMouseOver, true);
+  document.removeEventListener("mouseout", handleMouseOut, true);
+  document.removeEventListener("click", handleElementClick, true);
+  if (hoveredElement) {
+    hoveredElement.classList.remove("tt-hover");
+  }
+  if (overlay) {
+    overlay.style.display = "none";
+  }
+
+  function resumeMapper() {
+    document.addEventListener("mouseover", handleMouseOver, true);
+    document.addEventListener("mouseout", handleMouseOut, true);
+    document.addEventListener("click", handleElementClick, true);
+  }
+
+  function closeModal() {
+    modal.remove();
+    resumeMapper();
+  }
+
   let selectedEvent = null;
 
   modal.querySelectorAll(".tt-event-option").forEach((btn) => {
@@ -190,12 +214,13 @@ function showEventAssignModal(element) {
     attachEventListener(element, eventConfig);
 
     modal.remove();
+    resumeMapper();
     showMapperToast('Evenement "' + selectedEvent + '" mappe');
   });
 
-  document.getElementById("tt-modal-close")?.addEventListener("click", () => modal.remove());
-  document.getElementById("tt-modal-cancel")?.addEventListener("click", () => modal.remove());
-  modal.querySelector(".tt-modal-backdrop")?.addEventListener("click", () => modal.remove());
+  document.getElementById("tt-modal-close")?.addEventListener("click", closeModal);
+  document.getElementById("tt-modal-cancel")?.addEventListener("click", closeModal);
+  modal.querySelector(".tt-modal-backdrop")?.addEventListener("click", closeModal);
 }
 
 function attachEventListener(element, config) {
