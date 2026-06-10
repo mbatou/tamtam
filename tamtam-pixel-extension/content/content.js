@@ -294,12 +294,12 @@ function deactivateVisualMapper() {
 function autoInjectPixel(pxId) {
   if (window.__tamtamInjected) return;
 
-  const script = document.createElement("script");
-  script.id = "tamtam-pixel-script";
-  script.src = "https://tamma.me/api/pixel/pixel.js";
-  script.setAttribute("data-pixel-id", pxId);
-  script.async = true;
-  document.head.appendChild(script);
+  const params = new URLSearchParams(window.location.search);
+  const tmRef = params.get("tm_ref");
+  if (tmRef) {
+    sessionStorage.setItem("tamtam_tm_ref", tmRef);
+    sessionStorage.setItem("tamtam_tm_ref_ts", Date.now().toString());
+  }
 
   window.__tamtamInjected = true;
   window.__tamtamPixelId = pxId;
