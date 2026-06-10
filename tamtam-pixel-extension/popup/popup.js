@@ -5,6 +5,9 @@ const TAMTAM_DOMAIN = "https://tamma.me";
 let pixelId = null;
 let currentTab = null;
 let mappedEvents = [];
+let isMapperActive = false;
+let isInjected = false;
+let pixelTestPassed = false;
 
 document.addEventListener("DOMContentLoaded", async () => {
   currentTab = await getCurrentTab();
@@ -19,9 +22,11 @@ async function getCurrentTab() {
 }
 
 async function loadState() {
-  const data = await chrome.storage.local.get(["pixelId", "mappedEvents"]);
+  const data = await chrome.storage.local.get(["pixelId", "mappedEvents", "mapperActive", "pixelTestPassed"]);
   pixelId = data.pixelId || null;
   mappedEvents = data.mappedEvents || [];
+  isMapperActive = data.mapperActive || false;
+  pixelTestPassed = data.pixelTestPassed || false;
 }
 
 async function saveState() {
@@ -45,32 +50,86 @@ function updateUI() {
   document.getElementById("pixelIdDisplay").textContent = pixelId;
 
   updateInjectionStatus();
+  updateMapperButton();
   loadAutoInjectToggle();
   renderEventsList();
 }
 
-function updateInjectionStatus() {
-  chrome.tabs.sendMessage(currentTab.id, { action: "isInjected" }, (response) => {
-    const statusEl = document.getElementById("injectionStatus");
-    const dotEl = document.getElementById("statusDot");
+async function updateInjectionStatus() {
+  const statusEl = document.getElementById("injectionStatus");
+  const dotEl = document.getElementById("statusDot");
 
-    if (chrome.runtime.lastError || !response) {
-      statusEl.textContent = "Non injecte";
-      statusEl.className = "injection-status not-injected";
-      dotEl.className = "status-dot";
-      return;
-    }
+  try {
+    const response = await chrome.tabs.sendMessage(currentTab.id, {
+      action: "isInjected",
+    });
+    isInjected = !!response?.injected;
+  } catch {
+    isInjected = false;
+  }
 
-    if (response.injected) {
-      statusEl.textContent = "Injecte";
-      statusEl.className = "injection-status injected";
-      dotEl.className = "status-dot injected";
-    } else {
-      statusEl.textContent = "Non injecte";
-      statusEl.className = "injection-status not-injected";
-      dotEl.className = "status-dot";
-    }
-  });
+  if (isInjected) {
+    statusEl.textContent = "Injecte";
+    statusEl.className = "injection-status injected";
+    statusEl.title = "Pixel actif sur cette page";
+    dotEl.className = "status-dot active";
+  } else if (pixelTestPassed) {
+    statusEl.textContent = "Integre";
+    statusEl.className = "injection-status injected";
+    statusEl.title = "Pixel actif via integration externe";
+    dotEl.className = "status-dot injected";
+  } else {
+    statusEl.textContent = "Non injecte";
+    statusEl.className = "injection-status not-injected";
+    statusEl.title = "Cliquez sur Script > Injecter maintenant";
+    dotEl.className = "status-dot";
+  }
+
+  updateStatusBar();
+}
+
+function updateMapperButton() {
+  const btn = document.getElementById("btnActivateMapper");
+  if (!btn) return;
+
+  if (isMapperActive) {
+    btn.innerHTML = '<span class="pulse-dot"></span> Mapper actif';
+    btn.className = "btn btn-mapper-active";
+  } else {
+    btn.textContent = "Activer le mapper";
+    btn.className = "btn btn-primary";
+  }
+}
+
+function updateStatusBar() {
+  const domain = getDomain();
+  const domainEvents = mappedEvents.filter((e) => e.domain === domain);
+
+  const step1 = document.getElementById("step1");
+  const step2 = document.getElementById("step2");
+  const step2icon = document.getElementById("step2icon");
+  const step3 = document.getElementById("step3");
+  const step3icon = document.getElementById("step3icon");
+
+  if (!step1) return;
+
+  step1.className = "status-step done";
+
+  if (isInjected || pixelTestPassed) {
+    step2.className = "status-step done";
+    step2icon.textContent = "✓";
+  } else {
+    step2.className = "status-step";
+    step2icon.textContent = "○";
+  }
+
+  if (domainEvents.length > 0) {
+    step3.className = "status-step done";
+    step3icon.textContent = "✓";
+  } else {
+    step3.className = "status-step";
+    step3icon.textContent = "○";
+  }
 }
 
 async function loadAutoInjectToggle() {
@@ -92,11 +151,12 @@ function renderEventsList() {
 
   if (domainEvents.length === 0) {
     list.innerHTML = `
-      <p style="font-size:12px;color:rgba(255,255,255,0.25);text-align:center;padding:16px 0;">
+      <p style="font-size:12px;color:rgba(255,255,255,0.25);text-align:center;padding:16px 0;line-height:1.6;">
         Aucun evenement configure.<br>
-        Cliquez sur "Mapper un element".
+        Cliquez "+ Mapper un element" pour commencer.
       </p>
     `;
+    updateStatusBar();
     return;
   }
 
@@ -124,9 +184,11 @@ function renderEventsList() {
       chrome.tabs.sendMessage(currentTab.id, {
         action: "refreshEvents",
         events: mappedEvents.filter((e) => e.domain === domain),
-      });
+      }).catch(() => {});
     });
   });
+
+  updateStatusBar();
 }
 
 function getDomain() {
@@ -166,13 +228,22 @@ function setupEventListeners() {
     });
   });
 
-  // Activate visual mapper
+  // Activate / deactivate visual mapper
   document.getElementById("btnActivateMapper")?.addEventListener("click", async () => {
-    chrome.tabs.sendMessage(currentTab.id, {
-      action: "activateMapper",
-      pixelId,
-    });
-    window.close();
+    if (isMapperActive) {
+      chrome.tabs.sendMessage(currentTab.id, { action: "deactivateMapper" }).catch(() => {});
+      isMapperActive = false;
+      await chrome.storage.local.set({ mapperActive: false });
+      updateMapperButton();
+    } else {
+      chrome.tabs.sendMessage(currentTab.id, {
+        action: "activateMapper",
+        pixelId,
+      }).catch(() => {});
+      isMapperActive = true;
+      await chrome.storage.local.set({ mapperActive: true });
+      updateMapperButton();
+    }
   });
 
   // Add event (opens mapper)
@@ -181,15 +252,17 @@ function setupEventListeners() {
       action: "activateMapper",
       pixelId,
       mode: "selectElement",
-    });
-    window.close();
+    }).catch(() => {});
+    isMapperActive = true;
+    await chrome.storage.local.set({ mapperActive: true });
+    updateMapperButton();
   });
 
   // Inject now
   document.getElementById("btnInjectNow")?.addEventListener("click", async () => {
     await injectPixel();
-    setTimeout(() => updateInjectionStatus(), 500);
     showTestResult("success", "Pixel injecte sur cette page.");
+    setTimeout(() => updateInjectionStatus(), 500);
   });
 
   // Test pixel
@@ -220,8 +293,10 @@ function setupEventListeners() {
   });
 
   // Change pixel ID
-  document.getElementById("btnChangePixel")?.addEventListener("click", () => {
+  document.getElementById("btnChangePixel")?.addEventListener("click", async () => {
     pixelId = null;
+    pixelTestPassed = false;
+    await chrome.storage.local.set({ pixelTestPassed: false });
     saveState();
     showView("viewSetup");
   });
@@ -267,8 +342,13 @@ async function testPixel() {
     const data = await response.json();
 
     if (response.ok && data.success) {
+      pixelTestPassed = true;
+      await chrome.storage.local.set({ pixelTestPassed: true });
       showTestResult("success", "Pixel actif - Latence: " + data.latency_ms + "ms");
+      updateInjectionStatus();
     } else {
+      pixelTestPassed = false;
+      await chrome.storage.local.set({ pixelTestPassed: false });
       showTestResult("error", data.error || "Pixel ID invalide");
     }
   } catch (err) {
