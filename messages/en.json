@@ -629,7 +629,16 @@
       "finishedHint": "Your finished campaigns will appear here",
       "clicks": "clicks",
       "referralBonus": "+150 FCFA",
-      "imageMissing": "Image missing — contact support"
+      "imageMissing": "Image missing — contact support",
+      "cpaHint": "CPA Campaign — You earn on each conversion",
+      "perConversion": "/ conversion",
+      "echoEarning": "You earn",
+      "cpaIntroTitle": "New: CPA Campaigns",
+      "cpaIntroBody": "Some campaigns now pay you per conversion (purchase, signup...) instead of per click. You can earn more per action!",
+      "cpaIntroCpc": "CPC = You earn on each verified click",
+      "cpaIntroCpa": "CPA = You earn when someone takes an action (purchase, signup...)",
+      "cpaIntroTip": "CPA campaigns pay more per action, but your earnings depend on your audience's conversions.",
+      "cpaIntroGotIt": "Got it!"
     },
     "status": {
       "active": "Active",

@@ -5,8 +5,10 @@ import Modal from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { formatFCFA, getTrackingUrl } from "@/lib/utils";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
+import { isCpaCampaign, getEchoEarningPerConversion } from "@/lib/campaign-display";
 import type { Campaign, TrackedLinkWithCampaign } from "@/lib/types";
 import { shareCampaignToWhatsApp } from "@/lib/share-utils";
+import { useTranslation } from "@/lib/i18n";
 
 interface CampaignDetailModalProps {
   campaign: Campaign;
@@ -17,6 +19,7 @@ interface CampaignDetailModalProps {
 
 export default function CampaignDetailModal({ campaign, link, open, onClose }: CampaignDetailModalProps) {
   const { showToast, ToastComponent } = useToast();
+  const { t } = useTranslation();
   const [downloading, setDownloading] = useState<number | null>(null);
   const [sharing, setSharing] = useState(false);
 
@@ -107,7 +110,9 @@ export default function CampaignDetailModal({ campaign, link, open, onClose }: C
           {statusLabel[campaign.status] || campaign.status}
         </span>
         <span className="text-xs text-white/40">
-          {campaign.cpc} FCFA / clic
+          {isCpaCampaign(campaign)
+            ? `${formatFCFA(getEchoEarningPerConversion(campaign))} ${t("echo.rythmes.perConversion")}`
+            : `${campaign.cpc} FCFA / ${t("common.clicks")}`}
         </span>
       </div>
 
@@ -137,14 +142,25 @@ export default function CampaignDetailModal({ campaign, link, open, onClose }: C
         <div className="glass-card p-3 mb-4 flex items-center gap-4">
           <div className="text-center flex-1">
             <span className="text-lg font-black block">{link.click_count}</span>
-            <span className="text-[9px] text-white/40 font-semibold">Clics</span>
+            <span className="text-[9px] text-white/40 font-semibold">{t("common.clicks")}</span>
           </div>
           <div className="w-px h-8 bg-white/10" />
           <div className="text-center flex-1">
-            <span className="text-lg font-black block text-accent">
-              {formatFCFA(Math.floor(link.click_count * campaign.cpc * ECHO_SHARE_PERCENT / 100))}
-            </span>
-            <span className="text-[9px] text-white/40 font-semibold">Gagné</span>
+            {isCpaCampaign(campaign) ? (
+              <>
+                <span className="text-lg font-black block text-[#1D9E75]">
+                  {formatFCFA(getEchoEarningPerConversion(campaign))}
+                </span>
+                <span className="text-[9px] text-white/40 font-semibold">{t("echo.rythmes.perConversion")}</span>
+              </>
+            ) : (
+              <>
+                <span className="text-lg font-black block text-accent">
+                  {formatFCFA(Math.floor(link.click_count * campaign.cpc * ECHO_SHARE_PERCENT / 100))}
+                </span>
+                <span className="text-[9px] text-white/40 font-semibold">{t("common.earned")}</span>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -198,7 +214,14 @@ export default function CampaignDetailModal({ campaign, link, open, onClose }: C
       {/* Awareness indicator */}
       {objective === "awareness" && (
         <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2 text-xs text-blue-300 mb-4">
-          Campagne Notoriété — Partage le visuel + lien ensemble
+          {t("echo.rythmes.awarenessHint")}
+        </div>
+      )}
+
+      {/* CPA indicator */}
+      {isCpaCampaign(campaign) && (
+        <div className="bg-[#1D9E75]/10 border border-[#1D9E75]/20 rounded-lg px-3 py-2 text-xs text-[#5DCAA5] mb-4">
+          {t("echo.rythmes.cpaHint")}
         </div>
       )}
 

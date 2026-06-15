@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatFCFA } from "@/lib/utils";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
+import { isCpaCampaign, getEchoEarningPerConversion } from "@/lib/campaign-display";
+import CpaIntroModal from "@/components/echo/CpaIntroModal";
 import { useToast } from "@/components/ui/Toast";
 import CampaignDetailModal from "@/components/CampaignDetailModal";
 import { useTranslation } from "@/lib/i18n";
@@ -25,6 +27,7 @@ export default function EchoDashboard() {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   const [showPushPrompt, setShowPushPrompt] = useState(false);
+  const [showCpaIntro, setShowCpaIntro] = useState(false);
   const [clickStats, setClickStats] = useState<{ total: number; valid: number; invalid: number; validity_rate: number } | null>(null);
   const supabase = createClient();
   const { showToast, ToastComponent } = useToast();
@@ -83,6 +86,13 @@ export default function EchoDashboard() {
       return () => clearTimeout(timer);
     }
   }, [user]);
+
+  useEffect(() => {
+    const hasCpa = availableCampaigns.some((c) => isCpaCampaign(c));
+    if (hasCpa && !localStorage.getItem("cpa_intro_seen")) {
+      setShowCpaIntro(true);
+    }
+  }, [availableCampaigns]);
 
   async function acceptCampaign(campaignId: string) {
     setAccepting(campaignId);
@@ -316,6 +326,16 @@ export default function EchoDashboard() {
         />
       )}
 
+      {/* CPA intro modal */}
+      {showCpaIntro && (
+        <CpaIntroModal
+          onDismiss={() => {
+            localStorage.setItem("cpa_intro_seen", "true");
+            setShowCpaIntro(false);
+          }}
+        />
+      )}
+
       {/* Active campaigns strip */}
       {activeLinks.length > 0 && (
         <div className="mb-5">
@@ -375,7 +395,7 @@ export default function EchoDashboard() {
                   </h3>
                   <p className="text-xs text-white/30 mb-3 line-clamp-2">{campaign.description}</p>
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-bold text-[#D35400]">{campaign.cpc} FCFA / {t("common.clicks")}</span>
+                    <span className="text-sm font-bold text-[#D35400]">{isCpaCampaign(campaign) ? `${formatFCFA(getEchoEarningPerConversion(campaign))} ${t("echo.rythmes.perConversion")}` : `${campaign.cpc} FCFA / ${t("common.clicks")}`}</span>
                     <span className="text-xs text-white/40">
                       {formatFCFA(campaign.budget - campaign.spent)} {t("common.remaining")}
                     </span>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { formatFCFA, getTrackingUrl, timeAgo } from "@/lib/utils";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
+import { isCpaCampaign, getEchoEarningPerConversion } from "@/lib/campaign-display";
 import { useToast } from "@/components/ui/Toast";
 import CampaignDetailModal from "@/components/CampaignDetailModal";
 import { useTranslation } from "@/lib/i18n";
@@ -234,8 +235,13 @@ export default function RythmesPage() {
                       {t("echo.rythmes.awarenessHint")}
                     </div>
                   )}
+                  {isCpaCampaign(campaign) && (
+                    <div className="bg-[#1D9E75]/10 border border-[#1D9E75]/20 rounded-lg px-3 py-2 text-xs text-[#5DCAA5] mb-2">
+                      {t("echo.rythmes.cpaHint")}
+                    </div>
+                  )}
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-bold text-[#D35400]">{campaign.cpc} FCFA / {t("common.clicks")}</span>
+                    <span className="text-sm font-bold text-[#D35400]">{isCpaCampaign(campaign) ? `${formatFCFA(getEchoEarningPerConversion(campaign))} ${t("echo.rythmes.perConversion")}` : `${campaign.cpc} FCFA / ${t("common.clicks")}`}</span>
                     <span className="text-xs text-white/40">{formatFCFA(campaign.budget - campaign.spent)} {t("common.remaining")}</span>
                   </div>
                   <div className="h-1.5 bg-white/5 rounded-full overflow-hidden mb-4">
@@ -275,7 +281,8 @@ export default function RythmesPage() {
               const campaign = link.campaigns;
               if (!campaign) return null;
               const isShareable = campaign.status === "active";
-              const earned = Math.floor(link.click_count * campaign.cpc * ECHO_SHARE_PERCENT / 100);
+              const isCpa = isCpaCampaign(campaign);
+              const earned = isCpa ? 0 : Math.floor(link.click_count * campaign.cpc * ECHO_SHARE_PERCENT / 100);
 
               return (
                 <div key={link.id} className="rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-hidden">
@@ -304,7 +311,11 @@ export default function RythmesPage() {
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
                         <span className="font-semibold">{link.click_count}</span>
                       </div>
-                      <span className="font-bold text-[#D35400]">{formatFCFA(earned)} {t("common.earned")}</span>
+                      {isCpa ? (
+                        <span className="font-bold text-[#1D9E75]">{formatFCFA(getEchoEarningPerConversion(campaign))} {t("echo.rythmes.perConversion")}</span>
+                      ) : (
+                        <span className="font-bold text-[#D35400]">{formatFCFA(earned)} {t("common.earned")}</span>
+                      )}
                     </div>
 
                     <div className="flex flex-col gap-2">
@@ -356,7 +367,8 @@ export default function RythmesPage() {
             </div>
           ) : (
             finishedLinks.map((link) => {
-              const earned = Math.floor(link.click_count * (link.campaigns?.cpc || 0) * ECHO_SHARE_PERCENT / 100);
+              const finishedCpa = link.campaigns ? isCpaCampaign(link.campaigns) : false;
+              const earned = finishedCpa ? 0 : Math.floor(link.click_count * (link.campaigns?.cpc || 0) * ECHO_SHARE_PERCENT / 100);
               return (
                 <div key={link.id} className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
                   <div className="flex items-center justify-between mb-1">
@@ -365,7 +377,11 @@ export default function RythmesPage() {
                   </div>
                   <div className="flex items-center gap-3 text-xs">
                     <span className="text-white/40">{link.click_count} {t("echo.rythmes.clicks")}</span>
-                    <span className="font-bold text-[#D35400]">{formatFCFA(earned)}</span>
+                    {finishedCpa ? (
+                      <span className="font-bold text-[#1D9E75]">CPA</span>
+                    ) : (
+                      <span className="font-bold text-[#D35400]">{formatFCFA(earned)}</span>
+                    )}
                   </div>
                 </div>
               );

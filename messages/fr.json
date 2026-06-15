@@ -629,7 +629,16 @@
       "finishedHint": "Tes campagnes terminées apparaitront ici",
       "clicks": "clics",
       "referralBonus": "+150 FCFA",
-      "imageMissing": "Image manquante — contactez le support"
+      "imageMissing": "Image manquante — contactez le support",
+      "cpaHint": "Campagne CPA — Tu gagnes à chaque conversion",
+      "perConversion": "/ conversion",
+      "echoEarning": "Tu gagnes",
+      "cpaIntroTitle": "Nouveau : Campagnes CPA",
+      "cpaIntroBody": "Certaines campagnes te paient maintenant par conversion (achat, inscription...) au lieu du clic. Tu peux gagner plus par action !",
+      "cpaIntroCpc": "CPC = Tu gagnes à chaque clic vérifié",
+      "cpaIntroCpa": "CPA = Tu gagnes quand quelqu'un fait une action (achat, inscription...)",
+      "cpaIntroTip": "Les campagnes CPA paient plus par action, mais les gains dépendent des conversions de ton audience.",
+      "cpaIntroGotIt": "J'ai compris !"
     },
     "status": {
       "active": "Actif",
