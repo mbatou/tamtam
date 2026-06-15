@@ -91,6 +91,27 @@ export async function middleware(request: NextRequest) {
     return mapping[segment] || null;
   }
 
+  // Redirect authenticated users away from landing & login pages
+  if (pathname === "/" || pathname === "/login") {
+    if (user) {
+      const userData = await getUserWithTeam(user.id);
+      if (userData) {
+        if (userData.role === "superadmin") {
+          return NextResponse.redirect(new URL("/superadmin", request.url));
+        }
+        if (userData.role === "admin" && userData.team_position) {
+          return NextResponse.redirect(new URL("/superadmin", request.url));
+        }
+        if (userData.role === "batteur" || userData.role === "admin") {
+          return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+        }
+        if (userData.role === "echo") {
+          return NextResponse.redirect(new URL("/dashboard", request.url));
+        }
+      }
+    }
+  }
+
   // Protect echo routes
   if (pathname.startsWith("/dashboard") || pathname.startsWith("/rythmes") || pathname.startsWith("/earnings") || pathname.startsWith("/profil") || pathname.startsWith("/onboarding")) {
     if (!user) {
@@ -189,6 +210,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/",
+    "/login",
     "/dashboard/:path*",
     "/rythmes/:path*",
     "/earnings/:path*",
