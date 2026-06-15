@@ -2,6 +2,7 @@
 
 import { formatFCFA } from "@/lib/utils";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
+import { isCpaCampaign, getEchoEarningPerConversion } from "@/lib/campaign-display";
 import { useTranslation } from "@/lib/i18n";
 import type { TrackedLinkWithCampaign } from "@/lib/types";
 
@@ -12,8 +13,10 @@ interface CampaignMiniCardProps {
 
 export default function CampaignMiniCard({ link, onClick }: CampaignMiniCardProps) {
   const { t } = useTranslation();
-  const earned = Math.floor(link.click_count * (link.campaigns?.cpc || 0) * ECHO_SHARE_PERCENT / 100);
-  const isActive = link.campaigns?.status === "active";
+  const campaign = link.campaigns;
+  const isCpa = campaign ? isCpaCampaign(campaign) : false;
+  const earned = isCpa ? 0 : Math.floor(link.click_count * (campaign?.cpc || 0) * ECHO_SHARE_PERCENT / 100);
+  const isActive = campaign?.status === "active";
 
   return (
     <div
@@ -32,10 +35,14 @@ export default function CampaignMiniCard({ link, onClick }: CampaignMiniCardProp
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-bold truncate">{link.campaigns?.title}</p>
+        <p className="text-xs font-bold truncate">{campaign?.title}</p>
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-[10px] text-white/40">{link.click_count} {t("echo.rythmes.clicks")}</span>
-          <span className="text-[10px] font-bold text-[#D35400]">{formatFCFA(earned)}</span>
+          {isCpa && campaign ? (
+            <span className="text-[10px] font-bold text-[#1D9E75]">{formatFCFA(getEchoEarningPerConversion(campaign))} / conv.</span>
+          ) : (
+            <span className="text-[10px] font-bold text-[#D35400]">{formatFCFA(earned)}</span>
+          )}
         </div>
       </div>
       <div className={`w-2 h-2 rounded-full shrink-0 ${isActive ? "bg-[#1D9E75]" : "bg-white/20"}`} />
