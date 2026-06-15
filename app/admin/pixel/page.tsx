@@ -62,7 +62,7 @@ export default function PixelDashboardPage() {
       .on("postgres_changes", {
         event: "INSERT", schema: "public", table: "conversions",
         filter: `pixel_id=in.(${pixelIds.join(",")})`,
-      }, (payload) => {
+      }, (payload: { new: Record<string, unknown> }) => {
         const newEvent = payload.new as ConversionEvent;
         setLiveEvents((prev) => [newEvent, ...prev].slice(0, 50));
       })

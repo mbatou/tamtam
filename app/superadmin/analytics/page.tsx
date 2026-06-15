@@ -65,7 +65,7 @@ export default function AnalyticsPage() {
       const dateStr = d.toISOString().split("T")[0];
       const label = d.toLocaleDateString("en-US", { weekday: "short", day: "numeric" });
       const dayClicks = (allClicksRes.data || []).filter(
-        (c) => c.created_at.startsWith(dateStr) && c.is_valid !== false
+        (c: { created_at: string; is_valid?: boolean }) => c.created_at.startsWith(dateStr) && c.is_valid !== false
       ).length;
       days.push({
         date: label,
