@@ -136,9 +136,10 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // Count by event type
+  // Count by event type — only attributed conversions for the funnel
+  const attributedConversions = allConversions.filter((c) => c.campaign_id === campaignId);
   const eventCounts: Record<string, number> = {};
-  for (const c of allConversions) {
+  for (const c of attributedConversions) {
     if (c.event === "test") continue;
     eventCounts[c.event] = (eventCounts[c.event] || 0) + 1;
   }
@@ -183,9 +184,10 @@ export async function GET(request: NextRequest) {
   if (funnel.purchases > 0) costs.cpa_purchase = Math.round(spent / funnel.purchases);
   if (funnel.leads > 0) costs.cpl = Math.round(spent / funnel.leads);
 
-  // Revenue
+  // Revenue — only count attributed conversions for ROI metrics
   const nonTestConversions = allConversions.filter((c) => c.event !== "test");
-  const totalValue = nonTestConversions.reduce((sum, c) => sum + (c.value_amount || 0), 0);
+  const nonTestAttributed = attributedConversions.filter((c) => c.event !== "test");
+  const totalValue = nonTestAttributed.reduce((sum, c) => sum + (c.value_amount || 0), 0);
   const roas = spent > 0 ? Math.round((totalValue / spent) * 100) / 100 : 0;
 
   // Daily aggregation (event names are singular, map keys are plural)
@@ -194,7 +196,7 @@ export async function GET(request: NextRequest) {
     subscription: "subscriptions", purchase: "purchases", lead: "leads",
   };
   const dailyMap = new Map<string, Record<string, number>>();
-  for (const c of nonTestConversions) {
+  for (const c of nonTestAttributed) {
     const date = c.created_at.split("T")[0];
     if (!dailyMap.has(date)) {
       dailyMap.set(date, { clicks: 0, installs: 0, signups: 0, activations: 0, subscriptions: 0, purchases: 0, leads: 0 });
