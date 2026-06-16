@@ -61,13 +61,14 @@ export default function ConversionFunnel({ funnel, rates, animated = true }: Con
     return null;
   }
 
-  const maxCount = stages[0].count || 1;
+  const maxCount = Math.max(...stages.map((s) => s.count), 1);
 
   return (
     <div className="space-y-1">
       {stages.map((stage, i) => {
         const pct = (stage.count / maxCount) * 100;
-        const globalPct = stages[0].count > 0 ? (stage.count / stages[0].count) * 100 : 0;
+        const prevCount = i > 0 ? stages[i - 1].count : 0;
+        const stepPct = prevCount > 0 ? (stage.count / prevCount) * 100 : 0;
         const prevKey = i > 0 ? stages[i - 1].key : null;
         const rateKey = prevKey ? `${prevKey}→${stage.key}` : null;
         const rate = rateKey ? rates[RATE_MAP[rateKey]] : null;
@@ -81,7 +82,7 @@ export default function ConversionFunnel({ funnel, rates, animated = true }: Con
                   <path d="M12 5v14M19 12l-7 7-7-7" />
                 </svg>
                 <span className="text-[11px] text-white/30">
-                  {rate ? `${rate}% convertis` : `${globalPct.toFixed(1)}% du total`}
+                  {rate ? `${rate}% convertis` : `${stepPct.toFixed(1)}% convertis`}
                 </span>
               </div>
             )}
@@ -107,7 +108,7 @@ export default function ConversionFunnel({ funnel, rates, animated = true }: Con
                     </span>
                     {i > 0 && (
                       <span className="text-[10px] font-semibold text-white/50">
-                        {globalPct.toFixed(1)}%
+                        {stepPct.toFixed(1)}%
                       </span>
                     )}
                   </div>

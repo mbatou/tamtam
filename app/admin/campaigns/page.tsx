@@ -677,8 +677,12 @@ export default function AdminCampaignsPage() {
           </div>
           {(c.objective || "traffic") !== "lead_generation" && (
             <div className="rounded-2xl p-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-              <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>CPC</p>
-              <p className="text-xl font-bold font-syne text-white">{formatFCFA(c.cpc)}</p>
+              <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>
+                {(c.pricing_model || "cpc") === "cpa" ? "CPA" : "CPC"}
+              </p>
+              <p className="text-xl font-bold font-syne text-white">
+                {(c.pricing_model || "cpc") === "cpa" ? formatFCFA(c.cpa_amount || 0) : formatFCFA(c.cpc)}
+              </p>
             </div>
           )}
         </div>
@@ -687,8 +691,12 @@ export default function AdminCampaignsPage() {
         {(c.objective || "traffic") === "lead_generation" && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div className="rounded-2xl p-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-              <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>CPC</p>
-              <p className="text-xl font-bold font-syne text-white">{formatFCFA(c.cpc)}</p>
+              <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>
+                {(c.pricing_model || "cpc") === "cpa" ? "CPA" : "CPC"}
+              </p>
+              <p className="text-xl font-bold font-syne text-white">
+                {(c.pricing_model || "cpc") === "cpa" ? formatFCFA(c.cpa_amount || 0) : formatFCFA(c.cpc)}
+              </p>
             </div>
             <div className="rounded-2xl p-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
               <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>CPL</p>
