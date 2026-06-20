@@ -269,11 +269,16 @@ export async function GET(request: NextRequest) {
       .in("campaign_id", activeCampaignIds);
 
     // Group links by campaign
-    const linksByCampaign = new Map<string, typeof allLinks>();
+    const linksByCampaign = new Map<string, NonNullable<typeof allLinks>>();
     for (const link of allLinks || []) {
       const campId = link.campaign_id;
-      if (!linksByCampaign.has(campId)) linksByCampaign.set(campId, []);
-      linksByCampaign.get(campId)!.push(link);
+      if (!campId) continue;
+      const existing = linksByCampaign.get(campId);
+      if (existing) {
+        existing.push(link);
+      } else {
+        linksByCampaign.set(campId, [link]);
+      }
     }
 
     // Compute per-campaign details with parallel click counts
@@ -285,10 +290,12 @@ export async function GET(request: NextRequest) {
         for (const link of links) {
           const echoUser = link.users as unknown as { id: string; name: string; city: string | null } | null;
           if (!echoUser) continue;
-          if (!echoLinkMap.has(link.echo_id)) {
-            echoLinkMap.set(link.echo_id, { user: echoUser, linkIds: [] });
+          const existing = echoLinkMap.get(link.echo_id);
+          if (existing) {
+            existing.linkIds.push(link.id);
+          } else {
+            echoLinkMap.set(link.echo_id, { user: echoUser, linkIds: [link.id] });
           }
-          echoLinkMap.get(link.echo_id)!.linkIds.push(link.id);
         }
 
         // Use Postgres COUNT(*) for accurate campaign-level totals

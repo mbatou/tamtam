@@ -115,10 +115,10 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   const positionBadge = userCtx?.team_position
     ? userCtx.team_position === "coo"
       ? "COO"
-      : userCtx.team_position
+      : String(userCtx.team_position)
           .replace(/_/g, " ")
           .split(" ")
-          .map((w) => w[0]?.toUpperCase())
+          .map((w) => w[0]?.toUpperCase() ?? "")
           .join("")
     : "SA";
 
