@@ -30,11 +30,18 @@ async function notifyEchosNewCampaign(supabase: ReturnType<typeof createServiceC
       page++;
     }
 
-    for (const echo of echos) {
-      const email = emailMap.get(echo.id);
-      if (email) {
-        sendNewCampaignNotification({ to: email, echoName: echo.name, campaignTitle, cpc }).catch(() => {});
-      }
+    // Send emails in batches of 10 to avoid EMFILE
+    const toSend = echos
+      .map((echo) => ({ echo, email: emailMap.get(echo.id) }))
+      .filter((e): e is { echo: typeof echos[number]; email: string } => !!e.email);
+
+    for (let i = 0; i < toSend.length; i += 10) {
+      const batch = toSend.slice(i, i + 10);
+      await Promise.allSettled(
+        batch.map(({ echo, email }) =>
+          sendNewCampaignNotification({ to: email, echoName: echo.name, campaignTitle, cpc })
+        )
+      );
     }
   } catch { /* non-blocking */ }
 }

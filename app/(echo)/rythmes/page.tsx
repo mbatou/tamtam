@@ -128,7 +128,7 @@ export default function RythmesPage() {
   const acceptedIds = new Set(myLinks.map((l) => l.campaign_id));
   const availableCampaigns = campaigns.filter((c) => c.status === "active" && !acceptedIds.has(c.id));
   const myActiveLinks = myLinks.filter((l) => l.campaigns?.status === "active");
-  const finishedLinks = myLinks.filter((l) => l.campaigns?.status !== "active");
+  const finishedLinks = myLinks.filter((l) => l.campaigns && l.campaigns.status !== "active");
 
   const tabs = [
     { key: "available" as const, label: t("echo.rythmes.tabAvailable"), count: availableCampaigns.length },
