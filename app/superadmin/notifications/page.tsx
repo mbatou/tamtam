@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Bell, Send, Ban, Clock, RefreshCw, TrendingUp, Users, ArrowRight } from "lucide-react";
+import { Bell, Send, Ban, Clock, RefreshCw, TrendingUp, Users, ArrowRight, Smartphone } from "lucide-react";
+import SmsTestPanel from "@/components/admin/SmsTestPanel";
 
 interface Stats {
   pending: number;
@@ -53,6 +54,7 @@ export default function NotificationsOverview() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [processResult, setProcessResult] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"push" | "sms">("push");
   const router = useRouter();
 
   const load = useCallback(() => {
@@ -166,6 +168,34 @@ export default function NotificationsOverview() {
         </div>
       </div>
 
+      {/* Tab switcher */}
+      <div className="flex bg-[#111128] rounded-xl p-1 gap-1 w-fit">
+        <button
+          onClick={() => setActiveTab("push")}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+            activeTab === "push"
+              ? "bg-[#D35400] text-white shadow-sm"
+              : "text-white/35 hover:text-white/50"
+          }`}
+        >
+          <Bell size={12} /> Push / Email
+        </button>
+        <button
+          onClick={() => setActiveTab("sms")}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+            activeTab === "sms"
+              ? "bg-[#D35400] text-white shadow-sm"
+              : "text-white/35 hover:text-white/50"
+          }`}
+        >
+          <Smartphone size={12} /> SMS Test
+        </button>
+      </div>
+
+      {activeTab === "sms" ? (
+        <SmsTestPanel />
+      ) : (
+      <>
       {processResult && (
         <div className="px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
           {processResult}
@@ -312,6 +342,8 @@ export default function NotificationsOverview() {
           )}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }
