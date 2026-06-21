@@ -45,6 +45,30 @@ export async function sendTestSms({
 
     const latencyMs = Date.now() - start;
     const rawResponse = await response.text();
+
+    try {
+      const json = JSON.parse(rawResponse);
+      if (json.results && json.results[0]) {
+        const r = json.results[0];
+        const ticket = r.ticket as string | undefined;
+        const smsCount = parseInt(r.smscount || "0");
+        const code = parseInt(r.code || "0");
+
+        if (code === 0 && ticket) {
+          return { success: true, ticket, smsCount, latencyMs, rawResponse };
+        }
+        return {
+          success: false,
+          errorCode: code,
+          error: r.reason || getSmsError(code),
+          latencyMs,
+          rawResponse,
+        };
+      }
+    } catch {
+      // Not JSON — fall through to legacy URLSearchParams parsing
+    }
+
     const parsed = new URLSearchParams(rawResponse);
     const ticket = parsed.get("ticket");
     const smsCount = parseInt(parsed.get("smscount") || "0");
