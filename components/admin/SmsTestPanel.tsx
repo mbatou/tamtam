@@ -52,6 +52,16 @@ interface Balance {
   error?: string;
 }
 
+interface ReengagementResult {
+  success: boolean;
+  total: number;
+  sent: number;
+  failed: number;
+  skipped: number;
+  costEstimateFcfa: number;
+  error?: string;
+}
+
 export default function SmsTestPanel() {
   const [message, setMessage] = useState(TEMPLATES[0].msg);
   const [sender, setSender] = useState("TamTam");
@@ -60,6 +70,10 @@ export default function SmsTestPanel() {
   const [result, setResult] = useState<SmsResult | null>(null);
   const [balance, setBalance] = useState<Balance | null>(null);
   const [logs, setLogs] = useState<SmsLog[]>([]);
+  const [reengLoading, setReengLoading] = useState(false);
+  const [reengDone, setReengDone] = useState(false);
+  const [reengResult, setReengResult] = useState<ReengagementResult | null>(null);
+  const [showReengConfirm, setShowReengConfirm] = useState(false);
 
   useEffect(() => {
     fetchBalance();
@@ -109,8 +123,28 @@ export default function SmsTestPanel() {
       .from("sms_test_logs")
       .select("id, message, status, latency_ms, sent_at, error_message")
       .order("sent_at", { ascending: false })
-      .limit(10);
+      .limit(20);
     setLogs((data as SmsLog[]) || []);
+  }
+
+  async function confirmReengagement() {
+    setShowReengConfirm(false);
+    setReengLoading(true);
+    setReengResult(null);
+    try {
+      const res = await fetch("/api/sms/reengagement", {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json();
+      setReengResult(data);
+      setReengDone(data.success === true);
+      fetchLogs();
+      fetchBalance();
+    } catch {
+      setReengResult({ success: false, total: 0, sent: 0, failed: 0, skipped: 0, costEstimateFcfa: 0, error: "Network error" });
+    }
+    setReengLoading(false);
   }
 
   return (
@@ -344,6 +378,107 @@ export default function SmsTestPanel() {
           </div>
         </div>
       )}
+
+      {/* Re-engagement campaign */}
+      <div className="bg-[rgba(29,158,117,0.06)] border border-[rgba(29,158,117,0.2)] rounded-[14px] p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <p className="text-[13px] font-bold text-white">
+              Campagne Reengagement Dormants
+            </p>
+            <p className="text-[11px] text-white/40 mt-0.5">
+              46 Echos dormants · SMS personnalise par prenom
+            </p>
+          </div>
+          <span className={cn(
+            "text-[10px] px-2 py-0.5 rounded-full",
+            reengDone
+              ? "bg-[rgba(29,158,117,0.12)] text-[#5DCAA5]"
+              : "bg-[rgba(211,84,0,0.12)] text-[#F0997B]"
+          )}>
+            {reengDone ? "Envoye" : "Pret"}
+          </span>
+        </div>
+
+        <div className="bg-[#141420] rounded-[10px] p-3 mb-3 font-mono text-[11px] text-white/50">
+          TamTam: Salut [Prenom]! Une campagne t&apos;attend. 50 FCFA par clic verifie sur Wave. Rejoins: tamma.me/echo/rythmes STOP 36180
+        </div>
+
+        <div className="flex gap-2 text-[11px] text-white/30 mb-3">
+          <span>46 destinataires</span>
+          <span>&middot;</span>
+          <span>~230 FCFA</span>
+          <span>&middot;</span>
+          <span>~10 secondes</span>
+        </div>
+
+        <button
+          onClick={() => setShowReengConfirm(true)}
+          disabled={reengLoading || reengDone}
+          className={cn(
+            "w-full py-3 rounded-[10px] text-[13px] font-bold flex items-center justify-center gap-2 transition",
+            reengDone
+              ? "bg-[rgba(29,158,117,0.2)] text-[#5DCAA5] cursor-not-allowed"
+              : reengLoading
+                ? "bg-[#1D9E75]/50 text-white cursor-wait"
+                : "bg-[#1D9E75] text-white hover:brightness-110"
+          )}
+        >
+          {reengLoading ? (
+            <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Envoi en cours...</>
+          ) : reengDone ? (
+            <>Campagne envoyee — {reengResult?.sent}/{reengResult?.total} SMS livres</>
+          ) : (
+            <>Lancer la campagne SMS reengagement</>
+          )}
+        </button>
+
+        {showReengConfirm && (
+          <div className="mt-3 bg-[rgba(211,84,0,0.08)] border border-[rgba(211,84,0,0.2)] rounded-[10px] p-3">
+            <p className="text-[12px] text-white/70 mb-2">
+              Vous etes sur le point d&apos;envoyer 46 SMS (~230 FCFA).
+              Cette action ne peut pas etre annulee.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={confirmReengagement}
+                className="flex-1 bg-[#D35400] text-white text-[12px] font-bold py-2 rounded-[8px] hover:brightness-110 transition"
+              >
+                Confirmer l&apos;envoi
+              </button>
+              <button
+                onClick={() => setShowReengConfirm(false)}
+                className="flex-1 bg-white/[0.05] text-white/50 text-[12px] py-2 rounded-[8px] hover:bg-white/[0.08] transition"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        )}
+
+        {reengResult && !reengResult.success && reengResult.error && (
+          <div className="mt-3 bg-[rgba(226,75,74,0.06)] border border-[rgba(226,75,74,0.2)] rounded-[10px] p-3">
+            <p className="text-[12px] text-[#F09595]">Erreur: {reengResult.error}</p>
+          </div>
+        )}
+
+        {reengResult && reengResult.success && (
+          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+            <div className="bg-[rgba(29,158,117,0.08)] rounded-[8px] p-2">
+              <p className="text-[16px] font-bold text-[#5DCAA5]">{reengResult.sent}</p>
+              <p className="text-[10px] text-white/30">Envoyes</p>
+            </div>
+            <div className="bg-[rgba(226,75,74,0.06)] rounded-[8px] p-2">
+              <p className="text-[16px] font-bold text-[#F09595]">{reengResult.failed}</p>
+              <p className="text-[10px] text-white/30">Echoues</p>
+            </div>
+            <div className="bg-white/[0.03] rounded-[8px] p-2">
+              <p className="text-[16px] font-bold text-white/50">{reengResult.skipped}</p>
+              <p className="text-[10px] text-white/30">Ignores</p>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Report checklist */}
       <div className="bg-[rgba(211,84,0,0.04)] border border-[rgba(211,84,0,0.12)] rounded-[12px] p-4">
