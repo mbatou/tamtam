@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { verifyWebhookSignature } from "@/lib/wave";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
+import { sendSmsToEcho } from "@/lib/sms/sms-service";
 
 export const dynamic = "force-dynamic";
 
@@ -216,6 +217,15 @@ async function handlePayoutCompleted(
       .update({ status: "sent", completed_at: new Date().toISOString() })
       .eq("id", wavePayout.payout_id);
   }
+
+  // SMS notification — payout bypasses daily cap and quiet hours
+  sendSmsToEcho({
+    echoId: wavePayout.user_id,
+    type: "payout",
+    vars: { amount: wavePayout.amount },
+    bypassDailyCap: true,
+    bypassQuietHours: true,
+  }).catch((err) => console.error("[SMS] Payout SMS failed:", err));
 }
 
 // ---------------------------------------------------------------------------

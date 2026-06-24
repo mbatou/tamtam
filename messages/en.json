@@ -695,6 +695,12 @@
       "pref_campaign_ending": "Campaigns ending soon",
       "pref_streak_danger": "Streak at risk"
     },
+    "sms": {
+      "label": "SMS notifications",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "description": "Receive TamTam SMS (campaigns, payments)"
+    },
     "leaderboard": {
       "eyebrow": "All-time ranking",
       "heroTitle": "Top Échos 🔥",
