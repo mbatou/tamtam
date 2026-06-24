@@ -1,8 +1,13 @@
 -- Fix: Definitive refund_wallet_from_payout RPC
--- Replaces conflicting versions from wave_integration and dual_balance migrations.
--- Accepts 3 params to match the Wave webhook caller.
--- Idempotent: checks wallet_transactions for existing refund before processing.
+-- Drops ALL old overloads, then creates exactly two clean versions.
+-- Run this in Supabase SQL editor to replace the broken functions.
 
+-- 1. Drop all existing overloads
+DROP FUNCTION IF EXISTS refund_wallet_from_payout(uuid, integer, uuid);
+DROP FUNCTION IF EXISTS refund_wallet_from_payout(uuid);
+DROP FUNCTION IF EXISTS refund_wallet_from_payout(uuid, integer);
+
+-- 2. Three-param overload: used by Wave webhook (handlePayoutFailed)
 CREATE OR REPLACE FUNCTION refund_wallet_from_payout(
   p_user_id uuid,
   p_amount integer,
@@ -13,7 +18,6 @@ DECLARE
   v_wave_payout_id uuid;
   v_already_refunded boolean;
 BEGIN
-  -- Find the wave_payout by idempotency_key
   SELECT id, payout_status INTO v_wave_payout_id, v_payout_status
   FROM wave_payouts
   WHERE idempotency_key = p_idempotency_key;
@@ -22,12 +26,11 @@ BEGIN
     RETURN false;
   END IF;
 
-  -- Only refund failed/reversed payouts
   IF v_payout_status NOT IN ('failed', 'reversed') THEN
     RETURN false;
   END IF;
 
-  -- Idempotency: skip if already refunded
+  -- Idempotency: skip if already refunded (source_id is text)
   SELECT EXISTS (
     SELECT 1 FROM wallet_transactions
     WHERE source_id = v_wave_payout_id::text
@@ -39,12 +42,10 @@ BEGIN
     RETURN false;
   END IF;
 
-  -- Restore available_balance (dual-balance model)
   UPDATE users
   SET available_balance = available_balance + p_amount
   WHERE id = p_user_id;
 
-  -- Mark wave_payout as refunded
   UPDATE wave_payouts
   SET payout_status = 'refunded'
   WHERE id = v_wave_payout_id;
@@ -53,7 +54,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Also create a single-param overload for manual refunds by wave_payout ID
+-- 3. Single-param overload: used by superadmin manual refund
 CREATE OR REPLACE FUNCTION refund_wallet_from_payout(
   p_wave_payout_id uuid
 ) RETURNS boolean AS $$
@@ -76,7 +77,6 @@ BEGIN
     RETURN false;
   END IF;
 
-  -- Idempotency
   SELECT EXISTS (
     SELECT 1 FROM wallet_transactions
     WHERE source_id = p_wave_payout_id::text
