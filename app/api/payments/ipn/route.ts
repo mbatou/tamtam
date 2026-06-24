@@ -51,9 +51,13 @@ export async function POST(req: NextRequest) {
 
       if (expectedKey !== api_key_sha256 || expectedSecret !== api_secret_sha256) {
         console.error("IPN: SHA256 verification failed");
-        await logSecurityEvent("ipn_verification_failed", "critical", { ref_command, type: "hmac" }, req.headers.get("x-forwarded-for")?.split(",")[0] || undefined);
+        await logSecurityEvent("ipn_verification_failed", "critical", { ref_command, type: "sha256" }, req.headers.get("x-forwarded-for")?.split(",")[0] || undefined);
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
+    } else {
+      console.error("IPN: No verification credentials provided");
+      await logSecurityEvent("ipn_verification_failed", "critical", { ref_command, type: "missing_credentials" }, req.headers.get("x-forwarded-for")?.split(",")[0] || undefined);
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // ===== PARSE CUSTOM FIELD =====

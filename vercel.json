@@ -1,24 +1,56 @@
 {
   "crons": [
     {
-      "path": "/api/cron/brand-nudge",
-      "schedule": "0 9 * * *"
+      "path": "/api/cron/unlock-earnings",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/financial-snapshot",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/reconciliation",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/process-cpa-pending",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/lead-conversion-flag",
+      "schedule": "0 7 * * *"
     },
     {
       "path": "/api/cron/brand-weekly-summary",
       "schedule": "0 8 * * 1"
     },
     {
-      "path": "/api/cron/echo-weekly-summary",
-      "schedule": "0 10 * * 1"
+      "path": "/api/cron/brand-nudge",
+      "schedule": "0 9 * * *"
     },
     {
-      "path": "/api/cron/unlock-earnings",
-      "schedule": "0 0 * * *"
+      "path": "/api/cron/notify-new-campaign",
+      "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/echo-weekly-summary",
+      "schedule": "0 11 * * 1"
     },
     {
       "path": "/api/cron/push-new-campaigns",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/payout-recovery",
+      "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/smart-notifications",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/push-streak-danger",
+      "schedule": "0 20 * * *"
     }
   ]
 }

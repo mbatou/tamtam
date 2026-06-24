@@ -1,21 +1,34 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import * as Sentry from "@sentry/nextjs";
+import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
 // ---------------------------------------------------------------------------
 // LUP-113: Low Conversion Flag Cron
 // Flags lead generation campaigns with < 2% conversion rate after 50+ clicks.
-// Intended to run daily. Can be triggered manually via GET.
+// Intended to run daily.
 // ---------------------------------------------------------------------------
 
 const MIN_CLICKS_THRESHOLD = 50;
 const LOW_CONVERSION_RATE = 0.02; // 2%
 
-export async function GET() {
-  // Auth: verify cron secret (optional — for Vercel cron or manual trigger)
-  // In production, this would be protected by vercel.json cron config or API key
+function verifyCronSecret(request: NextRequest): boolean {
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader || !process.env.CRON_SECRET) return false;
+  const expected = `Bearer ${process.env.CRON_SECRET}`;
+  if (authHeader.length !== expected.length) return false;
+  return crypto.timingSafeEqual(
+    Buffer.from(authHeader),
+    Buffer.from(expected)
+  );
+}
+
+export async function GET(request: NextRequest) {
+  if (!verifyCronSecret(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   try {
     // Find active lead_generation campaigns with enough traffic
