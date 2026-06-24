@@ -695,6 +695,12 @@
       "pref_campaign_ending": "Campagnes qui expirent",
       "pref_streak_danger": "Série en danger"
     },
+    "sms": {
+      "label": "Notifications SMS",
+      "enabled": "Activées",
+      "disabled": "Désactivées",
+      "description": "Recevoir les SMS de TamTam (campagnes, paiements)"
+    },
     "leaderboard": {
       "eyebrow": "Classement général",
       "heroTitle": "Top Échos 🔥",

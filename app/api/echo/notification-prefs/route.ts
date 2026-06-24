@@ -51,19 +51,39 @@ export async function PUT(request: NextRequest) {
 
   const supabase = createServiceClient();
 
+  // Handle SMS opt-out separately (direct column, not JSONB)
+  if ("sms_optout" in body) {
+    const smsUpdate: Record<string, unknown> = {
+      sms_optout: Boolean(body.sms_optout),
+    };
+    if (body.sms_optout) {
+      smsUpdate.sms_optout_at = body.sms_optout_at || new Date().toISOString();
+    } else {
+      smsUpdate.sms_optout_at = null;
+    }
+    await supabase
+      .from("users")
+      .update(smsUpdate)
+      .eq("id", session.user.id);
+  }
+
   // Merge with existing prefs (brand prefs may also be on this field)
-  const { data: existing } = await supabase
-    .from("users")
-    .select("notification_prefs")
-    .eq("id", session.user.id)
-    .single();
+  if (Object.keys(prefs).length > 0) {
+    const { data: existing } = await supabase
+      .from("users")
+      .select("notification_prefs")
+      .eq("id", session.user.id)
+      .single();
 
-  const merged = { ...(existing?.notification_prefs as Record<string, boolean> || {}), ...prefs };
+    const merged = { ...(existing?.notification_prefs as Record<string, boolean> || {}), ...prefs };
 
-  await supabase
-    .from("users")
-    .update({ notification_prefs: merged })
-    .eq("id", session.user.id);
+    await supabase
+      .from("users")
+      .update({ notification_prefs: merged })
+      .eq("id", session.user.id);
 
-  return NextResponse.json({ success: true, prefs: merged });
+    return NextResponse.json({ success: true, prefs: merged });
+  }
+
+  return NextResponse.json({ success: true });
 }

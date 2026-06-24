@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Bell, Send, Ban, Clock, RefreshCw, TrendingUp, Users, ArrowRight, Smartphone } from "lucide-react";
 import SmsTestPanel from "@/components/admin/SmsTestPanel";
+import SmsDashboard from "@/components/admin/SmsDashboard";
 
 interface Stats {
   pending: number;
@@ -188,12 +189,18 @@ export default function NotificationsOverview() {
               : "text-white/35 hover:text-white/50"
           }`}
         >
-          <Smartphone size={12} /> SMS Test
+          <Smartphone size={12} /> SMS
         </button>
       </div>
 
       {activeTab === "sms" ? (
-        <SmsTestPanel />
+        <div className="flex flex-col gap-6">
+          <SmsDashboard />
+          <div className="border-t border-white/[0.06] pt-4">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-white/25 mb-3">Zone de test (Georges)</p>
+            <SmsTestPanel />
+          </div>
+        </div>
       ) : (
       <>
       {processResult && (

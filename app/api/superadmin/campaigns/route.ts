@@ -5,6 +5,7 @@ import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { unlockCampaignEarnings } from "@/lib/unlock-earnings";
 import { triggerNewCampaign } from "@/lib/notifications/engine";
 import { processNotificationQueue } from "@/lib/notifications/sender";
+import { sendSmsBatch } from "@/lib/sms/sms-service";
 
 export const dynamic = "force-dynamic";
 
@@ -276,7 +277,7 @@ export async function POST(request: NextRequest) {
   // Get current campaign state
   const { data: campaign, error: fetchErr } = await supabase
     .from("campaigns")
-    .select("id, title, status, moderation_status, budget, spent, cpc, batteur_id, objective, setup_fee_paid, setup_fee_amount_fcfa, landing_page_id")
+    .select("id, title, status, moderation_status, budget, spent, cpc, batteur_id, objective, setup_fee_paid, setup_fee_amount_fcfa, landing_page_id, target_cities")
     .eq("id", campaign_id)
     .single();
 
@@ -606,6 +607,14 @@ export async function POST(request: NextRequest) {
         triggerNewCampaign(supabase, campaign_id)
           .then(() => processNotificationQueue(supabase))
           .catch(() => {});
+        // SMS blast to eligible echos
+        sendSmsBatch({
+          type: "new_campaign",
+          campaignId: campaign_id,
+          segment: "all",
+          cityFilter: campaign.target_cities?.length ? campaign.target_cities : undefined,
+          vars: { cpc: campaignFull.cpc || 50 },
+        }).catch((err) => console.error("[SMS] Campaign blast failed:", err));
       }
     } catch { /* non-blocking */ }
   }
