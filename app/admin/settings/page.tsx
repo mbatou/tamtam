@@ -576,7 +576,7 @@ export default function AdminSettingsPage() {
                             <div className="text-[10px] font-dm flex items-center gap-2" style={{ color: "rgba(255,255,255,0.3)" }}>
                               {member.email}
                               <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: rc.bg, color: rc.color }}>{rc.label}</span>
-                              {member.status === "invited" && (
+                              {(member.status === "pending" || member.status === "invited") && (
                                 <span className="inline-flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(211,84,0,0.1)", color: "#D35400" }}>
                                   <span className="w-1 h-1 rounded-full" style={{ background: "#D35400" }} />
                                   {t("admin.settings.inviteSent")}
