@@ -102,10 +102,9 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // Refund via atomic RPC
+        // Refund via atomic RPC (single-param overload by wave_payout ID)
         const { data: refunded } = await supabase.rpc("refund_wallet_from_payout", {
-          p_user_id: wavePayout.user_id,
-          p_amount: wavePayout.amount,
+          p_wave_payout_id: subjectId,
         });
 
         if (!refunded) {
