@@ -1,13 +1,47 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { Webhook } from "svix";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const body = await request.json();
+  const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
 
-  const event = body.type;
-  const resendId = body.data?.email_id;
+  const body = await request.text();
+
+  if (webhookSecret) {
+    const svixId = request.headers.get("svix-id");
+    const svixTimestamp = request.headers.get("svix-timestamp");
+    const svixSignature = request.headers.get("svix-signature");
+
+    if (!svixId || !svixTimestamp || !svixSignature) {
+      return NextResponse.json({ error: "Missing signature headers" }, { status: 400 });
+    }
+
+    try {
+      const wh = new Webhook(webhookSecret);
+      wh.verify(body, {
+        "svix-id": svixId,
+        "svix-timestamp": svixTimestamp,
+        "svix-signature": svixSignature,
+      });
+    } catch {
+      console.error("[Resend] Webhook signature verification failed");
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+  } else {
+    console.warn("[Resend] RESEND_WEBHOOK_SECRET not set — skipping signature verification");
+  }
+
+  let parsed: { type?: string; data?: { email_id?: string } };
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const event = parsed.type;
+  const resendId = parsed.data?.email_id;
 
   if (!resendId) return NextResponse.json({ ok: true });
 
