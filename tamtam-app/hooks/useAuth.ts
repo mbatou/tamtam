@@ -21,28 +21,35 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
 
   const fetchProfile = useCallback(async (userId: string) => {
-    const { data } = await supabase
-      .from('users')
-      .select(`
-        id, name, role, balance, available_balance,
-        pending_balance, total_valid_clicks, total_earned,
-        city, phone
-      `)
-      .eq('id', userId)
-      .single()
+    try {
+      const { data } = await supabase
+        .from('users')
+        .select(`
+          id, name, role, balance, available_balance,
+          pending_balance, total_valid_clicks, total_earned,
+          city, phone
+        `)
+        .eq('id', userId)
+        .single()
 
-    setProfile(data)
+      setProfile(data)
+    } catch {}
     setLoading(false)
   }, [])
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session: s } }: { data: { session: Session | null } }) => {
-      setSession(s)
-      if (s?.user) fetchProfile(s.user.id)
-      else setLoading(false)
-    })
+    supabase.auth
+      .getSession()
+      .then(({ data: { session: s } }) => {
+        setSession(s)
+        if (s?.user) fetchProfile(s.user.id)
+        else setLoading(false)
+      })
+      .catch(() => setLoading(false))
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
       (_event: string, s: Session | null) => {
         setSession(s)
         if (s?.user) fetchProfile(s.user.id)
