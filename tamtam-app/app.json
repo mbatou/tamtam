@@ -43,6 +43,12 @@
     "scheme": "tamtam",
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b30b7849-6ec1-4bb1-ab92-1b9b450f2a42"
+      }
+    },
+    "owner": "tamtamglobal"
   }
 }
