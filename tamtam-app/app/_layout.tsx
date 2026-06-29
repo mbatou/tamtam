@@ -14,7 +14,6 @@ import type { Session } from '@supabase/supabase-js'
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false)
-  const [authed, setAuthed] = useState(false)
   const [loaded] = useFonts({
     DMSans_400Regular,
     DMSans_600SemiBold,
@@ -22,16 +21,14 @@ export default function RootLayout() {
   })
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session: s } }: { data: { session: Session | null } }) => {
-      setAuthed(!!s)
-      setReady(true)
-    })
+    supabase.auth
+      .getSession()
+      .then(() => setReady(true))
+      .catch(() => setReady(true))
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event: string, s: Session | null) => {
-      setAuthed(!!s)
-    })
+    } = supabase.auth.onAuthStateChange(() => {})
 
     return () => subscription.unsubscribe()
   }, [])

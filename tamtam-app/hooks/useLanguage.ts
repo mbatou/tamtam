@@ -6,14 +6,18 @@ export function useLanguage() {
   const [lang, setLangState] = useState<Lang>('fr')
 
   useEffect(() => {
-    SecureStore.getItemAsync('app_lang').then(stored => {
-      if (stored === 'fr' || stored === 'en') setLangState(stored)
-    })
+    SecureStore.getItemAsync('app_lang')
+      .then(stored => {
+        if (stored === 'fr' || stored === 'en') setLangState(stored)
+      })
+      .catch(() => {})
   }, [])
 
   const setLang = useCallback(async (newLang: Lang) => {
     setLangState(newLang)
-    await SecureStore.setItemAsync('app_lang', newLang)
+    try {
+      await SecureStore.setItemAsync('app_lang', newLang)
+    } catch {}
   }, [])
 
   return { t: translations[lang], lang, setLang }
