@@ -149,7 +149,7 @@ export default function CampaignDetailScreen() {
         {shareUrl ? (
           <View
             style={{
-              backgroundColor: Colors.bgCard,
+              backgroundColor: Colors.night2,
               borderRadius: 12,
               padding: 14,
               borderWidth: 1,
@@ -173,7 +173,7 @@ export default function CampaignDetailScreen() {
         <TouchableOpacity
           onPress={handleCopy}
           style={{
-            backgroundColor: copied ? Colors.teal : Colors.bgCard,
+            backgroundColor: copied ? Colors.teal : Colors.night2,
             borderRadius: 12,
             padding: 16,
             alignItems: 'center',
@@ -221,7 +221,7 @@ export default function CampaignDetailScreen() {
               color: '#fff',
             }}
           >
-            {t.shareToWhatsApp}
+            {t.shareOnWhatsApp}
           </Text>
         </TouchableOpacity>
       </ScrollView>

@@ -11,51 +11,51 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: Colors.bgCard,
+          backgroundColor: Colors.night2,
           borderTopColor: Colors.border,
           borderTopWidth: 1,
           height: 60,
           paddingBottom: 8,
         },
-        tabBarActiveTintColor: Colors.orange,
+        tabBarActiveTintColor: Colors.teal,
         tabBarInactiveTintColor: Colors.textMuted,
         tabBarLabelStyle: {
-          fontFamily: 'DMSans_400Regular',
-          fontSize: 11,
+          fontFamily: 'DMSans_600SemiBold',
+          fontSize: 10,
         },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: t.campaigns,
+          title: t.navPulse,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="grid-outline" size={size} color={color} />
+            <Ionicons name="pulse-outline" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="dashboard"
+        name="rythmes"
         options={{
-          title: t.dashboard,
+          title: t.navRythmes,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="bar-chart-outline" size={size} color={color} />
+            <Ionicons name="play-circle-outline" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="notifications"
+        name="earnings"
         options={{
-          title: t.notifications,
+          title: t.navEarnings,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="notifications-outline" size={size} color={color} />
+            <Ionicons name="cash-outline" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: t.profile,
+          title: t.navProfile,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           ),
