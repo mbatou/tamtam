@@ -15,7 +15,7 @@ import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
 import { useLanguage } from '@/hooks/useLanguage'
 
 export default function LoginScreen() {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -62,7 +62,7 @@ export default function LoginScreen() {
               letterSpacing: -1,
             }}
           >
-            TAMTAM
+            Tamtam
           </Text>
           <Text
             style={{
@@ -72,7 +72,7 @@ export default function LoginScreen() {
               marginTop: 4,
             }}
           >
-            Gagne en partageant
+            {lang === 'fr' ? 'Gagne en partageant' : 'Earn by sharing'}
           </Text>
         </View>
 
@@ -111,7 +111,7 @@ export default function LoginScreen() {
           keyboardType="email-address"
           autoCapitalize="none"
           style={{
-            backgroundColor: Colors.bgCard,
+            backgroundColor: Colors.night2,
             borderWidth: 1,
             borderColor: Colors.border,
             borderRadius: 12,
@@ -130,7 +130,7 @@ export default function LoginScreen() {
           placeholderTextColor={Colors.textMuted}
           secureTextEntry
           style={{
-            backgroundColor: Colors.bgCard,
+            backgroundColor: Colors.night2,
             borderWidth: 1,
             borderColor: Colors.border,
             borderRadius: 12,

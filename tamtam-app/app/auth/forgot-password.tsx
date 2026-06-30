@@ -104,7 +104,7 @@ export default function ForgotPasswordScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               style={{
-                backgroundColor: Colors.bgCard,
+                backgroundColor: Colors.night2,
                 borderWidth: 1,
                 borderColor: Colors.border,
                 borderRadius: 12,

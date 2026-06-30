@@ -1,11 +1,4 @@
-import {
-  View,
-  Text,
-  SafeAreaView,
-  ScrollView,
-  TouchableOpacity,
-  Switch,
-} from 'react-native'
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Switch } from 'react-native'
 import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
@@ -23,209 +16,167 @@ export default function ProfileScreen() {
     router.replace('/auth/login')
   }
 
+  const formatFCFA = (n: number) => n.toLocaleString('fr-FR') + ' F'
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
-      <ScrollView contentContainerStyle={{ padding: 20 }}>
-        <Text
-          style={{
-            fontFamily: 'Syne_800ExtraBold',
-            fontSize: 24,
-            color: Colors.textPrimary,
-            letterSpacing: -0.5,
-            marginBottom: 24,
-          }}
-        >
-          {t.profile}
+      <ScrollView contentContainerStyle={{ padding: 16, paddingTop: 20 }}>
+        <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 20, color: Colors.textPrimary, marginBottom: 20 }}>
+          {t.profileTitle}
         </Text>
 
-        <View
-          style={{
-            backgroundColor: Colors.bgCard,
-            borderRadius: 16,
-            padding: 20,
-            borderWidth: 1,
-            borderColor: Colors.border,
-            marginBottom: 24,
-          }}
-        >
-          <View
-            style={{
-              width: 52,
-              height: 52,
-              backgroundColor: Colors.orangeMuted,
-              borderRadius: 26,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: 12,
-            }}
-          >
-            <Text
-              style={{
-                fontFamily: 'Syne_800ExtraBold',
-                fontSize: 20,
-                color: Colors.orange,
-              }}
-            >
-              {profile?.name?.charAt(0).toUpperCase() || '?'}
-            </Text>
+        {/* Profile card — teal avatar */}
+        <View style={{
+          borderRadius: 12, padding: 20, marginBottom: 20,
+          backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder,
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+            <View style={{
+              width: 56, height: 56, borderRadius: 28,
+              backgroundColor: Colors.tealMuted, borderWidth: 1, borderColor: Colors.teal + '4D',
+              alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 20, color: Colors.teal }}>
+                {profile?.name?.charAt(0)?.toUpperCase() || '?'}
+              </Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 18, color: Colors.textPrimary }}>
+                {profile?.name}
+              </Text>
+              {profile?.phone && (
+                <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.textMuted, marginTop: 2 }}>
+                  {profile.phone}
+                </Text>
+              )}
+              {profile?.city && (
+                <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.textFaint, marginTop: 1 }}>
+                  {profile.city}
+                </Text>
+              )}
+            </View>
           </View>
-          <Text
-            style={{
-              fontFamily: 'Syne_800ExtraBold',
-              fontSize: 18,
-              color: Colors.textPrimary,
-            }}
-          >
-            {profile?.name}
-          </Text>
-          {profile?.city ? (
-            <Text
-              style={{
-                fontFamily: 'DMSans_400Regular',
-                fontSize: 13,
-                color: Colors.textMuted,
-                marginTop: 2,
-              }}
-            >
-              {profile.city}
-            </Text>
-          ) : null}
         </View>
 
-        <Text
-          style={{
-            fontFamily: 'DMSans_600SemiBold',
-            fontSize: 12,
-            color: Colors.textMuted,
-            textTransform: 'uppercase',
-            letterSpacing: 0.8,
-            marginBottom: 8,
-          }}
-        >
+        {/* Stats — 3 columns */}
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+          <View style={{ flex: 1, borderRadius: 12, padding: 12, alignItems: 'center', backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder }}>
+            <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 18, color: Colors.textPrimary }}>
+              {(profile?.total_valid_clicks || 0).toLocaleString('fr-FR')}
+            </Text>
+            <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 9, color: Colors.textMuted }}>{t.validClicks}</Text>
+          </View>
+          <View style={{ flex: 1, borderRadius: 12, padding: 12, alignItems: 'center', backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder }}>
+            <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 18, color: Colors.orange }}>
+              {formatFCFA(profile?.total_earned || 0)}
+            </Text>
+            <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 9, color: Colors.textMuted }}>{t.earned}</Text>
+          </View>
+          <View style={{ flex: 1, borderRadius: 12, padding: 12, alignItems: 'center', backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder }}>
+            <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 18, color: Colors.orange }}>
+              {formatFCFA(profile?.available_balance || 0)}
+            </Text>
+            <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 9, color: Colors.textMuted }}>{t.balance}</Text>
+          </View>
+        </View>
+
+        {/* Details card */}
+        <View style={{
+          borderRadius: 12, overflow: 'hidden', marginBottom: 20,
+          backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder,
+        }}>
+          {[
+            { label: t.balance, value: formatFCFA(profile?.available_balance || 0), color: Colors.orange },
+            { label: t.totalEarned, value: formatFCFA(profile?.total_earned || 0), color: Colors.orange },
+            { label: t.paymentMethod, value: profile?.phone ? t.wave : '—', color: Colors.textPrimary },
+          ].map((row, i) => (
+            <View key={i} style={{
+              flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12,
+              borderBottomWidth: i < 2 ? 1 : 0, borderBottomColor: 'rgba(255,255,255,0.05)',
+            }}>
+              <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.textMuted }}>{row.label}</Text>
+              <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: row.color }}>{row.value}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Language selector */}
+        <Text style={{
+          fontFamily: 'DMSans_600SemiBold', fontSize: 10, color: Colors.textMuted,
+          textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8,
+        }}>
           {t.language}
         </Text>
-
-        <View
-          style={{
-            backgroundColor: Colors.bgCard,
-            borderRadius: 14,
-            overflow: 'hidden',
-            borderWidth: 1,
-            borderColor: Colors.border,
-            marginBottom: 16,
-          }}
-        >
-          {(
-            [
-              { code: 'fr' as const, label: t.french },
-              { code: 'en' as const, label: t.english },
-            ] as const
-          ).map((option, i) => (
+        <View style={{
+          borderRadius: 12, overflow: 'hidden', marginBottom: 16,
+          backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder,
+        }}>
+          {([
+            { code: 'fr' as const, label: t.french },
+            { code: 'en' as const, label: t.english },
+          ]).map((option, i) => (
             <TouchableOpacity
               key={option.code}
               onPress={() => setLang(option.code)}
               style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: 16,
-                borderBottomWidth: i === 0 ? 1 : 0,
-                borderBottomColor: Colors.border,
-                backgroundColor:
-                  lang === option.code ? Colors.orangeMuted : 'transparent',
+                flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                padding: 16, borderBottomWidth: i === 0 ? 1 : 0,
+                borderBottomColor: 'rgba(255,255,255,0.05)',
+                backgroundColor: lang === option.code ? Colors.tealMuted : 'transparent',
               }}
             >
-              <Text
-                style={{
-                  fontFamily: 'DMSans_400Regular',
-                  fontSize: 15,
-                  color:
-                    lang === option.code
-                      ? Colors.orange
-                      : Colors.textSecondary,
-                }}
-              >
+              <Text style={{
+                fontFamily: 'DMSans_400Regular', fontSize: 15,
+                color: lang === option.code ? Colors.teal : Colors.textSecondary,
+              }}>
                 {option.label}
               </Text>
-              {lang === option.code ? (
-                <Text style={{ color: Colors.orange, fontSize: 16 }}>✓</Text>
-              ) : null}
+              {lang === option.code && (
+                <Text style={{ color: Colors.teal, fontSize: 16 }}>✓</Text>
+              )}
             </TouchableOpacity>
           ))}
         </View>
 
-        <Text
-          style={{
-            fontFamily: 'DMSans_600SemiBold',
-            fontSize: 12,
-            color: Colors.textMuted,
-            textTransform: 'uppercase',
-            letterSpacing: 0.8,
-            marginBottom: 8,
-          }}
-        >
-          {t.settings}
+        {/* Notifications */}
+        <Text style={{
+          fontFamily: 'DMSans_600SemiBold', fontSize: 10, color: Colors.textMuted,
+          textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8,
+        }}>
+          {t.notifications}
         </Text>
-
-        <View
-          style={{
-            backgroundColor: Colors.bgCard,
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: Colors.border,
-            padding: 16,
-            marginBottom: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <Text
-            style={{
-              fontFamily: 'DMSans_400Regular',
-              fontSize: 15,
-              color: Colors.textSecondary,
-            }}
-          >
+        <View style={{
+          borderRadius: 12, padding: 16, marginBottom: 16,
+          backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder,
+          flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 15, color: Colors.textSecondary }}>
             {t.pushNotifications}
           </Text>
           <Switch
             value={pushEnabled}
             onValueChange={setPushEnabled}
-            trackColor={{ false: Colors.border, true: Colors.teal }}
+            trackColor={{ false: 'rgba(255,255,255,0.10)', true: Colors.teal }}
             thumbColor="#fff"
           />
         </View>
 
-        <Text
-          style={{
-            fontFamily: 'DMSans_400Regular',
-            fontSize: 12,
-            color: Colors.textFaint,
-            textAlign: 'center',
-            marginBottom: 24,
-          }}
-        >
+        <Text style={{
+          fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.textGhost,
+          textAlign: 'center', marginBottom: 24,
+        }}>
           {t.version} {Constants.expoConfig?.version || '1.0.0'}
         </Text>
 
+        {/* Sign out */}
         <TouchableOpacity
           onPress={handleSignOut}
           style={{
-            borderWidth: 1,
-            borderColor: Colors.border,
-            borderRadius: 14,
-            padding: 16,
-            alignItems: 'center',
+            borderWidth: 1, borderColor: 'rgba(239,68,68,0.20)',
+            borderRadius: 12, paddingVertical: 14, alignItems: 'center',
           }}
         >
-          <Text
-            style={{
-              fontFamily: 'DMSans_600SemiBold',
-              fontSize: 15,
-              color: Colors.error,
-            }}
-          >
+          <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.error }}>
             {t.signOut}
           </Text>
         </TouchableOpacity>

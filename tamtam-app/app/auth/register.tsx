@@ -114,7 +114,7 @@ export default function RegisterScreen() {
           placeholderTextColor={Colors.textMuted}
           autoCapitalize="words"
           style={{
-            backgroundColor: Colors.bgCard,
+            backgroundColor: Colors.night2,
             borderWidth: 1,
             borderColor: Colors.border,
             borderRadius: 12,
@@ -134,7 +134,7 @@ export default function RegisterScreen() {
           keyboardType="email-address"
           autoCapitalize="none"
           style={{
-            backgroundColor: Colors.bgCard,
+            backgroundColor: Colors.night2,
             borderWidth: 1,
             borderColor: Colors.border,
             borderRadius: 12,
@@ -153,7 +153,7 @@ export default function RegisterScreen() {
           placeholderTextColor={Colors.textMuted}
           secureTextEntry
           style={{
-            backgroundColor: Colors.bgCard,
+            backgroundColor: Colors.night2,
             borderWidth: 1,
             borderColor: Colors.border,
             borderRadius: 12,
