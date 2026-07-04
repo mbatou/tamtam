@@ -23,10 +23,10 @@ function getStartOfMonth(): string {
 export async function GET(request: NextRequest) {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
 
   // Find current user's rank (1-indexed)
   const userIndex = results.findIndex(
-    (r: { echo_id: string }) => r.echo_id === session.user.id,
+    (r: { echo_id: string }) => r.echo_id === authUser.id,
   );
   const userRank = userIndex >= 0 ? userIndex + 1 : null;
 

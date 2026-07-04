@@ -8,13 +8,13 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
 
   const { data: currentUser } = await supabase
-    .from("users").select("role").eq("id", session.user.id).single();
+    .from("users").select("role").eq("id", authUser.id).single();
   if (!currentUser || currentUser.role !== "superadmin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
           .update({
             resolved: true,
             resolved_at: new Date().toISOString(),
-            resolved_by: session.user.id,
+            resolved_by: authUser.id,
             resolution_note: body.note || "Manually resolved",
           })
           .eq("id", issueId);
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
             .update({
               resolved: true,
               resolved_at: new Date().toISOString(),
-              resolved_by: session.user.id,
+              resolved_by: authUser.id,
               resolution_note: `Auto-healed: ${result.action}`,
             })
             .eq("id", issueId);
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
           description: `Refund for failed payout (manual) — ${wavePayout.amount} FCFA`,
           sourceType: "wave_payout",
           sourceId: subjectId,
-          createdBy: session.user.id,
+          createdBy: authUser.id,
         });
 
         // Mark issue resolved if provided
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
             .update({
               resolved: true,
               resolved_at: new Date().toISOString(),
-              resolved_by: session.user.id,
+              resolved_by: authUser.id,
               resolution_note: "Refunded manually",
             })
             .eq("id", issueId);
@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
           description: `Manual credit (reconciliation) — ${amount} FCFA`,
           sourceType: body.sourceType || "reconciliation",
           sourceId: body.sourceId || null,
-          createdBy: session.user.id,
+          createdBy: authUser.id,
         });
 
         if (issueId) {
@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
             .update({
               resolved: true,
               resolved_at: new Date().toISOString(),
-              resolved_by: session.user.id,
+              resolved_by: authUser.id,
               resolution_note: `Manual credit: ${amount} FCFA`,
             })
             .eq("id", issueId);

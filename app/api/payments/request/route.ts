@@ -12,15 +12,15 @@ export async function POST(req: NextRequest) {
   try {
     const authClient = createClient();
     const {
-      data: { session },
-    } = await authClient.auth.getSession();
+      data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-    if (!session) {
+    if (!authUser) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
     // Rate limit: 5 payment requests per hour
-    const { allowed } = rateLimit(`payment:${session.user.id}`, 5, 3600000);
+    const { allowed } = rateLimit(`payment:${authUser.id}`, 5, 3600000);
     if (!allowed) {
       return NextResponse.json(
         { error: "Trop de requêtes. Réessaie plus tard." },
@@ -41,13 +41,13 @@ export async function POST(req: NextRequest) {
     const supabase = createServiceClient();
 
     // Generate unique reference
-    const refCommand = `TAMTAM_WALLET_${session.user.id.slice(0, 8)}_${Date.now()}`;
+    const refCommand = `TAMTAM_WALLET_${authUser.id.slice(0, 8)}_${Date.now()}`;
 
     // Create payment record
     const { data: paymentRecord, error: insertError } = await supabase
       .from("payments")
       .insert({
-        user_id: session.user.id,
+        user_id: authUser.id,
         amount: amount,
         ref_command: refCommand,
         status: "pending",
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     const { data: profile } = await supabase
       .from("users")
       .select("name")
-      .eq("id", session.user.id)
+      .eq("id", authUser.id)
       .single();
 
     sendRechargeRequestNotification({
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
 
         // Track the checkout session (non-blocking — don't let DB errors prevent redirect)
         supabase.from("wave_checkouts").insert({
-          user_id: session.user.id,
+          user_id: authUser.id,
           payment_id: paymentRecord.id,
           wave_checkout_id: checkoutSession.id,
           amount,

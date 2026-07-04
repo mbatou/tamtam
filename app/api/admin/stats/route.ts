@@ -9,22 +9,22 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   const supabase = createServiceClient();
 
   // Verify the user is a brand (batteur)
-  const { data: currentUser } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  const { data: currentUser } = await supabase.from("users").select("role").eq("id", authUser.id).single();
   if (!currentUser || !["batteur", "admin", "superadmin"].includes(currentUser.role)) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 
-  const batteurId = await getEffectiveBrandId(supabase, session.user.id);
+  const batteurId = await getEffectiveBrandId(supabase, authUser.id);
 
   // Get batteur's wallet balance
   const { data: batteurUser } = await supabase
@@ -67,11 +67,17 @@ export async function GET(request: NextRequest) {
   // Fetch echo names (batched to avoid PostgREST URL-length silent failures)
   let topEchos: { id: string; name: string; clicks: number; earned: number }[] = [];
   if (echoIds.length > 0) {
-    const echoUsers = await fetchUsersByIds<{ id: string; name: string }>(supabase, echoIds, "id, name");
+    const echoUsers = await fetchUsersByIds<{ id: string; name: string; deleted_at: string | null }>(
+      supabase,
+      echoIds,
+      "id, name, deleted_at"
+    );
 
-    const nameMap = new Map(echoUsers.map((u) => [u.id, u.name]));
+    // Exclude soft-deleted echos from the leaderboard
+    const nameMap = new Map(echoUsers.filter((u) => !u.deleted_at).map((u) => [u.id, u.name]));
     topEchos = Object.values(echoEarnings)
-      .map((e) => ({ ...e, name: nameMap.get(e.id) || "Inconnu" }))
+      .filter((e) => nameMap.has(e.id))
+      .map((e) => ({ ...e, name: nameMap.get(e.id)! }))
       .sort((a, b) => b.earned - a.earned)
       .slice(0, 10);
   }

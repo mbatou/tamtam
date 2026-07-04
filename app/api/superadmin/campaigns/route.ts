@@ -6,6 +6,7 @@ import { unlockCampaignEarnings } from "@/lib/unlock-earnings";
 import { triggerNewCampaign } from "@/lib/notifications/engine";
 import { processNotificationQueue } from "@/lib/notifications/sender";
 import { sendSmsBatch } from "@/lib/sms/sms-service";
+import { requireAuth } from "@/lib/api/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -48,13 +49,11 @@ async function notifyEchosNewCampaign(supabase: ReturnType<typeof createServiceC
 }
 
 async function requireSuperadmin() {
-  const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return null;
-  const supabase = createServiceClient();
-  const { data: user } = await supabase.from("users").select("role").eq("id", session.user.id).single();
-  if (!user || user.role !== "superadmin") return null;
-  return { session, supabase };
+  try {
+    return await requireAuth(["superadmin"]);
+  } catch {
+    return null;
+  }
 }
 
 export async function GET() {
@@ -116,7 +115,7 @@ export async function POST(request: NextRequest) {
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = auth.supabase;
-  const session = auth.session;
+  const authUser = auth.authUser;
   const body = await request.json();
   const { action } = body;
 
@@ -155,7 +154,7 @@ export async function POST(request: NextRequest) {
       type: "campaign_budget_debit",
       description: `Campaign created by admin: ${title}`,
       sourceType: "campaign",
-      createdBy: session.user.id,
+      createdBy: authUser.id,
     });
 
     // Create campaign pre-approved
@@ -171,7 +170,7 @@ export async function POST(request: NextRequest) {
         spent: 0,
         status: "active",
         moderation_status: "approved",
-        moderated_by: session.user.id,
+        moderated_by: authUser.id,
         moderated_at: new Date().toISOString(),
         objective: objective || "traffic",
       })
@@ -182,7 +181,7 @@ export async function POST(request: NextRequest) {
 
     try {
       await supabase.from("admin_activity_log").insert({
-        admin_id: session.user.id,
+        admin_id: authUser.id,
         action: "campaign_create",
         target_type: "campaign",
         target_id: campaign.id,
@@ -286,7 +285,7 @@ export async function POST(request: NextRequest) {
   }
 
   const updates: Record<string, unknown> = {
-    moderated_by: session.user.id,
+    moderated_by: authUser.id,
     moderated_at: new Date().toISOString(),
   };
 
@@ -329,7 +328,7 @@ export async function POST(request: NextRequest) {
           description: `Approbation campagne par admin`,
           sourceId: campaign_id,
           sourceType: "campaign",
-          createdBy: session.user.id,
+          createdBy: authUser.id,
         });
       }
 
@@ -387,7 +386,7 @@ export async function POST(request: NextRequest) {
               description: `Refund for rejected campaign by admin`,
               sourceId: campaign_id,
               sourceType: "campaign",
-              createdBy: session.user.id,
+              createdBy: authUser.id,
             });
           }
         }
@@ -419,7 +418,7 @@ export async function POST(request: NextRequest) {
             description: `Remboursement frais landing page (campagne rejetee)`,
             sourceId: campaign_id,
             sourceType: "campaign_setup_fee",
-            createdBy: session.user.id,
+            createdBy: authUser.id,
           });
         }
       }
@@ -480,7 +479,7 @@ export async function POST(request: NextRequest) {
             description: `Refund for stopped campaign: ${campaign.title || campaign.id} (${stopRemaining} FCFA remaining)`,
             sourceId: campaign_id,
             sourceType: "campaign",
-            createdBy: session.user.id,
+            createdBy: authUser.id,
           });
         }
       }
@@ -502,7 +501,7 @@ export async function POST(request: NextRequest) {
   // Log action
   try {
     await supabase.from("admin_activity_log").insert({
-      admin_id: session.user.id,
+      admin_id: authUser.id,
       action: `campaign_${action}`,
       target_type: "campaign",
       target_id: campaign_id,

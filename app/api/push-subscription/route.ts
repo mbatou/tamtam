@@ -6,10 +6,10 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
   const { error } = await supabase.from("push_subscriptions").upsert(
     {
-      user_id: session.user.id,
+      user_id: authUser.id,
       subscription,
     },
     { onConflict: "user_id,subscription" }
@@ -39,10 +39,10 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -51,7 +51,7 @@ export async function DELETE(request: NextRequest) {
   const { error } = await supabase
     .from("push_subscriptions")
     .delete()
-    .eq("user_id", session.user.id);
+    .eq("user_id", authUser.id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

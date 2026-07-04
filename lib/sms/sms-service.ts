@@ -40,6 +40,38 @@ function isToday(dateStr: string | null): boolean {
   );
 }
 
+export async function checkMtargetBalance(): Promise<{
+  amount?: string | null;
+  currency?: string | null;
+  raw?: string;
+  error?: string;
+}> {
+  const params = new URLSearchParams({
+    username: process.env.MTARGET_USERNAME!,
+    password: process.env.MTARGET_PASSWORD!,
+  });
+
+  try {
+    const res = await fetch(
+      `${process.env.MTARGET_API_URL || "https://api-public.mtarget.fr"}/balance`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: params.toString(),
+      }
+    );
+    const text = await res.text();
+    const parsed = new URLSearchParams(text);
+    return {
+      amount: parsed.get("amount"),
+      currency: parsed.get("currency"),
+      raw: text,
+    };
+  } catch (err: unknown) {
+    return { error: err instanceof Error ? err.message : "Unknown error" };
+  }
+}
+
 export async function sendSms({
   phone,
   message,

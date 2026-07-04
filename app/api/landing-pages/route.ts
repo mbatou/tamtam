@@ -18,9 +18,9 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
+  const { data: { user: authUser } } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorise" }, { status: 401 });
   }
 
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
   const isDraft = body.save_as_draft === true;
 
   const supabase = createServiceClient();
-  const brandId = await getEffectiveBrandId(supabase, session.user.id);
+  const brandId = await getEffectiveBrandId(supabase, authUser.id);
 
   // Draft mode: relaxed validation, skip AI generation and landing page
   if (isDraft) {
@@ -304,14 +304,14 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
+  const { data: { user: authUser } } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorise" }, { status: 401 });
   }
 
   const supabase = createServiceClient();
-  const brandId = await getEffectiveBrandId(supabase, session.user.id);
+  const brandId = await getEffectiveBrandId(supabase, authUser.id);
 
   const { data, error } = await supabase
     .from("landing_pages")
@@ -333,9 +333,9 @@ export async function GET() {
 
 export async function PATCH(request: NextRequest) {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
+  const { data: { user: authUser } } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorise" }, { status: 401 });
   }
 
@@ -347,7 +347,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   const supabase = createServiceClient();
-  const brandId = await getEffectiveBrandId(supabase, session.user.id);
+  const brandId = await getEffectiveBrandId(supabase, authUser.id);
 
   const { data: existing } = await supabase
     .from("landing_pages")

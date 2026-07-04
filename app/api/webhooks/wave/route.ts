@@ -12,17 +12,22 @@ export async function POST(request: NextRequest) {
   // Wave sends signature in "Wave-Signature" header with format "t=timestamp,v1=hmac"
   const signature = request.headers.get("wave-signature") || "";
 
+  // Fail-closed: never accept unsigned webhooks in production.
+  const hasSigningSecret = Boolean(process.env.WAVE_WEBHOOK_SECRET || process.env.WAVE_SIGNING_SECRET);
+  if (!hasSigningSecret && process.env.NODE_ENV === "production") {
+    console.error("Wave webhook: no signing secret configured — rejecting webhook");
+    return NextResponse.json({ error: "Webhook secret not configured" }, { status: 503 });
+  }
+
   // Verify webhook signature
   if (signature) {
     if (!verifyWebhookSignature(rawBody, signature)) {
       console.error("Wave webhook: invalid signature:", signature.slice(0, 40));
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
-  } else {
-    if (process.env.WAVE_WEBHOOK_SECRET || process.env.WAVE_SIGNING_SECRET) {
-      console.error("Wave webhook: missing Wave-Signature header");
-      return NextResponse.json({ error: "Missing signature" }, { status: 401 });
-    }
+  } else if (hasSigningSecret) {
+    console.error("Wave webhook: missing Wave-Signature header");
+    return NextResponse.json({ error: "Missing signature" }, { status: 401 });
   }
 
   let event;
@@ -34,25 +39,25 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServiceClient();
 
-  // Idempotency: check if we already processed this event
+  // Idempotency: insert-first, backed by a unique index on wave_event_id
+  // (see supabase/migrations/20260704_webhook_hardening.sql). A duplicate
+  // delivery — including a concurrent one — fails the insert with 23505
+  // instead of racing a check-then-insert.
   const eventId = event.id || `${event.type}_${Date.now()}`;
-  const { data: existing } = await supabase
-    .from("wave_webhook_events")
-    .select("id")
-    .eq("wave_event_id", eventId)
-    .single();
-
-  if (existing) {
-    return NextResponse.json({ status: "already_processed" });
-  }
-
-  // Log the event
-  await supabase.from("wave_webhook_events").insert({
+  const { error: insertError } = await supabase.from("wave_webhook_events").insert({
     wave_event_id: eventId,
     event_type: event.type,
     payload: event,
     processed: false,
   });
+
+  if (insertError) {
+    if (insertError.code === "23505") {
+      return NextResponse.json({ status: "already_processed" });
+    }
+    console.error("Wave webhook: failed to record event:", insertError.message);
+    return NextResponse.json({ error: "Failed to record event" }, { status: 500 });
+  }
 
   try {
     switch (event.type) {

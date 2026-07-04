@@ -10,8 +10,8 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) {
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -53,7 +53,7 @@ export async function POST(
     description: "Refund — withdrawal rejected by admin",
     sourceId: params.id,
     sourceType: "payout",
-    createdBy: session.user.id,
+    createdBy: authUser.id,
   });
 
   return NextResponse.json({ success: true });

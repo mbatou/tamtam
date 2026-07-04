@@ -232,7 +232,6 @@ export interface Payment {
   status: "pending" | "completed" | "cancelled" | "failed";
   payment_method: string | null;
   client_phone: string | null;
-  paytech_token: string | null;
   completed_at: string | null;
   created_at: string;
 }

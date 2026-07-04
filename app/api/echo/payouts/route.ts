@@ -12,10 +12,10 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -23,7 +23,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("payouts")
     .select("*")
-    .eq("echo_id", session.user.id)
+    .eq("echo_id", authUser.id)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -35,14 +35,14 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
-  const { allowed } = rateLimit(`payout:${session.user.id}`, 3, 86400000);
+  const { allowed } = rateLimit(`payout:${authUser.id}`, 3, 86400000);
   if (!allowed) {
     return NextResponse.json({ error: "Trop de demandes de retrait. Réessaie demain." }, { status: 429 });
   }
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
   const { data: user } = await supabase
     .from("users")
     .select("balance, available_balance, phone, name")
-    .eq("id", session.user.id)
+    .eq("id", authUser.id)
     .single();
 
   const effectiveBalance = user?.available_balance ?? user?.balance ?? 0;
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Atomic debit via RPC (prevents race conditions)
     const { data: debited } = await supabase.rpc("debit_wallet_for_payout", {
-      p_user_id: session.user.id,
+      p_user_id: authUser.id,
       p_amount: parsed.data.amount,
       p_idempotency_key: idempotencyKey,
     });
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     // 3. Log the debit transaction
     await logWalletTransaction({
       supabase,
-      userId: session.user.id,
+      userId: authUser.id,
       amount: -parsed.data.amount,
       type: "withdrawal",
       description: `Retrait Wave — ${parsed.data.amount} FCFA (frais: ${fee} FCFA)`,
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
 
     // 4. Create payout record in our DB
     const { data: payoutRecord } = await supabase.from("payouts").insert({
-      echo_id: session.user.id,
+      echo_id: authUser.id,
       amount: parsed.data.amount,
       provider: "wave",
       status: "pending",
@@ -128,12 +128,12 @@ export async function POST(request: NextRequest) {
 
     // Format phone to E.164
     const mobile = user.phone!.startsWith("+") ? user.phone! : `+221${user.phone}`;
-    const clientRef = `TAMTAM_PAYOUT_${session.user.id.slice(0, 8)}_${Date.now()}`;
+    const clientRef = `TAMTAM_PAYOUT_${authUser.id.slice(0, 8)}_${Date.now()}`;
 
     // 5. Store wave_payout BEFORE calling API (idempotency key is our safety net)
     await supabase.from("wave_payouts").insert({
       payout_id: payoutRecord?.id,
-      user_id: session.user.id,
+      user_id: authUser.id,
       idempotency_key: idempotencyKey,
       amount: parsed.data.amount,
       fee,
@@ -241,7 +241,7 @@ export async function POST(request: NextRequest) {
   // Atomic debit via RPC (same as Wave path — prevents race conditions)
   const legacyIdempotencyKey = randomUUID();
   const { data: legacyDebited } = await supabase.rpc("debit_wallet_for_payout", {
-    p_user_id: session.user.id,
+    p_user_id: authUser.id,
     p_amount: parsed.data.amount,
     p_idempotency_key: legacyIdempotencyKey,
   });
@@ -252,7 +252,7 @@ export async function POST(request: NextRequest) {
 
   await logWalletTransaction({
     supabase,
-    userId: session.user.id,
+    userId: authUser.id,
     amount: -parsed.data.amount,
     type: "withdrawal",
     description: `Demande de retrait — ${provider}`,
@@ -260,7 +260,7 @@ export async function POST(request: NextRequest) {
   });
 
   const { data, error } = await supabase.from("payouts").insert({
-    echo_id: session.user.id,
+    echo_id: authUser.id,
     amount: parsed.data.amount,
     provider,
   }).select().single();
@@ -268,7 +268,7 @@ export async function POST(request: NextRequest) {
   if (error) {
     // Rollback: re-credit the balance via RPC
     await supabase.rpc("increment_echo_balance", {
-      p_echo_id: session.user.id,
+      p_echo_id: authUser.id,
       p_amount: parsed.data.amount,
     });
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -47,10 +47,6 @@
     {
       "path": "/api/cron/smart-notifications",
       "schedule": "0 14 * * *"
-    },
-    {
-      "path": "/api/cron/push-streak-danger",
-      "schedule": "0 20 * * *"
     }
   ]
 }

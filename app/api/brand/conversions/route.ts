@@ -7,15 +7,15 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   const supabase = createServiceClient();
-  const brandId = await getEffectiveBrandId(supabase, session.user.id);
+  const brandId = await getEffectiveBrandId(supabase, authUser.id);
 
   const { searchParams } = request.nextUrl;
   const campaignId = searchParams.get("campaign_id");
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (campaign.batteur_id !== brandId) {
-    console.error("[conversions] brand mismatch", { campaignId, batteur_id: campaign.batteur_id, brandId, userId: session.user.id });
+    console.error("[conversions] brand mismatch", { campaignId, batteur_id: campaign.batteur_id, brandId, userId: authUser.id });
     return NextResponse.json({ error: "Campagne introuvable" }, { status: 404 });
   }
 

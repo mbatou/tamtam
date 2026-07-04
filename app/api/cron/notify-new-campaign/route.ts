@@ -1,21 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { timingSafeEqual } from "crypto";
 import { triggerNewCampaign } from "@/lib/notifications/engine";
 import { processNotificationQueue } from "@/lib/notifications/sender";
+import { verifyCronSecret } from "@/lib/api/cron";
 
 export const dynamic = "force-dynamic";
-
-function verifyCronSecret(request: NextRequest): boolean {
-  const authHeader = request.headers.get("authorization");
-  const expected = `Bearer ${process.env.CRON_SECRET}`;
-  if (!authHeader || !process.env.CRON_SECRET) return false;
-  try {
-    return timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected));
-  } catch {
-    return false;
-  }
-}
 
 export async function POST(request: NextRequest) {
   if (!verifyCronSecret(request)) {

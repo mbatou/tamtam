@@ -9,9 +9,9 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
+  const { data: { user: authUser } } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorise" }, { status: 401 });
   }
 
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createServiceClient();
-  const brandId = await getEffectiveBrandId(supabase, session.user.id);
+  const brandId = await getEffectiveBrandId(supabase, authUser.id);
 
   const { data: campaign } = await supabase
     .from("campaigns")

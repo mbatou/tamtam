@@ -7,13 +7,13 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
 
   // Verify superadmin role
-  const { data: currentUser } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  const { data: currentUser } = await supabase.from("users").select("role").eq("id", authUser.id).single();
   if (!currentUser || currentUser.role !== "superadmin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
@@ -195,13 +195,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
 
   // Verify superadmin role
-  const { data: adminCheck } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  const { data: adminCheck } = await supabase.from("users").select("role").eq("id", authUser.id).single();
   if (!adminCheck || adminCheck.role !== "superadmin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create auth user
-    const { data: authUser, error: authErr } = await supabase.auth.admin.createUser({
+    const { data: createdUser, error: authErr } = await supabase.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
 
     // Create profile in users table
     const { error: profileErr } = await supabase.from("users").insert({
-      id: authUser.user.id,
+      id: createdUser.user.id,
       name,
       phone: phone || null,
       city: city || null,
@@ -244,15 +244,15 @@ export async function POST(request: NextRequest) {
 
     try {
       await supabase.from("admin_activity_log").insert({
-        admin_id: session.user.id,
+        admin_id: authUser.id,
         action: "user_create_batteur",
         target_type: "user",
-        target_id: authUser.user.id,
+        target_id: createdUser.user.id,
         details: { name, email },
       });
     } catch { /* admin_activity_log may not exist yet */ }
 
-    return NextResponse.json({ success: true, user_id: authUser.user.id });
+    return NextResponse.json({ success: true, user_id: createdUser.user.id });
   }
 
   // --- Top up brand balance ---
@@ -296,12 +296,12 @@ export async function POST(request: NextRequest) {
       type: "manual_credit",
       description: `Manual top-up by admin — ${user.name || "user"}`,
       sourceType: "admin",
-      createdBy: session.user.id,
+      createdBy: authUser.id,
     });
 
     try {
       await supabase.from("admin_activity_log").insert({
-        admin_id: session.user.id,
+        admin_id: authUser.id,
         action: "user_topup",
         target_type: "user",
         target_id: user_id,
@@ -359,12 +359,12 @@ export async function POST(request: NextRequest) {
         type: "balance_reset",
         description: `Balance reset by admin (previous balance: ${oldBalance} FCFA)`,
         sourceType: "admin",
-        createdBy: session.user.id,
+        createdBy: authUser.id,
       });
 
       try {
         await supabase.from("admin_activity_log").insert({
-          admin_id: session.user.id,
+          admin_id: authUser.id,
           action: `user_${action}`,
           target_type: "user",
           target_id: user_id,
@@ -383,7 +383,7 @@ export async function POST(request: NextRequest) {
 
   try {
     await supabase.from("admin_activity_log").insert({
-      admin_id: session.user.id,
+      admin_id: authUser.id,
       action: `user_${action}`,
       target_type: "user",
       target_id: user_id,

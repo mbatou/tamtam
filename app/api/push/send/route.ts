@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { verifyCronSecret } from "@/lib/api/cron";
 import webpush from "web-push";
-import { timingSafeEqual } from "crypto";
 import { getEchoStrings, type EchoLang } from "@/lib/echo-i18n";
 
 export const dynamic = "force-dynamic";
@@ -22,17 +22,6 @@ interface PushPayload {
     campaignId?: string;
   };
   userIds: "all" | string[];
-}
-
-function verifyCronSecret(request: NextRequest): boolean {
-  const authHeader = request.headers.get("authorization");
-  const expected = `Bearer ${process.env.CRON_SECRET}`;
-  if (!authHeader || !process.env.CRON_SECRET) return false;
-  try {
-    return timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected));
-  } catch {
-    return false;
-  }
 }
 
 function buildNotificationPayload(type: PushType, payload: PushPayload["payload"]) {

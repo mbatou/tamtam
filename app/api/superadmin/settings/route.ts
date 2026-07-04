@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { settingUpdateSchema } from "@/lib/validations";
+import { requireAuth } from "@/lib/api/auth";
 
 export const dynamic = "force-dynamic";
 
 async function requireSuperadmin() {
-  const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return null;
-  const supabase = createServiceClient();
-  const { data: user } = await supabase.from("users").select("role").eq("id", session.user.id).single();
-  if (!user || user.role !== "superadmin") return null;
-  return { session, supabase };
+  try {
+    return await requireAuth(["superadmin"]);
+  } catch {
+    return null;
+  }
 }
 
 export async function GET() {
@@ -46,7 +45,7 @@ export async function POST(request: NextRequest) {
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = auth.supabase;
-  const session = auth.session;
+  const authUser = auth.authUser;
   const body = await request.json();
   const parsed = settingUpdateSchema.safeParse(body);
 
@@ -62,14 +61,14 @@ export async function POST(request: NextRequest) {
       key,
       value: String(value),
       updated_at: new Date().toISOString(),
-      updated_by: session.user.id,
+      updated_by: authUser.id,
     });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   try {
     await supabase.from("admin_activity_log").insert({
-      admin_id: session.user.id,
+      admin_id: authUser.id,
       action: "setting_update",
       target_type: "setting",
       target_id: key,

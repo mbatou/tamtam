@@ -9,8 +9,8 @@ const REWARD_AMOUNT = 100;
 
 export async function GET() {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) {
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -19,9 +19,9 @@ export async function GET() {
   const [categoriesRes, signalsRes, userInterestsRes, userSignalsRes, userRes] = await Promise.all([
     supabase.from("interest_categories").select("*").order("sort_order"),
     supabase.from("content_signals").select("*").order("sort_order"),
-    supabase.from("echo_interests").select("interest_id").eq("echo_id", session.user.id),
-    supabase.from("echo_content_signals").select("signal_id").eq("echo_id", session.user.id),
-    supabase.from("users").select("interests_completed_at, is_founding_echo, interests_prompt_dismissed_at").eq("id", session.user.id).single(),
+    supabase.from("echo_interests").select("interest_id").eq("echo_id", authUser.id),
+    supabase.from("echo_content_signals").select("signal_id").eq("echo_id", authUser.id),
+    supabase.from("users").select("interests_completed_at, is_founding_echo, interests_prompt_dismissed_at").eq("id", authUser.id).single(),
   ]);
 
   return NextResponse.json({
@@ -37,8 +37,8 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) {
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createServiceClient();
-  const userId = session.user.id;
+  const userId = authUser.id;
 
   try {
     // Check if this is the first completion

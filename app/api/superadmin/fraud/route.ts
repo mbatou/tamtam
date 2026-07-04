@@ -6,8 +6,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
 
@@ -151,8 +151,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
   const body = await request.json();
@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
 
     await supabase.from("blocked_ips").upsert({
       ip_address: ip,
-      blocked_by: session.user.id,
+      blocked_by: authUser.id,
       reason: body.reason || "Blocked by superadmin",
       block_type: blockType,
       carrier_ip: !!matchedCarrier,
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
 
     try {
       await supabase.from("admin_activity_log").insert({
-        admin_id: session.user.id,
+        admin_id: authUser.id,
         action: "block_ip",
         target_type: "ip",
         target_id: ip,
@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
     await supabase.from("blocked_ips").delete().eq("ip_address", ip);
     try {
       await supabase.from("admin_activity_log").insert({
-        admin_id: session.user.id,
+        admin_id: authUser.id,
         action: "unblock_ip",
         target_type: "ip",
         target_id: ip,
@@ -234,7 +234,7 @@ export async function POST(request: NextRequest) {
       await supabase.from("blocked_ips").insert(
         ipsToBlock.map((ip) => ({
           ip_address: ip.ip_address,
-          blocked_by: session.user.id,
+          blocked_by: authUser.id,
           reason: `Auto-blocked: ${ip.risk_assessment}`,
           block_type: "bot" as const,
           carrier_ip: false,
@@ -242,7 +242,7 @@ export async function POST(request: NextRequest) {
       );
       try {
         await supabase.from("admin_activity_log").insert({
-          admin_id: session.user.id,
+          admin_id: authUser.id,
           action: "bulk_block_ips",
           target_type: "ip",
           target_id: "bulk",
@@ -293,7 +293,7 @@ export async function POST(request: NextRequest) {
 
       try {
         await supabase.from("admin_activity_log").insert({
-          admin_id: session.user.id,
+          admin_id: authUser.id,
           action: newValid ? "validate_click" : "invalidate_click",
           target_type: "click",
           target_id: click_id,
@@ -308,7 +308,7 @@ export async function POST(request: NextRequest) {
     await supabase.from("users").update({ risk_level: riskLevel }).eq("id", body.echo_id);
     try {
       await supabase.from("admin_activity_log").insert({
-        admin_id: session.user.id,
+        admin_id: authUser.id,
         action: "flag_echo_fraud",
         target_type: "user",
         target_id: body.echo_id,
@@ -335,7 +335,7 @@ export async function POST(request: NextRequest) {
           key,
           value: String(value),
           updated_at: new Date().toISOString(),
-          updated_by: session.user.id,
+          updated_by: authUser.id,
         });
       }
     }

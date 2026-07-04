@@ -5,13 +5,13 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
 
   // Verify superadmin role
-  const { data: admin } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  const { data: admin } = await supabase.from("users").select("role").eq("id", authUser.id).single();
   if (!admin || admin.role !== "superadmin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
@@ -35,13 +35,13 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
 
   // Verify superadmin role
-  const { data: admin } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  const { data: admin } = await supabase.from("users").select("role").eq("id", authUser.id).single();
   if (!admin || admin.role !== "superadmin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       .update({
         admin_reply: reply,
         status: "replied",
-        replied_by: session.user.id,
+        replied_by: authUser.id,
         replied_at: new Date().toISOString(),
       })
       .eq("id", ticket_id);
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     // Log activity
     try {
       await supabase.from("admin_activity_log").insert({
-        admin_id: session.user.id,
+        admin_id: authUser.id,
         action: "support_reply",
         target_type: "support_ticket",
         target_id: ticket_id,

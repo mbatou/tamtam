@@ -1,9 +1,11 @@
 import "server-only";
 
-import { createClient } from "@supabase/supabase-js";
+import { createServiceClient } from "./server";
 
-export const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-key",
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+/**
+ * Convenience service-role singleton.
+ * Same client as `createServiceClient()` — one construction path, and it
+ * throws at import time if the env vars are missing instead of silently
+ * falling back to placeholder credentials.
+ */
+export const supabaseAdmin = createServiceClient();

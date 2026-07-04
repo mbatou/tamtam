@@ -61,7 +61,7 @@ export default function SmsDashboard() {
 
   async function fetchBalance() {
     try {
-      const res = await fetch("/api/sms/test", { credentials: "include" });
+      const res = await fetch("/api/sms/balance", { credentials: "include" });
       const data = await res.json();
       setBalance(data);
     } catch {

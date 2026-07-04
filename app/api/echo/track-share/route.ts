@@ -5,8 +5,8 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   const { campaignId, shareMethod } = await request.json();
   if (!campaignId) {
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   const { data: link } = await supabase
     .from("tracked_links")
     .select("share_count")
-    .eq("echo_id", session.user.id)
+    .eq("echo_id", authUser.id)
     .eq("campaign_id", campaignId)
     .single();
 
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       last_share_method: method,
       share_count: (link?.share_count || 0) + 1,
     })
-    .eq("echo_id", session.user.id)
+    .eq("echo_id", authUser.id)
     .eq("campaign_id", campaignId);
 
   return NextResponse.json({ success: true });

@@ -8,10 +8,10 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -19,7 +19,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("tracked_links")
     .select("*, campaigns(*)")
-    .eq("echo_id", session.user.id)
+    .eq("echo_id", authUser.id)
     .order("created_at", { ascending: false })
     .limit(200);
 
@@ -32,10 +32,10 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     .from("tracked_links")
     .select("id")
     .eq("campaign_id", parsed.data.campaign_id)
-    .eq("echo_id", session.user.id)
+    .eq("echo_id", authUser.id)
     .single();
 
   if (existing) {
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
 
   const { data, error } = await supabase.from("tracked_links").insert({
     campaign_id: parsed.data.campaign_id,
-    echo_id: session.user.id,
+    echo_id: authUser.id,
     short_code: shortCode,
   }).select("*, campaigns(*)").single();
 
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Update campaigns joined count
-  const echoId = session.user.id;
+  const echoId = authUser.id;
   try {
     const { count } = await supabase
       .from("tracked_links")

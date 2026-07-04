@@ -5,10 +5,10 @@ export const dynamic = "force-dynamic";
 
 async function requireSuperadmin() {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return null;
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) return null;
   const supabase = createServiceClient();
-  const { data: user } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  const { data: user } = await supabase.from("users").select("role").eq("id", authUser.id).single();
   if (!user || !["superadmin", "admin"].includes(user.role)) return null;
   return true;
 }

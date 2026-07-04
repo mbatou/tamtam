@@ -1,18 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
-import crypto from "crypto";
+import { verifyCronSecret } from "@/lib/api/cron";
 
 export const dynamic = "force-dynamic";
 
-function verifyCronSecret(authHeader: string | null): boolean {
-  const expected = `Bearer ${process.env.CRON_SECRET || ""}`;
-  if (!authHeader || authHeader.length !== expected.length) return false;
-  return crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected));
-}
-
 export async function GET(request: NextRequest) {
-  if (!verifyCronSecret(request.headers.get("authorization"))) {
+  if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

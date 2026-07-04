@@ -10,13 +10,13 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) {
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const supabaseAuth = createServiceClient();
-  const { data: admin } = await supabaseAuth.from("users").select("role").eq("id", session.user.id).single();
+  const { data: admin } = await supabaseAuth.from("users").select("role").eq("id", authUser.id).single();
   if (!admin || admin.role !== "superadmin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }

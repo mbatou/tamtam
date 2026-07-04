@@ -9,7 +9,7 @@ const VALID_TYPES: SmsType[] = [
   "new_campaign",
   "share_reminder",
   "reengagement",
-  "streak_danger",
+  
   "campaign_ending",
   "welcome",
   "custom",
@@ -22,14 +22,14 @@ async function verifyAuth(request: NextRequest): Promise<boolean> {
   }
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
-  if (!session) return false;
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
+  if (!authUser) return false;
   const supabase = createServiceClient();
   const { data: user } = await supabase
     .from("users")
     .select("role")
-    .eq("id", session.user.id)
+    .eq("id", authUser.id)
     .single();
   return user?.role === "superadmin" || user?.role === "admin";
 }

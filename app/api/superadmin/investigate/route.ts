@@ -6,8 +6,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
   const userId = req.nextUrl.searchParams.get("user_id");
@@ -117,11 +117,11 @@ export async function GET(req: NextRequest) {
   } catch { /* table may not exist */ }
 
   // 13. Supabase auth metadata (created_at from auth)
-  let authUser = null;
+  let authMeta = null;
   try {
     const { data } = await supabase.auth.admin.getUserById(userId);
     if (data?.user) {
-      authUser = {
+      authMeta = {
         email: data.user.email,
         created_at: data.user.created_at,
         last_sign_in_at: data.user.last_sign_in_at,
@@ -250,7 +250,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     user,
-    authUser,
+    authUser: authMeta,
     walletTransactions: walletTransactions || [],
     payouts: payouts || [],
     payments: payments || [],

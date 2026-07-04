@@ -5,17 +5,17 @@ import { getEffectiveBrandId } from "@/lib/brand-utils";
 export async function GET() {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   const supabase = createServiceClient();
 
   // Get payouts for echos working on this brand's campaigns
-  const brandId = await getEffectiveBrandId(supabase, session.user.id);
+  const brandId = await getEffectiveBrandId(supabase, authUser.id);
   const { data: campaigns } = await supabase
     .from("campaigns")
     .select("id")
@@ -52,16 +52,16 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   // Verify user has admin/superadmin role before processing payouts
   const supabaseAdmin = createServiceClient();
-  const { data: adminUser } = await supabaseAdmin.from("users").select("role").eq("id", session.user.id).single();
+  const { data: adminUser } = await supabaseAdmin.from("users").select("role").eq("id", authUser.id).single();
   if (!adminUser || !["batteur", "admin", "superadmin"].includes(adminUser.role)) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }

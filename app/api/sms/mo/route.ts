@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { normalizePhone } from "@/lib/sms/sms-service";
+import { verifySharedWebhookSecret } from "@/lib/api/webhooks";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
+  if (!verifySharedWebhookSecret(request, "SMS_WEBHOOK_SECRET")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   let msisdn: string | null = null;
   let content: string | null = null;
 

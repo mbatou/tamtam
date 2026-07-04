@@ -7,24 +7,23 @@ import {
   buildReengagementEmail,
   buildCustomNotificationEmail,
 } from "@/lib/notifications/email-sender";
+import { requireAuth } from "@/lib/api/auth";
 
 export const dynamic = "force-dynamic";
 
 async function requireSuperadmin() {
-  const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return null;
-  const supabase = createServiceClient();
-  const { data: user } = await supabase.from("users").select("role").eq("id", session.user.id).single();
-  if (!user || !["superadmin", "admin"].includes(user.role)) return null;
-  return { session, supabase };
+  try {
+    return await requireAuth(["superadmin", "admin"]);
+  } catch {
+    return null;
+  }
 }
 
 export async function POST(request: NextRequest) {
   const auth = await requireSuperadmin();
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { supabase, session } = auth;
+  const { supabase, authUser } = auth;
 
   const {
     echoIds,
@@ -166,7 +165,7 @@ export async function POST(request: NextRequest) {
   // Log admin action
   try {
     await supabase.from("admin_activity_log").insert({
-      admin_id: session.user.id,
+      admin_id: authUser.id,
       action: "notification_manual_send",
       target_type: "notification",
       details: {

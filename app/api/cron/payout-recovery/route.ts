@@ -1,20 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
-import crypto from "crypto";
+import { verifyCronSecret } from "@/lib/api/cron";
 
 export const dynamic = "force-dynamic";
-
-function verifyCronSecret(request: NextRequest): boolean {
-  const authHeader = request.headers.get("authorization");
-  if (!authHeader || !process.env.CRON_SECRET) return false;
-  const expected = `Bearer ${process.env.CRON_SECRET}`;
-  if (authHeader.length !== expected.length) return false;
-  return crypto.timingSafeEqual(
-    Buffer.from(authHeader),
-    Buffer.from(expected)
-  );
-}
 
 export async function GET(request: NextRequest) {
   if (!verifyCronSecret(request)) {

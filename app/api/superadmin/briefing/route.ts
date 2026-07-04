@@ -6,13 +6,13 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
 
   // Verify superadmin role
-  const { data: admin } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  const { data: admin } = await supabase.from("users").select("role").eq("id", authUser.id).single();
   if (!admin || admin.role !== "superadmin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
@@ -123,7 +123,7 @@ export async function GET() {
   const suggestedActions: { label: string; href: string; priority: "high" | "medium" | "low" }[] = [];
 
   if ((newLeads?.length || 0) > 0) {
-    suggestedActions.push({ label: "process_leads", href: "/superadmin/leads", priority: "high" });
+    suggestedActions.push({ label: "process_leads", href: "/superadmin/crm", priority: "high" });
   }
   if ((pendingPayouts || 0) > 0) {
     suggestedActions.push({ label: "process_payouts", href: "/superadmin/finance", priority: "high" });
