@@ -173,7 +173,7 @@ export default function EchoDashboard() {
               {t("echo.dashboard.greeting", { name: user?.name?.split(" ")[0] || "" })}
             </h1>
             {user?.is_founding_echo && (
-              <span className="text-sm" title="Écho Fondateur">&#129351;</span>
+              <span className="text-sm" title={t("echo.profile.foundingEchoTitle")}>&#129351;</span>
             )}
           </div>
           <p className="text-xs text-white/35 mt-0.5">{t("echo.dashboard.yourPulse")}</p>

@@ -145,6 +145,7 @@ export interface TrackedLink {
   echo_id: string;
   short_code: string;
   click_count: number;
+  tm_ref: string | null;
   created_at: string;
 }
 
@@ -154,6 +155,7 @@ export interface Click {
   ip_address: string | null;
   user_agent: string | null;
   is_valid: boolean;
+  rejection_reason: string | null;
   country: string | null;
   created_at: string;
 }
@@ -289,6 +291,7 @@ export interface Conversion {
   attribution_type: "direct" | "assisted" | "unattributed" | null;
   click_to_conversion_seconds: number | null;
   external_id: string | null;
+  payment_status: "none" | "pending" | "paid" | "failed" | "duplicate";
   metadata: Record<string, unknown>;
   created_at: string;
 }

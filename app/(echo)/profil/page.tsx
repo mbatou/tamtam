@@ -304,7 +304,7 @@ export default function ProfilPage() {
               <div className="flex items-center gap-1.5">
                 <h2 className="text-lg font-bold truncate">{user?.name}</h2>
                 {user?.is_founding_echo && (
-                  <span className="text-sm" title="Écho Fondateur">&#129351;</span>
+                  <span className="text-sm" title={t("echo.profile.foundingEchoTitle")}>&#129351;</span>
                 )}
               </div>
               <p className="text-xs text-white/40">{user?.phone}</p>

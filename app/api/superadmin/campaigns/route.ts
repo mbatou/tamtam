@@ -7,6 +7,7 @@ import { triggerNewCampaign } from "@/lib/notifications/engine";
 import { processNotificationQueue } from "@/lib/notifications/sender";
 import { sendSmsBatch } from "@/lib/sms/sms-service";
 import { requireAuth } from "@/lib/api/auth";
+import { awardAmbassadorCommission } from "@/lib/ambassador-commission";
 
 export const dynamic = "force-dynamic";
 
@@ -208,60 +209,11 @@ export async function POST(request: NextRequest) {
     notifyEchosNewCampaign(supabase, title, parseInt(cpc));
 
     // Ambassador commission for superadmin-created campaigns (LUP-80)
-    try {
-      const { data: brand } = await supabase
-        .from("users")
-        .select("referred_by_ambassador")
-        .eq("id", batteur_id)
-        .single();
-
-      if (brand?.referred_by_ambassador) {
-        const { data: ambassador } = await supabase
-          .from("ambassadors")
-          .select("id, commission_rate")
-          .eq("id", brand.referred_by_ambassador)
-          .eq("status", "active")
-          .single();
-
-        if (ambassador) {
-          const commissionAmount = Math.round(parseInt(budget) * (ambassador.commission_rate / 100));
-          const { data: referral } = await supabase
-            .from("ambassador_referrals")
-            .select("id, first_campaign_at, total_campaigns, total_commission_earned")
-            .eq("ambassador_id", ambassador.id)
-            .eq("brand_user_id", batteur_id)
-            .single();
-
-          if (referral) {
-            const refUpdates: Record<string, unknown> = {
-              total_campaigns: (referral.total_campaigns || 0) + 1,
-              status: "active",
-              total_commission_earned: (referral.total_commission_earned || 0) + commissionAmount,
-            };
-            if (!referral.first_campaign_at) refUpdates.first_campaign_at = new Date().toISOString();
-            await supabase.from("ambassador_referrals").update(refUpdates).eq("id", referral.id);
-
-            await supabase.from("ambassador_commissions").insert({
-              ambassador_id: ambassador.id,
-              referral_id: referral.id,
-              campaign_id: campaign.id,
-              campaign_budget: parseInt(budget),
-              commission_rate: ambassador.commission_rate,
-              commission_amount: commissionAmount,
-              status: "earned",
-            });
-
-            const { data: amb } = await supabase.from("ambassadors").select("total_earned").eq("id", ambassador.id).single();
-            if (amb) {
-              await supabase.from("ambassadors").update({
-                total_earned: (amb.total_earned || 0) + commissionAmount,
-                updated_at: new Date().toISOString(),
-              }).eq("id", ambassador.id);
-            }
-          }
-        }
-      }
-    } catch { /* Non-blocking */ }
+    await awardAmbassadorCommission(supabase, {
+      brandUserId: batteur_id,
+      campaignId: campaign.id,
+      campaignBudget: parseInt(budget),
+    });
 
     return NextResponse.json({ success: true, campaign });
   }
@@ -511,72 +463,11 @@ export async function POST(request: NextRequest) {
 
   // --- Ambassador commission (LUP-80) ---
   if (action === "approve") {
-    try {
-      const brandId = campaign.batteur_id;
-      const { data: brand } = await supabase
-        .from("users")
-        .select("referred_by_ambassador")
-        .eq("id", brandId)
-        .single();
-
-      if (brand?.referred_by_ambassador) {
-        const { data: ambassador } = await supabase
-          .from("ambassadors")
-          .select("id, commission_rate")
-          .eq("id", brand.referred_by_ambassador)
-          .eq("status", "active")
-          .single();
-
-        if (ambassador) {
-          const commissionAmount = Math.round(campaign.budget * (ambassador.commission_rate / 100));
-
-          const { data: referral } = await supabase
-            .from("ambassador_referrals")
-            .select("id, first_campaign_at, total_campaigns, total_commission_earned")
-            .eq("ambassador_id", ambassador.id)
-            .eq("brand_user_id", brandId)
-            .single();
-
-          if (referral) {
-            // Update referral record
-            const refUpdates: Record<string, unknown> = {
-              total_campaigns: (referral.total_campaigns || 0) + 1,
-              status: "active",
-              total_commission_earned: (referral.total_commission_earned || 0) + commissionAmount,
-            };
-            if (!referral.first_campaign_at) {
-              refUpdates.first_campaign_at = new Date().toISOString();
-            }
-            await supabase.from("ambassador_referrals").update(refUpdates).eq("id", referral.id);
-
-            // Log commission
-            await supabase.from("ambassador_commissions").insert({
-              ambassador_id: ambassador.id,
-              referral_id: referral.id,
-              campaign_id: campaign.id,
-              campaign_budget: campaign.budget,
-              commission_rate: ambassador.commission_rate,
-              commission_amount: commissionAmount,
-              status: "earned",
-            });
-
-            // Update ambassador totals
-            const { data: amb } = await supabase
-              .from("ambassadors")
-              .select("total_earned")
-              .eq("id", ambassador.id)
-              .single();
-
-            if (amb) {
-              await supabase.from("ambassadors").update({
-                total_earned: (amb.total_earned || 0) + commissionAmount,
-                updated_at: new Date().toISOString(),
-              }).eq("id", ambassador.id);
-            }
-          }
-        }
-      }
-    } catch { /* Non-blocking: ambassador commission failure should not block approval */ }
+    await awardAmbassadorCommission(supabase, {
+      brandUserId: campaign.batteur_id,
+      campaignId: campaign.id,
+      campaignBudget: campaign.budget,
+    });
   }
 
   // Send engagement emails based on action

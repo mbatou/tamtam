@@ -6,6 +6,7 @@ import { Colors } from '@/constants/colors'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import * as Clipboard from 'expo-clipboard'
+import { SHARE_BASE_URL } from '@/constants/config'
 
 type TabKey = 'available' | 'mine' | 'done'
 
@@ -57,7 +58,7 @@ export default function RythmesScreen() {
   }
 
   async function copyLink(shortCode: string) {
-    await Clipboard.setStringAsync(`https://tamma.me/r/${shortCode}`)
+    await Clipboard.setStringAsync(`${SHARE_BASE_URL}/r/${shortCode}`)
   }
 
   async function onRefresh() {
