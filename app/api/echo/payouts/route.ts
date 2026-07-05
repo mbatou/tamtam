@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
-  const { allowed } = rateLimit(`payout:${authUser.id}`, 3, 86400000);
+  const { allowed } = await rateLimit(`payout:${authUser.id}`, 3, 86400000);
   if (!allowed) {
     return NextResponse.json({ error: "Trop de demandes de retrait. Réessaie demain." }, { status: 429 });
   }

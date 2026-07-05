@@ -9,7 +9,7 @@ const REFERRAL_BONUS_FCFA = 150;
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
-  const { allowed } = rateLimit(`register:${ip}`, 5, 3600000); // 5 per hour per IP
+  const { allowed } = await rateLimit(`register:${ip}`, 5, 3600000); // 5 per hour per IP
   if (!allowed) {
     return NextResponse.json({ error: "Trop de tentatives. Réessaie plus tard." }, { status: 429 });
   }

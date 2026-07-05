@@ -292,6 +292,9 @@ export interface Conversion {
   click_to_conversion_seconds: number | null;
   external_id: string | null;
   payment_status: "none" | "pending" | "paid" | "failed" | "duplicate";
+  payment_amount: number | null;
+  echo_earning: number | null;
+  paid_at: string | null;
   metadata: Record<string, unknown>;
   created_at: string;
 }

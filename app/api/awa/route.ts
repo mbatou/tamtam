@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   } = await authClient.auth.getUser();
   if (!authUser) return new Response("Unauthorized", { status: 401 });
 
-  const { allowed } = rateLimit(`awa:${authUser.id}`, 20, 3600000);
+  const { allowed } = await rateLimit(`awa:${authUser.id}`, 20, 3600000);
   if (!allowed) {
     return new Response("Rate limit exceeded", { status: 429 });
   }

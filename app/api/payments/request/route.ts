@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Rate limit: 5 payment requests per hour
-    const { allowed } = rateLimit(`payment:${authUser.id}`, 5, 3600000);
+    const { allowed } = await rateLimit(`payment:${authUser.id}`, 5, 3600000);
     if (!allowed) {
       return NextResponse.json(
         { error: "Trop de requêtes. Réessaie plus tard." },

@@ -204,10 +204,14 @@ Done in the commits following this report:
 - **Notifications tab cleaned** (product decision): kept overview + composer + history — the campaign-open notify-echos flow; deleted the mock sequences page, the unwired settings/templates pages + APIs, the suspended streak-danger flow (stub cron + engine trigger + composer option), and the hardcoded-user SMS test zone (balance check moved to `/api/sms/balance`).
 - Ambassador commission engine extracted to `lib/ambassador-commission.ts` (was duplicated twice in the superadmin campaigns route); drifted types fixed (`payment_status`, `rejection_reason`, `tm_ref`); Sentry env tagging consistent + 10% prod trace sampling; all 13 hook-deps lint warnings fixed (zero lint errors); mobile share URLs use a constant.
 
-### Still open (follow-ups)
-- Wallet/ledger service extraction + behavioral tests on money paths (§ Phase 2) — biggest remaining item.
-- Core schema into version control + generated DB types (needs `supabase db pull` against prod).
-- Distributed (Redis/KV) rate limiter to replace `lib/rate-limit.ts`.
+### Follow-ups executed 2026-07-05
+- **Wallet/ledger service** — `lib/wallet.ts` (atomic `debit_brand_budget` RPC with pre-migration fallback, credit wrappers pairing every mutation with a ledger entry); all 8 read-modify-write debit sites and 6 refund sites in `campaigns` + `superadmin/campaigns` routes migrated; stale-balance rollback fixed. Migration: `20260705_wallet_atomics.sql`.
+- **Behavioral tests** — 47 new tests executing real modules with a mocked Supabase client: wallet service, `lead-fraud-scorer`, API kernel (cron secret, webhook secret), rate limiter. `server-only` stubbed via vitest alias.
+- **Schema guard** — `supabase/schema.sql` prod snapshot committed; `__tests__/schema-drift.test.ts` asserts `lib/types.ts` properties are real columns (caught `campaigns.deleted_at` missing in prod → migration `20260705_campaign_soft_delete.sql`); workflow documented in `docs/database.md` incl. the Supabase-CLI upgrade path.
+- **Distributed rate limiter** — `lib/rate-limit.ts` now uses Upstash/Vercel KV REST (atomic INCR+PEXPIRE pipeline, fail-open on Redis errors, in-memory fallback for dev). Provision Vercel KV to activate.
+
+### Still open
 - Frontend monolith splits (`admin/campaigns` 2,173 lines et al.), shared UI kit adoption, 16 `<img>` → `next/image` warnings, ~90 remaining console statements.
 - Pixel extension event path (posts to nonexistent `/api/pixel/event`; wrong auth model) — needs a product decision.
 - Two i18n systems (`lib/i18n.tsx` + `lib/echo-i18n.ts`); en/fr key-parity check.
+- Supabase CLI adoption (`db pull` + `gen types`) — see docs/database.md.
