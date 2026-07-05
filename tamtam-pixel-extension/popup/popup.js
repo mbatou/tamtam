@@ -4,8 +4,6 @@ const TAMTAM_DOMAIN = "https://tamma.me";
 
 let pixelId = null;
 let currentTab = null;
-let mappedEvents = [];
-let isMapperActive = false;
 let isInjected = false;
 let pixelTestPassed = false;
 
@@ -22,15 +20,21 @@ async function getCurrentTab() {
 }
 
 async function loadState() {
-  const data = await chrome.storage.local.get(["pixelId", "mappedEvents", "mapperActive", "pixelTestPassed"]);
+  const data = await chrome.storage.local.get(["pixelId", "pixelTestPassed"]);
   pixelId = data.pixelId || null;
-  mappedEvents = data.mappedEvents || [];
-  isMapperActive = data.mapperActive || false;
   pixelTestPassed = data.pixelTestPassed || false;
+
+  // Clean up state left behind by the removed visual event mapper.
+  chrome.storage.local.remove([
+    "mappedEvents",
+    "mapperActive",
+    "eventHistory",
+    "autoInjectDomains",
+  ]);
 }
 
 async function saveState() {
-  await chrome.storage.local.set({ pixelId, mappedEvents });
+  await chrome.storage.local.set({ pixelId });
 }
 
 function updateUI() {
@@ -50,9 +54,6 @@ function updateUI() {
   document.getElementById("pixelIdDisplay").textContent = pixelId;
 
   updateInjectionStatus();
-  updateMapperButton();
-  loadAutoInjectToggle();
-  renderEventsList();
 }
 
 async function updateInjectionStatus() {
@@ -60,10 +61,11 @@ async function updateInjectionStatus() {
   const dotEl = document.getElementById("statusDot");
 
   try {
-    const response = await chrome.tabs.sendMessage(currentTab.id, {
-      action: "isInjected",
+    const [result] = await chrome.scripting.executeScript({
+      target: { tabId: currentTab.id },
+      func: () => !!window.__tamtamInjected,
     });
-    isInjected = !!response?.injected;
+    isInjected = !!result?.result;
   } catch {
     isInjected = false;
   }
@@ -81,35 +83,17 @@ async function updateInjectionStatus() {
   } else {
     statusEl.textContent = "Non injecte";
     statusEl.className = "injection-status not-injected";
-    statusEl.title = "Cliquez sur Script > Injecter maintenant";
+    statusEl.title = "Cliquez sur Injecter maintenant";
     dotEl.className = "status-dot";
   }
 
   updateStatusBar();
 }
 
-function updateMapperButton() {
-  const btn = document.getElementById("btnActivateMapper");
-  if (!btn) return;
-
-  if (isMapperActive) {
-    btn.innerHTML = '<span class="pulse-dot"></span> Mapper actif';
-    btn.className = "btn btn-mapper-active";
-  } else {
-    btn.textContent = "Activer le mapper";
-    btn.className = "btn btn-primary";
-  }
-}
-
 function updateStatusBar() {
-  const domain = getDomain();
-  const domainEvents = mappedEvents.filter((e) => e.domain === domain);
-
   const step1 = document.getElementById("step1");
   const step2 = document.getElementById("step2");
   const step2icon = document.getElementById("step2icon");
-  const step3 = document.getElementById("step3");
-  const step3icon = document.getElementById("step3icon");
 
   if (!step1) return;
 
@@ -121,81 +105,6 @@ function updateStatusBar() {
   } else {
     step2.className = "status-step";
     step2icon.textContent = "○";
-  }
-
-  if (domainEvents.length > 0) {
-    step3.className = "status-step done";
-    step3icon.textContent = "✓";
-  } else {
-    step3.className = "status-step";
-    step3icon.textContent = "○";
-  }
-}
-
-async function loadAutoInjectToggle() {
-  try {
-    const domain = new URL(currentTab.url).hostname;
-    const data = await chrome.storage.local.get("autoInjectDomains");
-    const domains = data.autoInjectDomains || [];
-    document.getElementById("toggleAutoInject").checked = domains.includes(domain);
-  } catch {
-    // non-http tab
-  }
-}
-
-function renderEventsList() {
-  const list = document.getElementById("eventsList");
-  const domain = getDomain();
-
-  const domainEvents = mappedEvents.filter((e) => e.domain === domain);
-
-  if (domainEvents.length === 0) {
-    list.innerHTML = `
-      <p style="font-size:12px;color:rgba(255,255,255,0.25);text-align:center;padding:16px 0;line-height:1.6;">
-        Aucun evenement configure.<br>
-        Cliquez "+ Mapper un element" pour commencer.
-      </p>
-    `;
-    updateStatusBar();
-    return;
-  }
-
-  list.innerHTML = domainEvents
-    .map((event, i) => {
-      const globalIndex = mappedEvents.indexOf(event);
-      return `
-    <div class="event-item">
-      <div class="event-item-left">
-        <span class="event-item-name">${escapeHtml(event.eventType)}</span>
-        <span class="event-item-selector">${escapeHtml(event.selector)}</span>
-      </div>
-      <button class="event-item-delete" data-index="${globalIndex}">x</button>
-    </div>
-  `;
-    })
-    .join("");
-
-  list.querySelectorAll(".event-item-delete").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const index = parseInt(btn.dataset.index);
-      mappedEvents.splice(index, 1);
-      saveState();
-      renderEventsList();
-      chrome.tabs.sendMessage(currentTab.id, {
-        action: "refreshEvents",
-        events: mappedEvents.filter((e) => e.domain === domain),
-      }).catch(() => {});
-    });
-  });
-
-  updateStatusBar();
-}
-
-function getDomain() {
-  try {
-    return new URL(currentTab.url).hostname;
-  } catch {
-    return "";
   }
 }
 
@@ -217,47 +126,6 @@ function setupEventListeners() {
     updateUI();
   });
 
-  // Tab switching
-  document.querySelectorAll(".tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
-      document.querySelectorAll(".tab-content").forEach((c) => c.classList.add("hidden"));
-      tab.classList.add("active");
-      const tabId = "tab" + capitalize(tab.dataset.tab);
-      document.getElementById(tabId)?.classList.remove("hidden");
-    });
-  });
-
-  // Activate / deactivate visual mapper
-  document.getElementById("btnActivateMapper")?.addEventListener("click", async () => {
-    if (isMapperActive) {
-      chrome.tabs.sendMessage(currentTab.id, { action: "deactivateMapper" }).catch(() => {});
-      isMapperActive = false;
-      await chrome.storage.local.set({ mapperActive: false });
-      updateMapperButton();
-    } else {
-      chrome.tabs.sendMessage(currentTab.id, {
-        action: "activateMapper",
-        pixelId,
-      }).catch(() => {});
-      isMapperActive = true;
-      await chrome.storage.local.set({ mapperActive: true });
-      updateMapperButton();
-    }
-  });
-
-  // Add event (opens mapper)
-  document.getElementById("btnAddEvent")?.addEventListener("click", async () => {
-    chrome.tabs.sendMessage(currentTab.id, {
-      action: "activateMapper",
-      pixelId,
-      mode: "selectElement",
-    }).catch(() => {});
-    isMapperActive = true;
-    await chrome.storage.local.set({ mapperActive: true });
-    updateMapperButton();
-  });
-
   // Inject now
   document.getElementById("btnInjectNow")?.addEventListener("click", async () => {
     await injectPixel();
@@ -268,28 +136,6 @@ function setupEventListeners() {
   // Test pixel
   document.getElementById("btnTestPixel")?.addEventListener("click", async () => {
     await testPixel();
-  });
-
-  // Auto inject toggle
-  document.getElementById("toggleAutoInject")?.addEventListener("change", async (e) => {
-    try {
-      const domain = new URL(currentTab.url).hostname;
-      const data = await chrome.storage.local.get("autoInjectDomains");
-      const autoInjectDomains = data.autoInjectDomains || [];
-
-      if (e.target.checked) {
-        if (!autoInjectDomains.includes(domain)) {
-          autoInjectDomains.push(domain);
-        }
-      } else {
-        const idx = autoInjectDomains.indexOf(domain);
-        if (idx > -1) autoInjectDomains.splice(idx, 1);
-      }
-
-      await chrome.storage.local.set({ autoInjectDomains });
-    } catch {
-      // non-http tab
-    }
   });
 
   // Change pixel ID
@@ -362,14 +208,4 @@ function showTestResult(type, message) {
   el.textContent = message;
   el.classList.remove("hidden");
   setTimeout(() => el.classList.add("hidden"), 5000);
-}
-
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-function escapeHtml(str) {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
 }
