@@ -77,14 +77,14 @@ export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
 
   // --- Rate limit: per IP ---
-  const { allowed: ipAllowed } = rateLimit(`pixel:ip:${ip}`, 200, 60000);
+  const { allowed: ipAllowed } = await rateLimit(`pixel:ip:${ip}`, 200, 60000);
   if (!ipAllowed) {
     logSecurity("rate_limit_ip", { ip });
     return json({ error: "Rate limit exceeded" }, 429);
   }
 
   // --- Rate limit: failed auth per IP ---
-  const { allowed: authAllowed } = rateLimit(`pixel:authfail:${ip}`, 10, 300000);
+  const { allowed: authAllowed } = await rateLimit(`pixel:authfail:${ip}`, 10, 300000);
   if (!authAllowed) {
     logSecurity("auth_blocked", { ip });
     return json({ error: "Too many failed attempts. Try again in 15 minutes." }, 429);
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
   if (!apiKey.startsWith(API_KEY_PREFIX) || apiKey.length < API_KEY_MIN_LENGTH) {
     logSecurity("invalid_key_format", { ip });
     // Consume a failed-auth slot
-    rateLimit(`pixel:authfail:${ip}`, 10, 300000);
+    void rateLimit(`pixel:authfail:${ip}`, 10, 300000);
     return json({ error: "Invalid API key format" }, 401);
   }
 
@@ -171,13 +171,13 @@ export async function POST(request: NextRequest) {
 
   if (!pixel) {
     // Consume a failed-auth slot (the rateLimit call increments the counter)
-    rateLimit(`pixel:authfail:${ip}`, 10, 300000);
+    void rateLimit(`pixel:authfail:${ip}`, 10, 300000);
     logSecurity("auth_failed", { ip, pixel_id });
     return json({ error: "Invalid pixel_id or API key" }, 401);
   }
 
   // --- Rate limit: per API key (after successful auth) ---
-  const { allowed: keyAllowed } = rateLimit(`pixel:key:${pixel.pixel_id}`, 100, 60000);
+  const { allowed: keyAllowed } = await rateLimit(`pixel:key:${pixel.pixel_id}`, 100, 60000);
   if (!keyAllowed) {
     logSecurity("rate_limit_key", { ip, pixel_id: pixel.pixel_id });
     return json({ error: "Rate limit exceeded for this pixel" }, 429);
@@ -407,17 +407,17 @@ export async function GET(request: NextRequest) {
   const ip = getClientIp(request);
 
   // Rate limit
-  const { allowed: ipAllowed } = rateLimit(`pixel:ip:${ip}`, 200, 60000);
+  const { allowed: ipAllowed } = await rateLimit(`pixel:ip:${ip}`, 200, 60000);
   if (!ipAllowed) return json({ error: "Rate limit exceeded" }, 429);
 
-  const { allowed: authAllowed } = rateLimit(`pixel:authfail:${ip}`, 10, 300000);
+  const { allowed: authAllowed } = await rateLimit(`pixel:authfail:${ip}`, 10, 300000);
   if (!authAllowed) return json({ error: "Too many failed attempts. Try again in 15 minutes." }, 429);
 
   const apiKey = request.headers.get("X-Tamtam-Key");
   if (!apiKey) return json({ error: "Missing API key" }, 401);
 
   if (!apiKey.startsWith(API_KEY_PREFIX) || apiKey.length < API_KEY_MIN_LENGTH) {
-    rateLimit(`pixel:authfail:${ip}`, 10, 300000);
+    void rateLimit(`pixel:authfail:${ip}`, 10, 300000);
     return json({ error: "Invalid API key format" }, 401);
   }
 
@@ -432,12 +432,12 @@ export async function GET(request: NextRequest) {
   const pixel = await authenticatePixel(supabase, apiKey, pixelId);
 
   if (!pixel) {
-    rateLimit(`pixel:authfail:${ip}`, 10, 300000);
+    void rateLimit(`pixel:authfail:${ip}`, 10, 300000);
     logSecurity("auth_failed", { ip, pixel_id: pixelId, method: "GET" });
     return json({ error: "Invalid pixel_id or API key" }, 401);
   }
 
-  const { allowed: keyAllowed } = rateLimit(`pixel:key:${pixel.pixel_id}`, 100, 60000);
+  const { allowed: keyAllowed } = await rateLimit(`pixel:key:${pixel.pixel_id}`, 100, 60000);
   if (!keyAllowed) return json({ error: "Rate limit exceeded for this pixel" }, 429);
 
   const event = searchParams.get("event");

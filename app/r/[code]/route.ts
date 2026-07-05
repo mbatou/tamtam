@@ -47,7 +47,7 @@ export async function GET(
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     request.headers.get("x-real-ip") ||
     "unknown";
-  const { allowed } = rateLimit(`r:${ip}`, 100, 60000);
+  const { allowed } = await rateLimit(`r:${ip}`, 100, 60000);
   if (!allowed) {
     return NextResponse.redirect(new URL("/", request.url));
   }

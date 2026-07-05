@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendNewCampaignNotification, sendCampaignLiveToBrand } from "@/lib/email";
-import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { unlockCampaignEarnings } from "@/lib/unlock-earnings";
 import { triggerNewCampaign } from "@/lib/notifications/engine";
 import { processNotificationQueue } from "@/lib/notifications/sender";
 import { sendSmsBatch } from "@/lib/sms/sms-service";
 import { requireAuth } from "@/lib/api/auth";
 import { awardAmbassadorCommission } from "@/lib/ambassador-commission";
+import { debitBrandBudgetLogged, creditBrandWallet } from "@/lib/wallet";
 
 export const dynamic = "force-dynamic";
 
@@ -127,36 +127,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Required fields missing" }, { status: 400 });
     }
 
-    // Verify the batteur exists and has enough balance
+    // Verify the batteur exists
     const { data: batteur } = await supabase
       .from("users")
-      .select("id, balance, role")
+      .select("id, role")
       .eq("id", batteur_id)
       .single();
 
     if (!batteur || batteur.role !== "batteur") {
       return NextResponse.json({ error: "Brand not found" }, { status: 404 });
     }
-    if ((batteur.balance || 0) < budget) {
-      return NextResponse.json({ error: `Insufficient balance (${batteur.balance || 0} FCFA available)` }, { status: 400 });
-    }
 
-    // Deduct from batteur balance
-    const { error: balErr } = await supabase
-      .from("users")
-      .update({ balance: (batteur.balance || 0) - budget })
-      .eq("id", batteur_id);
-    if (balErr) return NextResponse.json({ error: balErr.message }, { status: 500 });
-
-    await logWalletTransaction({
-      supabase,
-      userId: batteur_id,
-      amount: -parseInt(budget),
-      type: "campaign_budget_debit",
+    // Atomically deduct from batteur balance
+    const createDebit = await debitBrandBudgetLogged(supabase, {
+      brandId: batteur_id,
+      amount: parseInt(budget),
       description: `Campaign created by admin: ${title}`,
-      sourceType: "campaign",
       createdBy: authUser.id,
     });
+    if (!createDebit.ok) {
+      if (createDebit.reason === "insufficient_balance") {
+        return NextResponse.json({ error: "Insufficient brand balance" }, { status: 400 });
+      }
+      return NextResponse.json({ error: createDebit.message }, { status: 500 });
+    }
 
     // Create campaign pre-approved
     const { data: campaign, error: campErr } = await supabase
@@ -251,37 +245,21 @@ export async function POST(request: NextRequest) {
       // when the brand submitted them. Pure drafts (moderation_status is null)
       // need budget deducted now.
       if (campaign.status === "draft" && campaign.moderation_status !== "pending") {
-        const { data: batteur } = await supabase
-          .from("users")
-          .select("balance")
-          .eq("id", campaign.batteur_id)
-          .single();
-
-        if (!batteur || (batteur.balance || 0) < campaign.budget) {
-          return NextResponse.json({
-            error: `Insufficient brand balance (${batteur?.balance || 0} FCFA available, ${campaign.budget} FCFA required)`,
-          }, { status: 400 });
-        }
-
-        const { error: balErr } = await supabase
-          .from("users")
-          .update({ balance: (batteur.balance || 0) - campaign.budget })
-          .eq("id", campaign.batteur_id);
-
-        if (balErr) {
-          return NextResponse.json({ error: balErr.message }, { status: 500 });
-        }
-
-        await logWalletTransaction({
-          supabase,
-          userId: campaign.batteur_id,
-          amount: -campaign.budget,
-          type: "campaign_budget_debit",
+        const approveDebit = await debitBrandBudgetLogged(supabase, {
+          brandId: campaign.batteur_id,
+          amount: campaign.budget,
           description: `Approbation campagne par admin`,
           sourceId: campaign_id,
-          sourceType: "campaign",
           createdBy: authUser.id,
         });
+        if (!approveDebit.ok) {
+          if (approveDebit.reason === "insufficient_balance") {
+            return NextResponse.json({
+              error: `Insufficient brand balance (${campaign.budget} FCFA required)`,
+            }, { status: 400 });
+          }
+          return NextResponse.json({ error: approveDebit.message }, { status: 500 });
+        }
       }
 
       // Activate landing page for lead gen campaigns
@@ -325,19 +303,11 @@ export async function POST(request: NextRequest) {
         if (existingDebit && existingDebit.length > 0) {
           const unspent = campaign.budget - (campaign.spent || 0);
           if (unspent > 0) {
-            await supabase.rpc("increment_balance", {
-              p_user_id: campaign.batteur_id,
-              p_amount: unspent,
-            });
-
-            await logWalletTransaction({
-              supabase,
-              userId: campaign.batteur_id,
+            await creditBrandWallet(supabase, {
+              brandId: campaign.batteur_id,
               amount: unspent,
-              type: "campaign_budget_refund",
               description: `Refund for rejected campaign by admin`,
               sourceId: campaign_id,
-              sourceType: "campaign",
               createdBy: authUser.id,
             });
           }
@@ -357,16 +327,9 @@ export async function POST(request: NextRequest) {
           .limit(1);
 
         if (!existingSetupRefund || existingSetupRefund.length === 0) {
-          await supabase.rpc("increment_balance", {
-            p_user_id: campaign.batteur_id,
-            p_amount: campaign.setup_fee_amount_fcfa,
-          });
-
-          await logWalletTransaction({
-            supabase,
-            userId: campaign.batteur_id,
+          await creditBrandWallet(supabase, {
+            brandId: campaign.batteur_id,
             amount: campaign.setup_fee_amount_fcfa,
-            type: "campaign_budget_refund",
             description: `Remboursement frais landing page (campagne rejetee)`,
             sourceId: campaign_id,
             sourceType: "campaign_setup_fee",
@@ -418,19 +381,11 @@ export async function POST(request: NextRequest) {
           .limit(1);
 
         if (!existingRefund || existingRefund.length === 0) {
-          await supabase.rpc("increment_balance", {
-            p_user_id: campaign.batteur_id,
-            p_amount: stopRemaining,
-          });
-
-          await logWalletTransaction({
-            supabase,
-            userId: campaign.batteur_id,
+          await creditBrandWallet(supabase, {
+            brandId: campaign.batteur_id,
             amount: stopRemaining,
-            type: "campaign_budget_refund",
             description: `Refund for stopped campaign: ${campaign.title || campaign.id} (${stopRemaining} FCFA remaining)`,
             sourceId: campaign_id,
-            sourceType: "campaign",
             createdBy: authUser.id,
           });
         }

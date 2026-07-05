@@ -4,6 +4,7 @@ import { createCampaignSchema, updateCampaignSchema, deleteCampaignSchema } from
 import { sendCampaignCompletedToEcho, sendEmail } from "@/lib/email";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
+import { debitBrandBudget, debitBrandBudgetLogged, creditBrandWallet } from "@/lib/wallet";
 import { getEffectiveBrandId } from "@/lib/brand-utils";
 import { unlockCampaignEarnings } from "@/lib/unlock-earnings";
 import { triggerNewCampaign } from "@/lib/notifications/engine";
@@ -166,27 +167,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(data, { status: 201 });
   }
 
-  // Active: check and debit balance
-  const { data: batteur } = await supabase
-    .from("users")
-    .select("balance")
-    .eq("id", brandId)
-    .single();
-
-  if (!batteur || (batteur.balance || 0) < budget) {
-    return NextResponse.json(
-      { error: "Solde insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
-      { status: 400 }
-    );
-  }
-
-  const { error: debitError } = await supabase
-    .from("users")
-    .update({ balance: batteur.balance - budget })
-    .eq("id", brandId);
-
-  if (debitError) {
-    return NextResponse.json({ error: debitError.message }, { status: 500 });
+  // Active: atomically debit balance (ledger entry written after insert,
+  // once the campaign id exists — the resubmission idempotency check keys
+  // ledger rows by source_id)
+  const debit = await debitBrandBudget(supabase, { brandId, amount: budget });
+  if (!debit.ok) {
+    if (debit.reason === "insufficient_balance") {
+      return NextResponse.json(
+        { error: "Solde insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json({ error: debit.message }, { status: 500 });
   }
 
   const { data, error } = await supabase.from("campaigns").insert({
@@ -210,11 +202,14 @@ export async function POST(request: NextRequest) {
   }).select().single();
 
   if (error) {
-    // Rollback: restore balance if campaign creation fails
-    await supabase
-      .from("users")
-      .update({ balance: batteur.balance })
-      .eq("id", brandId);
+    // Rollback: credit the debited amount back (increment, not a stale
+    // absolute value — safe under concurrent balance changes)
+    await creditBrandWallet(supabase, {
+      brandId,
+      amount: budget,
+      description: "Rollback: échec de création de campagne",
+      log: false,
+    });
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
@@ -355,24 +350,21 @@ export async function PUT(request: NextRequest) {
     if (netDeducted > -campaignBudget) {
       const toDebit = campaignBudget + netDeducted;
       if (toDebit > 0) {
-        const { data: batteur } = await supabase.from("users").select("balance").eq("id", brandId).single();
-        if (!batteur || (batteur.balance || 0) < toDebit) {
-          return NextResponse.json(
-            { error: "Solde insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
-            { status: 400 }
-          );
-        }
-        await supabase.from("users").update({ balance: batteur.balance - toDebit }).eq("id", brandId);
-
-        await logWalletTransaction({
-          supabase,
-          userId: brandId,
-          amount: -toDebit,
-          type: "campaign_budget_debit",
+        const debit = await debitBrandBudgetLogged(supabase, {
+          brandId,
+          amount: toDebit,
           description: `Soumission campagne pour validation`,
           sourceId: id,
-          sourceType: "campaign",
         });
+        if (!debit.ok) {
+          if (debit.reason === "insufficient_balance") {
+            return NextResponse.json(
+              { error: "Solde insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
+              { status: 400 }
+            );
+          }
+          return NextResponse.json({ error: debit.message }, { status: 500 });
+        }
       }
     }
 
@@ -396,40 +388,32 @@ export async function PUT(request: NextRequest) {
       const diff = budget - oldBudget;
 
       if (diff > 0) {
-        // Need more budget: check balance
-        const { data: batteur } = await supabase.from("users").select("balance").eq("id", brandId).single();
-        if (!batteur || (batteur.balance || 0) < diff) {
-          return NextResponse.json(
-            { error: "Solde insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
-            { status: 400 }
-          );
-        }
-        await supabase.from("users").update({ balance: batteur.balance - diff }).eq("id", brandId);
-
-        await logWalletTransaction({
-          supabase,
-          userId: brandId,
-          amount: -diff,
-          type: "campaign_budget_debit",
+        // Need more budget: atomic debit
+        const debit = await debitBrandBudgetLogged(supabase, {
+          brandId,
+          amount: diff,
           description: `Augmentation budget campagne`,
           sourceId: id,
-          sourceType: "campaign",
         });
+        if (!debit.ok) {
+          if (debit.reason === "insufficient_balance") {
+            return NextResponse.json(
+              { error: "Solde insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
+              { status: 400 }
+            );
+          }
+          return NextResponse.json({ error: debit.message }, { status: 500 });
+        }
       } else if (diff < 0) {
         // Reducing budget: refund the difference (but can't go below spent)
         if (budget < existing.spent) {
           return NextResponse.json({ error: "Le budget ne peut pas être inférieur au montant déjà dépensé." }, { status: 400 });
         }
-        await supabase.rpc("increment_balance", { p_user_id: brandId, p_amount: Math.abs(diff) });
-
-        await logWalletTransaction({
-          supabase,
-          userId: brandId,
+        await creditBrandWallet(supabase, {
+          brandId,
           amount: Math.abs(diff),
-          type: "campaign_budget_refund",
           description: `Réduction budget campagne`,
           sourceId: id,
-          sourceType: "campaign",
         });
       }
     }
@@ -440,16 +424,11 @@ export async function PUT(request: NextRequest) {
   if (status !== undefined && (status === "paused" || status === "completed") && existing.status === "active") {
     const unspent = existing.budget - existing.spent;
     if (unspent > 0) {
-      await supabase.rpc("increment_balance", { p_user_id: brandId, p_amount: unspent });
-
-      await logWalletTransaction({
-        supabase,
-        userId: brandId,
+      await creditBrandWallet(supabase, {
+        brandId,
         amount: unspent,
-        type: "campaign_budget_refund",
         description: `Remboursement campagne ${status === "paused" ? "mise en pause" : "terminée"}`,
         sourceId: id,
-        sourceType: "campaign",
       });
     }
   }
@@ -457,48 +436,42 @@ export async function PUT(request: NextRequest) {
   // Debit balance when publishing a draft campaign
   if (status === "active" && existing.status === "draft") {
     const campaignBudget = budget !== undefined ? budget : existing.budget;
-    const { data: batteur } = await supabase.from("users").select("balance").eq("id", brandId).single();
-    if (!batteur || (batteur.balance || 0) < campaignBudget) {
-      return NextResponse.json(
-        { error: "Solde insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
-        { status: 400 }
-      );
-    }
-    await supabase.from("users").update({ balance: batteur.balance - campaignBudget }).eq("id", brandId);
-
-    await logWalletTransaction({
-      supabase,
-      userId: brandId,
-      amount: -campaignBudget,
-      type: "campaign_budget_debit",
+    const debit = await debitBrandBudgetLogged(supabase, {
+      brandId,
+      amount: campaignBudget,
       description: `Publication campagne`,
       sourceId: id,
-      sourceType: "campaign",
     });
+    if (!debit.ok) {
+      if (debit.reason === "insufficient_balance") {
+        return NextResponse.json(
+          { error: "Solde insuffisant. Veuillez recharger votre portefeuille.", code: "INSUFFICIENT_BALANCE" },
+          { status: 400 }
+        );
+      }
+      return NextResponse.json({ error: debit.message }, { status: 500 });
+    }
   }
 
   // Re-debit from balance when reactivating a paused campaign
   if (status === "active" && existing.status === "paused") {
     const unspent = existing.budget - existing.spent;
     if (unspent > 0) {
-      const { data: batteur } = await supabase.from("users").select("balance").eq("id", brandId).single();
-      if (!batteur || (batteur.balance || 0) < unspent) {
-        return NextResponse.json(
-          { error: "Solde insuffisant pour réactiver cette campagne.", code: "INSUFFICIENT_BALANCE" },
-          { status: 400 }
-        );
-      }
-      await supabase.from("users").update({ balance: batteur.balance - unspent }).eq("id", brandId);
-
-      await logWalletTransaction({
-        supabase,
-        userId: brandId,
-        amount: -unspent,
-        type: "campaign_budget_debit",
+      const debit = await debitBrandBudgetLogged(supabase, {
+        brandId,
+        amount: unspent,
         description: `Réactivation campagne`,
         sourceId: id,
-        sourceType: "campaign",
       });
+      if (!debit.ok) {
+        if (debit.reason === "insufficient_balance") {
+          return NextResponse.json(
+            { error: "Solde insuffisant pour réactiver cette campagne.", code: "INSUFFICIENT_BALANCE" },
+            { status: 400 }
+          );
+        }
+        return NextResponse.json({ error: debit.message }, { status: 500 });
+      }
     }
   }
 
@@ -560,15 +533,11 @@ export async function DELETE(request: NextRequest) {
     if (wasBudgetDeducted) {
       const unspent = existing.budget - existing.spent;
       if (unspent > 0) {
-        await supabase.rpc("increment_balance", { p_user_id: brandId, p_amount: unspent });
-        await logWalletTransaction({
-          supabase,
-          userId: brandId,
+        await creditBrandWallet(supabase, {
+          brandId,
           amount: unspent,
-          type: "campaign_budget_refund",
           description: `Remboursement suppression campagne`,
           sourceId: id,
-          sourceType: "campaign",
         });
         refunded += unspent;
       }
@@ -576,12 +545,9 @@ export async function DELETE(request: NextRequest) {
 
     // Refund setup fee for lead gen campaigns
     if (existing.objective === "lead_generation" && existing.setup_fee_paid && existing.setup_fee_amount_fcfa) {
-      await supabase.rpc("increment_balance", { p_user_id: brandId, p_amount: existing.setup_fee_amount_fcfa });
-      await logWalletTransaction({
-        supabase,
-        userId: brandId,
+      await creditBrandWallet(supabase, {
+        brandId,
         amount: existing.setup_fee_amount_fcfa,
-        type: "campaign_budget_refund",
         description: `Remboursement frais landing page (campagne supprimee)`,
         sourceId: id,
         sourceType: "campaign_setup_fee",

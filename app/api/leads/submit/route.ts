@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   // Rate limit: max 5 submissions per IP per hour
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  const { allowed } = rateLimit(`lead_submit:${ip}`, 5, 3600000);
+  const { allowed } = await rateLimit(`lead_submit:${ip}`, 5, 3600000);
   if (!allowed) {
     return NextResponse.json(
       { error: "Trop de soumissions. Reessayez plus tard." },

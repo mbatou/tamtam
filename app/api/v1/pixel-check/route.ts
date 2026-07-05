@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     request.headers.get("x-real-ip") ||
     "unknown";
 
-  const { allowed } = rateLimit(`pixel-check:${ip}`, 20, 60000);
+  const { allowed } = await rateLimit(`pixel-check:${ip}`, 20, 60000);
   if (!allowed) {
     return NextResponse.json(
       { success: false, error: "Rate limited" },
