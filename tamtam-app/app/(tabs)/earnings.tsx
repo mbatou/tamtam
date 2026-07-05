@@ -1,6 +1,6 @@
 import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator, Linking } from 'react-native'
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { api } from '@/lib/api'
 import { Colors } from '@/constants/colors'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
@@ -16,24 +16,17 @@ export default function EarningsScreen() {
 
   const loadPayouts = useCallback(async () => {
     if (!profile?.id) return
-    // NOTE: payout history lives in `payouts` (echo_id/status/provider),
-    // not `wave_payouts` — same table the web GET /api/echo/payouts reads.
-    const { data, error } = await supabase
-      .from('payouts')
-      .select('id, amount, status, provider, created_at')
-      .eq('echo_id', profile.id)
-      .order('created_at', { ascending: false })
-      .limit(20)
-
-    if (error) {
-      console.error('[Earnings] loadPayouts failed:', error)
+    try {
+      // GET /api/echo/payouts → full payout rows, newest first.
+      // Balance figures (available/pending/total_earned) stay on the profile
+      // from useAuth (/api/echo/user) — /api/echo/balance lacks total_earned.
+      const data = await api<any[]>('/api/echo/payouts')
+      setLoadError(false)
+      setPayouts((data || []).slice(0, 20))
+    } catch (err) {
+      console.error('[Earnings] loadPayouts failed:', err)
       setLoadError(true)
-      setLoading(false)
-      return
     }
-    setLoadError(false)
-
-    setPayouts(data || [])
     setLoading(false)
   }, [profile?.id])
 

@@ -11,7 +11,7 @@ import * as Clipboard from 'expo-clipboard'
 import { useLocalSearchParams, router } from 'expo-router'
 import { useState, useEffect, useCallback } from 'react'
 import { Ionicons } from '@expo/vector-icons'
-import { supabase } from '@/lib/supabase'
+import { api } from '@/lib/api'
 import { useAuth } from '@/hooks/useAuth'
 import { Colors } from '@/constants/colors'
 import { useLanguage } from '@/hooks/useLanguage'
@@ -32,31 +32,29 @@ export default function CampaignDetailScreen() {
     setLoading(true)
     setLoadError(false)
 
-    const { data: c, error: campaignError } = await supabase
-      .from('campaigns')
-      .select('*, brand:users!batteur_id(name, company_name)')
-      .eq('id', id)
-      .single()
+    try {
+      // No single-campaign endpoint — fetch the user's links (each carries a
+      // joined `campaigns` row, covering finished campaigns too) and the
+      // discoverable campaign list, then match by id client-side.
+      const [links, campaigns] = await Promise.all([
+        api<any[]>('/api/echo/links'),
+        api<any[]>('/api/echo/campaigns'),
+      ])
 
-    if (campaignError || !c) {
-      console.error('[CampaignDetail] load failed:', campaignError)
-      setLoadError(true)
-      setLoading(false)
-      return
-    }
-    setCampaign(c)
+      const myLink = (links || []).find((l: any) => l.campaign_id === id) || null
+      const c = myLink?.campaigns || (campaigns || []).find((camp: any) => camp.id === id) || null
 
-    if (profile?.id) {
-      const { data: tl, error: linkError } = await supabase
-        .from('tracked_links')
-        .select('id, tm_ref, short_code')
-        .eq('campaign_id', id)
-        .eq('echo_id', profile.id)
-        .maybeSingle()
-      if (linkError) {
-        console.error('[CampaignDetail] tracked link load failed:', linkError)
+      if (!c) {
+        console.error('[CampaignDetail] campaign not found:', id)
+        setLoadError(true)
+        setLoading(false)
+        return
       }
-      setTrackedLink(tl)
+      setCampaign(c)
+      setTrackedLink(myLink)
+    } catch (err) {
+      console.error('[CampaignDetail] load failed:', err)
+      setLoadError(true)
     }
     setLoading(false)
   }, [id, profile?.id])

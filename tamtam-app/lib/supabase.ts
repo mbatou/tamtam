@@ -1,3 +1,5 @@
+// AUTH ONLY: this client handles login/register/session (supabase.auth.*).
+// All data reads/writes go through the web API via lib/api.ts.
 import { createClient } from '@supabase/supabase-js'
 import * as SecureStore from 'expo-secure-store'
 import type { Database } from './database.types'

@@ -1,12 +1,11 @@
 import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native'
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { api } from '@/lib/api'
 import { Colors } from '@/constants/colors'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import * as Clipboard from 'expo-clipboard'
 import { SHARE_BASE_URL, ECHO_SHARE_PERCENT, formatFCFA } from '@/constants/config'
-import { generateShortCode } from '@/lib/shortCode'
 
 type TabKey = 'available' | 'mine' | 'done'
 
@@ -24,29 +23,21 @@ export default function RythmesScreen() {
   const loadData = useCallback(async () => {
     if (!profile?.id) return
 
-    const [campaignsRes, linksRes] = await Promise.all([
-      supabase
-        .from('campaigns')
-        .select('id, title, description, cpc, cpa_amount, pricing_model, budget, spent, status, creative_urls, target_cities')
-        .eq('status', 'active')
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('tracked_links')
-        .select('id, campaign_id, short_code, click_count, created_at, campaigns(id, title, description, cpc, cpa_amount, pricing_model, budget, spent, status, creative_urls)')
-        .eq('echo_id', profile.id),
-    ])
+    try {
+      // GET /api/echo/campaigns → active, approved (city-targeted) campaigns;
+      // GET /api/echo/links → tracked_links rows with joined `campaigns`.
+      const [campaignList, links] = await Promise.all([
+        api<any[]>('/api/echo/campaigns'),
+        api<any[]>('/api/echo/links'),
+      ])
 
-    if (campaignsRes.error || linksRes.error) {
-      console.error('[Rythmes] loadData failed:', campaignsRes.error || linksRes.error)
+      setLoadError(false)
+      setCampaigns(campaignList || [])
+      setMyLinks(links || [])
+    } catch (err) {
+      console.error('[Rythmes] loadData failed:', err)
       setLoadError(true)
-      setLoading(false)
-      return
     }
-    setLoadError(false)
-
-    setCampaigns(campaignsRes.data || [])
-    setMyLinks(linksRes.data || [])
     setLoading(false)
   }, [profile?.id])
 
@@ -57,16 +48,16 @@ export default function RythmesScreen() {
   async function acceptCampaign(campaignId: string) {
     if (!profile?.id) return
     setAccepting(campaignId)
-    const { data, error } = await supabase
-      .from('tracked_links')
-      .insert({ campaign_id: campaignId, echo_id: profile.id, short_code: generateShortCode() })
-      .select('id')
-      .single()
-    if (error) {
-      console.error('[Rythmes] acceptCampaign failed:', error)
-      Alert.alert(t.error, t.acceptError)
-    } else if (data) {
+    try {
+      // POST /api/echo/links generates the short_code server-side.
+      await api('/api/echo/links', {
+        method: 'POST',
+        body: JSON.stringify({ campaign_id: campaignId }),
+      })
       await loadData()
+    } catch (err) {
+      console.error('[Rythmes] acceptCampaign failed:', err)
+      Alert.alert(t.error, t.acceptError)
     }
     setAccepting(null)
   }

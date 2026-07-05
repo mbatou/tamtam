@@ -1,12 +1,11 @@
 import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator, Alert } from 'react-native'
 import { router } from 'expo-router'
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { api } from '@/lib/api'
 import { Colors } from '@/constants/colors'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { ECHO_SHARE_PERCENT, formatFCFA } from '@/constants/config'
-import { generateShortCode } from '@/lib/shortCode'
 
 export default function PulseScreen() {
   const { profile } = useAuth()
@@ -21,34 +20,23 @@ export default function PulseScreen() {
   const loadData = useCallback(async () => {
     if (!profile?.id) return
 
-    const [linksRes, campaignsRes] = await Promise.all([
-      supabase
-        .from('tracked_links')
-        .select('id, campaign_id, short_code, click_count, created_at, campaigns(id, title, description, cpc, cpa_amount, pricing_model, budget, spent, status, creative_urls)')
-        .eq('echo_id', profile.id),
-      supabase
-        .from('campaigns')
-        .select('id, title, description, cpc, cpa_amount, pricing_model, budget, spent, status, creative_urls, target_cities')
-        .eq('status', 'active')
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false }),
-    ])
+    try {
+      // GET /api/echo/links → tracked_links rows with joined `campaigns`;
+      // GET /api/echo/campaigns → active, approved (city-targeted) campaigns.
+      const [links, campaigns] = await Promise.all([
+        api<any[]>('/api/echo/links'),
+        api<any[]>('/api/echo/campaigns'),
+      ])
 
-    if (linksRes.error || campaignsRes.error) {
-      console.error('[Pulse] loadData failed:', linksRes.error || campaignsRes.error)
+      setLoadError(false)
+      setActiveLinks(links || [])
+
+      const acceptedIds = new Set((links || []).map((l: any) => l.campaign_id))
+      setAvailableCampaigns((campaigns || []).filter((c: any) => !acceptedIds.has(c.id)))
+    } catch (err) {
+      console.error('[Pulse] loadData failed:', err)
       setLoadError(true)
-      setLoading(false)
-      return
     }
-    setLoadError(false)
-
-    const links = linksRes.data || []
-    setActiveLinks(links)
-
-    const acceptedIds = new Set(links.map((l: any) => l.campaign_id))
-    const campaigns = campaignsRes.data || []
-    setAvailableCampaigns(campaigns.filter((c: any) => !acceptedIds.has(c.id)))
-
     setLoading(false)
   }, [profile?.id])
 
@@ -60,17 +48,16 @@ export default function PulseScreen() {
     if (!profile?.id) return
     setAccepting(campaignId)
 
-    const { data, error } = await supabase
-      .from('tracked_links')
-      .insert({ campaign_id: campaignId, echo_id: profile.id, short_code: generateShortCode() })
-      .select('id')
-      .single()
-
-    if (error) {
-      console.error('[Pulse] acceptCampaign failed:', error)
-      Alert.alert(t.error, t.acceptError)
-    } else if (data) {
+    try {
+      // POST /api/echo/links generates the short_code server-side.
+      await api('/api/echo/links', {
+        method: 'POST',
+        body: JSON.stringify({ campaign_id: campaignId }),
+      })
       await loadData()
+    } catch (err) {
+      console.error('[Pulse] acceptCampaign failed:', err)
+      Alert.alert(t.error, t.acceptError)
     }
     setAccepting(null)
   }

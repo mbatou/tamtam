@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { api } from '@/lib/api'
 import { Session } from '@supabase/supabase-js'
 import type { Database } from '@/lib/database.types'
 
@@ -22,24 +23,14 @@ export function useAuth() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const fetchProfile = useCallback(async (userId: string) => {
+  const fetchProfile = useCallback(async (_userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select(`
-          id, name, role, balance, available_balance,
-          pending_balance, total_valid_clicks, total_earned,
-          city, phone
-        `)
-        .eq('id', userId)
-        .single()
-
-      if (error) {
-        console.error('[useAuth] fetchProfile failed:', error)
-      }
+      // GET /api/echo/user returns the full users row for the bearer token's
+      // user; keep only the Profile fields the app relies on.
+      const data = await api<Profile>('/api/echo/user')
       setProfile(data)
     } catch (err) {
-      console.error('[useAuth] fetchProfile threw:', err)
+      console.error('[useAuth] fetchProfile failed:', err)
     }
     setLoading(false)
   }, [])
