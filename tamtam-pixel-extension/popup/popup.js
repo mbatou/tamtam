@@ -1,6 +1,6 @@
 // popup.js
 
-const TAMTAM_DOMAIN = "https://tamma.me";
+const TAMTAM_DOMAIN = "https://www.tamma.me";
 
 let pixelId = null;
 let currentTab = null;

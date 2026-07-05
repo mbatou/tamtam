@@ -1,13 +1,13 @@
 import {
   View,
   Text,
-  SafeAreaView,
   TouchableOpacity,
   Share,
   ScrollView,
   Image,
   ActivityIndicator,
 } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import * as Clipboard from 'expo-clipboard'
 import { useLocalSearchParams, router } from 'expo-router'
 import { useState, useEffect, useCallback } from 'react'
@@ -17,6 +17,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { Colors } from '@/constants/colors'
 import { useLanguage } from '@/hooks/useLanguage'
 import { SHARE_BASE_URL, ECHO_SHARE_PERCENT, formatFCFA } from '@/constants/config'
+import { Fonts, Typography } from '@/constants/typography'
 
 export default function CampaignDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -88,7 +89,7 @@ export default function CampaignDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
+      <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: Colors.bg }}>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator color={Colors.orange} />
         </View>
@@ -98,16 +99,16 @@ export default function CampaignDetailScreen() {
 
   if (loadError || !campaign) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
+      <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: Colors.bg }}>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-          <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.textPrimary, marginBottom: 12, textAlign: 'center' }}>
+          <Text style={{ ...Typography.bodyBold, marginBottom: 12, textAlign: 'center' }}>
             {t.loadError}
           </Text>
           <TouchableOpacity
             onPress={load}
             style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10 }}
           >
-            <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 13, color: '#fff' }}>{t.retry}</Text>
+            <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 13, color: '#fff' }}>{t.retry}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -123,7 +124,7 @@ export default function CampaignDetailScreen() {
     : 0
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
+    <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: Colors.bg }}>
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         <TouchableOpacity
           onPress={() => router.back()}
@@ -142,7 +143,7 @@ export default function CampaignDetailScreen() {
 
         <Text
           style={{
-            fontFamily: 'DMSans_400Regular',
+            fontFamily: Fonts.body,
             fontSize: 12,
             color: Colors.textMuted,
             textTransform: 'uppercase',
@@ -155,7 +156,7 @@ export default function CampaignDetailScreen() {
 
         <Text
           style={{
-            fontFamily: 'Syne_800ExtraBold',
+            fontFamily: Fonts.heading,
             fontSize: 22,
             color: Colors.textPrimary,
             letterSpacing: -0.5,
@@ -177,11 +178,11 @@ export default function CampaignDetailScreen() {
               paddingVertical: 2,
             }}
           >
-            <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 10, color: isActive ? Colors.teal : Colors.textMuted }}>
+            <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 10, color: isActive ? Colors.teal : Colors.textMuted }}>
               {isActive ? t.statusActive : campaign.status}
             </Text>
           </View>
-          <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.textMuted }}>
+          <Text style={{ ...Typography.bodySmall }}>
             {displayAmount != null
               ? `${displayAmount} FCFA ${isCpa ? t.perAction : t.perClick}`
               : '—'}
@@ -190,7 +191,7 @@ export default function CampaignDetailScreen() {
 
         {/* Description */}
         {campaign.description ? (
-          <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 14, lineHeight: 21, color: 'rgba(255,255,255,0.5)', marginBottom: 16 }}>
+          <Text style={{ fontFamily: Fonts.body, fontSize: 14, lineHeight: 21, color: 'rgba(255,255,255,0.5)', marginBottom: 16 }}>
             {campaign.description}
           </Text>
         ) : null}
@@ -199,8 +200,8 @@ export default function CampaignDetailScreen() {
         {campaign.budget ? (
           <View style={{ marginBottom: 16 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-              <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.textMuted }}>{t.budget}</Text>
-              <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: Colors.textSecondary }}>
+              <Text style={{ ...Typography.bodySmall }}>{t.budget}</Text>
+              <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 12, color: Colors.textSecondary }}>
                 {formatFCFA(campaign.spent || 0)} / {formatFCFA(campaign.budget)}
               </Text>
             </View>
@@ -233,26 +234,26 @@ export default function CampaignDetailScreen() {
             }}
           >
             <View style={{ flex: 1, alignItems: 'center' }}>
-              <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 18, color: Colors.textPrimary }}>
+              <Text style={{ ...Typography.stat }}>
                 {trackedLink.click_count || 0}
               </Text>
-              <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 9, color: Colors.textMuted }}>{t.clicks}</Text>
+              <Text style={{ ...Typography.captionBold, fontSize: 9 }}>{t.clicks}</Text>
             </View>
             <View style={{ width: 1, height: 32, backgroundColor: Colors.btnGhostBorder }} />
             <View style={{ flex: 1, alignItems: 'center' }}>
               {isCpa ? (
                 <>
-                  <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 18, color: Colors.teal }}>
+                  <Text style={{ ...Typography.stat, color: Colors.teal }}>
                     {formatFCFA(Math.floor((campaign.cpa_amount || 0) * ECHO_SHARE_PERCENT / 100))}
                   </Text>
-                  <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 9, color: Colors.textMuted }}>{t.perConversion}</Text>
+                  <Text style={{ ...Typography.captionBold, fontSize: 9 }}>{t.perConversion}</Text>
                 </>
               ) : (
                 <>
-                  <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 18, color: Colors.orange }}>
+                  <Text style={{ ...Typography.stat, color: Colors.orange }}>
                     {formatFCFA(earned)}
                   </Text>
-                  <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 9, color: Colors.textMuted }}>{t.earned}</Text>
+                  <Text style={{ ...Typography.captionBold, fontSize: 9 }}>{t.earned}</Text>
                 </>
               )}
             </View>
@@ -261,7 +262,7 @@ export default function CampaignDetailScreen() {
 
         <Text
           style={{
-            fontFamily: 'DMSans_600SemiBold',
+            fontFamily: Fonts.bodySemiBold,
             fontSize: 15,
             color: Colors.textPrimary,
             marginBottom: 8,
@@ -283,7 +284,7 @@ export default function CampaignDetailScreen() {
           >
             <Text
               style={{
-                fontFamily: 'DMSans_400Regular',
+                fontFamily: Fonts.body,
                 fontSize: 13,
                 color: Colors.textSecondary,
               }}
@@ -317,7 +318,7 @@ export default function CampaignDetailScreen() {
           />
           <Text
             style={{
-              fontFamily: 'DMSans_600SemiBold',
+              fontFamily: Fonts.bodySemiBold,
               fontSize: 15,
               color: copied ? '#fff' : Colors.textSecondary,
             }}
@@ -342,7 +343,7 @@ export default function CampaignDetailScreen() {
           <Ionicons name="share-social-outline" size={18} color="#fff" />
           <Text
             style={{
-              fontFamily: 'DMSans_600SemiBold',
+              fontFamily: Fonts.bodySemiBold,
               fontSize: 15,
               color: '#fff',
             }}

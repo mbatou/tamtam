@@ -24,7 +24,8 @@
     "tabs"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "https://www.tamma.me/*",
+    "https://tamma.me/*"
   ],
   "background": {
     "service_worker": "background/background.js"

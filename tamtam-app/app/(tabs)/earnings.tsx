@@ -1,10 +1,12 @@
-import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator, Linking } from 'react-native'
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator, Linking } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '@/lib/api'
 import { Colors } from '@/constants/colors'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatFCFA } from '@/constants/config'
+import { Fonts, Typography } from '@/constants/typography'
 
 export default function EarningsScreen() {
   const { profile, refetchProfile } = useAuth()
@@ -54,16 +56,16 @@ export default function EarningsScreen() {
 
   if (loadError) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: Colors.bg }}>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-          <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.textPrimary, marginBottom: 12, textAlign: 'center' }}>
+          <Text style={{ ...Typography.bodyBold, marginBottom: 12, textAlign: 'center' }}>
             {t.loadError}
           </Text>
           <TouchableOpacity
             onPress={loadPayouts}
             style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10 }}
           >
-            <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 13, color: '#fff' }}>{t.retry}</Text>
+            <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 13, color: '#fff' }}>{t.retry}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -73,7 +75,7 @@ export default function EarningsScreen() {
   if (loading) {
     // Skeleton blocks mirroring the PWA earnings loading state
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: Colors.bg }}>
         <View style={{ padding: 16, paddingTop: 20, gap: 12 }}>
           <View style={{ height: 24, width: 112, borderRadius: 12, backgroundColor: Colors.card }} />
           <View style={{ height: 144, borderRadius: 16, backgroundColor: Colors.card }} />
@@ -85,12 +87,12 @@ export default function EarningsScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: Colors.bg }}>
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingTop: 20 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.teal} />}
       >
-        <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 20, color: Colors.textPrimary, marginBottom: 20 }}>
+        <Text style={{ ...Typography.heading, marginBottom: 20 }}>
           {t.earningsTitle}
         </Text>
 
@@ -101,18 +103,18 @@ export default function EarningsScreen() {
         }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <View>
-              <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 10, color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 }}>
+              <Text style={{ ...Typography.label, marginBottom: 2 }}>
                 {t.availableBalance}
               </Text>
-              <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 30, color: Colors.orange, letterSpacing: -0.75 }}>
+              <Text style={{ ...Typography.balance }}>
                 {formatFCFA(balance)}
               </Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 10, color: Colors.textFaint }}>
+              <Text style={{ ...Typography.caption }}>
                 {t.totalEarned}
               </Text>
-              <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.orange }}>
+              <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 14, color: Colors.orange }}>
                 {formatFCFA(totalEarned)}
               </Text>
             </View>
@@ -125,7 +127,7 @@ export default function EarningsScreen() {
               flexDirection: 'row', alignItems: 'center', gap: 8,
             }}>
               <ActivityIndicator size="small" color={Colors.teal} />
-              <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 13, color: Colors.teal, flex: 1 }}>
+              <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 13, color: Colors.teal, flex: 1 }}>
                 {t.processing}
               </Text>
             </View>
@@ -143,14 +145,14 @@ export default function EarningsScreen() {
                 }}
               >
                 <Text style={{
-                  fontFamily: 'DMSans_600SemiBold', fontSize: 14,
+                  fontFamily: Fonts.bodySemiBold, fontSize: 14,
                   color: balance >= 500 ? '#fff' : Colors.textGhost,
                 }}>
                   {t.withdraw}
                 </Text>
               </TouchableOpacity>
               <Text style={{
-                fontFamily: 'DMSans_400Regular', fontSize: 10, color: Colors.textFaint,
+                ...Typography.caption,
                 textAlign: 'center', marginTop: 8,
               }}>
                 {t.withdrawOnWeb}
@@ -167,18 +169,18 @@ export default function EarningsScreen() {
           }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <View>
-                <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 10, color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 }}>
+                <Text style={{ ...Typography.label, marginBottom: 2 }}>
                   {t.pendingEarnings}
                 </Text>
-                <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 24, color: Colors.orange }}>
+                <Text style={{ fontFamily: Fonts.heading, fontSize: 24, color: Colors.orange }}>
                   {formatFCFA(pendingBalance)}
                 </Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 10, color: Colors.textFaint }}>
+                <Text style={{ ...Typography.caption }}>
                   {t.totalAll}
                 </Text>
-                <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.textSecondary }}>
+                <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 14, color: Colors.textSecondary }}>
                   {formatFCFA(balance + pendingBalance)}
                 </Text>
               </View>
@@ -188,7 +190,7 @@ export default function EarningsScreen() {
 
         {/* Payout history */}
         <Text style={{
-          fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: Colors.textSecondary,
+          fontFamily: Fonts.bodySemiBold, fontSize: 12, color: Colors.textSecondary,
           textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12,
         }}>
           {t.history}
@@ -199,7 +201,7 @@ export default function EarningsScreen() {
             borderRadius: 12, padding: 24, alignItems: 'center',
             backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder,
           }}>
-            <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.textFaint }}>
+            <Text style={{ ...Typography.bodySmall, color: Colors.textFaint }}>
               {t.noWithdraw}
             </Text>
           </View>
@@ -217,15 +219,15 @@ export default function EarningsScreen() {
                     width: 32, height: 32, borderRadius: 16,
                     backgroundColor: style.bg, alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <Text style={{ fontSize: 12, color: style.text }}>
+                    <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 12, color: style.text }}>
                       {payout.status === 'sent' ? '✓' : payout.status === 'pending' || payout.status === 'processing' ? '⏳' : '✕'}
                     </Text>
                   </View>
                   <View>
-                    <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.textPrimary }}>
+                    <Text style={{ ...Typography.bodyBold }}>
                       {formatFCFA(payout.amount)}
                     </Text>
-                    <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 10, color: Colors.textFaint }}>
+                    <Text style={{ ...Typography.caption }}>
                       {payout.provider === 'wave' ? t.wave : t.orangeMoney}
                     </Text>
                   </View>
@@ -234,7 +236,7 @@ export default function EarningsScreen() {
                   backgroundColor: style.bg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2,
                   borderWidth: 1, borderColor: style.border,
                 }}>
-                  <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 10, color: style.text }}>
+                  <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 10, color: style.text }}>
                     {style.label}
                   </Text>
                 </View>

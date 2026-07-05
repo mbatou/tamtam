@@ -25,6 +25,7 @@ export const t = {
     navPulse: 'Pulse',
     navRythmes: 'Rythmes',
     navEarnings: 'Gains',
+    navRanking: 'Classement',
     navProfile: 'Profil',
 
     // Dashboard (matches PWA echo/dashboard)
@@ -70,6 +71,17 @@ export const t = {
     acceptError: "Impossible d'accepter le rythme. Réessaie.",
     cpaHint: 'Campagne CPA — Tu gagnes à chaque conversion',
     awarenessHint: 'Campagne Notoriété — Partage le visuel + lien ensemble',
+
+    // Ranking (matches PWA echo/leaderboard)
+    rankingEyebrow: 'Classement général',
+    rankingTitle: 'Top Échos 🔥',
+    rankingCount: 'Échos dans le classement',
+    yourRank: 'Votre rang',
+    rankingCampaigns: 'campagnes',
+    founding: 'Fondateur',
+    rankingEmptyTitle: 'Le classement est vide',
+    rankingEmptyDesc: 'Rejoignez une campagne et soyez le premier sur le podium !',
+    rankingSeeCampaigns: 'Voir les campagnes',
 
     // Earnings (matches PWA echo/earnings)
     earningsTitle: 'Mes Gains',
@@ -159,6 +171,7 @@ export const t = {
     navPulse: 'Pulse',
     navRythmes: 'Rythmes',
     navEarnings: 'Earnings',
+    navRanking: 'Ranking',
     navProfile: 'Profile',
 
     // Dashboard
@@ -204,6 +217,17 @@ export const t = {
     acceptError: 'Could not accept the rythme. Please try again.',
     cpaHint: 'CPA Campaign — You earn on each conversion',
     awarenessHint: 'Awareness Campaign — Share the visual + link together',
+
+    // Ranking (matches PWA echo/leaderboard)
+    rankingEyebrow: 'All-time ranking',
+    rankingTitle: 'Top Échos 🔥',
+    rankingCount: 'Échos ranked',
+    yourRank: 'Your rank',
+    rankingCampaigns: 'campaigns',
+    founding: 'Founding',
+    rankingEmptyTitle: 'No rankings yet',
+    rankingEmptyDesc: 'Join a campaign and be the first on the podium!',
+    rankingSeeCampaigns: 'See campaigns',
 
     // Earnings
     earningsTitle: 'My Earnings',

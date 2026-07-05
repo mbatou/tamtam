@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Colors } from '@/constants/colors'
 import { useLanguage } from '@/hooks/useLanguage'
+import { Fonts } from '@/constants/typography'
 
 WebBrowser.maybeCompleteAuthSession()
 
@@ -61,11 +62,11 @@ export function GoogleSignInButton() {
         gap: 10,
       }}
     >
-      <Text style={{ fontSize: 18, color: '#1F1F1F', fontFamily: 'DMSans_600SemiBold' }}>G</Text>
+      <Text style={{ fontSize: 18, color: '#1F1F1F', fontFamily: Fonts.bodySemiBold }}>G</Text>
       <Text
         style={{
           color: '#1F1F1F',
-          fontFamily: 'DMSans_600SemiBold',
+          fontFamily: Fonts.bodySemiBold,
           fontSize: 14,
         }}
       >

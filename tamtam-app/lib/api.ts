@@ -4,7 +4,7 @@
 // exact same server-side logic and response shapes.
 import { supabase } from './supabase'
 
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://tamma.me'
+const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://www.tamma.me'
 
 export class ApiError extends Error {
   status: number
