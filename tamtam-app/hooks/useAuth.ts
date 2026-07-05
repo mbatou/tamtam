@@ -16,6 +16,7 @@ type Profile = Pick<
   | 'total_earned'
   | 'city'
   | 'phone'
+  | 'created_at'
 >
 
 export function useAuth() {

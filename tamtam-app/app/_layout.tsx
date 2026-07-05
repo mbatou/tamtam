@@ -7,6 +7,7 @@ import {
   DMSans_600SemiBold,
 } from '@expo-google-fonts/dm-sans'
 import { Syne_800ExtraBold } from '@expo-google-fonts/syne'
+import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
 import { Colors } from '@/constants/colors'
 import { View, ActivityIndicator } from 'react-native'
@@ -49,7 +50,10 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    // expo-router usually mounts its own SafeAreaProvider, but Android devices
+    // were rendering under the status/nav bars — provide one explicitly so
+    // every SafeAreaView/useSafeAreaInsets below is guaranteed real insets.
+    <SafeAreaProvider>
       <StatusBar style="light" />
       <Stack
         screenOptions={{
@@ -65,6 +69,6 @@ export default function RootLayout() {
           options={{ presentation: 'modal' }}
         />
       </Stack>
-    </>
+    </SafeAreaProvider>
   )
 }

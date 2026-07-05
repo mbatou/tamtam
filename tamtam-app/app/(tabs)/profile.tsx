@@ -1,14 +1,35 @@
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { Colors } from '@/constants/colors'
 import Constants from 'expo-constants'
 import { router } from 'expo-router'
 import { formatFCFA } from '@/constants/config'
+import { Fonts, Typography } from '@/constants/typography'
+
+// Month + year in the user's language (e.g. "juillet 2026" / "July 2026").
+// Hand-rolled month names keep the output deterministic — no Intl dependency.
+const MONTHS = {
+  fr: ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'],
+  en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+} as const
+
+function formatMonthYear(iso: string | null | undefined, lang: 'fr' | 'en'): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  return `${MONTHS[lang][d.getMonth()]} ${d.getFullYear()}`
+}
 
 export default function ProfileScreen() {
   const { profile, signOut } = useAuth()
   const { t, lang, setLang } = useLanguage()
+
+  // First letter of the name — "?" only when the profile is truly absent.
+  const initial = profile?.name?.trim()
+    ? profile.name.trim().charAt(0).toUpperCase()
+    : '?'
 
   async function handleSignOut() {
     await signOut()
@@ -16,9 +37,9 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: Colors.bg }}>
       <ScrollView contentContainerStyle={{ padding: 16, paddingTop: 20 }}>
-        <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 20, color: Colors.textPrimary, marginBottom: 20 }}>
+        <Text style={{ ...Typography.heading, marginBottom: 20 }}>
           {t.profileTitle}
         </Text>
 
@@ -33,21 +54,21 @@ export default function ProfileScreen() {
               backgroundColor: Colors.tealSoft, borderWidth: 1, borderColor: Colors.tealBorder30,
               alignItems: 'center', justifyContent: 'center',
             }}>
-              <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 20, color: Colors.teal }}>
-                {profile?.name?.charAt(0)?.toUpperCase() || '?'}
+              <Text style={{ fontFamily: Fonts.heading, fontSize: 20, color: Colors.teal }}>
+                {initial}
               </Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 18, color: Colors.textPrimary }} numberOfLines={1}>
+              <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 18, color: Colors.textPrimary }} numberOfLines={1}>
                 {profile?.name}
               </Text>
               {profile?.phone && (
-                <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.textMuted, marginTop: 2 }}>
+                <Text style={{ ...Typography.bodySmall, marginTop: 2 }}>
                   {profile.phone}
                 </Text>
               )}
               {profile?.city && (
-                <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.textFaint, marginTop: 1 }}>
+                <Text style={{ ...Typography.bodySmall, color: Colors.textFaint, marginTop: 1 }}>
                   {profile.city}
                 </Text>
               )}
@@ -58,22 +79,22 @@ export default function ProfileScreen() {
         {/* Stats — 3 columns */}
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
           <View style={{ flex: 1, borderRadius: 12, padding: 12, alignItems: 'center', backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder }}>
-            <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 18, color: Colors.textPrimary }}>
+            <Text style={{ ...Typography.stat }}>
               {(profile?.total_valid_clicks || 0).toLocaleString('fr-FR')}
             </Text>
-            <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 9, color: Colors.textMuted }}>{t.validClicks}</Text>
+            <Text style={{ ...Typography.captionBold, fontSize: 9 }}>{t.validClicks}</Text>
           </View>
           <View style={{ flex: 1, borderRadius: 12, padding: 12, alignItems: 'center', backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder }}>
-            <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 18, color: Colors.orange }}>
+            <Text style={{ ...Typography.stat, color: Colors.orange }}>
               {formatFCFA(profile?.total_earned || 0)}
             </Text>
-            <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 9, color: Colors.textMuted }}>{t.earned}</Text>
+            <Text style={{ ...Typography.captionBold, fontSize: 9 }}>{t.earned}</Text>
           </View>
           <View style={{ flex: 1, borderRadius: 12, padding: 12, alignItems: 'center', backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder }}>
-            <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 18, color: Colors.textPrimary }}>
+            <Text style={{ ...Typography.stat }}>
               {formatFCFA(profile?.available_balance || 0)}
             </Text>
-            <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 9, color: Colors.textMuted }}>{t.balance}</Text>
+            <Text style={{ ...Typography.captionBold, fontSize: 9 }}>{t.balance}</Text>
           </View>
         </View>
 
@@ -87,20 +108,21 @@ export default function ProfileScreen() {
             { label: t.totalEarned, value: formatFCFA(profile?.total_earned || 0), color: Colors.orange },
             { label: t.paymentMethod, value: profile?.phone ? t.wave : '—', color: Colors.textPrimary },
             { label: t.city, value: profile?.city || '—', color: Colors.textPrimary },
+            { label: t.memberSince, value: formatMonthYear(profile?.created_at, lang), color: Colors.textPrimary },
           ].map((row, i, rows) => (
             <View key={i} style={{
               flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12,
               borderBottomWidth: i < rows.length - 1 ? 1 : 0, borderBottomColor: Colors.divider,
             }}>
-              <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.textMuted }}>{row.label}</Text>
-              <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: row.color }}>{row.value}</Text>
+              <Text style={{ ...Typography.bodySmall }}>{row.label}</Text>
+              <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 12, color: row.color }}>{row.value}</Text>
             </View>
           ))}
         </View>
 
         {/* Language selector */}
         <Text style={{
-          fontFamily: 'DMSans_600SemiBold', fontSize: 10, color: Colors.textMuted,
+          ...Typography.captionBold,
           textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8,
         }}>
           {t.language}
@@ -124,13 +146,13 @@ export default function ProfileScreen() {
               }}
             >
               <Text style={{
-                fontFamily: 'DMSans_400Regular', fontSize: 15,
+                fontFamily: Fonts.body, fontSize: 15,
                 color: lang === option.code ? Colors.teal : Colors.textSecondary,
               }}>
                 {option.label}
               </Text>
               {lang === option.code && (
-                <Text style={{ color: Colors.teal, fontSize: 16 }}>✓</Text>
+                <Text style={{ fontFamily: Fonts.bodySemiBold, color: Colors.teal, fontSize: 16 }}>✓</Text>
               )}
             </TouchableOpacity>
           ))}
@@ -138,7 +160,7 @@ export default function ProfileScreen() {
 
         {/* Notifications */}
         <Text style={{
-          fontFamily: 'DMSans_600SemiBold', fontSize: 10, color: Colors.textMuted,
+          ...Typography.captionBold,
           textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8,
         }}>
           {t.notifications}
@@ -148,13 +170,13 @@ export default function ProfileScreen() {
           backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder,
           flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 15, color: Colors.textSecondary }}>
+          <Text style={{ fontFamily: Fonts.body, fontSize: 15, color: Colors.textSecondary }}>
             {t.pushComingSoon}
           </Text>
         </View>
 
         <Text style={{
-          fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.textGhost,
+          fontFamily: Fonts.body, fontSize: 12, color: Colors.textGhost,
           textAlign: 'center', marginBottom: 24,
         }}>
           {t.version} {Constants.expoConfig?.version || '1.0.0'}
@@ -168,7 +190,7 @@ export default function ProfileScreen() {
             borderRadius: 12, paddingVertical: 14, alignItems: 'center',
           }}
         >
-          <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.error }}>
+          <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 14, color: Colors.error }}>
             {t.signOut}
           </Text>
         </TouchableOpacity>

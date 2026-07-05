@@ -1,4 +1,5 @@
-import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, Image, Alert } from 'react-native'
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Image, Alert } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import { useState, useEffect, useCallback } from 'react'
@@ -7,6 +8,7 @@ import { Colors } from '@/constants/colors'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { ECHO_SHARE_PERCENT, formatFCFA } from '@/constants/config'
+import { Fonts, Typography } from '@/constants/typography'
 
 export default function PulseScreen() {
   const { profile } = useAuth()
@@ -81,16 +83,16 @@ export default function PulseScreen() {
 
   if (loadError) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: Colors.bg }}>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-          <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.textPrimary, marginBottom: 12, textAlign: 'center' }}>
+          <Text style={{ ...Typography.bodyBold, marginBottom: 12, textAlign: 'center' }}>
             {t.loadError}
           </Text>
           <TouchableOpacity
             onPress={loadData}
             style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10 }}
           >
-            <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 13, color: '#fff' }}>{t.retry}</Text>
+            <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 13, color: '#fff' }}>{t.retry}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -100,7 +102,7 @@ export default function PulseScreen() {
   if (loading) {
     // Skeleton blocks mirroring the PWA dashboard loading state
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: Colors.bg }}>
         <View style={{ padding: 16, paddingTop: 20, gap: 16 }}>
           <View style={{ height: 32, width: 192, borderRadius: 12, backgroundColor: Colors.card }} />
           <View style={{ height: 128, borderRadius: 16, backgroundColor: Colors.card }} />
@@ -117,7 +119,7 @@ export default function PulseScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: Colors.bg }}>
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingTop: 20 }}
         refreshControl={
@@ -127,10 +129,10 @@ export default function PulseScreen() {
         {/* Top bar: greeting + avatar */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <View>
-            <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 20, color: Colors.textPrimary }}>
+            <Text style={{ ...Typography.heading }}>
               {t.greeting} {profile?.name?.split(' ')[0] || ''}
             </Text>
-            <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.textFaint, marginTop: 2 }}>
+            <Text style={{ ...Typography.bodySmall, color: Colors.textFaint, marginTop: 2 }}>
               {t.yourPulse}
             </Text>
           </View>
@@ -139,8 +141,8 @@ export default function PulseScreen() {
             backgroundColor: Colors.tealSoft, borderWidth: 1, borderColor: Colors.tealBorder30,
             alignItems: 'center', justifyContent: 'center',
           }}>
-            <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.teal }}>
-              {profile?.name?.charAt(0)?.toUpperCase() || '?'}
+            <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 14, color: Colors.teal }}>
+              {profile?.name?.trim() ? profile.name.trim().charAt(0).toUpperCase() : '?'}
             </Text>
           </View>
         </View>
@@ -153,18 +155,18 @@ export default function PulseScreen() {
         }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 10, color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
+              <Text style={{ ...Typography.label, marginBottom: 4 }}>
                 {t.availableBalance}
               </Text>
-              <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 30, color: Colors.orange, letterSpacing: -0.75 }}>
+              <Text style={{ ...Typography.balance }}>
                 {formatFCFA(balance)}
               </Text>
               {pendingBalance > 0 && (
-                <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 10, color: Colors.teal, opacity: 0.7, marginTop: 2 }}>
+                <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 10, color: Colors.teal, opacity: 0.7, marginTop: 2 }}>
                   +{formatFCFA(pendingBalance)} {t.pendingBalanceLabel}
                 </Text>
               )}
-              <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 10, color: Colors.textFaint, marginTop: 2 }}>
+              <Text style={{ ...Typography.caption, marginTop: 2 }}>
                 {t.totalEarnedLabel} <Text style={{ color: Colors.orange + 'CC' }}>{formatFCFA(totalEarned)}</Text>
               </Text>
             </View>
@@ -176,7 +178,7 @@ export default function PulseScreen() {
                   paddingHorizontal: 16, paddingVertical: 12, minHeight: 44, justifyContent: 'center',
                 }}
               >
-                <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: '#fff' }}>
+                <Text style={{ ...Typography.button, fontSize: 12 }}>
                   {t.withdraw}
                 </Text>
               </TouchableOpacity>
@@ -184,14 +186,14 @@ export default function PulseScreen() {
           </View>
           {balance === 0 && totalEarned === 0 && (
             <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: Colors.divider }}>
-              <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.textMuted }}>
+              <Text style={{ ...Typography.bodySmall }}>
                 🎯 {t.balanceZeroNew}
               </Text>
             </View>
           )}
           {balance === 0 && totalEarned > 0 && (
             <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: Colors.divider }}>
-              <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.textMuted }}>
+              <Text style={{ ...Typography.bodySmall }}>
                 💡 {t.balanceZeroEarned}
               </Text>
             </View>
@@ -212,10 +214,10 @@ export default function PulseScreen() {
               {stat.liveDot && (
                 <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.teal, marginBottom: 3 }} />
               )}
-              <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 18, color: stat.color }}>
+              <Text style={{ fontFamily: Fonts.heading, fontSize: 18, color: stat.color }}>
                 {stat.value}
               </Text>
-              <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 9, color: Colors.textMuted, marginTop: 2 }}>
+              <Text style={{ ...Typography.captionBold, fontSize: 9, marginTop: 2 }}>
                 {stat.label}
               </Text>
             </View>
@@ -226,11 +228,11 @@ export default function PulseScreen() {
         {activeLinks.length > 0 && (
           <View style={{ marginBottom: 20 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 14, color: Colors.textPrimary }}>
+              <Text style={{ ...Typography.headingSmall }}>
                 {t.myRythmes}
               </Text>
               <TouchableOpacity onPress={() => router.push('/(tabs)/rythmes' as any)}>
-                <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 11, color: Colors.teal }}>
+                <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 11, color: Colors.teal }}>
                   {t.seeAll} →
                 </Text>
               </TouchableOpacity>
@@ -263,14 +265,14 @@ export default function PulseScreen() {
                       </View>
                     )}
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: Colors.textPrimary }} numberOfLines={1}>
+                      <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 12, color: Colors.textPrimary }} numberOfLines={1}>
                         {campaign.title}
                       </Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
-                        <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 10, color: Colors.textMuted }}>
+                        <Text style={{ fontFamily: Fonts.body, fontSize: 10, color: Colors.textMuted }}>
                           {link.click_count} {t.clicks}
                         </Text>
-                        <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 10, color: Colors.orange }}>
+                        <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 10, color: Colors.orange }}>
                           {formatFCFA(earned)}
                         </Text>
                       </View>
@@ -290,10 +292,10 @@ export default function PulseScreen() {
         {availableCampaigns.length > 0 && (
           <View style={{ marginBottom: 20 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 14, color: Colors.textPrimary }}>
+              <Text style={{ ...Typography.headingSmall }}>
                 {t.discover}
               </Text>
-              <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 10, color: Colors.textFaint }}>
+              <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 10, color: Colors.textFaint }}>
                 {availableCampaigns.length} {t.available}{availableCampaigns.length !== 1 ? 's' : ''}
               </Text>
             </View>
@@ -313,21 +315,21 @@ export default function PulseScreen() {
                   <View style={{ padding: 16 }}>
                     <Text
                       onPress={() => router.push(`/campaign/${campaign.id}`)}
-                      style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.textPrimary, marginBottom: 4 }}
+                      style={{ ...Typography.bodyBold, marginBottom: 4 }}
                     >
                       {campaign.title}
                     </Text>
-                    <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.textFaint, marginBottom: 12 }} numberOfLines={2}>
+                    <Text style={{ ...Typography.bodySmall, color: Colors.textFaint, marginBottom: 12 }} numberOfLines={2}>
                       {campaign.description}
                     </Text>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.orange }}>
+                      <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 14, color: Colors.orange }}>
                         {isCpa
                           ? `${formatFCFA(Math.floor((campaign.cpa_amount || 0) * ECHO_SHARE_PERCENT / 100))} ${t.perConversion}`
                           : `${campaign.cpc} FCFA ${t.perClick}`
                         }
                       </Text>
-                      <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.textMuted }}>
+                      <Text style={{ ...Typography.bodySmall }}>
                         {formatFCFA(campaign.budget - campaign.spent)} {t.remaining}
                       </Text>
                     </View>
@@ -347,7 +349,7 @@ export default function PulseScreen() {
                         opacity: accepting === campaign.id ? 0.5 : 1,
                       }}
                     >
-                      <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: '#fff' }}>
+                      <Text style={{ ...Typography.button }}>
                         {accepting === campaign.id ? t.accepting : t.acceptRythme}
                       </Text>
                     </TouchableOpacity>
@@ -363,7 +365,7 @@ export default function PulseScreen() {
                   backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder,
                 }}
               >
-                <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.teal }}>
+                <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 14, color: Colors.teal }}>
                   {t.seeAll} ({availableCampaigns.length - 2} {t.moreAvailable})
                 </Text>
               </TouchableOpacity>
@@ -378,10 +380,10 @@ export default function PulseScreen() {
             backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder,
           }}>
             <Text style={{ fontSize: 32, marginBottom: 8 }}>🔔</Text>
-            <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.textPrimary, marginBottom: 4 }}>
+            <Text style={{ ...Typography.bodyBold, marginBottom: 4 }}>
               {t.noAvailable}
             </Text>
-            <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.textFaint, textAlign: 'center', marginBottom: 16 }}>
+            <Text style={{ ...Typography.bodySmall, color: Colors.textFaint, textAlign: 'center', marginBottom: 16 }}>
               {t.notifHint}
             </Text>
             <TouchableOpacity
@@ -392,7 +394,7 @@ export default function PulseScreen() {
                 backgroundColor: Colors.btnGhostBg, borderWidth: 1, borderColor: Colors.btnGhostBorder,
               }}
             >
-              <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: Colors.textPrimary }}>
+              <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 12, color: Colors.textPrimary }}>
                 🤝 {t.inviteFriend}
               </Text>
             </TouchableOpacity>

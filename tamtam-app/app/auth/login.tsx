@@ -7,17 +7,19 @@ import {
   Platform,
   ScrollView,
 } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Colors } from '@/constants/colors'
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
 import { useLanguage } from '@/hooks/useLanguage'
+import { Fonts } from '@/constants/typography'
 
 // PWA auth field look: label above a #141420 input with a white/[0.07]
 // border, rounded-xl, placeholder at white/20 (components/auth/FormField).
 const labelStyle = {
-  fontFamily: 'DMSans_600SemiBold',
+  fontFamily: Fonts.bodySemiBold,
   fontSize: 12,
   color: 'rgba(255,255,255,0.5)',
   marginBottom: 8,
@@ -31,7 +33,7 @@ const inputStyle = {
   paddingHorizontal: 16,
   paddingVertical: 12,
   color: Colors.textPrimary,
-  fontFamily: 'DMSans_400Regular',
+  fontFamily: Fonts.body,
   fontSize: 14,
 } as const
 
@@ -62,172 +64,177 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
+    <SafeAreaView
+      edges={['top', 'bottom']}
       style={{ flex: 1, backgroundColor: Colors.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          justifyContent: 'center',
-          padding: 24,
-        }}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={{ alignItems: 'center', marginBottom: 48 }}>
-          <Text
-            style={{
-              fontFamily: 'Syne_800ExtraBold',
-              fontSize: 40,
-              color: Colors.orange,
-              letterSpacing: -1,
-            }}
-          >
-            Tamtam
-          </Text>
-          <Text
-            style={{
-              fontFamily: 'DMSans_400Regular',
-              fontSize: 14,
-              color: Colors.textMuted,
-              marginTop: 4,
-            }}
-          >
-            {t.tagline}
-          </Text>
-        </View>
-
-        <GoogleSignInButton />
-
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            marginVertical: 24,
-            gap: 12,
+        <ScrollView
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: 'center',
+            padding: 24,
           }}
+          keyboardShouldPersistTaps="handled"
         >
-          <View
-            style={{ flex: 1, height: 1, backgroundColor: Colors.border }}
-          />
-          <Text
-            style={{
-              color: Colors.textMuted,
-              fontSize: 12,
-              fontFamily: 'DMSans_400Regular',
-            }}
-          >
-            {t.orSeparator}
-          </Text>
-          <View
-            style={{ flex: 1, height: 1, backgroundColor: Colors.border }}
-          />
-        </View>
-
-        <Text style={labelStyle}>{t.email}</Text>
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          placeholder={t.emailPlaceholder}
-          placeholderTextColor={Colors.textGhost}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          style={{ ...inputStyle, marginBottom: 16 }}
-        />
-
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 8,
-          }}
-        >
-          <Text style={{ ...labelStyle, marginBottom: 0 }}>{t.password}</Text>
-          <TouchableOpacity onPress={() => router.push('/auth/forgot-password')}>
+          <View style={{ alignItems: 'center', marginBottom: 48 }}>
             <Text
               style={{
-                color: 'rgba(255,255,255,0.35)',
-                fontSize: 12,
-                fontFamily: 'DMSans_400Regular',
+                fontFamily: Fonts.heading,
+                fontSize: 40,
+                color: Colors.orange,
+                letterSpacing: -1,
               }}
             >
-              {t.forgotPassword}
+              Tamtam
             </Text>
-          </TouchableOpacity>
-        </View>
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          placeholder={t.passwordPlaceholder}
-          placeholderTextColor={Colors.textGhost}
-          secureTextEntry
-          style={{ ...inputStyle, marginBottom: 20 }}
-        />
-
-        {error ? (
-          <View
-            style={{
-              backgroundColor: Colors.errorBg,
-              borderWidth: 1,
-              borderColor: 'rgba(239,68,68,0.2)',
-              borderRadius: 12,
-              padding: 12,
-              marginBottom: 16,
-            }}
-          >
             <Text
               style={{
-                color: Colors.error,
-                fontSize: 13,
-                fontFamily: 'DMSans_400Regular',
+                fontFamily: Fonts.body,
+                fontSize: 14,
+                color: Colors.textMuted,
+                marginTop: 4,
               }}
             >
-              {error}
+              {t.tagline}
             </Text>
           </View>
-        ) : null}
 
-        <TouchableOpacity
-          onPress={handleLogin}
-          disabled={loading}
-          style={{
-            backgroundColor: Colors.orange,
-            borderRadius: 12,
-            paddingVertical: 14,
-            minHeight: 48,
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity: loading ? 0.6 : 1,
-          }}
-        >
-          <Text
+          <GoogleSignInButton />
+
+          <View
             style={{
-              color: '#fff',
-              fontFamily: 'DMSans_600SemiBold',
-              fontSize: 14,
+              flexDirection: 'row',
+              alignItems: 'center',
+              marginVertical: 24,
+              gap: 12,
             }}
           >
-            {loading ? '...' : t.login}
-          </Text>
-        </TouchableOpacity>
+            <View
+              style={{ flex: 1, height: 1, backgroundColor: Colors.border }}
+            />
+            <Text
+              style={{
+                color: Colors.textMuted,
+                fontSize: 12,
+                fontFamily: Fonts.body,
+              }}
+            >
+              {t.orSeparator}
+            </Text>
+            <View
+              style={{ flex: 1, height: 1, backgroundColor: Colors.border }}
+            />
+          </View>
 
-        <TouchableOpacity
-          onPress={() => router.push('/auth/register')}
-          style={{ alignItems: 'center', marginTop: 24, minHeight: 44, justifyContent: 'center' }}
-        >
-          <Text
+          <Text style={labelStyle}>{t.email}</Text>
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder={t.emailPlaceholder}
+            placeholderTextColor={Colors.textGhost}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            style={{ ...inputStyle, marginBottom: 16 }}
+          />
+
+          <View
             style={{
-              color: Colors.textFaint,
-              fontSize: 14,
-              fontFamily: 'DMSans_400Regular',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 8,
             }}
           >
-            {t.noAccount}{' '}
-            <Text style={{ color: Colors.teal, fontFamily: 'DMSans_600SemiBold' }}>{t.register}</Text>
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            <Text style={{ ...labelStyle, marginBottom: 0 }}>{t.password}</Text>
+            <TouchableOpacity onPress={() => router.push('/auth/forgot-password')}>
+              <Text
+                style={{
+                  color: 'rgba(255,255,255,0.35)',
+                  fontSize: 12,
+                  fontFamily: Fonts.body,
+                }}
+              >
+                {t.forgotPassword}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            placeholder={t.passwordPlaceholder}
+            placeholderTextColor={Colors.textGhost}
+            secureTextEntry
+            style={{ ...inputStyle, marginBottom: 20 }}
+          />
+
+          {error ? (
+            <View
+              style={{
+                backgroundColor: Colors.errorBg,
+                borderWidth: 1,
+                borderColor: 'rgba(239,68,68,0.2)',
+                borderRadius: 12,
+                padding: 12,
+                marginBottom: 16,
+              }}
+            >
+              <Text
+                style={{
+                  color: Colors.error,
+                  fontSize: 13,
+                  fontFamily: Fonts.body,
+                }}
+              >
+                {error}
+              </Text>
+            </View>
+          ) : null}
+
+          <TouchableOpacity
+            onPress={handleLogin}
+            disabled={loading}
+            style={{
+              backgroundColor: Colors.orange,
+              borderRadius: 12,
+              paddingVertical: 14,
+              minHeight: 48,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: loading ? 0.6 : 1,
+            }}
+          >
+            <Text
+              style={{
+                color: '#fff',
+                fontFamily: Fonts.bodySemiBold,
+                fontSize: 14,
+              }}
+            >
+              {loading ? '...' : t.login}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.push('/auth/register')}
+            style={{ alignItems: 'center', marginTop: 24, minHeight: 44, justifyContent: 'center' }}
+          >
+            <Text
+              style={{
+                color: Colors.textFaint,
+                fontSize: 14,
+                fontFamily: Fonts.body,
+              }}
+            >
+              {t.noAccount}{' '}
+              <Text style={{ color: Colors.teal, fontFamily: Fonts.bodySemiBold }}>{t.register}</Text>
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   )
 }
