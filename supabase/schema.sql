@@ -1,4 +1,4 @@
--- Tamtam production schema — REFERENCE SNAPSHOT (2026-07-05)
+-- Tamtam production schema — REFERENCE SNAPSHOT (2026-07-05, incl. 20260705_campaign_soft_delete)
 -- WARNING: This schema is for context only and is not meant to be run.
 -- Table order and constraints may not be valid for execution.
 --
@@ -97,6 +97,7 @@ CREATE TABLE public.campaigns (
   pricing_model text NOT NULL DEFAULT 'cpc'::text CHECK (pricing_model = ANY (ARRAY['cpc'::text, 'cpa'::text])),
   cpa_amount integer CHECK (cpa_amount IS NULL OR cpa_amount >= 100),
   cpa_event text CHECK (cpa_event IS NULL OR cpa_event ~ '^[a-z_]+$'::text),
+  deleted_at timestamp with time zone,
   CONSTRAINT campaigns_pkey PRIMARY KEY (id),
   CONSTRAINT campaigns_batteur_id_fkey FOREIGN KEY (batteur_id) REFERENCES public.users(id),
   CONSTRAINT campaigns_moderated_by_fkey FOREIGN KEY (moderated_by) REFERENCES public.users(id),

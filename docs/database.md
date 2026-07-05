@@ -26,8 +26,8 @@ is a real column. When it fails:
 | Migration | Status |
 |---|---|
 | `20260704_webhook_hardening.sql` | No-op on prod (unique constraint already exists) — safe to skip |
-| `20260705_wallet_atomics.sql` | **Run before/with next deploy** — atomic `debit_brand_budget()`; code falls back to legacy pattern until applied |
-| `20260705_campaign_soft_delete.sql` | **Run when convenient** — adds `campaigns.deleted_at`; until applied, campaign deletion falls back to `status='completed'` (pre-existing behavior) |
+| `20260705_wallet_atomics.sql` | Applied 2026-07-05 |
+| `20260705_campaign_soft_delete.sql` | Applied 2026-07-05 |
 
 ## Recommended upgrade: Supabase CLI workflow
 
