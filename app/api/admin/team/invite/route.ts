@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
+import { validationError } from "@/lib/api/errors";
 
 export const dynamic = "force-dynamic";
+
+const inviteTeamMemberSchema = z.object({
+  email: z.string().min(1, "Email requis").email("Email invalide").max(200),
+  // Any unknown role silently falls back to "member" (existing behavior)
+  role: z.string().optional().nullable(),
+});
 
 export async function POST(request: NextRequest) {
   const authClient = createClient();
@@ -14,13 +22,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
-  const { email, role: inviteRole } = await request.json();
-  if (!email) {
-    return NextResponse.json({ error: "Email requis" }, { status: 400 });
+  const parsed = inviteTeamMemberSchema.safeParse(await request.json());
+  if (!parsed.success) {
+    return validationError(parsed.error);
   }
+  const { email, role: inviteRole } = parsed.data;
 
   const validRoles = ["admin", "member", "viewer"];
-  const teamRole = validRoles.includes(inviteRole) ? inviteRole : "member";
+  const teamRole = inviteRole && validRoles.includes(inviteRole) ? inviteRole : "member";
 
   const supabase = createServiceClient();
 

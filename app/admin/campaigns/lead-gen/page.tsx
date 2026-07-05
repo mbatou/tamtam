@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BRAND_INDUSTRIES } from "@/lib/validations";
 import { LEAD_GEN_SETUP_FEE_FCFA, LEAD_GEN_MIN_BUDGET_FCFA } from "@/lib/constants";
@@ -607,7 +608,7 @@ function LeadGenCampaignPage() {
             <div className="flex flex-wrap gap-3 mb-2">
               {creativeUrls.map((url, i) => (
                 <div key={i} className="relative group">
-                  <img src={url} alt={`Banner ${i + 1}`} className="w-24 h-24 object-cover rounded-xl border border-white/10" />
+                  <Image src={url} alt={`Banner ${i + 1}`} width={96} height={96} className="w-24 h-24 object-cover rounded-xl border border-white/10" />
                   <button onClick={() => setCreativeUrls((prev) => prev.filter((_, idx) => idx !== i))} className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition">x</button>
                 </div>
               ))}

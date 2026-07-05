@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { useRouter, useParams } from "next/navigation";
 import { TEMPLATES } from "@/lib/landing-page-templates";
 import type { LandingPage, LandingPageFormField, LandingPageTemplate } from "@/lib/types";
@@ -287,7 +288,7 @@ export default function LandingPagePreviewPage() {
                   <label className="block text-xs font-semibold text-white/40 mb-1.5">Image principale</label>
                   {heroImageUrl && (
                     <div className="relative mb-2 group">
-                      <img src={heroImageUrl} alt="" className="w-full h-32 object-cover rounded-lg border border-white/10" />
+                      <Image src={heroImageUrl} alt="" width={640} height={128} className="w-full h-32 object-cover rounded-lg border border-white/10" />
                       <button
                         onClick={() => setHeroImageUrl("")}
                         className="absolute top-1 right-1 w-6 h-6 bg-red-500 rounded-full text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
@@ -477,9 +478,11 @@ export default function LandingPagePreviewPage() {
                   {/* Hero image */}
                   {(editMode ? heroImageUrl : landingPage.hero_image_url) && (
                     <div className="mb-4 rounded-xl overflow-hidden">
-                      <img
+                      <Image
                         src={(editMode ? heroImageUrl : landingPage.hero_image_url) || ""}
                         alt=""
+                        width={640}
+                        height={160}
                         className="w-full h-40 object-cover"
                       />
                     </div>
@@ -489,7 +492,7 @@ export default function LandingPagePreviewPage() {
                   {(editMode ? logoUrl : landingPage.logo_url) && (
                     <div className="flex justify-center mb-5">
                       <div className="p-2.5 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10">
-                        <img src={(editMode ? logoUrl : landingPage.logo_url) || ""} alt="" className="h-8 w-auto object-contain" />
+                        <Image src={(editMode ? logoUrl : landingPage.logo_url) || ""} alt="" width={128} height={32} unoptimized className="h-8 w-auto object-contain" />
                       </div>
                     </div>
                   )}
