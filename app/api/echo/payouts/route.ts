@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { requireAuthResponse } from "@/lib/api/auth";
 import { payoutRequestSchema } from "@/lib/validations";
 import { rateLimit } from "@/lib/rate-limit";
 import { sendPayoutRequestNotification } from "@/lib/email";
@@ -9,17 +9,10 @@ import { randomUUID } from "crypto";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const authClient = createClient();
-  const {
-    data: { user: authUser },
-  } = await authClient.auth.getUser();
-
-  if (!authUser) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-  }
-
-  const supabase = createServiceClient();
+export async function GET(request: NextRequest) {
+  const auth = await requireAuthResponse(undefined, request);
+  if (auth instanceof NextResponse) return auth;
+  const { authUser, supabase } = auth;
   const { data, error } = await supabase
     .from("payouts")
     .select("*")
@@ -33,14 +26,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const authClient = createClient();
-  const {
-    data: { user: authUser },
-  } = await authClient.auth.getUser();
-
-  if (!authUser) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-  }
+  const auth = await requireAuthResponse(undefined, request);
+  if (auth instanceof NextResponse) return auth;
+  const { authUser, supabase } = auth;
 
   const { allowed } = await rateLimit(`payout:${authUser.id}`, 3, 86400000);
   if (!allowed) {
@@ -60,8 +48,6 @@ export async function POST(request: NextRequest) {
   if (parsed.data.amount % 5 !== 0) {
     return NextResponse.json({ error: "Le montant doit être un multiple de 5" }, { status: 400 });
   }
-
-  const supabase = createServiceClient();
 
   // Fetch dynamic min payout setting
   const { data: minPayoutSetting } = await supabase

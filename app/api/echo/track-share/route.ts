@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { requireAuthResponse } from "@/lib/api/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  const authClient = createClient();
-  const { data: { user: authUser } } = await authClient.auth.getUser();
-  if (!authUser) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const auth = await requireAuthResponse(undefined, request);
+  if (auth instanceof NextResponse) return auth;
+  const { authUser, supabase } = auth;
 
   const { campaignId, shareMethod } = await request.json();
   if (!campaignId) {
     return NextResponse.json({ error: "campaignId requis" }, { status: 400 });
   }
 
-  const supabase = createServiceClient();
   const validMethods = ["image_and_link", "fallback_download", "link_only"];
   const method = validMethods.includes(shareMethod) ? shareMethod : "link_only";
 
