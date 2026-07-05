@@ -232,7 +232,7 @@ function attachEventListener(element, config) {
       sessionStorage.getItem("tamtam_tm_ref") ||
       new URLSearchParams(window.location.search).get("tm_ref");
 
-    fetch("https://tamma.me/api/pixel/event", {
+    fetch("https://www.tamma.me/api/pixel/event", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
