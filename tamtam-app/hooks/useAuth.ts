@@ -1,19 +1,21 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Session } from '@supabase/supabase-js'
+import type { Database } from '@/lib/database.types'
 
-interface Profile {
-  id: string
-  name: string
-  role: string
-  balance: number
-  available_balance: number
-  pending_balance: number
-  total_valid_clicks: number
-  total_earned: number
-  city: string | null
-  phone: string | null
-}
+type Profile = Pick<
+  Database['public']['Tables']['users']['Row'],
+  | 'id'
+  | 'name'
+  | 'role'
+  | 'balance'
+  | 'available_balance'
+  | 'pending_balance'
+  | 'total_valid_clicks'
+  | 'total_earned'
+  | 'city'
+  | 'phone'
+>
 
 export function useAuth() {
   const [session, setSession] = useState<Session | null>(null)
@@ -22,7 +24,7 @@ export function useAuth() {
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('users')
         .select(`
           id, name, role, balance, available_balance,
@@ -32,8 +34,13 @@ export function useAuth() {
         .eq('id', userId)
         .single()
 
+      if (error) {
+        console.error('[useAuth] fetchProfile failed:', error)
+      }
       setProfile(data)
-    } catch {}
+    } catch (err) {
+      console.error('[useAuth] fetchProfile threw:', err)
+    }
     setLoading(false)
   }, [])
 

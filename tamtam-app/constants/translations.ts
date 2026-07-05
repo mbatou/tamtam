@@ -15,6 +15,8 @@ export const t = {
     resetPasswordSubtitle: 'Entre ton email pour recevoir un lien de réinitialisation.',
     resetEmailSent: 'Email envoyé ! Vérifie ta boîte de réception.',
     back: 'Retour',
+    orSeparator: 'ou',
+    tagline: 'Gagne en partageant',
 
     // Navigation (matches PWA EchoBottomNav)
     navPulse: 'Pulse',
@@ -50,13 +52,18 @@ export const t = {
     tabMine: 'Mes Rythmes',
     tabDone: 'Terminés',
     noAvailableRythmes: 'Aucun rythme disponible',
+    noActiveRythmes: 'Aucun rythme actif',
     clicks: 'clics',
     available: 'disponible',
     perConversion: '/ conversion',
     perClick: '/ clic',
+    perAction: 'par action',
     remaining: 'restant',
     noFinished: 'Aucun rythme terminé',
     finishedHint: 'Les rythmes terminés apparaîtront ici.',
+    newBadge: 'Nouveau',
+    statusActive: 'Actif',
+    acceptError: "Impossible d'accepter le rythme. Réessaie.",
 
     // Earnings (matches PWA echo/earnings)
     earningsTitle: 'Mes Gains',
@@ -64,6 +71,7 @@ export const t = {
     pendingEarnings: 'Gains en cours',
     history: 'Historique des retraits',
     noWithdraw: 'Aucun retrait effectué.',
+    withdrawOnWeb: "Le retrait s'effectue sur le site",
 
     // Share
     shareTitle: 'Partage ce lien sur tes réseaux',
@@ -93,6 +101,8 @@ export const t = {
     failed: 'Échoué',
     error: 'Erreur',
     preparing: 'Préparation...',
+    loadError: 'Une erreur est survenue',
+    retry: 'Réessayer',
 
     // Settings
     settings: 'Paramètres',
@@ -100,6 +110,7 @@ export const t = {
     notifications: 'Notifications',
     smsNotifications: 'Notifications SMS',
     pushNotifications: 'Notifications Push',
+    pushComingSoon: 'Notifications push — bientôt disponible',
     signOut: 'Se déconnecter',
     version: 'Version',
     french: 'Français',
@@ -126,6 +137,8 @@ export const t = {
     resetPasswordSubtitle: 'Enter your email to receive a reset link.',
     resetEmailSent: 'Email sent! Check your inbox.',
     back: 'Back',
+    orSeparator: 'or',
+    tagline: 'Earn by sharing',
 
     // Navigation
     navPulse: 'Pulse',
@@ -161,13 +174,18 @@ export const t = {
     tabMine: 'My Rythmes',
     tabDone: 'Done',
     noAvailableRythmes: 'No rythmes available',
+    noActiveRythmes: 'No active rythmes',
     clicks: 'clicks',
     available: 'available',
     perConversion: '/ conversion',
     perClick: '/ click',
+    perAction: 'per action',
     remaining: 'remaining',
     noFinished: 'No finished rythmes',
     finishedHint: 'Finished rythmes will appear here.',
+    newBadge: 'New',
+    statusActive: 'Active',
+    acceptError: 'Could not accept the rythme. Please try again.',
 
     // Earnings
     earningsTitle: 'My Earnings',
@@ -175,6 +193,7 @@ export const t = {
     pendingEarnings: 'Pending earnings',
     history: 'Withdrawal history',
     noWithdraw: 'No withdrawals yet.',
+    withdrawOnWeb: 'Withdrawals are made on the website',
 
     // Share
     shareTitle: 'Share this link on your networks',
@@ -204,6 +223,8 @@ export const t = {
     failed: 'Failed',
     error: 'Error',
     preparing: 'Preparing...',
+    loadError: 'Something went wrong',
+    retry: 'Retry',
 
     // Settings
     settings: 'Settings',
@@ -211,6 +232,7 @@ export const t = {
     notifications: 'Notifications',
     smsNotifications: 'SMS Notifications',
     pushNotifications: 'Push Notifications',
+    pushComingSoon: 'Push notifications — coming soon',
     signOut: 'Sign out',
     version: 'Version',
     french: 'Français',

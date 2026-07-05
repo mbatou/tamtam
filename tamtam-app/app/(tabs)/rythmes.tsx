@@ -1,12 +1,12 @@
-import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, Image } from 'react-native'
-import { router } from 'expo-router'
+import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native'
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Colors } from '@/constants/colors'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import * as Clipboard from 'expo-clipboard'
-import { SHARE_BASE_URL } from '@/constants/config'
+import { SHARE_BASE_URL, ECHO_SHARE_PERCENT, formatFCFA } from '@/constants/config'
+import { generateShortCode } from '@/lib/shortCode'
 
 type TabKey = 'available' | 'mine' | 'done'
 
@@ -16,6 +16,7 @@ export default function RythmesScreen() {
   const [campaigns, setCampaigns] = useState<any[]>([])
   const [myLinks, setMyLinks] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [accepting, setAccepting] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<TabKey>('available')
@@ -36,6 +37,14 @@ export default function RythmesScreen() {
         .eq('echo_id', profile.id),
     ])
 
+    if (campaignsRes.error || linksRes.error) {
+      console.error('[Rythmes] loadData failed:', campaignsRes.error || linksRes.error)
+      setLoadError(true)
+      setLoading(false)
+      return
+    }
+    setLoadError(false)
+
     setCampaigns(campaignsRes.data || [])
     setMyLinks(linksRes.data || [])
     setLoading(false)
@@ -48,12 +57,17 @@ export default function RythmesScreen() {
   async function acceptCampaign(campaignId: string) {
     if (!profile?.id) return
     setAccepting(campaignId)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('tracked_links')
-      .insert({ campaign_id: campaignId, echo_id: profile.id })
+      .insert({ campaign_id: campaignId, echo_id: profile.id, short_code: generateShortCode() })
       .select('id')
       .single()
-    if (data) await loadData()
+    if (error) {
+      console.error('[Rythmes] acceptCampaign failed:', error)
+      Alert.alert(t.error, t.acceptError)
+    } else if (data) {
+      await loadData()
+    }
     setAccepting(null)
   }
 
@@ -67,8 +81,6 @@ export default function RythmesScreen() {
     setRefreshing(false)
   }
 
-  const formatFCFA = (n: number) => n.toLocaleString('fr-FR') + ' F'
-
   const acceptedIds = new Set(myLinks.map((l: any) => l.campaign_id))
   const availableCampaigns = campaigns.filter((c: any) => !acceptedIds.has(c.id))
   const myActiveLinks = myLinks.filter((l: any) => l.campaigns?.status === 'active')
@@ -79,6 +91,34 @@ export default function RythmesScreen() {
     { key: 'mine', label: t.tabMine, count: myActiveLinks.length },
     { key: 'done', label: t.tabDone, count: finishedLinks.length },
   ]
+
+  if (loadError) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.textPrimary, marginBottom: 12, textAlign: 'center' }}>
+            {t.loadError}
+          </Text>
+          <TouchableOpacity
+            onPress={loadData}
+            style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10 }}
+          >
+            <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 13, color: '#fff' }}>{t.retry}</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    )
+  }
+
+  if (loading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={Colors.orange} />
+        </View>
+      </SafeAreaView>
+    )
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
@@ -144,7 +184,7 @@ export default function RythmesScreen() {
                         {campaign.title}
                       </Text>
                       <View style={{ backgroundColor: Colors.orangeMuted, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1, borderColor: Colors.orange + '33' }}>
-                        <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 10, color: Colors.orange }}>Nouveau</Text>
+                        <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 10, color: Colors.orange }}>{t.newBadge}</Text>
                       </View>
                     </View>
                     <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.textFaint, marginBottom: 8 }} numberOfLines={2}>
@@ -152,7 +192,7 @@ export default function RythmesScreen() {
                     </Text>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                       <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.orange }}>
-                        {isCpa ? `${formatFCFA(Math.floor((campaign.cpa_amount || 0) * 0.75))} ${t.perConversion}` : `${campaign.cpc} FCFA ${t.perClick}`}
+                        {isCpa ? `${formatFCFA(Math.floor((campaign.cpa_amount || 0) * ECHO_SHARE_PERCENT / 100))} ${t.perConversion}` : `${campaign.cpc} FCFA ${t.perClick}`}
                       </Text>
                       <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.textMuted }}>
                         {formatFCFA(campaign.budget - campaign.spent)} {t.remaining}
@@ -183,7 +223,7 @@ export default function RythmesScreen() {
             <View style={{ borderRadius: 12, padding: 32, alignItems: 'center', backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder }}>
               <Text style={{ fontSize: 32, marginBottom: 8 }}>🔍</Text>
               <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.textPrimary, marginBottom: 4 }}>
-                Aucun rythme actif
+                {t.noActiveRythmes}
               </Text>
               <TouchableOpacity onPress={() => setActiveTab('available')} style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 8, marginTop: 12 }}>
                 <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: '#fff' }}>{t.discover}</Text>
@@ -194,7 +234,7 @@ export default function RythmesScreen() {
               const campaign = link.campaigns
               if (!campaign) return null
               const isCpa = campaign.pricing_model === 'cpa'
-              const earned = isCpa ? 0 : Math.floor(link.click_count * campaign.cpc * 0.75)
+              const earned = isCpa ? 0 : Math.floor(link.click_count * campaign.cpc * ECHO_SHARE_PERCENT / 100)
               const firstImage = campaign.creative_urls?.find((u: string) => !u?.match(/\.(mp4|webm)/))
               return (
                 <View key={link.id} style={{
@@ -210,7 +250,7 @@ export default function RythmesScreen() {
                         {campaign.title}
                       </Text>
                       <View style={{ backgroundColor: Colors.successBg, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1, borderColor: Colors.teal + '33' }}>
-                        <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 10, color: Colors.teal }}>Actif</Text>
+                        <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 10, color: Colors.teal }}>{t.statusActive}</Text>
                       </View>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
@@ -218,7 +258,7 @@ export default function RythmesScreen() {
                         {link.click_count} {t.clicks}
                       </Text>
                       <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: isCpa ? Colors.teal : Colors.orange }}>
-                        {isCpa ? `${formatFCFA(Math.floor((campaign.cpa_amount || 0) * 0.75))} ${t.perConversion}` : `${formatFCFA(earned)} ${t.earned}`}
+                        {isCpa ? `${formatFCFA(Math.floor((campaign.cpa_amount || 0) * ECHO_SHARE_PERCENT / 100))} ${t.perConversion}` : `${formatFCFA(earned)} ${t.earned}`}
                       </Text>
                     </View>
                     <TouchableOpacity
@@ -255,7 +295,7 @@ export default function RythmesScreen() {
             </View>
           ) : (
             finishedLinks.map((link: any) => {
-              const earned = Math.floor(link.click_count * (link.campaigns?.cpc || 0) * 0.75)
+              const earned = Math.floor(link.click_count * (link.campaigns?.cpc || 0) * ECHO_SHARE_PERCENT / 100)
               return (
                 <View key={link.id} style={{
                   borderRadius: 12, padding: 16, marginBottom: 8,

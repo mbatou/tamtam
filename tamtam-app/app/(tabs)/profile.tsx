@@ -1,22 +1,19 @@
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Switch } from 'react-native'
-import { useState } from 'react'
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { Colors } from '@/constants/colors'
 import Constants from 'expo-constants'
 import { router } from 'expo-router'
+import { formatFCFA } from '@/constants/config'
 
 export default function ProfileScreen() {
   const { profile, signOut } = useAuth()
   const { t, lang, setLang } = useLanguage()
-  const [pushEnabled, setPushEnabled] = useState(true)
 
   async function handleSignOut() {
     await signOut()
     router.replace('/auth/login')
   }
-
-  const formatFCFA = (n: number) => n.toLocaleString('fr-FR') + ' F'
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
@@ -151,14 +148,8 @@ export default function ProfileScreen() {
           flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 15, color: Colors.textSecondary }}>
-            {t.pushNotifications}
+            {t.pushComingSoon}
           </Text>
-          <Switch
-            value={pushEnabled}
-            onValueChange={setPushEnabled}
-            trackColor={{ false: 'rgba(255,255,255,0.10)', true: Colors.teal }}
-            thumbColor="#fff"
-          />
         </View>
 
         <Text style={{

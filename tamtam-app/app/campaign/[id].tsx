@@ -5,10 +5,11 @@ import {
   TouchableOpacity,
   Share,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native'
 import * as Clipboard from 'expo-clipboard'
 import { useLocalSearchParams, router } from 'expo-router'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -22,32 +23,47 @@ export default function CampaignDetailScreen() {
   const { t } = useLanguage()
   const [campaign, setCampaign] = useState<any>(null)
   const [trackedLink, setTrackedLink] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!id) return
+    setLoading(true)
+    setLoadError(false)
 
-    async function load() {
-      const { data: c } = await supabase
-        .from('campaigns')
-        .select('*, brand:users!batteur_id(name, company_name)')
-        .eq('id', id)
-        .single()
-      setCampaign(c)
+    const { data: c, error: campaignError } = await supabase
+      .from('campaigns')
+      .select('*, brand:users!batteur_id(name, company_name)')
+      .eq('id', id)
+      .single()
 
-      if (profile?.id) {
-        const { data: tl } = await supabase
-          .from('tracked_links')
-          .select('id, tm_ref, short_code')
-          .eq('campaign_id', id)
-          .eq('echo_id', profile.id)
-          .maybeSingle()
-        setTrackedLink(tl)
-      }
+    if (campaignError || !c) {
+      console.error('[CampaignDetail] load failed:', campaignError)
+      setLoadError(true)
+      setLoading(false)
+      return
     }
+    setCampaign(c)
 
-    load()
+    if (profile?.id) {
+      const { data: tl, error: linkError } = await supabase
+        .from('tracked_links')
+        .select('id, tm_ref, short_code')
+        .eq('campaign_id', id)
+        .eq('echo_id', profile.id)
+        .maybeSingle()
+      if (linkError) {
+        console.error('[CampaignDetail] tracked link load failed:', linkError)
+      }
+      setTrackedLink(tl)
+    }
+    setLoading(false)
   }, [id, profile?.id])
+
+  useEffect(() => {
+    load()
+  }, [load])
 
   const shareUrl = trackedLink
     ? `${SHARE_BASE_URL}/r/${trackedLink.short_code || trackedLink.id}`
@@ -66,10 +82,41 @@ export default function CampaignDetailScreen() {
       await Share.share({
         message: `${campaign.title}\n\n${shareUrl}`,
       })
-    } catch {}
+    } catch (err) {
+      console.error('[CampaignDetail] Share.share failed:', err)
+    }
   }
 
-  if (!campaign) return null
+  if (loading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={Colors.orange} />
+        </View>
+      </SafeAreaView>
+    )
+  }
+
+  if (loadError || !campaign) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.textPrimary, marginBottom: 12, textAlign: 'center' }}>
+            {t.loadError}
+          </Text>
+          <TouchableOpacity
+            onPress={load}
+            style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10 }}
+          >
+            <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 13, color: '#fff' }}>{t.retry}</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    )
+  }
+
+  const isCpa = campaign.pricing_model === 'cpa'
+  const displayAmount = isCpa ? campaign.cpa_amount : campaign.cpc
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
@@ -122,7 +169,7 @@ export default function CampaignDetailScreen() {
               color: Colors.orange,
             }}
           >
-            {campaign.cpc || campaign.cpa_amount || 50} FCFA
+            {displayAmount != null ? `${displayAmount} FCFA` : '—'}
           </Text>
           <Text
             style={{
@@ -132,7 +179,7 @@ export default function CampaignDetailScreen() {
               marginTop: 4,
             }}
           >
-            {t.perClick}
+            {isCpa ? t.perAction : t.perClick}
           </Text>
         </View>
 

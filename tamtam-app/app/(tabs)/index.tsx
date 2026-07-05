@@ -1,10 +1,12 @@
-import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity } from 'react-native'
+import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator, Alert } from 'react-native'
 import { router } from 'expo-router'
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Colors } from '@/constants/colors'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
+import { ECHO_SHARE_PERCENT, formatFCFA } from '@/constants/config'
+import { generateShortCode } from '@/lib/shortCode'
 
 export default function PulseScreen() {
   const { profile } = useAuth()
@@ -12,6 +14,7 @@ export default function PulseScreen() {
   const [activeLinks, setActiveLinks] = useState<any[]>([])
   const [availableCampaigns, setAvailableCampaigns] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [accepting, setAccepting] = useState<string | null>(null)
 
@@ -31,6 +34,14 @@ export default function PulseScreen() {
         .order('created_at', { ascending: false }),
     ])
 
+    if (linksRes.error || campaignsRes.error) {
+      console.error('[Pulse] loadData failed:', linksRes.error || campaignsRes.error)
+      setLoadError(true)
+      setLoading(false)
+      return
+    }
+    setLoadError(false)
+
     const links = linksRes.data || []
     setActiveLinks(links)
 
@@ -49,13 +60,18 @@ export default function PulseScreen() {
     if (!profile?.id) return
     setAccepting(campaignId)
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('tracked_links')
-      .insert({ campaign_id: campaignId, echo_id: profile.id })
+      .insert({ campaign_id: campaignId, echo_id: profile.id, short_code: generateShortCode() })
       .select('id')
       .single()
 
-    if (data) await loadData()
+    if (error) {
+      console.error('[Pulse] acceptCampaign failed:', error)
+      Alert.alert(t.error, t.acceptError)
+    } else if (data) {
+      await loadData()
+    }
     setAccepting(null)
   }
 
@@ -68,14 +84,40 @@ export default function PulseScreen() {
   const totalClicks = activeLinks.reduce((sum: number, l: any) => sum + (l.click_count || 0), 0)
   const totalEarnings = activeLinks.reduce((sum: number, l: any) => {
     const cpc = l.campaigns?.cpc || 0
-    return sum + Math.floor(l.click_count * cpc * 0.75)
+    return sum + Math.floor(l.click_count * cpc * ECHO_SHARE_PERCENT / 100)
   }, 0)
   const balance = profile?.available_balance || 0
   const pendingBalance = profile?.pending_balance || 0
   const totalEarned = profile?.total_earned || 0
   const activeCount = activeLinks.filter((l: any) => l.campaigns?.status === 'active').length
 
-  const formatFCFA = (n: number) => n.toLocaleString('fr-FR') + ' F'
+  if (loadError) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.textPrimary, marginBottom: 12, textAlign: 'center' }}>
+            {t.loadError}
+          </Text>
+          <TouchableOpacity
+            onPress={loadData}
+            style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10 }}
+          >
+            <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 13, color: '#fff' }}>{t.retry}</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    )
+  }
+
+  if (loading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={Colors.orange} />
+        </View>
+      </SafeAreaView>
+    )
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
@@ -189,7 +231,7 @@ export default function PulseScreen() {
             {activeLinks.slice(0, 3).map((link: any) => {
               const campaign = link.campaigns
               if (!campaign) return null
-              const earned = Math.floor(link.click_count * (campaign.cpc || 0) * 0.75)
+              const earned = Math.floor(link.click_count * (campaign.cpc || 0) * ECHO_SHARE_PERCENT / 100)
               return (
                 <TouchableOpacity
                   key={link.id}
@@ -257,7 +299,7 @@ export default function PulseScreen() {
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                       <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.orange }}>
                         {isCpa
-                          ? `${formatFCFA(Math.floor((campaign.cpa_amount || 0) * 0.75))} ${t.perConversion}`
+                          ? `${formatFCFA(Math.floor((campaign.cpa_amount || 0) * ECHO_SHARE_PERCENT / 100))} ${t.perConversion}`
                           : `${campaign.cpc} FCFA ${t.perClick}`
                         }
                       </Text>

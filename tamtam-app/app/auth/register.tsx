@@ -66,7 +66,7 @@ export default function RegisterScreen() {
               letterSpacing: -1,
             }}
           >
-            TAMTAM
+            Tamtam
           </Text>
           <Text
             style={{
@@ -76,7 +76,7 @@ export default function RegisterScreen() {
               marginTop: 4,
             }}
           >
-            Gagne en partageant
+            {t.tagline}
           </Text>
         </View>
 
@@ -100,7 +100,7 @@ export default function RegisterScreen() {
               fontFamily: 'DMSans_400Regular',
             }}
           >
-            ou
+            {t.orSeparator}
           </Text>
           <View
             style={{ flex: 1, height: 1, backgroundColor: Colors.border }}

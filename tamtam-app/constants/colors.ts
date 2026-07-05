@@ -1,3 +1,5 @@
+// Mirrors tailwind.config.ts tt.* palette in the parent repo — a parity test
+// in the web repo enforces the shared tokens.
 export const Colors = {
   bg: '#0F0F1F',
   bgAlt: '#0A0A1A',
@@ -7,7 +9,8 @@ export const Colors = {
   cardBorder: 'rgba(255,255,255,0.06)',
 
   orange: '#D35400',
-  orangeLight: '#F39C12',
+  gold: '#F39C12', // legacy tamtam.gold (not part of the tt.* palette)
+  orangeLight: '#FEF0E7', // tt.orange-light
   orangeMid: '#F0997B',
   orangeDark: '#9A3D08',
   orangeMuted: 'rgba(211,84,0,0.15)',

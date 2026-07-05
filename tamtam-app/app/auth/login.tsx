@@ -15,7 +15,7 @@ import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
 import { useLanguage } from '@/hooks/useLanguage'
 
 export default function LoginScreen() {
-  const { t, lang } = useLanguage()
+  const { t } = useLanguage()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -72,7 +72,7 @@ export default function LoginScreen() {
               marginTop: 4,
             }}
           >
-            {lang === 'fr' ? 'Gagne en partageant' : 'Earn by sharing'}
+            {t.tagline}
           </Text>
         </View>
 
@@ -96,7 +96,7 @@ export default function LoginScreen() {
               fontFamily: 'DMSans_400Regular',
             }}
           >
-            ou
+            {t.orSeparator}
           </Text>
           <View
             style={{ flex: 1, height: 1, backgroundColor: Colors.border }}

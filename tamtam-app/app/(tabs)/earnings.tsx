@@ -1,25 +1,37 @@
-import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity } from 'react-native'
+import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator, Linking } from 'react-native'
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Colors } from '@/constants/colors'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
+import { formatFCFA } from '@/constants/config'
 
 export default function EarningsScreen() {
   const { profile, refetchProfile } = useAuth()
   const { t } = useLanguage()
   const [payouts, setPayouts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
 
   const loadPayouts = useCallback(async () => {
     if (!profile?.id) return
-    const { data } = await supabase
-      .from('wave_payouts')
+    // NOTE: payout history lives in `payouts` (echo_id/status/provider),
+    // not `wave_payouts` — same table the web GET /api/echo/payouts reads.
+    const { data, error } = await supabase
+      .from('payouts')
       .select('id, amount, status, provider, created_at')
       .eq('echo_id', profile.id)
       .order('created_at', { ascending: false })
       .limit(20)
+
+    if (error) {
+      console.error('[Earnings] loadPayouts failed:', error)
+      setLoadError(true)
+      setLoading(false)
+      return
+    }
+    setLoadError(false)
 
     setPayouts(data || [])
     setLoading(false)
@@ -35,7 +47,6 @@ export default function EarningsScreen() {
     setRefreshing(false)
   }
 
-  const formatFCFA = (n: number) => n.toLocaleString('fr-FR') + ' F'
   const balance = profile?.available_balance || 0
   const pendingBalance = profile?.pending_balance || 0
   const totalEarned = profile?.total_earned || 0
@@ -45,6 +56,34 @@ export default function EarningsScreen() {
     if (status === 'sent') return { bg: Colors.successBg, text: Colors.teal, border: Colors.teal + '33', label: t.sent }
     if (status === 'pending' || status === 'processing') return { bg: Colors.orangeMuted, text: Colors.orange, border: Colors.orange + '33', label: t.pending }
     return { bg: Colors.errorBg, text: Colors.error, border: 'rgba(239,68,68,0.2)', label: t.failed }
+  }
+
+  if (loadError) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.textPrimary, marginBottom: 12, textAlign: 'center' }}>
+            {t.loadError}
+          </Text>
+          <TouchableOpacity
+            onPress={loadPayouts}
+            style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10 }}
+          >
+            <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 13, color: '#fff' }}>{t.retry}</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    )
+  }
+
+  if (loading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={Colors.orange} />
+        </View>
+      </SafeAreaView>
+    )
   }
 
   return (
@@ -92,23 +131,32 @@ export default function EarningsScreen() {
               </Text>
             </View>
           ) : (
-            <TouchableOpacity
-              disabled={balance < 500}
-              style={{
-                marginTop: 12, paddingVertical: 12, borderRadius: 12, alignItems: 'center',
-                backgroundColor: balance >= 500 ? Colors.teal : 'rgba(255,255,255,0.05)',
-                borderWidth: balance >= 500 ? 0 : 1,
-                borderColor: Colors.borderActive,
-                opacity: balance >= 500 ? 1 : 0.5,
-              }}
-            >
+            <>
+              <TouchableOpacity
+                disabled={balance < 500}
+                onPress={() => Linking.openURL('https://tamma.me/earnings')}
+                style={{
+                  marginTop: 12, paddingVertical: 12, borderRadius: 12, alignItems: 'center',
+                  backgroundColor: balance >= 500 ? Colors.teal : 'rgba(255,255,255,0.05)',
+                  borderWidth: balance >= 500 ? 0 : 1,
+                  borderColor: Colors.borderActive,
+                  opacity: balance >= 500 ? 1 : 0.5,
+                }}
+              >
+                <Text style={{
+                  fontFamily: 'DMSans_600SemiBold', fontSize: 14,
+                  color: balance >= 500 ? '#fff' : Colors.textGhost,
+                }}>
+                  {t.withdraw}
+                </Text>
+              </TouchableOpacity>
               <Text style={{
-                fontFamily: 'DMSans_600SemiBold', fontSize: 14,
-                color: balance >= 500 ? '#fff' : Colors.textGhost,
+                fontFamily: 'DMSans_400Regular', fontSize: 10, color: Colors.textFaint,
+                textAlign: 'center', marginTop: 8,
               }}>
-                {t.withdraw}
+                {t.withdrawOnWeb}
               </Text>
-            </TouchableOpacity>
+            </>
           )}
         </View>
 
