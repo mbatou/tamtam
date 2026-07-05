@@ -31,11 +31,25 @@ export class ApiAuthError extends Error {
  * Throws ApiAuthError (401 when unauthenticated, 403 when the role check
  * fails). Route handlers can either try/catch or use `requireAuthResponse`.
  */
-export async function requireAuth(allowedRoles?: readonly string[]): Promise<AuthContext> {
+export async function requireAuth(
+  allowedRoles?: readonly string[],
+  request?: Request
+): Promise<AuthContext> {
   const authClient = createClient();
-  const {
+  let {
     data: { user },
   } = await authClient.auth.getUser();
+
+  // Mobile app / non-browser clients: no auth cookies, but a Supabase access
+  // token in the Authorization header. getUser(token) validates the JWT
+  // against the auth server exactly like the cookie path.
+  if (!user && request) {
+    const header = request.headers.get("authorization");
+    if (header?.startsWith("Bearer ")) {
+      const { data } = await authClient.auth.getUser(header.slice(7));
+      user = data.user;
+    }
+  }
 
   if (!user) {
     throw new ApiAuthError(401);
@@ -68,10 +82,11 @@ export async function requireAuth(allowedRoles?: readonly string[]): Promise<Aut
  *   if (auth instanceof NextResponse) return auth;
  */
 export async function requireAuthResponse(
-  allowedRoles?: readonly string[]
+  allowedRoles?: readonly string[],
+  request?: Request
 ): Promise<AuthContext | NextResponse> {
   try {
-    return await requireAuth(allowedRoles);
+    return await requireAuth(allowedRoles, request);
   } catch (err) {
     if (err instanceof ApiAuthError) return err.toResponse();
     throw err;
