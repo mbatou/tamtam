@@ -1,4 +1,41 @@
+import fr from "@/messages/fr.json";
+import en from "@/messages/en.json";
+
 export type EchoLang = "fr" | "en";
+
+const messages: Record<EchoLang, Record<string, unknown>> = { fr, en };
+
+// Same lookup semantics as lib/i18n.tsx: dot-path keys, silent fallback to the raw key.
+function getNestedValue(obj: Record<string, unknown>, path: string): string {
+  const keys = path.split(".");
+  let current: unknown = obj;
+  for (const key of keys) {
+    if (current && typeof current === "object" && key in (current as Record<string, unknown>)) {
+      current = (current as Record<string, unknown>)[key];
+    } else {
+      return path; // fallback to key
+    }
+  }
+  return typeof current === "string" ? current : path;
+}
+
+/**
+ * Server-side translation lookup over the same messages/*.json catalogs used by
+ * lib/i18n.tsx (which is client-only React context). Same {placeholder} syntax.
+ */
+export function t(
+  lang: EchoLang,
+  key: string,
+  vars?: Record<string, string | number>,
+): string {
+  let value = getNestedValue(messages[lang] || messages.fr, key);
+  if (vars) {
+    Object.entries(vars).forEach(([k, v]) => {
+      value = value.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
+    });
+  }
+  return value;
+}
 
 interface EchoStrings {
   // Push notification strings
@@ -50,125 +87,63 @@ interface EchoStrings {
   };
 }
 
-const strings: Record<EchoLang, EchoStrings> = {
-  fr: {
-    push: {
-      newCampaign: {
-        title: "Nouvelle campagne disponible !",
-        body: (cpc: number) => `Une nouvelle campagne est disponible à ${cpc} FCFA/clic. Ouvre l'app pour participer.`,
-      },
-      payout: {
-        title: "Paiement envoyé !",
-        body: (amount: number) => `${amount} FCFA ont été envoyés sur ton compte. Merci pour ton engagement !`,
-      },
-      streakDanger: {
-        title: "Ta série est en danger !",
-        body: (days: number) => `Tu as une série de ${days} jours. Partage aujourd'hui pour ne pas la perdre !`,
-      },
-      streakMilestone: {
-        title: "Bravo, objectif atteint !",
-        body: (days: number, reward: number) => `${days} jours de série ! Tu as gagné un bonus de ${reward} FCFA.`,
-      },
-      custom: {
-        defaultTitle: "Tamtam",
-      },
-      shareReminder: {
-        title: "Partagez et gagnez",
-        body: (campaignTitle: string, cpc: number) =>
-          `Ton lien ${campaignTitle} attend d'être partagé — ${cpc} FCFA par clic vérifié`,
-      },
-      inactivity: {
-        title: (amount: number) =>
-          `${amount.toLocaleString("fr-FR")} FCFA t'attendent`,
-        body: "Partage aujourd'hui pour débloquer tes gains en attente",
-      },
-      campaignEnding: {
-        title: (hoursLeft: number) => `Plus que ${hoursLeft}h — dernière chance !`,
-        body: (campaignTitle: string) =>
-          `La campagne "${campaignTitle}" se termine bientôt. Partage maintenant.`,
-      },
-    },
-    leaderboard: {
-      title: "Classement",
-      weekly: "Cette semaine",
-      monthly: "Ce mois",
-      rank: "Rang",
-      clicks: "Clics",
-      campaigns: "Campagnes",
-      yourRank: "Ton classement",
-      notRanked: "Non classé",
-      foundingEcho: "Écho fondateur",
-      tier: (tier: string) => {
-        const labels: Record<string, string> = {
-          echo: "Écho",
-          argent: "Argent",
-          or: "Or",
-          diamant: "Diamant",
-        };
-        return labels[tier] || tier;
-      },
-    },
-  },
-  en: {
-    push: {
-      newCampaign: {
-        title: "New campaign available!",
-        body: (cpc: number) => `A new campaign is available at ${cpc} FCFA/click. Open the app to participate.`,
-      },
-      payout: {
-        title: "Payment sent!",
-        body: (amount: number) => `${amount} FCFA have been sent to your account. Thanks for your engagement!`,
-      },
-      streakDanger: {
-        title: "Your streak is at risk!",
-        body: (days: number) => `You have a ${days}-day streak. Share today to keep it going!`,
-      },
-      streakMilestone: {
-        title: "Congratulations, milestone reached!",
-        body: (days: number, reward: number) => `${days}-day streak! You earned a ${reward} FCFA bonus.`,
-      },
-      custom: {
-        defaultTitle: "Tamtam",
-      },
-      shareReminder: {
-        title: "Share and earn",
-        body: (campaignTitle: string, cpc: number) =>
-          `Your ${campaignTitle} link is waiting to be shared — ${cpc} FCFA per verified click`,
-      },
-      inactivity: {
-        title: (amount: number) =>
-          `${amount.toLocaleString("en")} FCFA waiting for you`,
-        body: "Share today to unlock your pending earnings",
-      },
-      campaignEnding: {
-        title: (hoursLeft: number) => `Only ${hoursLeft}h left — last chance!`,
-        body: (campaignTitle: string) =>
-          `Campaign "${campaignTitle}" ends soon. Share now.`,
-      },
-    },
-    leaderboard: {
-      title: "Leaderboard",
-      weekly: "This week",
-      monthly: "This month",
-      rank: "Rank",
-      clicks: "Clicks",
-      campaigns: "Campaigns",
-      yourRank: "Your rank",
-      notRanked: "Not ranked",
-      foundingEcho: "Founding Echo",
-      tier: (tier: string) => {
-        const labels: Record<string, string> = {
-          echo: "Echo",
-          argent: "Silver",
-          or: "Gold",
-          diamant: "Diamond",
-        };
-        return labels[tier] || tier;
-      },
-    },
-  },
-};
-
 export function getEchoStrings(lang: EchoLang): EchoStrings {
-  return strings[lang] || strings.fr;
+  const l: EchoLang = lang === "en" ? "en" : "fr";
+  return {
+    push: {
+      newCampaign: {
+        title: t(l, "push.newCampaign.title"),
+        body: (cpc: number) => t(l, "push.newCampaign.body", { cpc }),
+      },
+      payout: {
+        title: t(l, "push.payout.title"),
+        body: (amount: number) => t(l, "push.payout.body", { amount }),
+      },
+      streakDanger: {
+        title: t(l, "push.streakDanger.title"),
+        body: (days: number) => t(l, "push.streakDanger.body", { days }),
+      },
+      streakMilestone: {
+        title: t(l, "push.streakMilestone.title"),
+        body: (days: number, reward: number) =>
+          t(l, "push.streakMilestone.body", { days, reward }),
+      },
+      custom: {
+        defaultTitle: t(l, "push.custom.defaultTitle"),
+      },
+      shareReminder: {
+        title: t(l, "push.shareReminder.title"),
+        body: (campaignTitle: string, cpc: number) =>
+          t(l, "push.shareReminder.body", { campaignTitle, cpc }),
+      },
+      inactivity: {
+        title: (amount: number) =>
+          t(l, "push.inactivity.title", {
+            amount: amount.toLocaleString(l === "fr" ? "fr-FR" : "en"),
+          }),
+        body: t(l, "push.inactivity.body"),
+      },
+      campaignEnding: {
+        title: (hoursLeft: number) => t(l, "push.campaignEnding.title", { hoursLeft }),
+        body: (campaignTitle: string) =>
+          t(l, "push.campaignEnding.body", { campaignTitle }),
+      },
+    },
+    leaderboard: {
+      title: t(l, "leaderboard.title"),
+      weekly: t(l, "leaderboard.weekly"),
+      monthly: t(l, "leaderboard.monthly"),
+      rank: t(l, "leaderboard.rank"),
+      clicks: t(l, "leaderboard.clicks"),
+      campaigns: t(l, "leaderboard.campaigns"),
+      yourRank: t(l, "leaderboard.yourRank"),
+      notRanked: t(l, "leaderboard.notRanked"),
+      foundingEcho: t(l, "leaderboard.foundingEcho"),
+      tier: (tier: string) => {
+        const key = `leaderboard.tier.${tier}`;
+        const label = t(l, key);
+        return label === key ? tier : label;
+      },
+    },
+  };
 }

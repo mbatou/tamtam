@@ -2196,5 +2196,55 @@
       "about": "À propos",
       "contact": "Contact"
     }
+  },
+  "push": {
+    "newCampaign": {
+      "title": "Nouvelle campagne disponible !",
+      "body": "Une nouvelle campagne est disponible à {cpc} FCFA/clic. Ouvre l'app pour participer."
+    },
+    "payout": {
+      "title": "Paiement envoyé !",
+      "body": "{amount} FCFA ont été envoyés sur ton compte. Merci pour ton engagement !"
+    },
+    "streakDanger": {
+      "title": "Ta série est en danger !",
+      "body": "Tu as une série de {days} jours. Partage aujourd'hui pour ne pas la perdre !"
+    },
+    "streakMilestone": {
+      "title": "Bravo, objectif atteint !",
+      "body": "{days} jours de série ! Tu as gagné un bonus de {reward} FCFA."
+    },
+    "custom": {
+      "defaultTitle": "Tamtam"
+    },
+    "shareReminder": {
+      "title": "Partagez et gagnez",
+      "body": "Ton lien {campaignTitle} attend d'être partagé — {cpc} FCFA par clic vérifié"
+    },
+    "inactivity": {
+      "title": "{amount} FCFA t'attendent",
+      "body": "Partage aujourd'hui pour débloquer tes gains en attente"
+    },
+    "campaignEnding": {
+      "title": "Plus que {hoursLeft}h — dernière chance !",
+      "body": "La campagne \"{campaignTitle}\" se termine bientôt. Partage maintenant."
+    }
+  },
+  "leaderboard": {
+    "title": "Classement",
+    "weekly": "Cette semaine",
+    "monthly": "Ce mois",
+    "rank": "Rang",
+    "clicks": "Clics",
+    "campaigns": "Campagnes",
+    "yourRank": "Ton classement",
+    "notRanked": "Non classé",
+    "foundingEcho": "Écho fondateur",
+    "tier": {
+      "echo": "Écho",
+      "argent": "Argent",
+      "or": "Or",
+      "diamant": "Diamant"
+    }
   }
 }

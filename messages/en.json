@@ -2196,5 +2196,55 @@
       "about": "About",
       "contact": "Contact"
     }
+  },
+  "push": {
+    "newCampaign": {
+      "title": "New campaign available!",
+      "body": "A new campaign is available at {cpc} FCFA/click. Open the app to participate."
+    },
+    "payout": {
+      "title": "Payment sent!",
+      "body": "{amount} FCFA have been sent to your account. Thanks for your engagement!"
+    },
+    "streakDanger": {
+      "title": "Your streak is at risk!",
+      "body": "You have a {days}-day streak. Share today to keep it going!"
+    },
+    "streakMilestone": {
+      "title": "Congratulations, milestone reached!",
+      "body": "{days}-day streak! You earned a {reward} FCFA bonus."
+    },
+    "custom": {
+      "defaultTitle": "Tamtam"
+    },
+    "shareReminder": {
+      "title": "Share and earn",
+      "body": "Your {campaignTitle} link is waiting to be shared — {cpc} FCFA per verified click"
+    },
+    "inactivity": {
+      "title": "{amount} FCFA waiting for you",
+      "body": "Share today to unlock your pending earnings"
+    },
+    "campaignEnding": {
+      "title": "Only {hoursLeft}h left — last chance!",
+      "body": "Campaign \"{campaignTitle}\" ends soon. Share now."
+    }
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "weekly": "This week",
+    "monthly": "This month",
+    "rank": "Rank",
+    "clicks": "Clicks",
+    "campaigns": "Campaigns",
+    "yourRank": "Your rank",
+    "notRanked": "Not ranked",
+    "foundingEcho": "Founding Echo",
+    "tier": {
+      "echo": "Echo",
+      "argent": "Silver",
+      "or": "Gold",
+      "diamant": "Diamond"
+    }
   }
 }
