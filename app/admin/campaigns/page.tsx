@@ -219,8 +219,7 @@ export default function AdminCampaignsPage() {
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    setUploading(true);
-    setImageFormatHint(null);
+    setUploading(true); setImageFormatHint(null);
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       // Check aspect ratio for images
@@ -235,8 +234,7 @@ export default function AdminCampaignsPage() {
           URL.revokeObjectURL(img.src);
         };
       }
-      const formData = new FormData();
-      formData.append("file", file);
+      const formData = new FormData(); formData.append("file", file);
       const res = await fetch("/api/campaigns/upload", { method: "POST", body: formData });
       const data = await res.json();
       if (res.ok && data.url) setCreativeUrls((prev) => [...prev, data.url]);
@@ -252,8 +250,7 @@ export default function AdminCampaignsPage() {
 
   async function handleSubmit(asDraft = false) {
     setSubmitting(true);
-    setError(null);
-    setShowRechargePrompt(false);
+    setError(null); setShowRechargePrompt(false);
     try {
       const payload = {
         ...(editingId ? { id: editingId } : {}),
@@ -279,12 +276,10 @@ export default function AdminCampaignsPage() {
           const fields = Object.entries(data.details).map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`).join("; ");
           if (fields) errorMsg += ` (${fields})`;
         }
-        setError(errorMsg);
-        setSubmitting(false);
+        setError(errorMsg); setSubmitting(false);
         return;
       }
-      resetForm();
-      setSubmitting(false);
+      resetForm(); setSubmitting(false);
       await loadCampaigns();
       if (asDraft) {
         setView("list");
@@ -294,15 +289,13 @@ export default function AdminCampaignsPage() {
         setView("detail");
       }
     } catch {
-      setError(t("common.networkRetry"));
-      setSubmitting(false);
+      setError(t("common.networkRetry")); setSubmitting(false);
     }
   }
 
   async function handleAction(campaignId: string, action: CampaignAction) {
     if (action === "delete") {
-      setDeleteTargetId(campaignId);
-      setShowDeleteConfirm(true);
+      setDeleteTargetId(campaignId); setShowDeleteConfirm(true);
       return;
     }
     setActionLoading(action);
@@ -315,9 +308,7 @@ export default function AdminCampaignsPage() {
         body.status = statusMap[action];
       }
       const res = await fetch("/api/campaigns", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -332,13 +323,10 @@ export default function AdminCampaignsPage() {
 
   async function confirmDelete() {
     if (!deleteTargetId) return;
-    setActionLoading("delete");
-    setShowDeleteConfirm(false);
+    setActionLoading("delete"); setShowDeleteConfirm(false);
     try {
       const res = await fetch("/api/campaigns", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: deleteTargetId }),
+        method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: deleteTargetId }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -346,9 +334,7 @@ export default function AdminCampaignsPage() {
       } else {
         const data = await res.json();
         const refundMsg = data.refunded ? ` (+${formatFCFA(data.refunded)} remboursé)` : "";
-        setError(null);
-        setSelectedCampaign(null);
-        setView("list");
+        setError(null); setSelectedCampaign(null); setView("list");
         await loadCampaigns();
         // Brief success toast via error state (green would be ideal, but reuse existing pattern)
         setError(`✓ Campagne supprimée${refundMsg}`);
@@ -357,8 +343,7 @@ export default function AdminCampaignsPage() {
     } catch {
       setError(t("common.networkRetry"));
     } finally {
-      setActionLoading(null);
-      setDeleteTargetId(null);
+      setActionLoading(null); setDeleteTargetId(null);
     }
   }
 
@@ -366,9 +351,7 @@ export default function AdminCampaignsPage() {
     setActionLoading("submitDraft");
     try {
       const res = await fetch("/api/campaigns", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: campaignId, moderation_status: "pending" }),
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: campaignId, moderation_status: "pending" }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -385,15 +368,11 @@ export default function AdminCampaignsPage() {
 
   async function handleLeadAction(leadId: string, action: "verify" | "reject") {
     const lead = leads.find(l => l.id === leadId);
-    if (action === "reject" && lead?.status === "verified") {
-      if (!confirm(t("admin.campaigns.revertLeadConfirm"))) return;
-    }
+    if (action === "reject" && lead?.status === "verified" && !confirm(t("admin.campaigns.revertLeadConfirm"))) return;
     setLeadActionLoading(leadId);
     try {
       const res = await fetch("/api/admin/campaigns/leads", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lead_id: leadId, action }),
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lead_id: leadId, action }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -432,10 +411,8 @@ export default function AdminCampaignsPage() {
   if (view === "objective") {
     return (
       <CampaignObjectiveView
-        objective={objective}
-        setObjective={setObjective}
-        onBack={() => { resetForm(); setView("list"); }}
-        onContinue={() => setView("form")}
+        objective={objective} setObjective={setObjective}
+        onBack={() => { resetForm(); setView("list"); }} onContinue={() => setView("form")}
       />
     );
   }
