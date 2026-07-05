@@ -1,25 +1,29 @@
 # Database workflow
 
-The schema of record lives in the Supabase project (managed via the dashboard).
-The repo tracks two things:
+The schema of record lives in the Supabase project. The repo tracks:
 
-- **`supabase/schema.sql`** — a reference snapshot of the production schema
-  ("for context only, not runnable"). Refresh it after any schema change:
-  Supabase dashboard → Database → Schema Visualizer/SQL, or `supabase db dump --schema public`.
-- **`supabase/migrations/*.sql`** — incremental changes to apply. These are
-  currently run by hand in the SQL editor (dashboard → SQL → paste → run).
+- **`types/database.ts`** — GENERATED types from the live schema (source of
+  truth for row shapes). Refresh after any schema change: `npm run db:types`,
+  then commit. The project is CLI-linked (done 2026-07-05).
+- **`supabase/migrations/*.sql`** — incremental changes, currently run by
+  hand in the SQL editor (dashboard → SQL → paste → run).
+- **`supabase/schema.sql`** — human-readable reference snapshot (superseded
+  by the generated types for correctness; kept as documentation).
 
 ## Guard rails
 
-`__tests__/schema-drift.test.ts` (runs in CI) parses `supabase/schema.sql` and
-asserts that every property of the hand-written row types in `lib/types.ts`
-is a real column. When it fails:
+1. **`types/type-sync.ts` (compile-time, strongest)** — binds every
+   hand-written row interface in `lib/types.ts` to the generated types.
+   `npm run typecheck` fails naming the exact column if a type references a
+   column that doesn't exist. After a schema change, `npm run db:types` +
+   commit; the compiler then tells you what code needs updating.
+2. `__tests__/schema-drift.test.ts` (runtime, legacy) — same idea against
+   the schema.sql snapshot; kept as belt-and-suspenders while the snapshot
+   exists.
 
-- You typo'd or renamed a field in `lib/types.ts` → fix the type.
-- You changed the database → refresh `supabase/schema.sql`.
-- You added a migration that isn't applied to prod yet → add the column to
-  `PENDING_MIGRATION_COLUMNS` in the test, and remove it after applying the
-  migration and refreshing the snapshot.
+When the compile check fails: you typo'd a field in `lib/types.ts` (fix the
+type) or the database changed (run `npm run db:types`, commit, then fix any
+code the compiler flags).
 
 ## Pending migrations checklist
 
