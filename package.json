@@ -11,7 +11,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "db:pull": "npx supabase@2 db pull",
-    "db:types": "npx supabase@2 gen types typescript --linked > types/database.ts"
+    "db:types": "npx supabase@2 gen types typescript --linked > types/database.ts && cp types/database.ts tamtam-app/lib/database.types.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.98.0",
