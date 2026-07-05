@@ -191,3 +191,23 @@ Consolidate on **one** service-role factory (`createServiceClient`), delete `lib
 | Distributed rate limiter | Medium | Day |
 | Extension event path fix | Medium (product-dependent) | Days |
 | Mobile shared tokens/types | Low-Med | Days |
+
+---
+
+## Addendum — cleanup executed 2026-07-04 (same branch)
+
+Done in the commits following this report:
+
+- **PayTech removed entirely** (product decision: Wave is the processor) — IPN + status routes, `lib/paytech.ts`, env keys, `Payment.paytech_token`. This retires findings C-5/§2-P0 item 4's IPN concerns.
+- **Phase 0 complete**: tests green (282/282, soft-delete filter fixed), GitHub Actions CI + `typecheck` script, fail-closed Resend/Wave webhooks, authenticated SMS DLR/MO webhooks (`SMS_WEBHOOK_SECRET`), atomic Wave webhook dedup (insert-first + unique-index migration `20260704_webhook_hardening.sql`), placeholder-credential fallbacks removed, `.gitignore` covers all `.env` files, single unified `.env.example` (incl. VAPID), dead pages/routes/components deleted (sentry-example, sentry-test, debug-auth, tech, sms/test + reengagement + cpa-backfill one-shot jobs, cgu/confidentialite + pipeline/leads stubs, orphan leads API, 6 dead components), favicon 536KB→9KB, founding-echo i18n fixed, real README.
+- **Phase 1 (API kernel) complete**: `lib/api/auth.ts` (`requireAuth` on `auth.getUser()`), `lib/api/cron.ts`, `lib/api/webhooks.ts`; 109 routes migrated off `getSession()`; 13 `verifyCronSecret` copies deduped; 18 local `requireSuperadmin` helpers now wrap the shared kernel; `supabaseAdmin` is a re-export of `createServiceClient()`; middleware also guards `/api/admin/*`.
+- **Notifications tab cleaned** (product decision): kept overview + composer + history — the campaign-open notify-echos flow; deleted the mock sequences page, the unwired settings/templates pages + APIs, the suspended streak-danger flow (stub cron + engine trigger + composer option), and the hardcoded-user SMS test zone (balance check moved to `/api/sms/balance`).
+- Ambassador commission engine extracted to `lib/ambassador-commission.ts` (was duplicated twice in the superadmin campaigns route); drifted types fixed (`payment_status`, `rejection_reason`, `tm_ref`); Sentry env tagging consistent + 10% prod trace sampling; all 13 hook-deps lint warnings fixed (zero lint errors); mobile share URLs use a constant.
+
+### Still open (follow-ups)
+- Wallet/ledger service extraction + behavioral tests on money paths (§ Phase 2) — biggest remaining item.
+- Core schema into version control + generated DB types (needs `supabase db pull` against prod).
+- Distributed (Redis/KV) rate limiter to replace `lib/rate-limit.ts`.
+- Frontend monolith splits (`admin/campaigns` 2,173 lines et al.), shared UI kit adoption, 16 `<img>` → `next/image` warnings, ~90 remaining console statements.
+- Pixel extension event path (posts to nonexistent `/api/pixel/event`; wrong auth model) — needs a product decision.
+- Two i18n systems (`lib/i18n.tsx` + `lib/echo-i18n.ts`); en/fr key-parity check.

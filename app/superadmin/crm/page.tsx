@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { formatFCFA } from "@/lib/utils";
 import { useToast } from "@/components/ui/Toast";
@@ -151,6 +151,11 @@ export default function CRMPage() {
   const [topupAmount, setTopupAmount] = useState("");
   const [toppingUp, setToppingUp] = useState(false);
 
+  // Ref so fetchData can show a toast without depending on the (unstable)
+  // showToast identity, which would re-trigger the fetch effect every render.
+  const showToastRef = useRef(showToast);
+  showToastRef.current = showToast;
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -159,7 +164,7 @@ export default function CRMPage() {
       const result = await res.json();
       setData(result);
     } catch {
-      showToast("Erreur de chargement", "error");
+      showToastRef.current("Erreur de chargement", "error");
     }
     setLoading(false);
   }, [search, cityFilter, stageFilter, page]);

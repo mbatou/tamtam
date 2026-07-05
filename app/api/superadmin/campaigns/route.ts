@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { sendNewCampaignNotification, sendCampaignLiveToBrand } from "@/lib/email";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { unlockCampaignEarnings } from "@/lib/unlock-earnings";

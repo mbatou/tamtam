@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { formatFCFA, timeAgo } from "@/lib/utils";
@@ -78,7 +78,29 @@ export default function AdminCampaignsPage() {
   const [convPage, setConvPage] = useState(0);
   const supabase = createClient();
 
-  useEffect(() => { loadCampaigns(); }, []);
+  // Keep a ref to the selected campaign so loaders/effects can read the latest
+  // value without re-running when the selection changes.
+  const selectedCampaignRef = useRef(selectedCampaign);
+  selectedCampaignRef.current = selectedCampaign;
+  const selectedCampaignId = selectedCampaign?.id;
+
+  const loadCampaigns = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const res = await fetch(`/api/campaigns?batteur_id=${session.user.id}`);
+    const data = await res.json();
+    const list = Array.isArray(data) ? data : [];
+    setCampaigns(list);
+    const current = selectedCampaignRef.current;
+    if (current) {
+      const updated = list.find((c: Campaign) => c.id === current.id);
+      if (updated) setSelectedCampaign(updated);
+      else { setSelectedCampaign(null); setView("list"); }
+    }
+    setLoading(false);
+  }, [supabase]);
+
+  useEffect(() => { loadCampaigns(); }, [loadCampaigns]);
   useEffect(() => {
     fetch("/api/brand/pixels")
       .then((r) => r.ok ? r.json() : null)
@@ -102,15 +124,15 @@ export default function AdminCampaignsPage() {
       });
   }, []);
   useEffect(() => {
-    if (view === "detail" && selectedCampaign) {
+    if (view === "detail" && selectedCampaignId) {
       setPerfLoading(true);
       setPerf(null);
-      fetch(`/api/admin/campaigns/performance?campaignId=${selectedCampaign.id}`)
+      fetch(`/api/admin/campaigns/performance?campaignId=${selectedCampaignId}`)
         .then((r) => r.ok ? r.json() : null)
         .then((data) => { setPerf(data); setPerfLoading(false); })
         .catch(() => setPerfLoading(false));
     }
-  }, [view, selectedCampaign?.id]);
+  }, [view, selectedCampaignId]);
 
   // Fetch conversion analytics when Conversions tab is active
   useEffect(() => {
@@ -136,20 +158,21 @@ export default function AdminCampaignsPage() {
 
   // Fetch leads and landing page slug for lead gen campaigns
   useEffect(() => {
-    if (view === "detail" && selectedCampaign && (selectedCampaign.objective || "traffic") === "lead_generation") {
+    const campaign = selectedCampaignRef.current;
+    if (view === "detail" && selectedCampaignId && campaign && (campaign.objective || "traffic") === "lead_generation") {
       setDetailTab("overview");
       // Fetch leads
       setLeadsLoading(true);
-      fetch(`/api/admin/campaigns/leads?campaign_id=${selectedCampaign.id}`)
+      fetch(`/api/admin/campaigns/leads?campaign_id=${selectedCampaignId}`)
         .then((r) => r.ok ? r.json() : { leads: [] })
         .then((data) => { setLeads(Array.isArray(data?.leads) ? data.leads : []); setLeadsLoading(false); })
         .catch(() => { setLeads([]); setLeadsLoading(false); });
       // Fetch landing page slug
-      if (selectedCampaign.landing_page_id) {
+      if (campaign.landing_page_id) {
         fetch(`/api/landing-pages`)
           .then((r) => r.ok ? r.json() : [])
           .then((pages: { id: string; slug: string }[]) => {
-            const match = Array.isArray(pages) ? pages.find((p) => p.id === selectedCampaign.landing_page_id) : null;
+            const match = Array.isArray(pages) ? pages.find((p) => p.id === campaign.landing_page_id) : null;
             setLandingSlug(match?.slug || null);
           })
           .catch(() => setLandingSlug(null));
@@ -157,22 +180,7 @@ export default function AdminCampaignsPage() {
         setLandingSlug(null);
       }
     }
-  }, [view, selectedCampaign?.id]);
-
-  async function loadCampaigns() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-    const res = await fetch(`/api/campaigns?batteur_id=${session.user.id}`);
-    const data = await res.json();
-    const list = Array.isArray(data) ? data : [];
-    setCampaigns(list);
-    if (selectedCampaign) {
-      const updated = list.find((c: Campaign) => c.id === selectedCampaign.id);
-      if (updated) setSelectedCampaign(updated);
-      else { setSelectedCampaign(null); setView("list"); }
-    }
-    setLoading(false);
-  }
+  }, [view, selectedCampaignId]);
 
   function resetForm() {
     setForm({ title: "", description: "", destination_url: "", cpc: "", budget: "", starts_at: "", ends_at: "" });

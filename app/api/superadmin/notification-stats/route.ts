@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/api/auth";
 
 export const dynamic = "force-dynamic";

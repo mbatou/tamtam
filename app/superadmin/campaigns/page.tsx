@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatFCFA } from "@/lib/utils";
 import { getBrandDisplayName } from "@/lib/display-utils";
@@ -162,30 +162,17 @@ function CampaignPageContent() {
     if (match) setSelected(match);
   }, []);
 
-  useEffect(() => { loadData(); }, []);
+  // Refs so loaders/effects can read the latest values without re-running
+  // when they change.
+  const showToastRef = useRef(showToast);
+  showToastRef.current = showToast;
+  const highlightIdRef = useRef(highlightId);
+  highlightIdRef.current = highlightId;
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
+  const selectedId = selected?.id;
 
-  useEffect(() => {
-    if (selected && (selected.objective || "traffic") === "lead_generation" && selected.landing_page_id) {
-      fetch(`/api/superadmin/landing-pages?id=${selected.landing_page_id}`)
-        .then((r) => r.ok ? r.json() : null)
-        .then((data) => setLandingPageSlug(data?.slug || null))
-        .catch(() => setLandingPageSlug(null));
-    } else {
-      setLandingPageSlug(null);
-    }
-  }, [selected?.id]);
-
-  useEffect(() => {
-    if (selected && (detailTab === "echos" || detailTab === "clicks")) {
-      setLoadingEchos(true);
-      fetch(`/api/superadmin/campaigns/${selected.id}/echos`)
-        .then((r) => r.json())
-        .then((data) => { setEchoData(data); setLoadingEchos(false); })
-        .catch(() => setLoadingEchos(false));
-    }
-  }, [selected?.id, detailTab]);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     try {
       const [campRes, usersRes] = await Promise.all([
         fetch("/api/superadmin/campaigns"),
@@ -195,7 +182,7 @@ function CampaignPageContent() {
       const usersData = await usersRes.json();
       if (!campRes.ok || !usersRes.ok) throw new Error("API error");
       setCampaigns(Array.isArray(campData) ? campData : []);
-      if (highlightId) openById(campData, highlightId);
+      if (highlightIdRef.current) openById(campData, highlightIdRef.current);
       const usersList = Array.isArray(usersData) ? usersData : usersData?.users || [];
       setBatteurs(
         usersList
@@ -207,10 +194,34 @@ function CampaignPageContent() {
           }))
       );
     } catch {
-      showToast("Erreur de chargement", "error");
+      showToastRef.current("Erreur de chargement", "error");
     }
     setLoading(false);
-  }
+  }, [openById]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  useEffect(() => {
+    const sel = selectedRef.current;
+    if (selectedId && sel && (sel.objective || "traffic") === "lead_generation" && sel.landing_page_id) {
+      fetch(`/api/superadmin/landing-pages?id=${sel.landing_page_id}`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => setLandingPageSlug(data?.slug || null))
+        .catch(() => setLandingPageSlug(null));
+    } else {
+      setLandingPageSlug(null);
+    }
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (selectedId && (detailTab === "echos" || detailTab === "clicks")) {
+      setLoadingEchos(true);
+      fetch(`/api/superadmin/campaigns/${selectedId}/echos`)
+        .then((r) => r.json())
+        .then((data) => { setEchoData(data); setLoadingEchos(false); })
+        .catch(() => setLoadingEchos(false));
+    }
+  }, [selectedId, detailTab]);
 
   async function moderateCampaign(id: string, action: string, reason?: string) {
     if (action === "stop") {

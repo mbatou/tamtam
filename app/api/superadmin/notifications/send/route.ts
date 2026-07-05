@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getNextNotifyDatetime } from "@/lib/notifications/smart-timing";
 import { sendSinglePush } from "@/lib/notifications/sender";
 import {

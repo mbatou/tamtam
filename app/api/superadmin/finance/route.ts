@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { requireAuth } from "@/lib/api/auth";
 

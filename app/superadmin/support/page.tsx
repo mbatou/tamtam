@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { timeAgo } from "@/lib/utils";
 import AdminStatCard from "@/components/superadmin/AdminStatCard";
@@ -77,20 +77,27 @@ function SuperadminSupportPageContent() {
     }
   }, []);
 
-  useEffect(() => { loadData(); }, []);
+  // Refs so loadData can read the latest values without re-running the mount
+  // effect when they change.
+  const showToastRef = useRef(showToast);
+  showToastRef.current = showToast;
+  const highlightIdRef = useRef(highlightId);
+  highlightIdRef.current = highlightId;
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     try {
       const res = await fetch("/api/superadmin/support");
       const data = await res.json();
       setTickets(data.tickets || []);
       setStats(data.stats || { total: 0, open: 0, replied: 0, closed: 0 });
-      if (highlightId) openTicketById(data.tickets || [], highlightId);
+      if (highlightIdRef.current) openTicketById(data.tickets || [], highlightIdRef.current);
     } catch {
-      showToast("Erreur réseau", "error");
+      showToastRef.current("Erreur réseau", "error");
     }
     setLoading(false);
-  }
+  }, [openTicketById]);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   async function handleAction(ticketId: string, action: "reply" | "close" | "reopen", replyText?: string) {
     setSending(true);

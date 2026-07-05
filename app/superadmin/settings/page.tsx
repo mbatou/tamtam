@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { timeAgo } from "@/lib/utils";
 import { useToast } from "@/components/ui/Toast";
 import { Settings, DollarSign, Shield, Megaphone, Users, Activity } from "lucide-react";
@@ -52,9 +52,12 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const { showToast, ToastComponent } = useToast();
 
-  useEffect(() => { loadSettings(); }, []);
+  // Ref so loadSettings can show a toast without depending on the (unstable)
+  // showToast identity, which would re-run the mount effect every render.
+  const showToastRef = useRef(showToast);
+  showToastRef.current = showToast;
 
-  async function loadSettings() {
+  const loadSettings = useCallback(async () => {
     try {
       const res = await fetch("/api/superadmin/settings");
       const data = await res.json();
@@ -68,10 +71,12 @@ export default function SettingsPage() {
       setAdmins(data.admins || []);
       setLogs(data.recentLogs || []);
     } catch {
-      showToast("Erreur de chargement", "error");
+      showToastRef.current("Erreur de chargement", "error");
     }
     setLoading(false);
-  }
+  }, []);
+
+  useEffect(() => { loadSettings(); }, [loadSettings]);
 
   async function saveSetting(key: string, value: string) {
     setSaving(true);

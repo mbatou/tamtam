@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useToast } from "@/components/ui/Toast";
 import { timeAgo } from "@/lib/utils";
 import AdminDrawer from "@/components/superadmin/AdminDrawer";
@@ -61,18 +61,23 @@ export default function TeamPage() {
     team_permissions: POSITION_DEFAULTS["customer_success"],
   });
 
-  useEffect(() => { loadTeam(); }, []);
+  // Ref so loadTeam can show a toast without depending on the (unstable)
+  // showToast identity, which would re-run the mount effect every render.
+  const showToastRef = useRef(showToast);
+  showToastRef.current = showToast;
 
-  async function loadTeam() {
+  const loadTeam = useCallback(async () => {
     try {
       const res = await fetch("/api/superadmin/team");
       const data = await res.json();
       setMembers(data.members || []);
     } catch {
-      showToast("Erreur réseau", "error");
+      showToastRef.current("Erreur réseau", "error");
     }
     setLoading(false);
-  }
+  }, []);
+
+  useEffect(() => { loadTeam(); }, [loadTeam]);
 
   async function createMember() {
     if (!form.name || !form.email || !form.password) {

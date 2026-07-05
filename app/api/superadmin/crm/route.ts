@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { updateLeadSchema } from "@/lib/validations";
 import { sendBatteurWelcomeEmail, sendRoleUpgradeEmail } from "@/lib/email";
 import crypto from "crypto";
