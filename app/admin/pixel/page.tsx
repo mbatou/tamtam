@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useTranslation } from "@/lib/i18n";
 import type { Pixel } from "@/lib/types";
@@ -212,6 +213,24 @@ export default function PixelDashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Chrome extension guide link */}
+      <Link
+        href="/admin/pixel/extension"
+        className="flex items-center justify-between gap-3 rounded-2xl p-5 mb-6 transition-all hover:scale-[1.01]"
+        style={C}
+      >
+        <div className="flex items-center gap-3">
+          <div className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(211,84,0,0.12)" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D35400" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>
+          </div>
+          <div>
+            <h3 className="text-sm font-bold font-syne text-white">{t("brandExtension.linkCardTitle")}</h3>
+            <p className="text-[10px] font-dm mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>{t("brandExtension.linkCardDesc")}</p>
+          </div>
+        </div>
+        <svg className="shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </Link>
 
       {/* Pixel cards */}
       {pixels.length === 0 ? (
