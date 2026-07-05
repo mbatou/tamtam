@@ -1,7 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { requireAuth } from "@/lib/api/auth";
+import { apiError, validationError } from "@/lib/api/errors";
 
 export const dynamic = "force-dynamic";
+
+// The CRM edit drawer sends every whitelisted field, including empty strings
+// and nulls for untouched values — keep accepting those. Unknown keys are
+// stripped by the whitelist below, so the schema stays non-strict.
+const updateUserBodySchema = z.object({
+  userId: z.string().uuid("Identifiant utilisateur invalide"),
+  updates: z.object({
+    name: z.string().max(200).optional().nullable(),
+    email: z.string().max(200).optional().nullable(),
+    phone: z.string().max(30).optional().nullable(),
+    city: z.string().max(100).optional().nullable(),
+    company_name: z.string().max(200).optional().nullable(),
+    balance: z.union([
+      z.number(),
+      z.string().regex(/^-?\d+(\.\d+)?$/, "Solde invalide"),
+    ]).optional().nullable(),
+  }).optional().nullable(),
+});
 
 async function requireSuperadmin() {
   try {
@@ -16,7 +36,12 @@ export async function PUT(request: NextRequest) {
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = auth.supabase;
-  const { userId, updates } = await request.json();
+  const body = await request.json();
+  const parsed = updateUserBodySchema.safeParse(body);
+  if (!parsed.success) {
+    return validationError(parsed.error);
+  }
+  const { userId, updates } = body;
 
   if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
 
@@ -61,7 +86,10 @@ export async function PUT(request: NextRequest) {
     .update(safeUpdates)
     .eq("id", userId);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[superadmin/crm/update] user update failed:", error);
+    return apiError(500, "Erreur interne");
+  }
 
   // Log activity
   try {

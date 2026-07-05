@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/server";
+import { apiError, validationError } from "@/lib/api/errors";
 import { sendNewCampaignNotification, sendCampaignLiveToBrand } from "@/lib/email";
 import { unlockCampaignEarnings } from "@/lib/unlock-earnings";
 import { triggerNewCampaign } from "@/lib/notifications/engine";
@@ -10,6 +12,30 @@ import { awardAmbassadorCommission } from "@/lib/ambassador-commission";
 import { debitBrandBudgetLogged, creditBrandWallet } from "@/lib/wallet";
 
 export const dynamic = "force-dynamic";
+
+// The superadmin UI sends cpc/budget as strings ("25"); downstream code calls
+// parseInt() on them, so accept string-or-number and pass the raw value through.
+const intLike = z.union([
+  z.string().regex(/^\d+(\.\d+)?$/, "Nombre invalide"),
+  z.number().nonnegative("Nombre invalide"),
+]);
+
+const createCampaignBodySchema = z.object({
+  action: z.literal("create"),
+  batteur_id: z.string().uuid("Identifiant marque invalide"),
+  title: z.string().min(1, "Titre requis").max(200),
+  description: z.string().max(1000).optional().nullable(),
+  destination_url: z.string().url("URL invalide").max(2000),
+  cpc: intLike,
+  budget: intLike,
+  objective: z.enum(["awareness", "traffic", "lead_generation"]).optional().nullable(),
+});
+
+const moderateCampaignBodySchema = z.object({
+  action: z.enum(["approve", "reject", "pause", "resume", "stop"]),
+  campaign_id: z.string().uuid("Identifiant campagne invalide"),
+  reason: z.string().max(500).optional().nullable(),
+});
 
 async function notifyEchosNewCampaign(supabase: ReturnType<typeof createServiceClient>, campaignTitle: string, cpc: number) {
   try {
@@ -122,6 +148,10 @@ export async function POST(request: NextRequest) {
 
   // --- Create a campaign on behalf of a brand ---
   if (action === "create") {
+    const parsedCreate = createCampaignBodySchema.safeParse(body);
+    if (!parsedCreate.success) {
+      return validationError(parsedCreate.error);
+    }
     const { batteur_id, title, description, destination_url, cpc, budget, objective } = body;
     if (!batteur_id || !title || !destination_url || !cpc || !budget) {
       return NextResponse.json({ error: "Required fields missing" }, { status: 400 });
@@ -149,7 +179,8 @@ export async function POST(request: NextRequest) {
       if (createDebit.reason === "insufficient_balance") {
         return NextResponse.json({ error: "Insufficient brand balance" }, { status: 400 });
       }
-      return NextResponse.json({ error: createDebit.message }, { status: 500 });
+      console.error("[superadmin/campaigns] create debit failed:", createDebit.message);
+      return apiError(500, "Erreur interne");
     }
 
     // Create campaign pre-approved
@@ -172,7 +203,10 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (campErr) return NextResponse.json({ error: campErr.message }, { status: 500 });
+    if (campErr) {
+      console.error("[superadmin/campaigns] campaign insert failed:", campErr);
+      return apiError(500, "Erreur interne");
+    }
 
     try {
       await supabase.from("admin_activity_log").insert({
@@ -219,6 +253,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
   }
 
+  const parsedModeration = moderateCampaignBodySchema.safeParse(body);
+  if (!parsedModeration.success) {
+    return validationError(parsedModeration.error);
+  }
+
   // Get current campaign state
   const { data: campaign, error: fetchErr } = await supabase
     .from("campaigns")
@@ -258,7 +297,8 @@ export async function POST(request: NextRequest) {
               error: `Insufficient brand balance (${campaign.budget} FCFA required)`,
             }, { status: 400 });
           }
-          return NextResponse.json({ error: approveDebit.message }, { status: 500 });
+          console.error("[superadmin/campaigns] approve debit failed:", approveDebit.message);
+          return apiError(500, "Erreur interne");
         }
       }
 
@@ -402,7 +442,8 @@ export async function POST(request: NextRequest) {
     .eq("id", campaign_id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[superadmin/campaigns] campaign update failed:", error);
+    return apiError(500, "Erreur interne");
   }
 
   // Log action

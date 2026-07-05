@@ -1,9 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { sendEmail } from "@/lib/email";
 import crypto from "crypto";
 import { requireAuth } from "@/lib/api/auth";
+import { validationError } from "@/lib/api/errors";
 
 export const dynamic = "force-dynamic";
+
+const bulkActionBodySchema = z.object({
+  action: z.enum(["send_invitation", "delete", "export"]),
+  userIds: z.array(z.string().uuid("Identifiant utilisateur invalide")).min(1, "Aucun utilisateur sélectionné").max(500),
+  data: z.object({
+    subject: z.string().max(200).optional().nullable(),
+    message: z.string().max(5000).optional().nullable(),
+    reason: z.string().max(500).optional().nullable(),
+  }).optional().nullable(),
+});
 
 async function requireSuperadmin() {
   try {
@@ -18,7 +30,12 @@ export async function POST(request: NextRequest) {
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = auth.supabase;
-  const { action, userIds, data } = await request.json();
+  const body = await request.json();
+  const parsed = bulkActionBodySchema.safeParse(body);
+  if (!parsed.success) {
+    return validationError(parsed.error);
+  }
+  const { action, userIds, data } = body;
 
   if (!userIds || userIds.length === 0) {
     return NextResponse.json({ error: "No users selected" }, { status: 400 });
