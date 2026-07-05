@@ -20,7 +20,7 @@ export default function OnboardingPage() {
         if (user.platforms?.length) setPlatforms(user.platforms);
         if (user.audience_size_range) setAudienceSize(user.audience_size_range);
       })
-      .catch(() => {});
+      .catch((err) => console.error("[onboarding] user prefill", err));
   }, []);
 
   async function savePlatformData() {

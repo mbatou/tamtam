@@ -40,7 +40,7 @@ export function BrandProvider({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ brandId }),
-      }).catch(() => {});
+      }).catch((err) => console.error("[brand-switch]", err));
 
       router.refresh();
     },

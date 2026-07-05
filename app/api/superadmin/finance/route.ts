@@ -1,8 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { requireAuth } from "@/lib/api/auth";
+import { apiError, validationError } from "@/lib/api/errors";
 
 export const dynamic = "force-dynamic";
+
+const paymentActionBodySchema = z.object({
+  payment_id: z.string().uuid("Identifiant paiement invalide"),
+  action: z.enum(["validate", "reject"]),
+  reason: z.string().max(500).optional().nullable(),
+});
+
+const payoutActionBodySchema = z.object({
+  payout_id: z.string().uuid("Identifiant paiement invalide"),
+  action: z.enum(["approve", "reject"]),
+  reason: z.string().max(500).optional().nullable(),
+});
 
 async function requireSuperadmin() {
   try {
@@ -117,6 +131,15 @@ export async function POST(request: NextRequest) {
   if (body.payment_id && body.action) {
     const { payment_id, action: paymentAction } = body;
 
+    // Only validate/reject are handled here — anything else falls through to
+    // the payout section below (existing behavior).
+    if (paymentAction === "validate" || paymentAction === "reject") {
+      const parsedPayment = paymentActionBodySchema.safeParse(body);
+      if (!parsedPayment.success) {
+        return validationError(parsedPayment.error);
+      }
+    }
+
     if (paymentAction === "validate") {
       // Get the payment record
       const { data: payment, error: fetchError } = await supabase
@@ -143,7 +166,8 @@ export async function POST(request: NextRequest) {
         .eq("id", payment_id);
 
       if (updateError) {
-        return NextResponse.json({ error: updateError.message }, { status: 500 });
+        console.error("[superadmin/finance] payment validation failed:", updateError);
+        return apiError(500, "Erreur interne");
       }
 
       // Credit the user's balance
@@ -181,7 +205,8 @@ export async function POST(request: NextRequest) {
         .eq("id", payment_id);
 
       if (updateError) {
-        return NextResponse.json({ error: updateError.message }, { status: 500 });
+        console.error("[superadmin/finance] payment rejection failed:", updateError);
+        return apiError(500, "Erreur interne");
       }
 
       try {
@@ -205,6 +230,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
   }
 
+  const parsedPayout = payoutActionBodySchema.safeParse(body);
+  if (!parsedPayout.success) {
+    return validationError(parsedPayout.error);
+  }
+
   if (action === "approve") {
     // Balance already debited at request time — just mark as sent
     const { error } = await supabase
@@ -212,7 +242,10 @@ export async function POST(request: NextRequest) {
       .update({ status: "sent", completed_at: new Date().toISOString() })
       .eq("id", payout_id)
       .eq("status", "pending");
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      console.error("[superadmin/finance] payout approval failed:", error);
+      return apiError(500, "Erreur interne");
+    }
   } else if (action === "reject") {
     // Refund balance since it was debited at request time
     const { data: payout } = await supabase
@@ -228,7 +261,10 @@ export async function POST(request: NextRequest) {
       .from("payouts")
       .update({ status: "failed", failure_reason: reason || "Rejected by admin", completed_at: new Date().toISOString() })
       .eq("id", payout_id);
-    if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
+    if (updateErr) {
+      console.error("[superadmin/finance] payout rejection failed:", updateErr);
+      return apiError(500, "Erreur interne");
+    }
 
     // Refund the echo's balance
     await supabase.rpc("increment_echo_balance", {

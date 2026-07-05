@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { LandingPageFormField } from "@/lib/types";
@@ -81,9 +82,12 @@ export default async function LandingPage({ params, searchParams }: PageProps) {
           {page.logo_url && (
             <div className="flex justify-center mb-6">
               <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10">
-                <img
+                <Image
                   src={page.logo_url}
                   alt=""
+                  width={160}
+                  height={40}
+                  unoptimized
                   className="h-10 w-auto object-contain"
                   loading="eager"
                 />
@@ -94,9 +98,11 @@ export default async function LandingPage({ params, searchParams }: PageProps) {
           {/* Hero image */}
           {page.hero_image_url && (
             <div className="mb-6 rounded-2xl overflow-hidden border border-white/10">
-              <img
+              <Image
                 src={page.hero_image_url}
                 alt=""
+                width={640}
+                height={224}
                 className="w-full h-48 sm:h-56 object-cover"
                 loading="eager"
               />

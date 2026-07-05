@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getEffectiveBrandId } from "@/lib/brand-utils";
+import { apiError, validationError } from "@/lib/api/errors";
+
+const processPayoutBodySchema = z.object({
+  payout_id: z.string().uuid("Identifiant paiement invalide"),
+  status: z.enum(["sent", "failed"]),
+});
 
 export async function GET() {
   const authClient = createClient();
@@ -66,7 +73,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 
-  const { payout_id, status } = await request.json();
+  const body = await request.json();
+  const parsed = processPayoutBodySchema.safeParse(body);
+  if (!parsed.success) {
+    return validationError(parsed.error);
+  }
+  const { payout_id, status } = body;
   if (!payout_id || !status) {
     return NextResponse.json({ error: "Paramètres manquants" }, { status: 400 });
   }
@@ -78,7 +90,8 @@ export async function POST(request: NextRequest) {
   });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[admin/payouts] process_payout failed:", error);
+    return apiError(500, "Erreur interne");
   }
   return NextResponse.json({ success: true });
 }

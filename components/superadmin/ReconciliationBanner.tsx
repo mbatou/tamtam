@@ -22,7 +22,7 @@ export default function ReconciliationBanner() {
       .then((d) => {
         if (d) setStatus(d);
       })
-      .catch(() => {});
+      .catch((err) => console.error("[reconciliation-banner]", err));
 
     const interval = setInterval(() => {
       fetch("/api/superadmin/reconciliation/status")
@@ -30,7 +30,7 @@ export default function ReconciliationBanner() {
         .then((d) => {
           if (d) setStatus(d);
         })
-        .catch(() => {});
+        .catch((err) => console.error("[reconciliation-banner]", err));
     }, 5 * 60 * 1000); // Refresh every 5 min
 
     return () => clearInterval(interval);

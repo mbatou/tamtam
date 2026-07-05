@@ -1,10 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { updateLeadSchema } from "@/lib/validations";
 import { sendBatteurWelcomeEmail, sendRoleUpgradeEmail } from "@/lib/email";
 import crypto from "crypto";
 import { requireAuth } from "@/lib/api/auth";
+import { apiError, validationError } from "@/lib/api/errors";
 
 export const dynamic = "force-dynamic";
+
+const addNoteBodySchema = z.object({
+  action: z.literal("add_note"),
+  contact_id: z.string().uuid("Identifiant contact invalide"),
+  contact_type: z.string().min(1, "Type de contact requis").max(30),
+  content: z.string().min(1, "Contenu requis").max(2000),
+  note_type: z.string().max(30).optional().nullable(),
+  followup_date: z.string().max(40).optional().nullable(),
+});
+
+const deleteNoteBodySchema = z.object({
+  action: z.literal("delete_note"),
+  note_id: z.string().uuid("Identifiant note invalide"),
+});
+
+const updateStageBodySchema = z.object({
+  action: z.literal("update_stage"),
+  user_id: z.string().uuid("Identifiant utilisateur invalide"),
+  crm_stage: z.string().min(1, "Étape requise").max(50),
+});
+
+const updateTagsBodySchema = z.object({
+  action: z.literal("update_tags"),
+  contact_id: z.string().uuid("Identifiant contact invalide"),
+  contact_type: z.string().min(1, "Type de contact requis").max(30),
+  tags: z.array(z.string().max(50)).max(50).optional().nullable(),
+});
+
+const updateLeadStatusBodySchema = z.object({
+  action: z.literal("update_lead_status"),
+  lead_id: z.string().uuid("Identifiant lead invalide"),
+});
+
+const convertLeadBodySchema = z.object({
+  action: z.literal("convert_lead"),
+  lead_id: z.string().uuid("Identifiant lead invalide"),
+  // Optional override; the UI may send an empty string to fall back to the lead's email.
+  email: z.string().email("Email invalide").max(200).optional().nullable().or(z.literal("")),
+});
 
 async function requireSuperadmin() {
   try {
@@ -208,6 +249,8 @@ export async function POST(request: NextRequest) {
 
   // --- Add note ---
   if (action === "add_note") {
+    const parsed = addNoteBodySchema.safeParse(body);
+    if (!parsed.success) return validationError(parsed.error);
     const { contact_id, contact_type, content, note_type, followup_date } = body;
     if (!contact_id || !contact_type || !content) {
       return NextResponse.json({ error: "Required fields missing" }, { status: 400 });
@@ -222,50 +265,70 @@ export async function POST(request: NextRequest) {
       followup_date: followup_date || null,
     }).select().single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      console.error("[superadmin/crm] note insert failed:", error);
+      return apiError(500, "Erreur interne");
+    }
     return NextResponse.json(data);
   }
 
   // --- Delete note ---
   if (action === "delete_note") {
+    const parsed = deleteNoteBodySchema.safeParse(body);
+    if (!parsed.success) return validationError(parsed.error);
     const { note_id } = body;
     if (!note_id) return NextResponse.json({ error: "note_id required" }, { status: 400 });
 
     const { error } = await supabase.from("crm_notes").delete().eq("id", note_id);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      console.error("[superadmin/crm] note delete failed:", error);
+      return apiError(500, "Erreur interne");
+    }
     return NextResponse.json({ success: true });
   }
 
   // --- Update brand stage ---
   if (action === "update_stage") {
+    const parsed = updateStageBodySchema.safeParse(body);
+    if (!parsed.success) return validationError(parsed.error);
     const { user_id, crm_stage } = body;
     if (!user_id || !crm_stage) return NextResponse.json({ error: "Required fields" }, { status: 400 });
 
     const { error } = await supabase.from("users").update({ crm_stage }).eq("id", user_id);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      console.error("[superadmin/crm] stage update failed:", error);
+      return apiError(500, "Erreur interne");
+    }
     return NextResponse.json({ success: true });
   }
 
   // --- Update tags ---
   if (action === "update_tags") {
+    const parsed = updateTagsBodySchema.safeParse(body);
+    if (!parsed.success) return validationError(parsed.error);
     const { contact_id, contact_type, tags } = body;
     if (!contact_id || !contact_type) return NextResponse.json({ error: "Required fields" }, { status: 400 });
 
     const table = contact_type === "brand" ? "users" : "brand_leads";
     const col = contact_type === "brand" ? "crm_tags" : "tags";
     const { error } = await supabase.from(table).update({ [col]: tags || [] }).eq("id", contact_id);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      console.error("[superadmin/crm] tags update failed:", error);
+      return apiError(500, "Erreur interne");
+    }
     return NextResponse.json({ success: true });
   }
 
   // --- Update lead status ---
   if (action === "update_lead_status") {
+    const parsedBody = updateLeadStatusBodySchema.safeParse(body);
+    if (!parsedBody.success) return validationError(parsedBody.error);
     const { lead_id, status, notes } = body;
     if (!lead_id) return NextResponse.json({ error: "lead_id required" }, { status: 400 });
 
     const parsed = updateLeadSchema.safeParse({ status, notes });
     if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid data", details: parsed.error.flatten().fieldErrors }, { status: 400 });
+      return validationError(parsed.error);
     }
 
     const updates: Record<string, unknown> = {};
@@ -279,12 +342,17 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      console.error("[superadmin/crm] lead status update failed:", error);
+      return apiError(500, "Erreur interne");
+    }
     return NextResponse.json(data);
   }
 
   // --- Convert lead to brand ---
   if (action === "convert_lead") {
+    const parsed = convertLeadBodySchema.safeParse(body);
+    if (!parsed.success) return validationError(parsed.error);
     const { lead_id, email: overrideEmail, promote_echo } = body;
     if (!lead_id) return NextResponse.json({ error: "lead_id required" }, { status: 400 });
 
@@ -322,7 +390,8 @@ export async function POST(request: NextRequest) {
             .eq("id", existingProfile.id);
 
           if (updateError) {
-            return NextResponse.json({ error: updateError.message }, { status: 500 });
+            console.error("[superadmin/crm] echo promotion failed:", updateError);
+            return apiError(500, "Erreur interne");
           }
 
           await supabase
@@ -385,7 +454,8 @@ export async function POST(request: NextRequest) {
           email_conflict: true,
         }, { status: 409 });
       }
-      return NextResponse.json({ error: authError?.message || "Account creation error" }, { status: 500 });
+      console.error("[superadmin/crm] lead account creation failed:", authError);
+      return apiError(500, "Erreur interne");
     }
 
     const { error: profileError } = await supabase.from("users").insert({
@@ -398,7 +468,8 @@ export async function POST(request: NextRequest) {
 
     if (profileError) {
       await supabase.auth.admin.deleteUser(createdUser.user.id);
-      return NextResponse.json({ error: profileError.message }, { status: 500 });
+      console.error("[superadmin/crm] lead profile insert failed:", profileError);
+      return apiError(500, "Erreur interne");
     }
 
     await supabase

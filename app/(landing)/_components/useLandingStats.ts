@@ -33,7 +33,7 @@ export function useLandingStats() {
           setLoaded(true);
         }
       })
-      .catch(() => {});
+      .catch((err) => console.error("[landing-stats]", err));
   }, []);
 
   return { stats, loaded };

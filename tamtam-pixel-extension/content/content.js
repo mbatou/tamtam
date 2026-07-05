@@ -239,6 +239,7 @@ function attachEventListener(element, config) {
         "X-Tamtam-Key": config.pixelId,
       },
       body: JSON.stringify({
+        pixel_id: config.pixelId,
         event: config.eventType,
         tm_ref: tmRef || undefined,
         value: config.value,

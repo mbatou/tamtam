@@ -1,10 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getEffectiveBrandId } from "@/lib/brand-utils";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import { apiError, validationError } from "@/lib/api/errors";
 
 export const dynamic = "force-dynamic";
+
+const createPixelBodySchema = z.object({
+  name: z.string().min(1, "Le nom est requis").max(200),
+  // Any unknown platform silently falls back to "app" (existing behavior)
+  platform: z.string().max(20).optional().nullable(),
+});
+
+const updatePixelBodySchema = z.object({
+  pixel_id: z.string().min(1, "pixel_id requis").max(50),
+  name: z.string().min(1).max(200).optional(),
+  platform: z.string().max(20).optional().nullable(),
+  is_active: z.boolean().optional(),
+  allowed_events: z.array(z.string().max(50)).max(50).optional(),
+  webhook_url: z.string().url("URL invalide").max(2000).or(z.literal("")).optional().nullable(),
+});
 
 function generatePixelId(): string {
   return `px_${crypto.randomBytes(8).toString("hex")}`;
@@ -34,7 +51,8 @@ export async function GET() {
     .order("created_at", { ascending: false });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[brand/pixels] pixels fetch failed:", error);
+    return apiError(500, "Erreur interne");
   }
 
   return NextResponse.json({ pixels: data || [] });
@@ -60,6 +78,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Corps JSON invalide" }, { status: 400 });
   }
 
+  const parsedCreate = createPixelBodySchema.safeParse(body);
+  if (!parsedCreate.success) {
+    return validationError(parsedCreate.error);
+  }
   const { name, platform } = body as { name?: string; platform?: string };
 
   if (!name || !name.trim()) {
@@ -86,7 +108,8 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[brand/pixels] pixel insert failed:", error);
+    return apiError(500, "Erreur interne");
   }
 
   return NextResponse.json({
@@ -119,6 +142,10 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Corps JSON invalide" }, { status: 400 });
   }
 
+  const parsedUpdate = updatePixelBodySchema.safeParse(body);
+  if (!parsedUpdate.success) {
+    return validationError(parsedUpdate.error);
+  }
   const { pixel_id, name, platform, is_active, allowed_events, webhook_url } = body as {
     pixel_id?: string;
     name?: string;
@@ -159,7 +186,8 @@ export async function PATCH(request: NextRequest) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[brand/pixels] pixel update failed:", error);
+    return apiError(500, "Erreur interne");
   }
 
   return NextResponse.json({ pixel: data });

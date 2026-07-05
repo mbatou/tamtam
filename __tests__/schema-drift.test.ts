@@ -46,9 +46,7 @@ function interfaceProps(name: string): string[] {
 // Columns added by a migration in supabase/migrations/ that has not yet been
 // applied to production (schema.sql is a prod snapshot). Remove each entry
 // after running the migration and refreshing schema.sql.
-const PENDING_MIGRATION_COLUMNS: Record<string, string[]> = {
-  campaigns: ["deleted_at"], // 20260705_campaign_soft_delete.sql
-};
+const PENDING_MIGRATION_COLUMNS: Record<string, string[]> = {};
 
 // Base row interfaces mapped to their tables (join/computed types excluded)
 const MAPPINGS: Array<[iface: string, table: string]> = [

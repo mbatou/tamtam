@@ -1,9 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { normalizeCity } from "@/lib/cities";
+import { apiError, validationError } from "@/lib/api/errors";
 
 export const dynamic = "force-dynamic";
+
+const createBatteurBodySchema = z.object({
+  action: z.literal("create_batteur"),
+  name: z.string().min(1, "Nom requis").max(200),
+  email: z.string().email("Email invalide").max(200),
+  password: z.string().min(6, "Mot de passe trop court (6 caractères min.)").max(200),
+  // The UI sends empty strings for untouched optional fields — keep accepting them.
+  phone: z.string().max(30).optional().nullable(),
+  city: z.string().max(100).optional().nullable(),
+});
+
+// The topup drawer sends the amount as a string ("5000"); downstream code calls
+// parseInt() on it, so accept string-or-number and pass the raw value through.
+const topupBodySchema = z.object({
+  action: z.literal("topup"),
+  user_id: z.string().uuid("Identifiant utilisateur invalide"),
+  amount: z.union([
+    z.string().regex(/^\d+(\.\d+)?$/, "Montant invalide"),
+    z.number().positive("Montant invalide"),
+  ]),
+});
+
+const moderateUserBodySchema = z.object({
+  action: z.enum(["verify", "flag", "suspend", "reset_balance", "promote_admin", "promote_superadmin"]),
+  user_id: z.string().uuid("Identifiant utilisateur invalide"),
+  reason: z.string().max(500).optional().nullable(),
+});
 
 export async function GET(request: NextRequest) {
   const authClient = createClient();
@@ -215,6 +244,10 @@ export async function POST(request: NextRequest) {
 
   // --- Create a brand user ---
   if (action === "create_batteur") {
+    const parsedCreate = createBatteurBodySchema.safeParse(body);
+    if (!parsedCreate.success) {
+      return validationError(parsedCreate.error);
+    }
     const { name, phone, email, password } = body;
     const city = normalizeCity(body.city);
     if (!name || !email || !password) {
@@ -227,7 +260,10 @@ export async function POST(request: NextRequest) {
       password,
       email_confirm: true,
     });
-    if (authErr) return NextResponse.json({ error: authErr.message }, { status: 500 });
+    if (authErr) {
+      console.error("[superadmin/users] auth user creation failed:", authErr);
+      return apiError(500, "Erreur interne");
+    }
 
     // Create profile in users table
     const { error: profileErr } = await supabase.from("users").insert({
@@ -240,7 +276,10 @@ export async function POST(request: NextRequest) {
       total_earned: 0,
       status: "verified",
     });
-    if (profileErr) return NextResponse.json({ error: profileErr.message }, { status: 500 });
+    if (profileErr) {
+      console.error("[superadmin/users] profile insert failed:", profileErr);
+      return apiError(500, "Erreur interne");
+    }
 
     try {
       await supabase.from("admin_activity_log").insert({
@@ -257,6 +296,10 @@ export async function POST(request: NextRequest) {
 
   // --- Top up brand balance ---
   if (action === "topup") {
+    const parsedTopup = topupBodySchema.safeParse(body);
+    if (!parsedTopup.success) {
+      return validationError(parsedTopup.error);
+    }
     const { amount } = body;
     if (!user_id || !amount || amount <= 0) {
       return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
@@ -277,7 +320,10 @@ export async function POST(request: NextRequest) {
       .from("users")
       .update({ balance: newBalance })
       .eq("id", user_id);
-    if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
+    if (upErr) {
+      console.error("[superadmin/users] balance update failed:", upErr);
+      return apiError(500, "Erreur interne");
+    }
 
     // Log as a manual payment
     await supabase.from("payments").insert({
@@ -317,6 +363,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
   }
 
+  const parsedModeration = moderateUserBodySchema.safeParse(body);
+  if (!parsedModeration.success) {
+    return validationError(parsedModeration.error);
+  }
+
   const updates: Record<string, unknown> = {};
 
   switch (action) {
@@ -350,7 +401,10 @@ export async function POST(request: NextRequest) {
     if (targetUser && (targetUser.balance || 0) > 0) {
       const oldBalance = targetUser.balance || 0;
       const { error: resetErr } = await supabase.from("users").update({ balance: 0 }).eq("id", user_id);
-      if (resetErr) return NextResponse.json({ error: resetErr.message }, { status: 500 });
+      if (resetErr) {
+        console.error("[superadmin/users] balance reset failed:", resetErr);
+        return apiError(500, "Erreur interne");
+      }
 
       await logWalletTransaction({
         supabase,
@@ -378,7 +432,8 @@ export async function POST(request: NextRequest) {
 
   const { error } = await supabase.from("users").update(updates).eq("id", user_id);
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[superadmin/users] user update failed:", error);
+    return apiError(500, "Erreur interne");
   }
 
   try {

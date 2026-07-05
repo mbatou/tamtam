@@ -2196,5 +2196,98 @@
       "about": "About",
       "contact": "Contact"
     }
+  },
+  "push": {
+    "newCampaign": {
+      "title": "New campaign available!",
+      "body": "A new campaign is available at {cpc} FCFA/click. Open the app to participate."
+    },
+    "payout": {
+      "title": "Payment sent!",
+      "body": "{amount} FCFA have been sent to your account. Thanks for your engagement!"
+    },
+    "streakDanger": {
+      "title": "Your streak is at risk!",
+      "body": "You have a {days}-day streak. Share today to keep it going!"
+    },
+    "streakMilestone": {
+      "title": "Congratulations, milestone reached!",
+      "body": "{days}-day streak! You earned a {reward} FCFA bonus."
+    },
+    "custom": {
+      "defaultTitle": "Tamtam"
+    },
+    "shareReminder": {
+      "title": "Share and earn",
+      "body": "Your {campaignTitle} link is waiting to be shared — {cpc} FCFA per verified click"
+    },
+    "inactivity": {
+      "title": "{amount} FCFA waiting for you",
+      "body": "Share today to unlock your pending earnings"
+    },
+    "campaignEnding": {
+      "title": "Only {hoursLeft}h left — last chance!",
+      "body": "Campaign \"{campaignTitle}\" ends soon. Share now."
+    }
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "weekly": "This week",
+    "monthly": "This month",
+    "rank": "Rank",
+    "clicks": "Clicks",
+    "campaigns": "Campaigns",
+    "yourRank": "Your rank",
+    "notRanked": "Not ranked",
+    "foundingEcho": "Founding Echo",
+    "tier": {
+      "echo": "Echo",
+      "argent": "Silver",
+      "or": "Gold",
+      "diamant": "Diamond"
+    }
+  },
+  "brandExtension": {
+    "linkCardTitle": "Chrome extension — installation guide",
+    "linkCardDesc": "Install the pixel and map your conversions without code, directly from your website",
+    "back": "Back to Pixel",
+    "title": "Tamtam Pixel Chrome Extension",
+    "subtitle": "Install the pixel and map your conversions without writing a single line of code",
+    "heroBody": "The Tamtam Pixel Chrome extension installs the pixel on your website and turns any button into a conversion event, no developer needed: you click the element to track (buy button, signup form…), pick the event type, and every real click from your visitors is recorded and attributed to the echoes that drove the visit.",
+    "stepsTitle": "5-step installation guide",
+    "screenshotSoon": "Screenshot coming soon",
+    "step1Title": "Install the extension",
+    "step1Body": "The extension installs into Google Chrome in one click from the Chrome Web Store.",
+    "chromeStoreCta": "Open the Chrome Web Store",
+    "chromeStoreSoon": "Coming soon to the Chrome Web Store",
+    "manualToggle": "Manual installation (advanced)",
+    "manualIntro": "While we await publication on the Chrome Web Store, you can load the extension manually:",
+    "manualDownload": "Download tamtam-pixel-extension.zip",
+    "manualStep1": "Unzip the .zip file into a folder on your computer.",
+    "manualStep2": "In Chrome, open chrome://extensions (copy this address into the URL bar).",
+    "manualStep3": "Enable “Developer mode” (toggle in the top right).",
+    "manualStep4": "Click “Load unpacked” and select the unzipped folder.",
+    "step2Title": "Configure your Pixel ID",
+    "step2Body": "Click the Tamtam icon in the Chrome toolbar to open the extension. Paste your Pixel ID (it starts with px_) then click “Enregistrer”.",
+    "step2Where": "Your Pixel ID lives on your Tamtam Pixel page, under each pixel's name — use the “Copy ID” button.",
+    "step2Link": "Open my Pixel page",
+    "step3Title": "Inject and test the pixel",
+    "step3Body": "Open your website in Chrome, then open the extension and go to the “Script” tab.",
+    "step3Item1": "Click “Injecter maintenant” to activate the pixel on the page. Turn on “Injection automatique” so it loads on every visit.",
+    "step3Item2": "Click “Tester le Pixel” to verify the connection with Tamtam. The test event shows up immediately in your dashboard.",
+    "step4Title": "Map your conversions",
+    "step4Body": "Still on your website, open the extension's “Mapper visuel” tab:",
+    "step4Item1": "Click “Activer le mapper” (or “+ Mapper un élément”). A Tamtam bar appears at the top of your site.",
+    "step4Item2": "Hover then click the element that represents a conversion: buy button, signup submit button, contact form…",
+    "step4Item3": "Choose the event type and, if relevant, a value in FCFA (e.g. the product price), then click “Enregistrer”.",
+    "step4Done": "That's it: every real visitor click on that element sends the event to Tamtam.",
+    "eventTypesLabel": "Available event types",
+    "step5Title": "Verify and understand attribution",
+    "step5Body": "Your events show up in real time in your dashboard's Conversions view, in the “Live events” section of the Pixel page.",
+    "attributionTitle": "How your echoes get credited",
+    "attributionBody": "Every link shared by an echo carries a tm_ref parameter. When a visitor lands on your site through that link and then triggers a mapped event within the attribution window (7 days by default), the conversion is automatically credited to the echo that drove the visit.",
+    "noteTitle": "Important: tracking and analytics only",
+    "noteBody": "Events mapped from the browser are for tracking and analytics: they are recorded and attributed, but never trigger CPA payouts. For payable (CPA) conversions, use the server-side API with your secret key.",
+    "noteCta": "View the API documentation"
   }
 }

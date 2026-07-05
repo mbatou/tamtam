@@ -9,7 +9,9 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:pull": "npx supabase@2 db pull",
+    "db:types": "npx supabase@2 gen types typescript --linked > types/database.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.98.0",

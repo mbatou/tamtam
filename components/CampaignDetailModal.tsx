@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Modal from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { formatFCFA, getTrackingUrl } from "@/lib/utils";
@@ -179,7 +180,7 @@ export default function CampaignDetailModal({ campaign, link, open, onClose }: C
                   {isVideo ? (
                     <video src={url} className="w-full h-28 object-cover" />
                   ) : (
-                    <img src={url} alt={`Asset ${i + 1}`} className="w-full h-28 object-cover" />
+                    <Image src={url} alt={`Asset ${i + 1}`} width={320} height={112} className="w-full h-28 object-cover" />
                   )}
                   {/* Download overlay */}
                   <button

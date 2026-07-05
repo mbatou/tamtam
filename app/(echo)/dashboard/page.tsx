@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { formatFCFA } from "@/lib/utils";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
@@ -49,7 +50,7 @@ export default function EchoDashboard() {
       if (userData.status === "suspended") {
         fetch("/api/echo/click-stats").then(r => r.ok ? r.json() : null).then(d => {
           if (d) setClickStats(d);
-        }).catch(() => {});
+        }).catch((err) => console.error("[echo-dashboard] click stats", err));
       }
     }
 
@@ -381,7 +382,7 @@ export default function EchoDashboard() {
                       url.match(/\.(mp4|webm)/) ? (
                         <video key={j} src={url} className="w-full h-36 object-cover snap-center flex-shrink-0" controls />
                       ) : (
-                        <img key={j} src={url} alt={`${campaign.title} ${j + 1}`} className="w-full h-36 object-cover snap-center flex-shrink-0" />
+                        <Image key={j} src={url} alt={`${campaign.title} ${j + 1}`} width={640} height={144} className="w-full h-36 object-cover snap-center flex-shrink-0" />
                       )
                     ))}
                   </div>

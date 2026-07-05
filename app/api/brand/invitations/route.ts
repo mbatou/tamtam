@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { validationError } from "@/lib/api/errors";
 
 export const dynamic = "force-dynamic";
+
+const invitationActionSchema = z.object({
+  invitationId: z.string().uuid("Invitation invalide"),
+  action: z.enum(["accept", "decline"]),
+});
 
 export async function POST(request: NextRequest) {
   const authClient = createClient();
@@ -13,10 +20,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
-  const { invitationId, action } = await request.json();
-  if (!invitationId || !["accept", "decline"].includes(action)) {
-    return NextResponse.json({ error: "Paramètres invalides" }, { status: 400 });
+  const parsed = invitationActionSchema.safeParse(await request.json());
+  if (!parsed.success) {
+    return validationError(parsed.error);
   }
+  const { invitationId, action } = parsed.data;
 
   const supabase = createServiceClient();
 

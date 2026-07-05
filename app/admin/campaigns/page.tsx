@@ -3,18 +3,20 @@
 import { useCallback, useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { formatFCFA, timeAgo } from "@/lib/utils";
+import { formatFCFA } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
-import type { Campaign } from "@/lib/types";
-import { ECHO_SHARE_PERCENT, ECHO_CPA_SHARE_PERCENT, SITE_URL, LEAD_GEN_SETUP_FEE_FCFA } from "@/lib/constants";
-import { SENEGAL_CITIES } from "@/lib/cities";
+import type { Campaign, CampaignObjective, PricingModel } from "@/lib/types";
 import { trackEvent } from "@/lib/analytics";
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import ConversionFunnel, { CostCards, AttributionBreakdown } from "@/components/ConversionFunnel";
 
-import type { CampaignObjective, PricingModel } from "@/lib/types";
-
-type View = "list" | "detail" | "objective" | "form";
+import CampaignDetailView from "./_components/CampaignDetailView";
+import CampaignFormView from "./_components/CampaignFormView";
+import CampaignListView from "./_components/CampaignListView";
+import CampaignObjectiveView from "./_components/CampaignObjectiveView";
+import CampaignsLoadingSkeleton from "./_components/CampaignsLoadingSkeleton";
+import type {
+  BrandPixel, CampaignAction, CampaignFormState, CampaignStatsMap,
+  ConvData, DetailTab, ImageFormatHint, Lead, PerfData, View,
+} from "./_components/types";
 
 export default function AdminCampaignsPage() {
   const { t } = useTranslation();
@@ -24,7 +26,7 @@ export default function AdminCampaignsPage() {
   const [view, setView] = useState<View>("list");
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<CampaignFormState>({
     title: "", description: "", destination_url: "", cpc: "", budget: "", starts_at: "", ends_at: "",
   });
   const [creativeUrls, setCreativeUrls] = useState<string[]>([]);
@@ -39,40 +41,27 @@ export default function AdminCampaignsPage() {
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [avgCpc, setAvgCpc] = useState<number>(0);
-  const [imageFormatHint, setImageFormatHint] = useState<{ type: "warning" | "success"; message: string } | null>(null);
+  const [imageFormatHint, setImageFormatHint] = useState<ImageFormatHint>(null);
   const [objective, setObjective] = useState<CampaignObjective>("traffic");
   const [pricingModel, setPricingModel] = useState<PricingModel>("cpc");
   const [cpaAmount, setCpaAmount] = useState("");
   const [cpaEvent, setCpaEvent] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [perf, setPerf] = useState<{
-    totalClicks: number; validClicks: number; activeEchos: number; costPerVisitor: number;
-    chartData: { date: string; valid: number; fraud: number }[];
-    topEchos: { name: string; city: string; clicks: number; earnings: number }[];
-    geoBreakdown: { city: string; clicks: number; percentage: number }[];
-  } | null>(null);
+  const [perf, setPerf] = useState<PerfData | null>(null);
   const [perfLoading, setPerfLoading] = useState(false);
   // Per-campaign real click + echo counts from stats API
-  const [campaignStats, setCampaignStats] = useState<Record<string, { realClicks: number; realValidClicks: number; echoCount: number }>>({});
+  const [campaignStats, setCampaignStats] = useState<CampaignStatsMap>({});
   // Lead gen: leads tab data
-  const [detailTab, setDetailTab] = useState<"overview" | "leads" | "conversions">("overview");
-  const [leads, setLeads] = useState<{ id: string; name: string; phone: string; email: string | null; custom_fields: Record<string, string> | null; status: string; created_at: string; echo_id: string | null }[]>([]);
+  const [detailTab, setDetailTab] = useState<DetailTab>("overview");
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [leadActionLoading, setLeadActionLoading] = useState<string | null>(null);
   const [leadsLoading, setLeadsLoading] = useState(false);
   const [landingSlug, setLandingSlug] = useState<string | null>(null);
-  const [brandPixels, setBrandPixels] = useState<{ pixel_id: string; name: string; platform: string; is_active: boolean }[]>([]);
+  const [brandPixels, setBrandPixels] = useState<BrandPixel[]>([]);
   const [selectedPixelId, setSelectedPixelId] = useState<string | null>(null);
   const [showPixelSection, setShowPixelSection] = useState(false);
   // Conversion analytics state
-  const [convData, setConvData] = useState<{
-    funnel: { clicks: number; installs: number; signups: number; activations: number; subscriptions: number; purchases: number; leads: number; custom: number };
-    rates: Record<string, number>;
-    costs: Record<string, number>;
-    revenue: { total_value: number; currency: string; roas: number };
-    daily: { date: string; clicks: number; installs: number; signups: number; activations: number; subscriptions: number; purchases: number; leads: number }[];
-    recent: { id: string; event: string; event_name: string | null; value_amount: number | null; value_currency: string; attributed: boolean; attribution_type: string | null; click_to_conversion_seconds: number | null; created_at: string; external_id: string | null }[];
-    attribution: { direct: number; unattributed: number; total: number };
-  } | null>(null);
+  const [convData, setConvData] = useState<ConvData | null>(null);
   const [convLoading, setConvLoading] = useState(false);
   const [convError, setConvError] = useState<string | null>(null);
   const [convPage, setConvPage] = useState(0);
@@ -104,53 +93,48 @@ export default function AdminCampaignsPage() {
   useEffect(() => {
     fetch("/api/brand/pixels")
       .then((r) => r.ok ? r.json() : null)
-      .then((data) => data?.pixels && setBrandPixels(data.pixels));
+      .then((data) => data?.pixels && setBrandPixels(data.pixels))
+      .catch((err) => console.error("Failed to load brand pixels:", err));
   }, []);
   useEffect(() => {
     fetch("/api/campaigns/avg-cpc")
       .then((r) => r.ok ? r.json() : null)
-      .then((data) => data && setAvgCpc(data.avgCpc));
+      .then((data) => data && setAvgCpc(data.avgCpc))
+      .catch((err) => console.error("Failed to load average CPC:", err));
     // Fetch enriched campaign data (real click + echo counts)
     fetch("/api/admin/stats")
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
-        if (data?.campaigns) {
-          const map: Record<string, { realClicks: number; realValidClicks: number; echoCount: number }> = {};
-          for (const c of data.campaigns) {
-            map[c.id] = { realClicks: c.realClicks || 0, realValidClicks: c.realValidClicks || 0, echoCount: c.echoCount || 0 };
-          }
-          setCampaignStats(map);
-        }
-      });
+        if (!data?.campaigns) return;
+        const map: CampaignStatsMap = {};
+        for (const c of data.campaigns) map[c.id] = { realClicks: c.realClicks || 0, realValidClicks: c.realValidClicks || 0, echoCount: c.echoCount || 0 };
+        setCampaignStats(map);
+      })
+      .catch((err) => console.error("Failed to load campaign stats:", err));
   }, []);
   useEffect(() => {
     if (view === "detail" && selectedCampaignId) {
-      setPerfLoading(true);
-      setPerf(null);
+      setPerfLoading(true); setPerf(null);
       fetch(`/api/admin/campaigns/performance?campaignId=${selectedCampaignId}`)
         .then((r) => r.ok ? r.json() : null)
         .then((data) => { setPerf(data); setPerfLoading(false); })
-        .catch(() => setPerfLoading(false));
+        .catch((err) => { console.error("Failed to load campaign performance:", err); setPerfLoading(false); });
     }
   }, [view, selectedCampaignId]);
 
   // Fetch conversion analytics when Conversions tab is active
   useEffect(() => {
     if (view === "detail" && selectedCampaign?.pixel_id && detailTab === "conversions") {
-      setConvLoading(true);
-      setConvData(null);
-      setConvError(null);
+      setConvLoading(true); setConvData(null); setConvError(null);
       fetch(`/api/brand/conversions?campaign_id=${selectedCampaign.id}`)
         .then(async (r) => {
           if (!r.ok) {
             const err = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
-            setConvError(err?.error || `Erreur ${r.status}`);
-            setConvLoading(false);
+            setConvError(err?.error || `Erreur ${r.status}`); setConvLoading(false);
             return;
           }
           const data = await r.json();
-          setConvData(data);
-          setConvLoading(false);
+          setConvData(data); setConvLoading(false);
         })
         .catch((e) => { setConvError(e.message); setConvLoading(false); });
     }
@@ -166,7 +150,7 @@ export default function AdminCampaignsPage() {
       fetch(`/api/admin/campaigns/leads?campaign_id=${selectedCampaignId}`)
         .then((r) => r.ok ? r.json() : { leads: [] })
         .then((data) => { setLeads(Array.isArray(data?.leads) ? data.leads : []); setLeadsLoading(false); })
-        .catch(() => { setLeads([]); setLeadsLoading(false); });
+        .catch((err) => { console.error("Failed to load leads:", err); setLeads([]); setLeadsLoading(false); });
       // Fetch landing page slug
       if (campaign.landing_page_id) {
         fetch(`/api/landing-pages`)
@@ -175,7 +159,7 @@ export default function AdminCampaignsPage() {
             const match = Array.isArray(pages) ? pages.find((p) => p.id === campaign.landing_page_id) : null;
             setLandingSlug(match?.slug || null);
           })
-          .catch(() => setLandingSlug(null));
+          .catch((err) => { console.error("Failed to load landing pages:", err); setLandingSlug(null); });
       } else {
         setLandingSlug(null);
       }
@@ -184,58 +168,58 @@ export default function AdminCampaignsPage() {
 
   function resetForm() {
     setForm({ title: "", description: "", destination_url: "", cpc: "", budget: "", starts_at: "", ends_at: "" });
-    setCreativeUrls([]);
-    setTargetCities([]);
-    setCitySearch("");
-    setEditingId(null);
-    setObjective("traffic");
-    setPricingModel("cpc");
-    setCpaAmount("");
-    setCpaEvent("");
-    setSelectedPixelId(null);
-    setError(null);
-    setShowRechargePrompt(false);
-    setShowCancelConfirm(false);
+    setCreativeUrls([]); setTargetCities([]); setCitySearch(""); setEditingId(null);
+    setObjective("traffic"); setPricingModel("cpc"); setCpaAmount(""); setCpaEvent("");
+    setSelectedPixelId(null); setError(null); setShowRechargePrompt(false); setShowCancelConfirm(false);
   }
 
-  function openDetail(campaign: Campaign) {
-    setSelectedCampaign(campaign);
-    setView("detail");
-  }
+  function openDetail(campaign: Campaign) { setSelectedCampaign(campaign); setView("detail"); }
 
-  function openNewForm() {
-    resetForm();
-    setView("objective");
-  }
+  function openNewForm() { resetForm(); setView("objective"); }
 
   function openEditForm(campaign: Campaign) {
     setForm({
-      title: campaign.title,
-      description: campaign.description || "",
-      destination_url: campaign.destination_url,
-      cpc: campaign.cpc.toString(),
-      budget: campaign.budget.toString(),
+      title: campaign.title, description: campaign.description || "", destination_url: campaign.destination_url,
+      cpc: campaign.cpc.toString(), budget: campaign.budget.toString(),
       starts_at: campaign.starts_at ? campaign.starts_at.slice(0, 16) : "",
       ends_at: campaign.ends_at ? campaign.ends_at.slice(0, 16) : "",
     });
-    setCreativeUrls(campaign.creative_urls || []);
-    setTargetCities(campaign.target_cities || []);
-    setEditingId(campaign.id);
-    setObjective(campaign.objective || "traffic");
+    setCreativeUrls(campaign.creative_urls || []); setTargetCities(campaign.target_cities || []);
+    setEditingId(campaign.id); setObjective(campaign.objective || "traffic");
     setPricingModel(campaign.pricing_model || "cpc");
-    setCpaAmount(campaign.cpa_amount?.toString() || "");
-    setCpaEvent(campaign.cpa_event || "");
+    setCpaAmount(campaign.cpa_amount?.toString() || ""); setCpaEvent(campaign.cpa_event || "");
     setSelectedPixelId(campaign.pixel_id || null);
-    setError(null);
-    setShowRechargePrompt(false);
+    setError(null); setShowRechargePrompt(false);
+    setView("form");
+  }
+
+  // Lead gen campaigns (shown with the purple objective badge) are edited in
+  // the dedicated lead-gen editor; everything else uses the inline form.
+  function handleEdit(campaign: Campaign) {
+    if (campaign.objective === "lead_generation") router.push(`/admin/campaigns/lead-gen?draft=${campaign.id}`);
+    else openEditForm(campaign);
+  }
+
+  function handleLaunchDraft(campaign: Campaign) {
+    if (campaign.objective === "lead_generation") router.push(`/admin/campaigns/lead-gen?draft=${campaign.id}`);
+    else handleSubmitDraft(campaign.id);
+  }
+
+  function handleRelaunch(campaign: Campaign) {
+    setForm({
+      title: campaign.title, description: campaign.description || "", destination_url: campaign.destination_url,
+      cpc: campaign.cpc.toString(), budget: campaign.budget.toString(),
+      starts_at: "", ends_at: "",
+    });
+    setCreativeUrls(campaign.creative_urls || []); setEditingId(null);
+    setError(null); setShowRechargePrompt(false);
     setView("form");
   }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    setUploading(true);
-    setImageFormatHint(null);
+    setUploading(true); setImageFormatHint(null);
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       // Check aspect ratio for images
@@ -244,25 +228,17 @@ export default function AdminCampaignsPage() {
         img.src = URL.createObjectURL(file);
         img.onload = () => {
           const aspectRatio = img.height / img.width;
-          if (aspectRatio < 1.2) {
-            setImageFormatHint({ type: "warning", message: "imageFormatWarning" });
-          } else if (aspectRatio >= 1.7 && aspectRatio <= 1.85) {
-            setImageFormatHint({ type: "success", message: "imageFormatSuccess" });
-          } else {
-            setImageFormatHint(null);
-          }
+          if (aspectRatio < 1.2) setImageFormatHint({ type: "warning", message: "imageFormatWarning" });
+          else if (aspectRatio >= 1.7 && aspectRatio <= 1.85) setImageFormatHint({ type: "success", message: "imageFormatSuccess" });
+          else setImageFormatHint(null);
           URL.revokeObjectURL(img.src);
         };
       }
-      const formData = new FormData();
-      formData.append("file", file);
+      const formData = new FormData(); formData.append("file", file);
       const res = await fetch("/api/campaigns/upload", { method: "POST", body: formData });
       const data = await res.json();
-      if (res.ok && data.url) {
-        setCreativeUrls((prev) => [...prev, data.url]);
-      } else {
-        setError(data.error || t("admin.campaigns.uploadError"));
-      }
+      if (res.ok && data.url) setCreativeUrls((prev) => [...prev, data.url]);
+      else setError(data.error || t("admin.campaigns.uploadError"));
     }
     setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -274,22 +250,15 @@ export default function AdminCampaignsPage() {
 
   async function handleSubmit(asDraft = false) {
     setSubmitting(true);
-    setError(null);
-    setShowRechargePrompt(false);
+    setError(null); setShowRechargePrompt(false);
     try {
       const payload = {
         ...(editingId ? { id: editingId } : {}),
-        title: form.title,
-        description: form.description || null,
-        destination_url: form.destination_url,
-        cpc: pricingModel === "cpa" ? 0 : form.cpc,
-        budget: form.budget,
-        starts_at: form.starts_at || null,
-        ends_at: form.ends_at || null,
-        creative_urls: creativeUrls,
-        target_cities: targetCities,
-        objective,
-        pricing_model: pricingModel,
+        title: form.title, description: form.description || null, destination_url: form.destination_url,
+        cpc: pricingModel === "cpa" ? 0 : form.cpc, budget: form.budget,
+        starts_at: form.starts_at || null, ends_at: form.ends_at || null,
+        creative_urls: creativeUrls, target_cities: targetCities,
+        objective, pricing_model: pricingModel,
         ...(pricingModel === "cpa" ? { cpa_amount: cpaAmount, cpa_event: cpaEvent } : {}),
         ...(selectedPixelId ? { pixel_id: selectedPixelId } : {}),
         ...(!editingId && asDraft ? { save_as_draft: true } : {}),
@@ -307,12 +276,10 @@ export default function AdminCampaignsPage() {
           const fields = Object.entries(data.details).map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`).join("; ");
           if (fields) errorMsg += ` (${fields})`;
         }
-        setError(errorMsg);
-        setSubmitting(false);
+        setError(errorMsg); setSubmitting(false);
         return;
       }
-      resetForm();
-      setSubmitting(false);
+      resetForm(); setSubmitting(false);
       await loadCampaigns();
       if (asDraft) {
         setView("list");
@@ -322,15 +289,13 @@ export default function AdminCampaignsPage() {
         setView("detail");
       }
     } catch {
-      setError(t("common.networkRetry"));
-      setSubmitting(false);
+      setError(t("common.networkRetry")); setSubmitting(false);
     }
   }
 
-  async function handleAction(campaignId: string, action: "pause" | "activate" | "complete" | "delete" | "resubmit") {
+  async function handleAction(campaignId: string, action: CampaignAction) {
     if (action === "delete") {
-      setDeleteTargetId(campaignId);
-      setShowDeleteConfirm(true);
+      setDeleteTargetId(campaignId); setShowDeleteConfirm(true);
       return;
     }
     setActionLoading(action);
@@ -343,17 +308,12 @@ export default function AdminCampaignsPage() {
         body.status = statusMap[action];
       }
       const res = await fetch("/api/campaigns", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
       });
       if (!res.ok) {
         const data = await res.json();
-        if (data.code === "INSUFFICIENT_BALANCE") {
-          alert(t("admin.campaigns.insufficientBalance"));
-        } else {
-          alert(data.error || t("common.error"));
-        }
+        if (data.code === "INSUFFICIENT_BALANCE") alert(t("admin.campaigns.insufficientBalance"));
+        else alert(data.error || t("common.error"));
       }
       await loadCampaigns();
     } finally {
@@ -363,25 +323,18 @@ export default function AdminCampaignsPage() {
 
   async function confirmDelete() {
     if (!deleteTargetId) return;
-    setActionLoading("delete");
-    setShowDeleteConfirm(false);
+    setActionLoading("delete"); setShowDeleteConfirm(false);
     try {
       const res = await fetch("/api/campaigns", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: deleteTargetId }),
+        method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: deleteTargetId }),
       });
       if (!res.ok) {
         const data = await res.json();
         setError(data.error || t("common.error"));
       } else {
         const data = await res.json();
-        const refundMsg = data.refunded
-          ? ` (+${formatFCFA(data.refunded)} remboursé)`
-          : "";
-        setError(null);
-        setSelectedCampaign(null);
-        setView("list");
+        const refundMsg = data.refunded ? ` (+${formatFCFA(data.refunded)} remboursé)` : "";
+        setError(null); setSelectedCampaign(null); setView("list");
         await loadCampaigns();
         // Brief success toast via error state (green would be ideal, but reuse existing pattern)
         setError(`✓ Campagne supprimée${refundMsg}`);
@@ -390,8 +343,7 @@ export default function AdminCampaignsPage() {
     } catch {
       setError(t("common.networkRetry"));
     } finally {
-      setActionLoading(null);
-      setDeleteTargetId(null);
+      setActionLoading(null); setDeleteTargetId(null);
     }
   }
 
@@ -399,17 +351,12 @@ export default function AdminCampaignsPage() {
     setActionLoading("submitDraft");
     try {
       const res = await fetch("/api/campaigns", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: campaignId, moderation_status: "pending" }),
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: campaignId, moderation_status: "pending" }),
       });
       if (!res.ok) {
         const data = await res.json();
-        if (data.code === "INSUFFICIENT_BALANCE") {
-          alert(t("admin.campaigns.insufficientBalance"));
-        } else {
-          alert(data.error || t("common.error"));
-        }
+        if (data.code === "INSUFFICIENT_BALANCE") alert(t("admin.campaigns.insufficientBalance"));
+        else alert(data.error || t("common.error"));
       } else {
         trackEvent.brandLaunchCampaign(campaignId);
       }
@@ -421,17 +368,11 @@ export default function AdminCampaignsPage() {
 
   async function handleLeadAction(leadId: string, action: "verify" | "reject") {
     const lead = leads.find(l => l.id === leadId);
-    if (action === "reject" && lead?.status === "verified") {
-      if (!confirm(t("admin.campaigns.revertLeadConfirm"))) {
-        return;
-      }
-    }
+    if (action === "reject" && lead?.status === "verified" && !confirm(t("admin.campaigns.revertLeadConfirm"))) return;
     setLeadActionLoading(leadId);
     try {
       const res = await fetch("/api/admin/campaigns/leads", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lead_id: leadId, action }),
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lead_id: leadId, action }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -446,1736 +387,63 @@ export default function AdminCampaignsPage() {
     }
   }
 
-  function getStatusLabel(campaign: Campaign) {
-    if (campaign.status === "draft" && campaign.moderation_status === "pending" &&
-      !(campaign.objective === "lead_generation" && !campaign.landing_page_id)) {
-      return t("admin.campaigns.pendingValidation");
-    }
-    const map: Record<string, string> = {
-      active: t("common.active"), paused: t("common.paused"), completed: t("common.finished"), draft: t("admin.campaigns.draft"), rejected: t("common.rejected"),
-    };
-    return map[campaign.status] || campaign.status;
-  }
+  if (loading) return <CampaignsLoadingSkeleton />;
 
-  if (loading) {
-    return (
-      <div className="p-6 lg:p-8 space-y-5" style={{ maxWidth: "100%" }}>
-        <div className="h-8 w-48 rounded-xl animate-pulse" style={{ background: "rgba(255,255,255,0.06)" }} />
-        <div className="h-3 w-32 rounded-lg animate-pulse" style={{ background: "rgba(255,255,255,0.04)" }} />
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mt-4">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="rounded-xl overflow-hidden animate-pulse" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-              <div className="h-24" style={{ background: "rgba(255,255,255,0.03)" }} />
-              <div className="p-2.5 space-y-2">
-                <div className="h-3 w-3/4 rounded" style={{ background: "rgba(255,255,255,0.06)" }} />
-                <div className="h-2 w-1/2 rounded" style={{ background: "rgba(255,255,255,0.04)" }} />
-                <div className="h-[3px] w-full rounded-full" style={{ background: "rgba(255,255,255,0.04)" }} />
-                <div className="h-2 w-2/3 rounded" style={{ background: "rgba(255,255,255,0.04)" }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // ==================== DETAIL VIEW ====================
   if (view === "detail" && selectedCampaign) {
-    const c = selectedCampaign;
-    const progress = c.budget > 0 ? (c.spent / c.budget) * 100 : 0;
-    const remaining = Math.max(0, c.budget - c.spent);
-    const budgetConsumed = c.spent >= c.budget;
-    const isActive = c.status === "active";
-    const isPaused = c.status === "paused";
-    const isLeadGenDraftWithoutLP = c.objective === "lead_generation" && !c.landing_page_id;
-    const isDraft = c.status === "draft" && (c.moderation_status !== "pending" || isLeadGenDraftWithoutLP);
-    const isPendingReview = c.status === "draft" && c.moderation_status === "pending" && !isLeadGenDraftWithoutLP;
-    const isRejected = c.status === "rejected";
-    const isEnded = c.status === "completed";
-
     return (
-      <div className="p-6 lg:p-8" style={{ maxWidth: "100%" }}>
-        <button onClick={() => { setSelectedCampaign(null); setView("list"); }} className="flex items-center gap-2 text-xs font-medium transition mb-6" style={{ color: "rgba(255,255,255,0.35)" }} onMouseEnter={e => e.currentTarget.style.color = "rgba(255,255,255,0.7)"} onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.35)"}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-          {t("admin.campaigns.backToRythmes")}
-        </button>
-
-        {/* Draft banner */}
-        {isDraft && (
-          <div className="mb-6 p-4 rounded-2xl flex items-center justify-between" style={{ background: "rgba(234,179,8,0.06)", border: "0.5px solid rgba(234,179,8,0.15)" }}>
-            <div>
-              <p className="text-sm font-bold font-syne" style={{ color: "#EAB308" }}>{t("admin.campaigns.draft")}</p>
-              <p className="text-xs font-dm mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.draftNotice")}</p>
-            </div>
-            <div className="flex gap-2">
-              {c.objective === "lead_generation" && (
-                <button onClick={() => router.push(`/admin/campaigns/lead-gen?draft=${c.id}`)} className="px-5 py-2.5 rounded-xl text-sm font-bold transition" style={{ background: "rgba(211,84,0,0.1)", color: "#D35400" }}>
-                  {t("common.edit")}
-                </button>
-              )}
-              <button
-                onClick={() => c.objective === "lead_generation" ? router.push(`/admin/campaigns/lead-gen?draft=${c.id}`) : handleSubmitDraft(c.id)}
-                disabled={actionLoading !== null}
-                className="px-5 py-2.5 rounded-xl text-sm font-bold text-white transition disabled:opacity-40"
-                style={{ background: "#D35400" }}
-              >
-                {actionLoading === "submitDraft" ? "..." : t("admin.campaigns.launchDraft")}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-2xl font-bold font-syne text-white">{c.title}</h1>
-              {(() => {
-                const sc = isActive
-                  ? { dot: "#D35400", label: getStatusLabel(c), bg: "rgba(211,84,0,0.1)" }
-                  : isPaused
-                  ? { dot: "#EAB308", label: getStatusLabel(c), bg: "rgba(234,179,8,0.1)" }
-                  : isEnded
-                  ? { dot: "rgba(255,255,255,0.2)", label: getStatusLabel(c), bg: "rgba(255,255,255,0.04)" }
-                  : isDraft
-                  ? { dot: "rgba(255,255,255,0.15)", label: getStatusLabel(c), bg: "rgba(255,255,255,0.04)" }
-                  : isPendingReview
-                  ? { dot: "#F59E0B", label: getStatusLabel(c), bg: "rgba(245,158,11,0.1)" }
-                  : isRejected
-                  ? { dot: "#EF4444", label: getStatusLabel(c), bg: "rgba(239,68,68,0.1)" }
-                  : { dot: "rgba(255,255,255,0.2)", label: getStatusLabel(c), bg: "rgba(255,255,255,0.04)" };
-                return (
-                  <span className="flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full" style={{ background: sc.bg, color: sc.dot === "rgba(255,255,255,0.2)" || sc.dot === "rgba(255,255,255,0.15)" ? "rgba(255,255,255,0.4)" : sc.dot }}>
-                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: sc.dot }} />
-                    {sc.label}
-                  </span>
-                );
-              })()}
-              {(() => {
-                const oc = (c.objective || "traffic") === "awareness"
-                  ? { label: t("admin.campaigns.objectiveAwareness"), color: "#3B82F6", bg: "rgba(59,130,246,0.1)" }
-                  : (c.objective || "traffic") === "lead_generation"
-                  ? { label: t("admin.campaigns.objectiveLeadGen"), color: "#8B5CF6", bg: "rgba(139,92,246,0.1)" }
-                  : { label: t("admin.campaigns.objectiveTraffic"), color: "#1D9E75", bg: "rgba(29,158,117,0.1)" };
-                return <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ background: oc.bg, color: oc.color }}>{oc.label}</span>;
-              })()}
-              {(c.pricing_model || "cpc") === "cpa" && (
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(211,84,0,0.12)", color: "#D35400" }}>
-                  {t("admin.campaigns.cpaBadge")} · {c.cpa_event} · {formatFCFA(c.cpa_amount || 0)}/{t("admin.campaigns.cpaPerAction")}
-                </span>
-              )}
-            </div>
-            {c.description && <p className="text-sm max-w-xl font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{c.description}</p>}
-            {c.target_cities && c.target_cities.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {c.target_cities.map((city) => (
-                  <span key={city} className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: "rgba(211,84,0,0.08)", color: "#D35400" }}>{city}</span>
-                ))}
-              </div>
-            )}
-            <p className="text-[11px] mt-2" style={{ color: "rgba(255,255,255,0.2)" }}>{timeAgo(c.created_at)}</p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {isDraft && (
-              <button
-                onClick={() => c.objective === "lead_generation" ? router.push(`/admin/campaigns/lead-gen?draft=${c.id}`) : handleSubmitDraft(c.id)}
-                disabled={actionLoading !== null}
-                className="px-4 py-2 rounded-xl text-xs font-bold transition disabled:opacity-40"
-                style={{ background: "rgba(211,84,0,0.1)", color: "#D35400" }}
-              >
-                {actionLoading === "submitDraft" ? "..." : t("admin.campaigns.launchDraft")}
-              </button>
-            )}
-            {isActive && (
-              <button onClick={() => handleAction(c.id, "pause")} disabled={actionLoading !== null} className="px-4 py-2 rounded-xl text-xs font-bold transition disabled:opacity-40" style={{ background: "rgba(234,179,8,0.08)", color: "#EAB308" }}>
-                {actionLoading === "pause" ? "..." : t("admin.campaigns.pause")}
-              </button>
-            )}
-            {isPaused && (
-              <button onClick={() => handleAction(c.id, "activate")} disabled={actionLoading !== null} className="px-4 py-2 rounded-xl text-xs font-bold transition disabled:opacity-40" style={{ background: "rgba(29,158,117,0.08)", color: "#1D9E75" }}>
-                {actionLoading === "activate" ? "..." : t("admin.campaigns.reactivate")}
-              </button>
-            )}
-            {(isActive || isPaused) && (
-              <button onClick={() => handleAction(c.id, "complete")} disabled={actionLoading !== null} className="px-4 py-2 rounded-xl text-xs font-bold transition disabled:opacity-40" style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.5)" }}>
-                {actionLoading === "complete" ? "..." : t("admin.campaigns.finish")}
-              </button>
-            )}
-            {c.objective === "lead_generation" && c.landing_page_id && (
-              <button
-                onClick={() => router.push(`/admin/campaigns/${c.id}/preview`)}
-                className="px-4 py-2 rounded-xl text-xs font-bold transition"
-                style={{ background: "rgba(139,92,246,0.08)", color: "#8B5CF6" }}
-              >
-                {t("admin.campaigns.viewPage")}
-              </button>
-            )}
-            {!isEnded && (
-              <button
-                onClick={() => c.objective === "lead_generation" ? router.push(`/admin/campaigns/lead-gen?draft=${c.id}`) : openEditForm(c)}
-                className="px-4 py-2 rounded-xl text-xs font-bold transition"
-                style={{ background: "rgba(211,84,0,0.08)", color: "#D35400" }}
-              >
-                {t("common.edit")}
-              </button>
-            )}
-            <button onClick={() => handleAction(c.id, "delete")} disabled={actionLoading !== null} className="px-4 py-2 rounded-xl text-xs font-bold transition disabled:opacity-40" style={{ background: "rgba(239,68,68,0.08)", color: "#EF4444" }}>
-              {actionLoading === "delete" ? "..." : t("common.delete")}
-            </button>
-          </div>
-        </div>
-
-        {/* Pending review banner */}
-        {isPendingReview && (
-          <div className="rounded-2xl p-4 mb-8" style={{ background: "rgba(245,158,11,0.06)", border: "0.5px solid rgba(245,158,11,0.15)" }}>
-            <span className="text-sm font-bold font-syne" style={{ color: "#F59E0B" }}>{t("admin.campaigns.pendingReview")}</span>
-            <p className="text-xs font-dm mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>
-              {t("admin.campaigns.pendingReviewDesc")}
-            </p>
-          </div>
-        )}
-
-        {/* Rejected banner */}
-        {isRejected && (
-          <div className="rounded-2xl p-4 mb-8" style={{ background: "rgba(239,68,68,0.06)", border: "0.5px solid rgba(239,68,68,0.15)" }}>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <span className="text-sm font-bold font-syne" style={{ color: "#EF4444" }}>{t("admin.campaigns.modificationsRequired")}</span>
-                {c.moderation_reason && (
-                  <p className="text-xs font-dm mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>{c.moderation_reason}</p>
-                )}
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <button
-                  onClick={() => c.objective === "lead_generation" ? router.push(`/admin/campaigns/lead-gen?draft=${c.id}`) : openEditForm(c)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold transition"
-                  style={{ background: "rgba(211,84,0,0.08)", color: "#D35400" }}
-                >
-                  {t("common.edit")}
-                </button>
-                <button
-                  onClick={() => handleAction(c.id, "resubmit")}
-                  disabled={actionLoading !== null}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-white transition disabled:opacity-40"
-                  style={{ background: "#D35400" }}
-                >
-                  {actionLoading === "resubmit" ? "..." : t("admin.campaigns.resubmit")}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Stats cards */}
-        <div className={`grid grid-cols-2 ${(c.objective || "traffic") === "lead_generation" ? "lg:grid-cols-3" : "lg:grid-cols-4"} gap-4 mb-4`}>
-          <div className="rounded-2xl p-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-            <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>{t("common.budget")}</p>
-            <p className="text-xl font-bold font-syne text-white">{formatFCFA(c.budget)}</p>
-          </div>
-          <div className="rounded-2xl p-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-            <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.dashboard.spent")}</p>
-            <p className="text-xl font-bold font-syne" style={{ color: "#D35400" }}>{formatFCFA(c.spent)}</p>
-          </div>
-          <div className="rounded-2xl p-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-            <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.remaining")}</p>
-            <p className="text-xl font-bold font-syne" style={{ color: budgetConsumed ? "#1D9E75" : "#D35400" }}>
-              {budgetConsumed ? t("admin.campaigns.fullyConsumed") : formatFCFA(remaining)}
-            </p>
-          </div>
-          {(c.objective || "traffic") !== "lead_generation" && (
-            <div className="rounded-2xl p-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-              <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>
-                {(c.pricing_model || "cpc") === "cpa" ? "CPA" : "CPC"}
-              </p>
-              <p className="text-xl font-bold font-syne text-white">
-                {(c.pricing_model || "cpc") === "cpa" ? formatFCFA(c.cpa_amount || 0) : formatFCFA(c.cpc)}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Lead gen specific stats */}
-        {(c.objective || "traffic") === "lead_generation" && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <div className="rounded-2xl p-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-              <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>
-                {(c.pricing_model || "cpc") === "cpa" ? "CPA" : "CPC"}
-              </p>
-              <p className="text-xl font-bold font-syne text-white">
-                {(c.pricing_model || "cpc") === "cpa" ? formatFCFA(c.cpa_amount || 0) : formatFCFA(c.cpc)}
-              </p>
-            </div>
-            <div className="rounded-2xl p-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-              <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>CPL</p>
-              <p className="text-xl font-bold font-syne text-white">{formatFCFA(c.cost_per_lead_fcfa || 0)}</p>
-            </div>
-            <div className="rounded-2xl p-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-              <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.leadsCaptured")}</p>
-              <p className="text-xl font-bold font-syne" style={{ color: "#8B5CF6" }}>{c.leads_captured_count || 0}</p>
-            </div>
-            <div className="rounded-2xl p-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-              <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.landingPageFee")}</p>
-              <p className="text-xl font-bold font-syne text-white">{formatFCFA(LEAD_GEN_SETUP_FEE_FCFA)}</p>
-              <p className="text-[10px] text-white/20">{c.setup_fee_paid ? t("admin.campaigns.paid") : t("admin.campaigns.notPaid")}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Landing page URL for lead gen */}
-        {(c.objective || "traffic") === "lead_generation" && landingSlug && (
-          <div className="rounded-2xl p-4 mb-4" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-            <p className="text-[10px] font-medium font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.landingPage")}</p>
-            <a href={`${SITE_URL}/l/${landingSlug}`} target="_blank" rel="noopener noreferrer" className="text-sm font-mono hover:underline break-all" style={{ color: "#D35400" }}>
-              {SITE_URL}/l/{landingSlug}
-            </a>
-          </div>
-        )}
-
-        {/* Objective context */}
-        {(c.objective || "traffic") === "awareness" ? (
-          <p className="text-sm text-white/40 mb-4">
-            {t("admin.campaigns.awarenessContext")}
-          </p>
-        ) : (c.objective || "traffic") === "lead_generation" ? (
-          <p className="text-sm text-white/40 mb-4">
-            {t("admin.campaigns.leadGenContext")}
-          </p>
-        ) : (
-          <p className="text-sm text-white/40 mb-4">
-            {t("admin.campaigns.trafficContext")}
-          </p>
-        )}
-
-        {/* Tab bar for lead gen campaigns or campaigns with pixel */}
-        {((c.objective || "traffic") === "lead_generation" || c.pixel_id) && (
-          <div className="flex gap-1 mb-6 rounded-xl p-1 w-fit" style={{ background: "rgba(255,255,255,0.04)" }}>
-            <button onClick={() => setDetailTab("overview")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${detailTab === "overview" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"}`}>
-              {t("admin.campaigns.overview")}
-            </button>
-            {(c.objective || "traffic") === "lead_generation" && (
-              <button onClick={() => setDetailTab("leads")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${detailTab === "leads" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"}`}>
-                {t("admin.campaigns.leadsTab")} ({leads.length})
-              </button>
-            )}
-            {c.pixel_id && (
-              <button onClick={() => setDetailTab("conversions")} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${detailTab === "conversions" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"}`}>
-                {t("admin.campaigns.conversionsTab")}
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Leads Tab */}
-        {(c.objective || "traffic") === "lead_generation" && detailTab === "leads" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold">{t("admin.campaigns.leadsTab")} ({leads.length})</p>
-              {leads.length > 0 && (
-                <a
-                  href={`/api/admin/campaigns/leads?campaign_id=${c.id}&format=csv`}
-                  download
-                  className="px-4 py-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold hover:bg-purple-500/20 transition flex items-center gap-2"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  {t("admin.campaigns.downloadCSV")}
-                </a>
-              )}
-            </div>
-            {leadsLoading ? (
-              <div className="rounded-2xl p-8 text-center text-white/30 text-sm" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>{t("admin.campaigns.loadingData")}</div>
-            ) : leads.length === 0 ? (
-              <div className="rounded-2xl p-8 text-center text-white/30 text-sm" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>{t("admin.campaigns.noLeads")}</div>
-            ) : (
-              <div className="rounded-2xl overflow-x-auto" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-                {(() => {
-                  const customFieldKeys = Array.from(new Set(leads.flatMap(l => l.custom_fields ? Object.keys(l.custom_fields) : [])));
-                  return (
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-white/10 text-left">
-                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">{t("admin.campaigns.leadName")}</th>
-                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">{t("admin.campaigns.leadPhone")}</th>
-                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">{t("common.email")}</th>
-                          {customFieldKeys.map(key => (
-                            <th key={key} className="px-4 py-3 text-xs text-white/40 font-semibold">{key}</th>
-                          ))}
-                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">{t("admin.campaigns.leadStatus")}</th>
-                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">{t("admin.campaigns.leadDate")}</th>
-                          <th className="px-4 py-3 text-xs text-white/40 font-semibold">{t("admin.campaigns.leadActions")}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {leads.map((lead) => (
-                          <tr key={lead.id} className="border-b border-white/5 hover:bg-white/5 transition">
-                            <td className="px-4 py-3">{lead.name}</td>
-                            <td className="px-4 py-3 font-mono text-xs">{lead.phone}</td>
-                            <td className="px-4 py-3 text-xs text-white/60">{lead.email || (lead.custom_fields && Object.entries(lead.custom_fields).find(([k]) => k.toLowerCase().includes("email"))?.[1]) || "—"}</td>
-                            {customFieldKeys.map(key => (
-                              <td key={key} className="px-4 py-3 text-xs text-white/60">{lead.custom_fields?.[key] || "—"}</td>
-                            ))}
-                            <td className="px-4 py-3">
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                lead.status === "verified" ? "bg-emerald-500/20 text-emerald-300" :
-                                lead.status === "rejected" ? "bg-red-500/20 text-red-300" :
-                                lead.status === "flagged" ? "bg-yellow-500/20 text-yellow-300" :
-                                "bg-white/10 text-white/60"
-                              }`}>
-                                {lead.status === "verified" ? t("admin.campaigns.leadAccepted") : lead.status === "rejected" ? t("admin.campaigns.leadRejected") : lead.status === "flagged" ? t("admin.campaigns.leadFlagged") : t("admin.campaigns.leadPending")}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-xs text-white/40">{new Date(lead.created_at).toLocaleDateString("fr-FR")}</td>
-                            <td className="px-4 py-3">
-                              {(lead.status === "pending" || lead.status === "flagged") && (
-                                <div className="flex gap-1.5">
-                                  <button
-                                    onClick={() => handleLeadAction(lead.id, "verify")}
-                                    disabled={leadActionLoading === lead.id}
-                                    className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-[11px] font-semibold hover:bg-emerald-500/20 transition disabled:opacity-40"
-                                  >
-                                    {leadActionLoading === lead.id ? "..." : t("admin.campaigns.acceptLead")}
-                                  </button>
-                                  <button
-                                    onClick={() => handleLeadAction(lead.id, "reject")}
-                                    disabled={leadActionLoading === lead.id}
-                                    className="px-2.5 py-1 rounded-lg bg-red-500/10 text-red-400 text-[11px] font-semibold hover:bg-red-500/20 transition disabled:opacity-40"
-                                  >
-                                    {leadActionLoading === lead.id ? "..." : t("admin.campaigns.rejectLead")}
-                                  </button>
-                                </div>
-                              )}
-                              {lead.status === "verified" && (
-                                <button
-                                  onClick={() => handleLeadAction(lead.id, "reject")}
-                                  disabled={leadActionLoading === lead.id}
-                                  className="px-2.5 py-1 rounded-lg bg-red-500/10 text-red-400 text-[11px] font-semibold hover:bg-red-500/20 transition disabled:opacity-40"
-                                >
-                                  {leadActionLoading === lead.id ? "..." : t("admin.campaigns.rejectLead")}
-                                </button>
-                              )}
-                              {lead.status === "rejected" && <span className="text-[11px] text-red-400/50">{t("admin.campaigns.leadRejected")}</span>}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  );
-                })()}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Conversions tab — full funnel visualization */}
-        {detailTab === "conversions" && c.pixel_id && (
-          <div className="space-y-6">
-            {convLoading ? (
-              <div className="flex items-center justify-center py-16">
-                <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
-              </div>
-            ) : convData && (convData.funnel.installs > 0 || convData.funnel.signups > 0 || convData.funnel.activations > 0 || convData.funnel.subscriptions > 0 || convData.funnel.purchases > 0 || convData.funnel.leads > 0 || convData.funnel.custom > 0) ? (
-              <>
-                {/* Funnel */}
-                <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-                  <h3 className="text-[10px] font-bold font-dm uppercase tracking-wider mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.conversionFunnel")}</h3>
-                  <ConversionFunnel funnel={convData.funnel} rates={convData.rates} />
-                </div>
-
-                {/* Cost metrics */}
-                <CostCards costs={convData.costs} revenue={convData.revenue} />
-
-                {/* Daily chart */}
-                {convData.daily.length > 1 && (
-                  <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-                    <h3 className="text-[10px] font-bold font-dm uppercase tracking-wider mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.conversionsPerDay")}</h3>
-                    <div className="h-64 -ml-2">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={convData.daily}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                          <XAxis
-                            dataKey="date"
-                            tickFormatter={(v) => { const d = new Date(v); return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" }); }}
-                            tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }}
-                            axisLine={false}
-                            tickLine={false}
-                          />
-                          <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                          <Tooltip
-                            contentStyle={{ background: "rgba(0,0,0,0.85)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontSize: 12 }}
-                            labelFormatter={(v) => new Date(String(v)).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}
-                          />
-                          <Bar dataKey="installs" name="Installations" fill="#D35400" radius={[2, 2, 0, 0]} />
-                          <Bar dataKey="signups" name="Inscriptions" fill="#E67E22" radius={[2, 2, 0, 0]} />
-                          <Bar dataKey="activations" name="Activations" fill="#F39C12" radius={[2, 2, 0, 0]} />
-                          <Bar dataKey="subscriptions" name="Souscriptions" fill="#1ABC9C" radius={[2, 2, 0, 0]} />
-                          <Bar dataKey="purchases" name="Achats" fill="#16A085" radius={[2, 2, 0, 0]} />
-                          <Bar dataKey="leads" name="Leads" fill="#2ECC71" radius={[2, 2, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                )}
-
-                {/* Attribution breakdown */}
-                <AttributionBreakdown attribution={convData.attribution} />
-
-                {/* Recent conversions table */}
-                {convData.recent.length > 0 && (
-                  <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-[10px] font-bold font-dm uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.recentConversions")}</h3>
-                      <a
-                        href={`/api/brand/conversions?campaign_id=${c.id}&format=csv`}
-                        download
-                        className="text-xs font-semibold bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg transition flex items-center gap-2"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        {t("admin.campaigns.exportCSV")}
-                      </a>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="text-white/30 text-xs border-b border-white/5">
-                            <th className="text-left py-2 px-3 font-semibold">{t("admin.campaigns.leadDate")}</th>
-                            <th className="text-left py-2 px-3 font-semibold">Événement</th>
-                            <th className="text-left py-2 px-3 font-semibold">Valeur</th>
-                            <th className="text-left py-2 px-3 font-semibold">Attribué</th>
-                            <th className="text-left py-2 px-3 font-semibold">Délai</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {convData.recent.slice(convPage * 10, (convPage + 1) * 10).map((ev) => {
-                            const eventColors: Record<string, string> = {
-                              install: "bg-orange-500/20 text-orange-400",
-                              signup: "bg-yellow-500/20 text-yellow-400",
-                              subscription: "bg-teal-500/20 text-teal-400",
-                              purchase: "bg-emerald-500/20 text-emerald-400",
-                              lead: "bg-blue-500/20 text-blue-400",
-                            };
-                            let delay = "—";
-                            if (ev.click_to_conversion_seconds) {
-                              const h = Math.floor(ev.click_to_conversion_seconds / 3600);
-                              const m = Math.floor((ev.click_to_conversion_seconds % 3600) / 60);
-                              delay = h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m` : `${ev.click_to_conversion_seconds}s`;
-                            }
-                            return (
-                              <tr key={ev.id} className="border-b border-white/5 last:border-0">
-                                <td className="py-2.5 px-3 text-white/50 text-xs">
-                                  {new Date(ev.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}{" "}
-                                  {new Date(ev.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
-                                </td>
-                                <td className="py-2.5 px-3">
-                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${eventColors[ev.event] || "bg-white/10 text-white/50"}`}>
-                                    {ev.event}
-                                  </span>
-                                </td>
-                                <td className="py-2.5 px-3 text-xs font-semibold">
-                                  {ev.value_amount ? formatFCFA(ev.value_amount) : "—"}
-                                </td>
-                                <td className="py-2.5 px-3 text-xs">
-                                  {ev.attributed ? (
-                                    <span className="text-emerald-400 font-semibold">Direct</span>
-                                  ) : (
-                                    <span className="text-white/30">Non</span>
-                                  )}
-                                </td>
-                                <td className="py-2.5 px-3 text-xs text-white/40">{delay}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                    {/* Pagination */}
-                    {convData.recent.length > 10 && (
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
-                        <button
-                          onClick={() => setConvPage(Math.max(0, convPage - 1))}
-                          disabled={convPage === 0}
-                          className="text-xs font-semibold bg-white/5 px-3 py-1.5 rounded-lg disabled:opacity-30 hover:bg-white/10 transition"
-                        >
-                          {t("admin.campaigns.previous")}
-                        </button>
-                        <span className="text-xs text-white/30">
-                          {convPage + 1} / {Math.ceil(convData.recent.length / 10)}
-                        </span>
-                        <button
-                          onClick={() => setConvPage(Math.min(Math.ceil(convData.recent.length / 10) - 1, convPage + 1))}
-                          disabled={(convPage + 1) * 10 >= convData.recent.length}
-                          className="text-xs font-semibold bg-white/5 px-3 py-1.5 rounded-lg disabled:opacity-30 hover:bg-white/10 transition"
-                        >
-                          {t("admin.campaigns.nextPage")}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </>
-            ) : convError ? (
-              <div className="rounded-2xl text-center py-16" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-                <p className="text-sm text-red-400 font-semibold">Erreur : {convError}</p>
-                <button onClick={() => setDetailTab("conversions")} className="mt-4 text-sm hover:underline" style={{ color: "#D35400" }}>{t("admin.campaigns.retryLoad")}</button>
-              </div>
-            ) : (
-              /* Empty state — pixel linked but no conversions yet */
-              <div className="rounded-2xl text-center py-16" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto text-white/15 mb-4"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                <h3 className="text-lg font-bold text-white/50">{t("admin.campaigns.waitingConversions")}</h3>
-                <p className="text-sm text-white/30 mt-2 max-w-md mx-auto">
-                  Votre Pixel est configuré et lié à cette campagne.
-                  Les données de conversion apparaîtront ici dès que votre app enverra le premier événement.
-                </p>
-                <p className="text-xs text-white/20 mt-3 max-w-sm mx-auto">
-                  Pour tester : envoyez un événement test via cURL avec le tm_ref d&apos;un de vos clics.
-                </p>
-                <a href="/admin/pixel/guide" className="inline-block mt-5 text-sm font-semibold hover:underline" style={{ color: "#D35400" }}>
-                  Voir le guide d&apos;intégration
-                </a>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Overview tab content (always show for non-lead-gen, or when overview tab is active) */}
-        {((c.objective || "traffic") !== "lead_generation" || detailTab === "overview") && detailTab !== "conversions" && <>
-        {/* Progress bar */}
-        <div className="rounded-2xl p-5 mb-8" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-semibold">{t("admin.campaigns.budgetProgress")}</p>
-            <p className="text-sm font-bold font-syne" style={{ color: "#D35400" }}>{Math.round(progress)}%</p>
-          </div>
-          <div className="h-3 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
-            <div className="h-full rounded-full transition-all duration-500" style={{ background: "#D35400", width: `${Math.min(progress, 100)}%` }} />
-          </div>
-          <div className="flex justify-between mt-2 text-xs text-white/30">
-            <span>{formatFCFA(c.spent)}</span>
-            <span>{formatFCFA(c.budget)}</span>
-          </div>
-        </div>
-
-        {/* Performance Overview — skeleton while loading */}
-        {perfLoading && (
-          <div className="space-y-4 mb-8 animate-pulse">
-            {/* Metrics skeleton */}
-            <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-              <div className="h-5 w-32 bg-white/10 rounded mb-4" />
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i}>
-                    <div className="h-3 w-20 bg-white/10 rounded mb-2" />
-                    <div className="h-7 w-16 bg-white/10 rounded mb-1" />
-                    <div className="h-2 w-24 bg-white/5 rounded" />
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* Chart skeleton */}
-            <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-              <div className="h-5 w-40 bg-white/10 rounded mb-4" />
-              <div className="flex items-end gap-1 h-48">
-                {Array.from({ length: 14 }).map((_, i) => (
-                  <div key={i} className="flex-1 bg-white/5 rounded-t"
-                    style={{ height: `${25 + (i % 3) * 20 + (i % 5) * 8}%` }} />
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-        {perf && (
-          <div className="space-y-4 mb-8">
-            {/* Summary metrics */}
-            <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-              <h3 className="font-bold font-syne text-white text-lg mb-4">{t("admin.campaigns.performance")}</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.totalReach")}</p>
-                  <p className="text-2xl font-bold font-syne text-white">{perf.totalClicks.toLocaleString()}</p>
-                  <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.25)" }}>{t("admin.campaigns.totalReachSub")}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.realVisitors")}</p>
-                  <p className="text-2xl font-bold font-syne" style={{ color: "#D35400" }}>{perf.validClicks.toLocaleString()}</p>
-                  <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.25)" }}>{t("admin.campaigns.verifiedClicks")}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.costPerVisitor")}</p>
-                  <p className="text-2xl font-bold font-syne text-white">{perf.costPerVisitor} FCFA</p>
-                  <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.25)" }}>{t("admin.campaigns.perVerifiedClick")}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.activeEchos")}</p>
-                  <p className="text-2xl font-bold font-syne text-white">{perf.activeEchos}</p>
-                  <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.25)" }}>{t("admin.campaigns.sharingYourLink")}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Performance chart */}
-            <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-              <h3 className="font-bold font-syne text-white mb-4">{t("admin.campaigns.clicksPerDay")}</h3>
-              {perf.chartData && perf.chartData.length > 0 ? (
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={perf.chartData}>
-                      <defs>
-                        <linearGradient id="validGradientPerf" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#1ABC9C" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="#1ABC9C" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fill: "#666", fontSize: 12 }}
-                        tickFormatter={(d: string) => new Date(d).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
-                      />
-                      <YAxis tick={{ fill: "#666", fontSize: 12 }} />
-                      <Tooltip
-                        contentStyle={{ background: "#1A1A2E", border: "1px solid #333", borderRadius: 8 }}
-                        labelFormatter={(d) => new Date(String(d)).toLocaleDateString(undefined, { day: "numeric", month: "long" })}
-                        formatter={(value, name) => [value, name === "valid" ? t("admin.campaigns.realVisitorsLabel") : t("admin.campaigns.total")]}
-                      />
-                      <Area type="monotone" dataKey="valid" stroke="#1ABC9C" fill="url(#validGradientPerf)" strokeWidth={2} />
-                      <Area type="monotone" dataKey="fraud" stroke="#444" fill="none" strokeWidth={1} strokeDasharray="4 4" name="total" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <div className="text-center py-12 text-white/30">
-                  {t("admin.campaigns.noDataYet")}
-                </div>
-              )}
-            </div>
-
-            {/* Two-column: Top Échos + Geographic breakdown */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Top Échos leaderboard */}
-              <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-                <h3 className="font-bold font-syne text-white mb-4">{t("admin.campaigns.topEchos")}</h3>
-                {perf.topEchos.length > 0 ? (
-                  <div className="space-y-3">
-                    {perf.topEchos.map((echo, i) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="text-lg">
-                            {i === 0 ? "\u{1F947}" : i === 1 ? "\u{1F948}" : i === 2 ? "\u{1F949}" : `#${i + 1}`}
-                          </span>
-                          <div>
-                            <p className="text-sm font-medium">{echo.name}</p>
-                            <p className="text-xs text-white/30">{echo.city}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-sm" style={{ color: "#D35400" }}>{echo.clicks} {t("common.clicks")}</p>
-                          <p className="text-xs text-white/30">{echo.earnings.toLocaleString()} FCFA</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center py-6 text-white/30 text-sm">
-                    {t("admin.campaigns.noEchoClicks")}
-                  </p>
-                )}
-              </div>
-
-              {/* Geographic breakdown */}
-              <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-                <h3 className="font-bold font-syne text-white mb-4">{t("admin.campaigns.geoBreakdown")}</h3>
-                {perf.geoBreakdown.length > 0 ? (
-                  <div className="space-y-3">
-                    {perf.geoBreakdown.map((geo, i) => (
-                      <div key={i}>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm">{geo.city}</span>
-                          <span className="text-sm text-white/40">{geo.percentage}%</span>
-                        </div>
-                        <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full" style={{ background: "#D35400", width: `${geo.percentage}%` }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center py-6 text-white/30 text-sm">
-                    {t("admin.campaigns.geoComingSoon")}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* ROI comparison */}
-            <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-              <h3 className="font-bold font-syne text-white mb-3">{t("admin.campaigns.roi")}</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)" }}>
-                  <p className="text-[10px] font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>Facebook Ads</p>
-                  <p className="font-bold font-syne text-white text-sm">200-500 FCFA/clic</p>
-                </div>
-                <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)" }}>
-                  <p className="text-[10px] font-dm mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>Instagram Ads</p>
-                  <p className="font-bold font-syne text-white text-sm">300-800 FCFA/clic</p>
-                </div>
-                <div className="rounded-xl p-3" style={{ background: "rgba(29,158,117,0.08)", border: "0.5px solid rgba(29,158,117,0.2)" }}>
-                  <p className="text-[10px] font-dm mb-1" style={{ color: "#1D9E75" }}>Tamtam</p>
-                  <p className="font-bold font-syne text-sm" style={{ color: "#1D9E75" }}>{perf.costPerVisitor} FCFA/clic</p>
-                  <p className="text-[10px] font-dm" style={{ color: "rgba(29,158,117,0.6)" }}>
-                    {perf.costPerVisitor < 200
-                      ? t("admin.campaigns.percentCheaper", { pct: String(Math.round((1 - perf.costPerVisitor / 350) * 100)) })
-                      : t("admin.campaigns.competitive")}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Details grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-            <p className="text-[10px] font-medium font-dm mb-3" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.info")}</p>
-            <div className="space-y-3">
-              <div>
-                <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.25)" }}>{t("admin.campaigns.destUrl")}</p>
-                <a href={c.destination_url} target="_blank" rel="noopener noreferrer" className="text-sm hover:underline break-all" style={{ color: "#D35400" }}>{c.destination_url}</a>
-              </div>
-              {c.starts_at && (
-                <div>
-                  <p className="text-xs text-white/30">{t("admin.campaigns.startDate")}</p>
-                  <p className="text-sm">{new Date(c.starts_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
-                </div>
-              )}
-              {c.ends_at && (
-                <div>
-                  <p className="text-xs text-white/30">{t("admin.campaigns.endDate")}</p>
-                  <p className="text-sm">{new Date(c.ends_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-2xl p-5" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-            <p className="text-[10px] font-medium font-dm mb-3" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.visuals")}</p>
-            {c.creative_urls && c.creative_urls.length > 0 ? (
-              <div className="grid grid-cols-3 gap-2">
-                {c.creative_urls.map((url, i) => (
-                  <div key={i} className="aspect-square rounded-xl overflow-hidden border border-white/10">
-                    {url.match(/\.(mp4|webm)/) ? (
-                      <video src={url} className="w-full h-full object-cover" controls />
-                    ) : (
-                      <img src={url} alt={`Visuel ${i + 1}`} className="w-full h-full object-cover" />
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-white/20">{t("admin.campaigns.noVisuals")}</p>
-            )}
-          </div>
-        </div>
-        </>}
-
-        {showDeleteConfirm && (
-          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-            <div className="rounded-2xl p-6 max-w-md w-full" style={{ background: "#111128", border: "0.5px solid rgba(239,68,68,0.15)" }}>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </div>
-                <h3 className="text-white font-bold text-lg">{t("admin.campaigns.deleteTitle")}</h3>
-              </div>
-              <p className="text-white/60 text-sm mb-6">
-                {t("admin.campaigns.deleteMessage")}
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => { setShowDeleteConfirm(false); setDeleteTargetId(null); }}
-                  className="flex-1 py-2.5 rounded-lg bg-white/5 text-white/60 text-sm hover:bg-white/10 transition"
-                >
-                  {t("common.cancel")}
-                </button>
-                <button
-                  onClick={confirmDelete}
-                  disabled={actionLoading === "delete"}
-                  className="flex-1 py-2.5 rounded-lg bg-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/30 transition disabled:opacity-50"
-                >
-                  {actionLoading === "delete" ? t("common.saving") : t("admin.campaigns.confirmDelete")}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      <CampaignDetailView
+        vm={{
+          campaign: selectedCampaign,
+          onBack: () => { setSelectedCampaign(null); setView("list"); },
+          onEdit: handleEdit, onLaunchDraft: handleLaunchDraft, onAction: handleAction, actionLoading,
+          detailTab, setDetailTab, landingSlug,
+          leads, leadsLoading, leadActionLoading, onLeadAction: handleLeadAction,
+          perf, perfLoading,
+          convData, convLoading, convError, convPage, setConvPage,
+          showDeleteConfirm,
+          onCancelDelete: () => { setShowDeleteConfirm(false); setDeleteTargetId(null); },
+          onConfirmDelete: confirmDelete,
+        }}
+      />
     );
   }
 
-  // ==================== OBJECTIVE PICKER VIEW ====================
   if (view === "objective") {
-    const objectives = [
-      {
-        id: "traffic" as const,
-        label: t("admin.campaigns.objectiveTraffic"),
-        description: t("admin.campaigns.trafficDesc"),
-        detail: t("admin.campaigns.trafficDetail"),
-        icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>,
-        disabled: false,
-      },
-      {
-        id: "awareness" as const,
-        label: t("admin.campaigns.objectiveAwareness"),
-        description: t("admin.campaigns.awarenessDesc"),
-        detail: t("admin.campaigns.awarenessDetail"),
-        icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
-        disabled: false,
-      },
-      {
-        id: "lead_generation" as const,
-        label: t("admin.campaigns.leadGenLabel"),
-        description: t("admin.campaigns.leadGenDesc"),
-        detail: t("admin.campaigns.leadGenDetail"),
-        icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
-        disabled: false,
-      },
-      {
-        id: "app_install" as const,
-        label: t("admin.campaigns.appInstallLabel"),
-        description: t("admin.campaigns.appInstallDesc"),
-        detail: t("admin.campaigns.appInstallDetail"),
-        icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><path d="M12 18h.01"/><path d="M8 10l4 4 4-4"/></svg>,
-        disabled: true,
-      },
-    ];
-
     return (
-      <div className="p-6 lg:p-8" style={{ maxWidth: "100%" }}>
-        <button onClick={() => { resetForm(); setView("list"); }} className="flex items-center gap-2 text-xs font-medium transition mb-6" style={{ color: "rgba(255,255,255,0.35)" }} onMouseEnter={e => e.currentTarget.style.color = "rgba(255,255,255,0.7)"} onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.35)"}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-          {t("common.back")}
-        </button>
-
-        <h1 className="text-2xl font-bold font-syne text-white mb-2">{t("admin.campaigns.newRythme")}</h1>
-        <p className="text-xs font-dm mb-8" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.objectiveQuestion")}</p>
-
-        <div data-tour="objective-grid" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-          {objectives.map((obj) => (
-            <button
-              key={obj.id}
-              onClick={() => !obj.disabled && setObjective(obj.id as CampaignObjective)}
-              disabled={obj.disabled}
-              data-tour={`objective-${obj.id}`}
-              className="relative text-left p-5 rounded-2xl transition-all"
-              style={{
-                background: obj.disabled ? "rgba(255,255,255,0.02)" : objective === obj.id ? "rgba(211,84,0,0.08)" : "#111128",
-                border: obj.disabled ? "0.5px solid rgba(255,255,255,0.04)" : objective === obj.id ? "1.5px solid #D35400" : "0.5px solid rgba(255,255,255,0.06)",
-                opacity: obj.disabled ? 0.4 : 1,
-                cursor: obj.disabled ? "not-allowed" : "pointer",
-              }}
-            >
-              {obj.disabled && (
-                <span className="absolute top-3 right-3 text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/40 font-semibold">
-                  {t("admin.campaigns.comingSoon")}
-                </span>
-              )}
-              {!obj.disabled && objective === obj.id && (
-                <span className="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "#D35400" }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                </span>
-              )}
-              <div className="mb-3" style={{ color: "#D35400" }}>{obj.icon}</div>
-              <h3 className="font-bold font-syne text-white text-lg mb-1">{obj.label}</h3>
-              <p className="text-xs font-dm mb-2" style={{ color: "rgba(255,255,255,0.5)" }}>{obj.description}</p>
-              <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.25)" }}>{obj.detail}</p>
-            </button>
-          ))}
-        </div>
-
-        <div className="flex justify-end">
-          {objective === "lead_generation" ? (
-            <a
-              href="/admin/campaigns/lead-gen"
-              className="px-8 py-3 rounded-xl text-sm font-bold text-white inline-block text-center no-underline transition" style={{ background: "#D35400" }}
-            >
-              {t("admin.campaigns.configureLeadGen")}
-            </a>
-          ) : (
-            <button
-              onClick={() => setView("form")}
-              className="px-8 py-3 rounded-xl text-sm font-bold text-white transition" style={{ background: "#D35400" }}
-            >
-              {t("admin.campaigns.continue")}
-            </button>
-          )}
-        </div>
-      </div>
+      <CampaignObjectiveView
+        objective={objective} setObjective={setObjective}
+        onBack={() => { resetForm(); setView("list"); }} onContinue={() => setView("form")}
+      />
     );
   }
 
-  // ==================== FORM VIEW ====================
   if (view === "form") {
     return (
-      <div className="p-6 lg:p-8" style={{ maxWidth: "100%" }}>
-        <button onClick={() => { resetForm(); setView(editingId ? "detail" : "list"); }} className="flex items-center gap-2 text-xs font-medium transition mb-6" style={{ color: "rgba(255,255,255,0.35)" }} onMouseEnter={e => e.currentTarget.style.color = "rgba(255,255,255,0.7)"} onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.35)"}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-          {t("common.back")}
-        </button>
-
-        <h1 className="text-2xl font-bold font-syne text-white mb-4">{editingId ? t("admin.campaigns.editRythme") : t("admin.campaigns.newRythme")}</h1>
-
-        {/* Objective indicator */}
-        <div className="flex items-center gap-2 mb-6">
-          <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
-            objective === "awareness"
-              ? "bg-blue-500/20 text-blue-300"
-              : objective === "lead_generation"
-                ? "bg-purple-500/20 text-purple-300"
-                : "bg-teal-500/20 text-teal-300"
-          }`}>
-            {objective === "awareness" ? t("admin.campaigns.objectiveAwareness") : objective === "lead_generation" ? t("admin.campaigns.objectiveLeadGen") : t("admin.campaigns.objectiveTraffic")}
-          </span>
-          {!editingId && (
-            <button onClick={() => setView("objective")} className="text-xs text-white/30 hover:text-white/50 transition">
-              {t("admin.campaigns.changeObjective")}
-            </button>
-          )}
-        </div>
-
-        {objective === "awareness" && (
-          <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mb-6 flex items-start gap-3">
-            <span className="text-lg">📸</span>
-            <div>
-              <p className="text-sm font-semibold text-blue-300">{t("admin.campaigns.awarenessNotice")}</p>
-              <p className="text-xs text-white/40">{t("admin.campaigns.awarenessNoticeDesc")}</p>
-            </div>
-          </div>
-        )}
-
-        <div className="rounded-2xl p-6" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.titleLabel")}</label>
-              <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder={t("admin.campaigns.titlePlaceholder")} className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.description")}</label>
-              <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder={t("admin.campaigns.descPlaceholder")} rows={3} className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition resize-none" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.destUrlLabel")}</label>
-              <input type="url" value={form.destination_url} onChange={(e) => setForm({ ...form, destination_url: e.target.value })} placeholder={t("admin.campaigns.destUrlPlaceholder")} className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>
-                {t("admin.campaigns.campaignVisuals")}
-                {objective === "awareness" && <span className="text-red-400 ml-1">*</span>}
-              </label>
-              {objective === "awareness" && creativeUrls.length === 0 && (
-                <p className="text-xs text-red-400 mb-2">{t("admin.campaigns.imageRequired")}</p>
-              )}
-              <div className="flex flex-wrap gap-3 mb-3">
-                {creativeUrls.map((url, i) => (
-                  <div key={i} className="relative group">
-                    {url.match(/\.(mp4|webm)/) ? (
-                      <video src={url} className="w-24 h-24 object-cover rounded-xl border border-white/10" />
-                    ) : (
-                      <img src={url} alt={`Creative ${i + 1}`} className="w-24 h-24 object-cover rounded-xl border border-white/10" />
-                    )}
-                    <button onClick={() => removeCreative(i)} className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition">x</button>
-                  </div>
-                ))}
-                <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="w-24 h-24 rounded-xl border-2 border-dashed border-white/20 flex flex-col items-center justify-center gap-1 text-white/30 hover:text-white/50 hover:border-white/40 transition cursor-pointer">
-                  {uploading ? (
-                    <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                      <span className="text-[10px]">{t("admin.campaigns.add")}</span>
-                    </>
-                  )}
-                </button>
-              </div>
-              <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" multiple onChange={handleUpload} className="hidden" />
-              <div className="bg-white/[0.03] rounded-lg p-3 mb-2">
-                <div className="flex items-center gap-2 text-xs">
-                  <span>📱</span>
-                  <span className="text-white/50">
-                    {t("admin.campaigns.formatRecommended")} <strong className="text-white/80">{t("admin.campaigns.formatVertical")}</strong> {t("admin.campaigns.formatDimensions")} — {t("admin.campaigns.formatOptimal")}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                  <span>💬 WhatsApp</span>
-                </div>
-              </div>
-              {imageFormatHint && (
-                <p className={`text-xs mt-1 ${imageFormatHint.type === "warning" ? "text-orange-400" : "text-green-400"}`}>
-                  {imageFormatHint.type === "warning" ? `⚠️ ${t("admin.campaigns.imageFormatWarning")}` : `✓ ${t("admin.campaigns.imageFormatSuccess")}`}
-                </p>
-              )}
-              <p className="text-xs text-white/20 mt-1">{t("admin.campaigns.visualFormats")}</p>
-            </div>
-
-            {/* Pricing Model Selector */}
-            {(objective === "traffic" || objective === "awareness") && (
-              <div className="md:col-span-2">
-                <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.pricingModelLabel")}</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setPricingModel("cpc")}
-                    className="text-left p-4 rounded-xl transition-all"
-                    style={{
-                      background: pricingModel === "cpc" ? "rgba(211,84,0,0.08)" : "rgba(255,255,255,0.02)",
-                      border: pricingModel === "cpc" ? "1.5px solid #D35400" : "0.5px solid rgba(255,255,255,0.08)",
-                    }}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-bold text-white font-syne">{t("admin.campaigns.pricingCpc")}</span>
-                      {pricingModel === "cpc" && (
-                        <span className="w-4 h-4 rounded-full flex items-center justify-center" style={{ background: "#D35400" }}>
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.4)" }}>{t("admin.campaigns.pricingCpcDesc")}</p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (brandPixels.filter(p => p.is_active).length === 0) return;
-                      setPricingModel("cpa");
-                      setShowPixelSection(true);
-                    }}
-                    className="text-left p-4 rounded-xl transition-all"
-                    style={{
-                      background: pricingModel === "cpa" ? "rgba(211,84,0,0.08)" : "rgba(255,255,255,0.02)",
-                      border: pricingModel === "cpa" ? "1.5px solid #D35400" : "0.5px solid rgba(255,255,255,0.08)",
-                      opacity: brandPixels.filter(p => p.is_active).length === 0 ? 0.4 : 1,
-                      cursor: brandPixels.filter(p => p.is_active).length === 0 ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-bold text-white font-syne">{t("admin.campaigns.pricingCpa")}</span>
-                      {pricingModel === "cpa" && (
-                        <span className="w-4 h-4 rounded-full flex items-center justify-center" style={{ background: "#D35400" }}>
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.4)" }}>
-                      {brandPixels.filter(p => p.is_active).length === 0
-                        ? t("admin.campaigns.cpaNoPixel")
-                        : t("admin.campaigns.pricingCpaDesc")
-                      }
-                    </p>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {pricingModel === "cpc" ? (
-              <>
-                <div>
-                  <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.cpcLabel")}</label>
-                  <input type="number" value={form.cpc} onChange={(e) => setForm({ ...form, cpc: e.target.value })} placeholder="25" className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
-                  {avgCpc > 0 && (
-                    <div className="mt-2">
-                      <p className="text-xs text-white/40">
-                        {t("admin.campaigns.avgCpcHint", { avg: formatFCFA(avgCpc) })}
-                      </p>
-                      {Number(form.cpc) > 0 && Number(form.cpc) < avgCpc && (
-                        <p className="text-xs text-yellow-400 mt-1">
-                          {t("admin.campaigns.cpcBelowAvg", { recommended: formatFCFA(Math.round(avgCpc * 1.25)) })}
-                        </p>
-                      )}
-                      {Number(form.cpc) >= avgCpc && (
-                        <p className="text-xs text-emerald-400 mt-1">
-                          {t("admin.campaigns.cpcAboveAvg")}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.budgetLabel")}</label>
-                  <input type="number" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="100000" className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
-                </div>
-              </>
-            ) : (
-              <>
-                <div>
-                  <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.cpaAmountLabel")}</label>
-                  <input type="number" value={cpaAmount} onChange={(e) => setCpaAmount(e.target.value)} placeholder="100" className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
-                  <p className="text-[10px] mt-1" style={{ color: "rgba(255,255,255,0.25)" }}>Min. 100 FCFA</p>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.cpaEventLabel")}</label>
-                  <select
-                    value={cpaEvent}
-                    onChange={(e) => setCpaEvent(e.target.value)}
-                    className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition"
-                    style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }}
-                  >
-                    <option value="">{t("admin.campaigns.cpaEventPlaceholder")}</option>
-                    <option value="purchase">{t("admin.campaigns.cpaEventPurchase")}</option>
-                    <option value="signup">{t("admin.campaigns.cpaEventSignup")}</option>
-                    <option value="install">{t("admin.campaigns.cpaEventInstall")}</option>
-                    <option value="activation">{t("admin.campaigns.cpaEventActivation")}</option>
-                    <option value="subscription">{t("admin.campaigns.cpaEventSubscription")}</option>
-                    <option value="lead">{t("admin.campaigns.cpaEventLead")}</option>
-                  </select>
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.budgetLabel")}</label>
-                  <input type="number" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="100000" className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
-                </div>
-              </>
-            )}
-            <div>
-              <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.startDate")}</label>
-              <input type="datetime-local" value={form.starts_at} onChange={(e) => setForm({ ...form, starts_at: e.target.value })} className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
-            </div>
-            <div>
-              <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.endDate")}</label>
-              <input type="datetime-local" value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }} />
-            </div>
-
-            {/* City Targeting */}
-            <div className="md:col-span-2">
-              <label className="block text-[10px] font-medium font-dm mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.targeting")}</label>
-              <p className="text-xs text-white/30 mb-2">{t("admin.campaigns.targetingHint")}</p>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={citySearch}
-                  onChange={(e) => setCitySearch(e.target.value)}
-                  placeholder={t("admin.campaigns.searchCity")}
-                  className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }}
-                />
-                {citySearch && (
-                  <ul className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto rounded-xl bg-[#1a1a2e] border border-white/10 shadow-xl">
-                    {SENEGAL_CITIES.filter((c) => c.toLowerCase().includes(citySearch.toLowerCase()) && !targetCities.includes(c)).map((city) => (
-                      <li
-                        key={city}
-                        onClick={() => { setTargetCities([...targetCities, city]); setCitySearch(""); }}
-                        className="px-4 py-2 text-sm cursor-pointer hover:bg-white/10 transition text-white/70"
-                      >
-                        {city}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              {targetCities.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {targetCities.map((city) => (
-                    <span key={city} className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold" style={{ background: "rgba(211,84,0,0.15)", color: "#D35400" }}>
-                      {city}
-                      <button onClick={() => setTargetCities(targetCities.filter((c) => c !== city))} className="hover:text-white transition">×</button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Pixel Linking (collapsible) */}
-          {brandPixels.length > 0 && (
-            <div className="mt-5">
-              <button
-                type="button"
-                onClick={() => setShowPixelSection(!showPixelSection)}
-                className="flex items-center gap-2 text-sm font-semibold text-white/50 hover:text-white/80 transition"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                {t("admin.campaigns.conversionTracking")}
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${showPixelSection ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6"/></svg>
-              </button>
-              {showPixelSection && (
-                <div className="mt-3 p-4 rounded-xl bg-white/[0.03] border border-white/10">
-                  <p className="text-xs text-white/30 mb-3">
-                    {t("admin.campaigns.pixelLinkDesc")}
-                  </p>
-                  <select
-                    value={selectedPixelId || ""}
-                    onChange={(e) => setSelectedPixelId(e.target.value || null)}
-                    className="w-full rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }}
-                  >
-                    <option value="">{t("admin.campaigns.noPixel")}</option>
-                    {brandPixels.filter((p) => p.is_active).map((p) => (
-                      <option key={p.pixel_id} value={p.pixel_id}>
-                        {p.name} ({p.platform}) — {p.pixel_id}
-                      </option>
-                    ))}
-                  </select>
-                  {selectedPixelId && (
-                    <p className="text-xs text-emerald-400 mt-2">
-                      {t("admin.campaigns.pixelLinkedSuccess")}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Estimation section */}
-          {((pricingModel === "cpc" && Number(form.cpc) > 0) || (pricingModel === "cpa" && Number(cpaAmount) >= 100)) && Number(form.budget) > 0 && (() => {
-            const budget = Number(form.budget);
-            if (pricingModel === "cpa") {
-              const cpa = Number(cpaAmount);
-              const estimatedConversions = Math.floor(budget / cpa);
-              const echoEarningsPerAction = Math.floor(cpa * ECHO_CPA_SHARE_PERCENT / 100);
-              return (
-                <div className="mt-5 p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-                  <h4 className="text-sm font-bold font-syne text-white mb-3 flex items-center gap-2">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#D35400" }}><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
-                    {t("admin.campaigns.estimationTitle")}
-                  </h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.03)" }}>
-                      <p className="text-lg font-black font-syne" style={{ color: "#D35400" }}>{estimatedConversions.toLocaleString()}</p>
-                      <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.estConversions")}</p>
-                    </div>
-                    <div className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.03)" }}>
-                      <p className="text-lg font-black font-syne" style={{ color: "#D35400" }}>{formatFCFA(echoEarningsPerAction)}</p>
-                      <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.echoEarnsPerAction")}</p>
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-white/25 mt-2 text-center">{t("admin.campaigns.cpaEstNote")}</p>
-                </div>
-              );
-            }
-            const cpc = Number(form.cpc);
-            const estimatedClicks = Math.floor(budget / cpc);
-            const echoEarningsPerClick = Math.floor(cpc * ECHO_SHARE_PERCENT / 100);
-            const isAboveAvg = avgCpc > 0 && cpc >= avgCpc;
-            return (
-              <div className="mt-5 p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "0.5px solid rgba(255,255,255,0.06)" }}>
-                <h4 className="text-sm font-bold font-syne text-white mb-3 flex items-center gap-2">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#D35400" }}><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
-                  {t("admin.campaigns.estimationTitle")}
-                </h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.03)" }}>
-                    <p className="text-lg font-black font-syne" style={{ color: "#D35400" }}>{estimatedClicks.toLocaleString()}</p>
-                    <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.estClicks")}</p>
-                  </div>
-                  <div className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.03)" }}>
-                    <p className="text-lg font-black font-syne" style={{ color: "#D35400" }}>{formatFCFA(echoEarningsPerClick)}</p>
-                    <p className="text-[10px] font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.echoEarnsPerClick")}</p>
-                  </div>
-                </div>
-                {isAboveAvg && (
-                  <p className="text-xs text-emerald-400 mt-3 text-center">
-                    {t("admin.campaigns.estEngagementBoost")}
-                  </p>
-                )}
-                {avgCpc > 0 && cpc < avgCpc && (
-                  <p className="text-xs text-yellow-400/70 mt-3 text-center">
-                    {t("admin.campaigns.estLowCpcWarning", { avg: formatFCFA(avgCpc) })}
-                  </p>
-                )}
-              </div>
-            );
-          })()}
-
-          {error && (
-            <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-              <p>{error}</p>
-              {showRechargePrompt && (
-                <a href="/admin/wallet" className="inline-block mt-2 px-4 py-2 rounded-xl font-semibold text-xs transition" style={{ background: "rgba(211,84,0,0.15)", color: "#D35400" }}>
-                  {t("admin.campaigns.rechargeWallet")}
-                </a>
-              )}
-            </div>
-          )}
-
-          <div className="flex items-center justify-between mt-6">
-            <button
-              type="button"
-              onClick={() => setShowCancelConfirm(true)}
-              className="text-white/30 hover:text-white/60 text-sm transition"
-            >
-              {t("admin.campaigns.cancel")}
-            </button>
-            <div className="flex gap-3">
-              {!editingId && (
-                <button
-                  type="button"
-                  onClick={() => handleSubmit(true)}
-                  disabled={submitting || !form.title || !form.destination_url || !form.budget || (pricingModel === "cpc" && !form.cpc) || (pricingModel === "cpa" && (!cpaAmount || !cpaEvent || !selectedPixelId)) || (objective === "awareness" && creativeUrls.length === 0)}
-                  className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 font-semibold text-sm hover:bg-white/10 transition disabled:opacity-40"
-                >
-                  {submitting ? "..." : t("admin.campaigns.saveDraft")}
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => handleSubmit(false)}
-                disabled={submitting || !form.title || !form.destination_url || !form.budget || (pricingModel === "cpc" && !form.cpc) || (pricingModel === "cpa" && (!cpaAmount || !cpaEvent || !selectedPixelId)) || (objective === "awareness" && creativeUrls.length === 0)}
-                className="px-8 py-3 rounded-xl text-sm font-bold text-white transition disabled:opacity-40" style={{ background: "#D35400" }}
-              >
-                {submitting ? t("common.saving") : editingId ? t("common.save") : t("admin.campaigns.launchRythme")}
-              </button>
-            </div>
-          </div>
-
-          {showCancelConfirm && (
-            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-              <div className="rounded-2xl p-6 max-w-md w-full" style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.08)" }}>
-                <h3 className="text-white font-bold text-lg mb-2">{t("admin.campaigns.cancelConfirm")}</h3>
-                <p className="text-white/40 text-sm mb-6">
-                  {t("admin.campaigns.cancelMessage")}
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setShowCancelConfirm(false)}
-                    className="flex-1 py-2.5 rounded-lg bg-white/5 text-white/60 text-sm hover:bg-white/10 transition"
-                  >
-                    {t("admin.campaigns.continueEditing")}
-                  </button>
-                  <button
-                    onClick={() => { setShowCancelConfirm(false); handleSubmit(true); }}
-                    className="flex-1 py-2.5 rounded-lg bg-white/10 text-white text-sm hover:bg-white/15 transition"
-                  >
-                    {t("admin.campaigns.saveDraft")}
-                  </button>
-                  <button
-                    onClick={() => { setShowCancelConfirm(false); resetForm(); setView("list"); }}
-                    className="flex-1 py-2.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30 transition"
-                  >
-                    {t("admin.campaigns.quitWithout")}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {showDeleteConfirm && (
-            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-              <div className="rounded-2xl p-6 max-w-md w-full" style={{ background: "#111128", border: "0.5px solid rgba(239,68,68,0.15)" }}>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </div>
-                  <h3 className="text-white font-bold text-lg">{t("admin.campaigns.deleteTitle")}</h3>
-                </div>
-                <p className="text-white/60 text-sm mb-6">
-                  {t("admin.campaigns.deleteMessage")}
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => { setShowDeleteConfirm(false); setDeleteTargetId(null); }}
-                    className="flex-1 py-2.5 rounded-lg bg-white/5 text-white/60 text-sm hover:bg-white/10 transition"
-                  >
-                    {t("common.cancel")}
-                  </button>
-                  <button
-                    onClick={confirmDelete}
-                    disabled={actionLoading === "delete"}
-                    className="flex-1 py-2.5 rounded-lg bg-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/30 transition disabled:opacity-50"
-                  >
-                    {actionLoading === "delete" ? t("common.saving") : t("admin.campaigns.confirmDelete")}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      <CampaignFormView
+        vm={{
+          form, setForm, editingId, objective, setView, resetForm,
+          creativeUrls, uploading, fileInputRef, handleUpload, removeCreative, imageFormatHint,
+          pricingModel, setPricingModel, brandPixels, showPixelSection, setShowPixelSection,
+          cpaAmount, setCpaAmount, cpaEvent, setCpaEvent, avgCpc,
+          citySearch, setCitySearch, targetCities, setTargetCities,
+          selectedPixelId, setSelectedPixelId,
+          error, showRechargePrompt, submitting, handleSubmit,
+          showCancelConfirm, setShowCancelConfirm,
+          showDeleteConfirm, setShowDeleteConfirm, setDeleteTargetId, confirmDelete, actionLoading,
+        }}
+      />
     );
   }
 
-  // ==================== LIST VIEW (Card Grid) ====================
-  // Best CPC computed once outside the loop
-  const allFinishedCampaigns = campaigns.filter(c => c.status === "completed" && c.spent > 0);
-  const bestCPCId = allFinishedCampaigns.length > 1
-    ? [...allFinishedCampaigns].sort((a, b) => {
-        const aCPC = a.cpc > 0 ? Math.floor(a.spent / a.cpc) : 0;
-        const bCPC = b.cpc > 0 ? Math.floor(b.spent / b.cpc) : 0;
-        return (aCPC > 0 ? a.spent / aCPC : Infinity) - (bCPC > 0 ? b.spent / bCPC : Infinity);
-      })[0]?.id
-    : null;
-
   return (
-    <div className="p-4 lg:p-6" style={{ maxWidth: "100%" }}>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-        <div>
-          <h1 className="text-xl font-bold font-syne text-white">{t("admin.campaigns.title")}</h1>
-          <p className="text-[11px] font-dm mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
-            {campaigns.length} {campaigns.length === 1 ? t("admin.campaigns.rythmeCount") : t("admin.campaigns.rythmeCountPlural")} ·{" "}
-            {campaigns.filter(c => c.status === "active").length} {t("admin.dashboard.live").toLowerCase()}
-          </p>
-        </div>
-        <button
-          onClick={openNewForm}
-          data-tour="new-campaign-btn"
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[11px] font-bold text-white transition-all active:scale-[0.97] hover:shadow-lg hover:shadow-orange-900/20"
-          style={{ background: "#D35400" }}
-          aria-label={t("admin.campaigns.newRythme")}
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          {t("admin.campaigns.newRythme")}
-        </button>
-      </div>
-
-      {error && (
-        <div role="alert" className="mb-5 p-3 rounded-xl text-xs" style={{ background: error.startsWith("✓") ? "rgba(29,158,117,0.1)" : "rgba(239,68,68,0.1)", border: `0.5px solid ${error.startsWith("✓") ? "rgba(29,158,117,0.3)" : "rgba(239,68,68,0.3)"}`, color: error.startsWith("✓") ? "#5DCAA5" : "#EF4444" }}>
-          {error}
-        </div>
-      )}
-
-      {campaigns.length === 0 ? (
-        <div
-          className="rounded-2xl p-10 text-center"
-          style={{ background: "#111128", border: "0.5px solid rgba(255,255,255,0.06)" }}
-        >
-          <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "rgba(211,84,0,0.1)" }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D35400" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0-11V3m0 0L9.5 7.5M12 3l2.5 4.5" /></svg>
-          </div>
-          <p className="text-sm font-semibold font-syne text-white mb-1">{t("admin.campaigns.noRythmes")}</p>
-          <p className="text-[11px] mb-4 font-dm" style={{ color: "rgba(255,255,255,0.35)" }}>{t("admin.campaigns.noRythmesDesc")}</p>
-          <button
-            onClick={openNewForm}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-bold text-white transition-all active:scale-[0.97]"
-            style={{ background: "#D35400" }}
-          >
-            {t("admin.campaigns.createFirst")}
-          </button>
-        </div>
-      ) : (
-        <div data-tour="campaign-list" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-          {campaigns.map((campaign) => {
-            const progress = campaign.budget > 0 ? (campaign.spent / campaign.budget) * 100 : 0;
-            const stats = campaignStats[campaign.id];
-            const realClicks = stats?.realValidClicks ?? 0;
-            const echoCount = stats?.echoCount ?? 0;
-            const estimatedClicks = realClicks > 0 ? realClicks : (campaign.cpc > 0 ? Math.floor(campaign.spent / campaign.cpc) : 0);
-            const actualCPC = estimatedClicks > 0 ? Math.round(campaign.spent / estimatedClicks) : campaign.cpc;
-            const isFinished = campaign.status === "completed";
-            const budgetConsumed = progress >= 100;
-            const isActive = campaign.status === "active";
-            const isPaused = campaign.status === "paused";
-            const isDraft = campaign.status === "draft" && (campaign.moderation_status !== "pending" || (campaign.objective === "lead_generation" && !campaign.landing_page_id));
-            const isPendingReview = campaign.status === "draft" && campaign.moderation_status === "pending" && !(campaign.objective === "lead_generation" && !campaign.landing_page_id);
-            const isRejected = campaign.status === "rejected";
-
-            const statusConfig = isActive
-              ? { dot: "#D35400", label: t("common.active"), bg: "rgba(211,84,0,0.1)" }
-              : isPaused
-              ? { dot: "#EAB308", label: t("common.paused"), bg: "rgba(234,179,8,0.1)" }
-              : isFinished
-              ? { dot: "rgba(255,255,255,0.2)", label: t("common.finished"), bg: "rgba(255,255,255,0.04)" }
-              : isDraft
-              ? { dot: "rgba(255,255,255,0.15)", label: t("admin.campaigns.draft"), bg: "rgba(255,255,255,0.04)" }
-              : isPendingReview
-              ? { dot: "#F59E0B", label: t("admin.campaigns.pendingValidation"), bg: "rgba(245,158,11,0.1)" }
-              : isRejected
-              ? { dot: "#EF4444", label: t("common.rejected"), bg: "rgba(239,68,68,0.1)" }
-              : { dot: "rgba(255,255,255,0.2)", label: campaign.status, bg: "rgba(255,255,255,0.04)" };
-
-            const objectiveConfig = (campaign.objective || "traffic") === "awareness"
-              ? { label: t("admin.campaigns.objectiveAwareness"), color: "#3B82F6", bg: "rgba(59,130,246,0.1)" }
-              : (campaign.objective || "traffic") === "lead_generation"
-              ? { label: t("admin.campaigns.objectiveLeadGen"), color: "#8B5CF6", bg: "rgba(139,92,246,0.1)" }
-              : { label: t("admin.campaigns.objectiveTraffic"), color: "#1D9E75", bg: "rgba(29,158,117,0.1)" };
-
-            return (
-              <div
-                key={campaign.id}
-                role="article"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDetail(campaign); } }}
-                className="rounded-xl overflow-hidden transition-all cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D35400]/50"
-                style={{
-                  background: "#111128",
-                  border: "0.5px solid rgba(255,255,255,0.06)",
-                }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(211,84,0,0.2)"}
-                onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)"}
-                onClick={() => openDetail(campaign)}
-              >
-                {/* Image / placeholder */}
-                {campaign.creative_urls && campaign.creative_urls.length > 0 ? (
-                  <div className="h-24 overflow-hidden">
-                    <img src={campaign.creative_urls[0]} alt={campaign.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                  </div>
-                ) : (
-                  <div className="h-12 flex items-center justify-center" style={{ background: "rgba(255,255,255,0.02)" }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
-                    </svg>
-                  </div>
-                )}
-
-                <div className="p-2.5">
-                  {/* Title + objective badge */}
-                  <div className="flex items-start justify-between gap-1 mb-1.5">
-                    <h3 className="text-[11px] font-bold font-syne text-white truncate leading-tight">{campaign.title}</h3>
-                    <span className="text-[8px] font-medium px-1 py-px rounded-full shrink-0 leading-tight" style={{ background: objectiveConfig.bg, color: objectiveConfig.color }}>
-                      {objectiveConfig.label}
-                    </span>
-                  </div>
-
-                  {/* Status + echo count */}
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <span className="w-1 h-1 rounded-full shrink-0" style={{ background: statusConfig.dot }} />
-                    <span className="text-[9px] font-medium" style={{ color: statusConfig.dot === "rgba(255,255,255,0.2)" || statusConfig.dot === "rgba(255,255,255,0.15)" ? "rgba(255,255,255,0.4)" : statusConfig.dot }}>{statusConfig.label}</span>
-                    {echoCount > 0 && (
-                      <span className="text-[8px] ml-auto" style={{ color: "rgba(255,255,255,0.25)" }}>
-                        {echoCount} {t("admin.campaigns.echosCount")}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Budget bar */}
-                  <div className="mb-2">
-                    <div className="h-[3px] rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{
-                          width: `${Math.min(progress, 100)}%`,
-                          background: budgetConsumed ? "#1D9E75" : isActive ? "#D35400" : "rgba(255,255,255,0.2)",
-                        }}
-                      />
-                    </div>
-                    <div className="flex justify-between mt-1 text-[8px]" style={{ color: "rgba(255,255,255,0.3)" }}>
-                      <span>{formatFCFA(campaign.spent)}</span>
-                      <span style={{ color: budgetConsumed ? "#5DCAA5" : "rgba(255,255,255,0.3)" }}>
-                        {budgetConsumed ? t("admin.campaigns.fullyConsumed") : formatFCFA(campaign.budget)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Metrics */}
-                  <div className="flex items-center gap-1 text-[9px]" style={{ color: "rgba(255,255,255,0.4)" }}>
-                    <span className="font-medium text-white">{estimatedClicks.toLocaleString()} {t("common.clicks")}</span>
-                    <span style={{ color: "rgba(255,255,255,0.12)" }}>·</span>
-                    {(campaign.pricing_model || "cpc") === "cpa" ? (
-                      <span>{formatFCFA(campaign.cpa_amount || 0)}/{t("admin.campaigns.cpaPerAction")}</span>
-                    ) : (
-                      <span>{formatFCFA(actualCPC)}/{t("admin.campaigns.perClick")}</span>
-                    )}
-                  </div>
-
-                  {/* CPA badge */}
-                  {(campaign.pricing_model || "cpc") === "cpa" && (
-                    <div className="mt-1">
-                      <span className="text-[8px] font-semibold px-1.5 py-px rounded-full" style={{ background: "rgba(211,84,0,0.12)", color: "#D35400" }}>
-                        {t("admin.campaigns.cpaBadge")}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Best CPC badge */}
-                  {bestCPCId === campaign.id && allFinishedCampaigns.length > 1 && (
-                    <div className="mt-1.5">
-                      <span className="text-[8px] font-semibold px-1.5 py-px rounded-full" style={{ background: "rgba(29,158,117,0.12)", color: "#5DCAA5" }}>
-                        {t("admin.campaigns.bestCPC")}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Action buttons — stop propagation so card click doesn't fire */}
-                  {isDraft && (
-                    <div className="flex gap-1.5 mt-2 pt-2" style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)" }}>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (campaign.objective === "lead_generation") {
-                            router.push(`/admin/campaigns/lead-gen?draft=${campaign.id}`);
-                          } else {
-                            openEditForm(campaign);
-                          }
-                        }}
-                        className="flex-1 py-1.5 rounded-lg text-[10px] font-semibold transition-colors"
-                        style={{ background: "rgba(211,84,0,0.08)", color: "#D35400" }}
-                        aria-label={`${t("common.edit")} ${campaign.title}`}
-                      >
-                        {t("common.edit")}
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (campaign.objective === "lead_generation") {
-                            router.push(`/admin/campaigns/lead-gen?draft=${campaign.id}`);
-                          } else {
-                            handleSubmitDraft(campaign.id);
-                          }
-                        }}
-                        disabled={actionLoading !== null}
-                        className="flex-1 py-1.5 rounded-lg text-[10px] font-bold text-white transition-colors disabled:opacity-40"
-                        style={{ background: "#D35400" }}
-                        aria-label={`${t("admin.campaigns.launchDraft")} ${campaign.title}`}
-                      >
-                        {actionLoading === "submitDraft" ? "..." : t("admin.campaigns.launchDraft")}
-                      </button>
-                    </div>
-                  )}
-
-                  {isRejected && (
-                    <div className="flex gap-1.5 mt-2 pt-2" style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)" }}>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (campaign.objective === "lead_generation") {
-                            router.push(`/admin/campaigns/lead-gen?draft=${campaign.id}`);
-                          } else {
-                            openEditForm(campaign);
-                          }
-                        }}
-                        className="flex-1 py-1.5 rounded-lg text-[10px] font-semibold transition-colors"
-                        style={{ background: "rgba(211,84,0,0.08)", color: "#D35400" }}
-                      >
-                        {t("common.edit")}
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleAction(campaign.id, "resubmit"); }}
-                        disabled={actionLoading !== null}
-                        className="flex-1 py-1.5 rounded-lg text-[10px] font-bold text-white transition-colors disabled:opacity-40"
-                        style={{ background: "#D35400" }}
-                      >
-                        {actionLoading === "resubmit" ? "..." : t("admin.campaigns.resubmit")}
-                      </button>
-                    </div>
-                  )}
-
-                  {isFinished && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setForm({
-                          title: campaign.title,
-                          description: campaign.description || "",
-                          destination_url: campaign.destination_url,
-                          cpc: campaign.cpc.toString(),
-                          budget: campaign.budget.toString(),
-                          starts_at: "",
-                          ends_at: "",
-                        });
-                        setCreativeUrls(campaign.creative_urls || []);
-                        setEditingId(null);
-                        setError(null);
-                        setShowRechargePrompt(false);
-                        setView("form");
-                      }}
-                      className="w-full mt-2 pt-2 pb-0 text-center text-[10px] font-semibold transition-colors"
-                      style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)", color: "#D35400" }}
-                      aria-label={`${t("admin.campaigns.relaunch")} ${campaign.title}`}
-                    >
-                      {t("admin.campaigns.relaunch")}
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
+    <CampaignListView
+      vm={{
+        campaigns, campaignStats, error,
+        onNewCampaign: openNewForm, onOpenDetail: openDetail,
+        onEdit: handleEdit, onLaunchDraft: handleLaunchDraft,
+        onResubmit: (campaignId) => handleAction(campaignId, "resubmit"),
+        onRelaunch: handleRelaunch, actionLoading,
+      }}
+    />
   );
 }

@@ -115,7 +115,7 @@ export default function AwaProvider({ children }: { children: ReactNode }) {
           brandName: data.brandName || prev.brandName,
         }));
       })
-      .catch(() => {});
+      .catch((err) => console.error("[awa] brand stats", err));
   }, []);
 
   useEffect(() => {

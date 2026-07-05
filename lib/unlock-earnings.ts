@@ -60,7 +60,7 @@ export async function unlockCampaignEarnings(campaignId: string, campaignName: s
     unlockedCount++;
   }
 
-  console.log(`[UNLOCK] Campaign ${campaignId}: unlocked ${unlockedCount} Échos`);
+  console.warn(`[UNLOCK] Campaign ${campaignId}: unlocked ${unlockedCount} Échos`);
   return unlockedCount;
 }
 
