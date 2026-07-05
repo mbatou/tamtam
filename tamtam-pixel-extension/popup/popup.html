@@ -46,14 +46,46 @@
         </div>
       </div>
 
-      <!-- Pixel installer -->
-      <div class="section">
-        <p class="section-label">INSTALLATION DU PIXEL</p>
+      <!-- Mode tabs -->
+      <div class="tabs">
+        <button class="tab active" data-tab="visual">
+          Mapper visuel
+        </button>
+        <button class="tab" data-tab="script">
+          Script
+        </button>
+      </div>
+
+      <!-- Tab: Visual Mapper -->
+      <div id="tabVisual" class="tab-content">
+        <p class="section-label">EVENEMENTS CONFIGURES</p>
+        <div id="eventsList" class="events-list">
+        </div>
+        <button id="btnAddEvent" class="btn btn-secondary">
+          + Mapper un element
+        </button>
+        <div class="divider"></div>
+        <button id="btnActivateMapper" class="btn btn-primary">
+          Activer le mapper
+        </button>
+      </div>
+
+      <!-- Tab: Script Injector -->
+      <div id="tabScript" class="tab-content hidden">
+        <p class="section-label">INJECTION AUTOMATIQUE</p>
         <p class="description">
           Injecte le script Tamtam Pixel sur cette page.
           Le Pixel capturera automatiquement les parametres
           <code>tm_ref</code> depuis l'URL.
         </p>
+        <div class="toggle-row">
+          <span>Injection automatique</span>
+          <label class="toggle">
+            <input type="checkbox" id="toggleAutoInject" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="divider"></div>
         <button id="btnInjectNow" class="btn btn-primary">
           Injecter maintenant
         </button>
@@ -84,6 +116,10 @@
         <div class="status-step" id="step2">
           <span class="step-icon" id="step2icon">○</span>
           <span class="step-label">Pixel actif</span>
+        </div>
+        <div class="status-step" id="step3">
+          <span class="step-icon" id="step3icon">○</span>
+          <span class="step-label">Evenement</span>
         </div>
       </div>
     </div>

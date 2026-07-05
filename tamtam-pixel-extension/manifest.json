@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tamtam Pixel",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Install the Tamtam Pixel on any website. No developer required.",
   "icons": {
     "16": "assets/icon-16.png",
@@ -20,9 +20,27 @@
   "permissions": [
     "activeTab",
     "scripting",
-    "storage"
+    "storage",
+    "tabs"
   ],
   "host_permissions": [
-    "https://tamma.me/*"
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content/content.js"
+      ],
+      "css": [
+        "content/content.css"
+      ],
+      "run_at": "document_idle"
+    }
   ]
 }
