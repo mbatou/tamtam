@@ -246,7 +246,7 @@ function PixelDetailPanel({
           );
         setLatencyData(ld);
       })
-      .catch(() => {})
+      .catch((err) => console.error("[pixels] pixel detail", err))
       .finally(() => setLoading(false));
   }, [pixel.pixel_id]);
 
@@ -620,7 +620,7 @@ export default function PixelsPage() {
         setStats(d.stats || null);
         setLastRefresh(Date.now());
       })
-      .catch(() => {})
+      .catch((err) => console.error("[pixels] list", err))
       .finally(() => setLoading(false));
   }, []);
 

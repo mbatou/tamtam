@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { formatFCFA, getTrackingUrl, timeAgo } from "@/lib/utils";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { isCpaCampaign, getEchoEarningPerConversion } from "@/lib/campaign-display";
@@ -212,7 +213,7 @@ export default function RythmesPage() {
                       url.match(/\.(mp4|webm)/) ? (
                         <video key={i} src={url} className="w-full h-40 object-cover snap-center flex-shrink-0" controls />
                       ) : (
-                        <img key={i} src={url} alt={`${campaign.title} ${i + 1}`} className="w-full h-40 object-cover snap-center flex-shrink-0" />
+                        <Image key={i} src={url} alt={`${campaign.title} ${i + 1}`} width={640} height={160} className="w-full h-40 object-cover snap-center flex-shrink-0" />
                       )
                     ))}
                   </div>
@@ -295,7 +296,7 @@ export default function RythmesPage() {
                         url.match(/\.(mp4|webm)/) ? (
                           <video key={j} src={url} className="w-full h-36 object-cover snap-center flex-shrink-0" />
                         ) : (
-                          <img key={j} src={url} alt="" className="w-full h-36 object-cover snap-center flex-shrink-0" />
+                          <Image key={j} src={url} alt="" width={640} height={144} className="w-full h-36 object-cover snap-center flex-shrink-0" />
                         )
                       ))}
                     </div>

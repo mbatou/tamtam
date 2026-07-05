@@ -83,7 +83,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     fetch("/api/superadmin/pending-counts")
       .then((r) => r.json())
       .then((d) => setCounts(d))
-      .catch(() => {});
+      .catch((err) => console.error("[superadmin-layout] pending counts", err));
   }, []);
 
   useEffect(() => {
@@ -104,7 +104,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
             name: u.name,
           });
       })
-      .catch(() => {});
+      .catch((err) => console.error("[superadmin-layout] user context", err));
   }, []);
 
   const isSuperadmin = !userCtx || userCtx.role === "superadmin";

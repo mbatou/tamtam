@@ -37,7 +37,7 @@ export default function BrandPickerPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ brandId }),
-    }).catch(() => {});
+    }).catch((err) => console.error("[brand-picker] brand switch", err));
 
     router.push("/admin/dashboard");
   }, [router]);

@@ -864,7 +864,7 @@ export default function ProfilPage() {
             const allSigs = data.signals || [];
             setUserInterests(allCats.filter((c: { id: string }) => (data.selectedInterests || []).includes(c.id)));
             setUserSignals(allSigs.filter((s: { id: string }) => (data.selectedSignals || []).includes(s.id)));
-          }).catch(() => {});
+          }).catch((err) => console.error("[profil] interests refresh", err));
           if (!interestEditMode) {
             setSuccess(reward.credited ? t("echo.profile.interestRewardSuccess") : t("echo.profile.interestSaved"));
             setTimeout(() => setSuccess(""), 5000);

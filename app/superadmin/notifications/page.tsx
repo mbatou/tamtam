@@ -62,7 +62,7 @@ export default function NotificationsOverview() {
     fetch("/api/superadmin/notification-stats")
       .then((r) => r.json())
       .then((d) => setStats(d))
-      .catch(() => {})
+      .catch((err) => console.error("[notifications] stats", err))
       .finally(() => setLoading(false));
   }, []);
 

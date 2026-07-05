@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { formatFCFA, timeAgo } from "@/lib/utils";
 import { MIN_PAYOUT_AMOUNT, ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { useToast } from "@/components/ui/Toast";
@@ -308,8 +309,7 @@ export default function EarningsPage() {
               <div key={c.id} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
                 <div className="flex items-center gap-3">
                   {c.image_url && (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={c.image_url} alt="" className="w-8 h-8 rounded object-cover" />
+                    <Image src={c.image_url} alt="" width={32} height={32} className="w-8 h-8 rounded object-cover" />
                   )}
                   <div>
                     <div className="text-white text-sm">{c.name}</div>

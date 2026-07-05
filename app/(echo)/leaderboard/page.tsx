@@ -35,7 +35,7 @@ export default function LeaderboardPage() {
       .then(data => {
         if (data?.id) setCurrentUserId(data.id)
       })
-      .catch(() => {})
+      .catch((err) => console.error("[leaderboard] current user", err))
   }, [])
 
   useEffect(() => {

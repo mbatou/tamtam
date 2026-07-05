@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useTranslation, Locale } from "@/lib/i18n";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import { trackEvent } from "@/lib/analytics";
@@ -261,7 +262,7 @@ export default function AdminSettingsPage() {
               <div className="flex items-center gap-5">
                 <div className="w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden shrink-0" style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)" }}>
                   {logoUrl ? (
-                    <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                    <Image src={logoUrl} alt="Logo" width={64} height={64} className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-xl font-bold font-syne" style={{ color: "rgba(255,255,255,0.2)" }}>{form.name?.charAt(0)?.toUpperCase() || "?"}</span>
                   )}

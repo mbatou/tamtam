@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { formatFCFA } from "@/lib/utils";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { isCpaCampaign, getEchoEarningPerConversion } from "@/lib/campaign-display";
@@ -24,9 +25,11 @@ export default function CampaignMiniCard({ link, onClick }: CampaignMiniCardProp
       className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] cursor-pointer hover:bg-white/[0.05] transition min-w-[200px] shrink-0"
     >
       {link.campaigns?.creative_urls?.[0] && !link.campaigns.creative_urls[0].match(/\.(mp4|webm)/) ? (
-        <img
+        <Image
           src={link.campaigns.creative_urls[0]}
           alt=""
+          width={40}
+          height={40}
           className="w-10 h-10 rounded-lg object-cover shrink-0"
         />
       ) : (

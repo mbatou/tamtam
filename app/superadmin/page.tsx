@@ -114,7 +114,7 @@ export default function SuperAdminOverview() {
     ]).then(([statsData, treasuryData]) => {
       setStats(statsData);
       if (!treasuryData.error) setTreasury(treasuryData);
-    }).catch(() => {}).finally(() => {
+    }).catch((err) => console.error("[superadmin-dashboard] stats", err)).finally(() => {
       setLoading(false);
       setLastRefresh(new Date());
     });
