@@ -1,4 +1,5 @@
-import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native'
+import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, Image, Share, Alert } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '@/lib/api'
 import { Colors } from '@/constants/colors'
@@ -66,6 +67,14 @@ export default function RythmesScreen() {
     await Clipboard.setStringAsync(`${SHARE_BASE_URL}/r/${shortCode}`)
   }
 
+  async function shareLink(shortCode: string, title: string) {
+    try {
+      await Share.share({ message: `${title}\n\n${SHARE_BASE_URL}/r/${shortCode}` })
+    } catch (err) {
+      console.error('[Rythmes] Share.share failed:', err)
+    }
+  }
+
   async function onRefresh() {
     setRefreshing(true)
     await loadData()
@@ -102,10 +111,14 @@ export default function RythmesScreen() {
   }
 
   if (loading) {
+    // Skeleton blocks mirroring the PWA rythmes loading state
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <ActivityIndicator color={Colors.orange} />
+        <View style={{ padding: 16, paddingTop: 20, gap: 12 }}>
+          <View style={{ height: 24, width: 112, borderRadius: 12, backgroundColor: Colors.card }} />
+          <View style={{ height: 40, borderRadius: 12, backgroundColor: Colors.card }} />
+          <View style={{ height: 176, borderRadius: 12, backgroundColor: Colors.card }} />
+          <View style={{ height: 176, borderRadius: 12, backgroundColor: Colors.card }} />
         </View>
       </SafeAreaView>
     )
@@ -131,7 +144,8 @@ export default function RythmesScreen() {
               key={tab.key}
               onPress={() => setActiveTab(tab.key)}
               style={{
-                flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center',
+                flex: 1, paddingVertical: 10, minHeight: 40, borderRadius: 8,
+                alignItems: 'center', justifyContent: 'center',
                 backgroundColor: activeTab === tab.key ? Colors.teal : 'transparent',
               }}
             >
@@ -174,13 +188,27 @@ export default function RythmesScreen() {
                       <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.textPrimary, flex: 1, marginRight: 8 }}>
                         {campaign.title}
                       </Text>
-                      <View style={{ backgroundColor: Colors.orangeMuted, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1, borderColor: Colors.orange + '33' }}>
+                      <View style={{ backgroundColor: Colors.badgeOrangeBg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1, borderColor: Colors.badgeOrangeBorder }}>
                         <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 10, color: Colors.orange }}>{t.newBadge}</Text>
                       </View>
                     </View>
                     <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.textFaint, marginBottom: 8 }} numberOfLines={2}>
                       {campaign.description}
                     </Text>
+                    {campaign.target_cities && campaign.target_cities.length > 0 && (
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+                        {campaign.target_cities.map((city: string) => (
+                          <View key={city} style={{ backgroundColor: Colors.tealMuted, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
+                            <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 10, color: Colors.tealMid }}>📍 {city}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                    {isCpa && (
+                      <View style={{ backgroundColor: Colors.tealMuted, borderWidth: 1, borderColor: Colors.heroTealBorder, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 8 }}>
+                        <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.tealMid }}>{t.cpaHint}</Text>
+                      </View>
+                    )}
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                       <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.orange }}>
                         {isCpa ? `${formatFCFA(Math.floor((campaign.cpa_amount || 0) * ECHO_SHARE_PERCENT / 100))} ${t.perConversion}` : `${campaign.cpc} FCFA ${t.perClick}`}
@@ -189,13 +217,13 @@ export default function RythmesScreen() {
                         {formatFCFA(campaign.budget - campaign.spent)} {t.remaining}
                       </Text>
                     </View>
-                    <View style={{ height: 6, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 3, marginBottom: 16, overflow: 'hidden' }}>
+                    <View style={{ height: 6, backgroundColor: Colors.progressTrack, borderRadius: 3, marginBottom: 16, overflow: 'hidden' }}>
                       <View style={{ height: '100%', backgroundColor: Colors.teal, borderRadius: 3, width: `${Math.min((campaign.spent / campaign.budget) * 100, 100)}%` }} />
                     </View>
                     <TouchableOpacity
                       onPress={() => acceptCampaign(campaign.id)}
                       disabled={accepting === campaign.id}
-                      style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingVertical: 12, alignItems: 'center', opacity: accepting === campaign.id ? 0.5 : 1 }}
+                      style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingVertical: 12, minHeight: 44, alignItems: 'center', justifyContent: 'center', opacity: accepting === campaign.id ? 0.5 : 1 }}
                     >
                       <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: '#fff' }}>
                         {accepting === campaign.id ? t.accepting : t.acceptRythme}
@@ -240,31 +268,52 @@ export default function RythmesScreen() {
                       <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.textPrimary, flex: 1, marginRight: 8 }} numberOfLines={1}>
                         {campaign.title}
                       </Text>
-                      <View style={{ backgroundColor: Colors.successBg, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1, borderColor: Colors.teal + '33' }}>
+                      <View style={{ backgroundColor: Colors.badgeTealBg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1, borderColor: Colors.heroTealBorder }}>
                         <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 10, color: Colors.teal }}>{t.statusActive}</Text>
                       </View>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                      <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: Colors.textSecondary }}>
-                        {link.click_count} {t.clicks}
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="pulse-outline" size={12} color={Colors.textSecondary} />
+                        <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: Colors.textSecondary }}>
+                          {link.click_count}
+                        </Text>
+                      </View>
                       <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: isCpa ? Colors.teal : Colors.orange }}>
                         {isCpa ? `${formatFCFA(Math.floor((campaign.cpa_amount || 0) * ECHO_SHARE_PERCENT / 100))} ${t.perConversion}` : `${formatFCFA(earned)} ${t.earned}`}
                       </Text>
                     </View>
-                    <TouchableOpacity
-                      onPress={() => copyLink(link.short_code)}
-                      style={{
-                        backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.borderActive,
-                        borderRadius: 12, paddingVertical: 10, alignItems: 'center',
-                        flexDirection: 'row', justifyContent: 'center', gap: 6,
-                      }}
-                    >
-                      <Text style={{ fontSize: 14 }}>🔗</Text>
-                      <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: Colors.textSecondary }}>
-                        {t.copyLink}
-                      </Text>
-                    </TouchableOpacity>
+                    <View style={{ gap: 8 }}>
+                      <TouchableOpacity
+                        onPress={() => shareLink(link.short_code, campaign.title)}
+                        style={{
+                          backgroundColor: Colors.shareGreen, borderRadius: 12,
+                          paddingVertical: 12, minHeight: 44, alignItems: 'center', justifyContent: 'center',
+                          flexDirection: 'row', gap: 8,
+                        }}
+                      >
+                        <Ionicons name="share-social-outline" size={18} color="#fff" />
+                        <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: '#fff' }}>
+                          {t.shareOnWhatsApp}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => copyLink(link.short_code)}
+                        style={{
+                          backgroundColor: Colors.btnGhostBg, borderWidth: 1, borderColor: Colors.btnGhostBorder,
+                          borderRadius: 12, paddingVertical: 10, minHeight: 44, alignItems: 'center', justifyContent: 'center',
+                          flexDirection: 'row', gap: 6,
+                        }}
+                      >
+                        <Text style={{ fontSize: 12 }}>🔗</Text>
+                        <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: Colors.textSecondary }}>
+                          {t.copyLink}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                    <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 10, color: Colors.textFaint, textAlign: 'center', marginTop: 8 }}>
+                      📱 {t.shareWhatsAppHint}
+                    </Text>
                   </View>
                 </View>
               )
@@ -286,7 +335,8 @@ export default function RythmesScreen() {
             </View>
           ) : (
             finishedLinks.map((link: any) => {
-              const earned = Math.floor(link.click_count * (link.campaigns?.cpc || 0) * ECHO_SHARE_PERCENT / 100)
+              const finishedCpa = link.campaigns?.pricing_model === 'cpa'
+              const earned = finishedCpa ? 0 : Math.floor(link.click_count * (link.campaigns?.cpc || 0) * ECHO_SHARE_PERCENT / 100)
               return (
                 <View key={link.id} style={{
                   borderRadius: 12, padding: 16, marginBottom: 8,
@@ -299,9 +349,13 @@ export default function RythmesScreen() {
                     <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.textMuted }}>
                       {link.click_count} {t.clicks}
                     </Text>
-                    <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: Colors.orange }}>
-                      {formatFCFA(earned)}
-                    </Text>
+                    {finishedCpa ? (
+                      <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: Colors.teal }}>CPA</Text>
+                    ) : (
+                      <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: Colors.orange }}>
+                        {formatFCFA(earned)}
+                      </Text>
+                    )}
                   </View>
                 </View>
               )

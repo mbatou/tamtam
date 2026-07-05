@@ -30,7 +30,7 @@ export default function ProfileScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
             <View style={{
               width: 56, height: 56, borderRadius: 28,
-              backgroundColor: Colors.tealMuted, borderWidth: 1, borderColor: Colors.teal + '4D',
+              backgroundColor: Colors.tealSoft, borderWidth: 1, borderColor: Colors.tealBorder30,
               alignItems: 'center', justifyContent: 'center',
             }}>
               <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 20, color: Colors.teal }}>
@@ -38,7 +38,7 @@ export default function ProfileScreen() {
               </Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 18, color: Colors.textPrimary }}>
+              <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 18, color: Colors.textPrimary }} numberOfLines={1}>
                 {profile?.name}
               </Text>
               {profile?.phone && (
@@ -70,7 +70,7 @@ export default function ProfileScreen() {
             <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 9, color: Colors.textMuted }}>{t.earned}</Text>
           </View>
           <View style={{ flex: 1, borderRadius: 12, padding: 12, alignItems: 'center', backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder }}>
-            <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 18, color: Colors.orange }}>
+            <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 18, color: Colors.textPrimary }}>
               {formatFCFA(profile?.available_balance || 0)}
             </Text>
             <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 9, color: Colors.textMuted }}>{t.balance}</Text>
@@ -86,10 +86,11 @@ export default function ProfileScreen() {
             { label: t.balance, value: formatFCFA(profile?.available_balance || 0), color: Colors.orange },
             { label: t.totalEarned, value: formatFCFA(profile?.total_earned || 0), color: Colors.orange },
             { label: t.paymentMethod, value: profile?.phone ? t.wave : '—', color: Colors.textPrimary },
-          ].map((row, i) => (
+            { label: t.city, value: profile?.city || '—', color: Colors.textPrimary },
+          ].map((row, i, rows) => (
             <View key={i} style={{
               flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12,
-              borderBottomWidth: i < 2 ? 1 : 0, borderBottomColor: 'rgba(255,255,255,0.05)',
+              borderBottomWidth: i < rows.length - 1 ? 1 : 0, borderBottomColor: Colors.divider,
             }}>
               <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 12, color: Colors.textMuted }}>{row.label}</Text>
               <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 12, color: row.color }}>{row.value}</Text>

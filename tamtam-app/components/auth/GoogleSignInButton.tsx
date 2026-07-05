@@ -46,27 +46,27 @@ export function GoogleSignInButton() {
     }
   }
 
+  // Mirrors the PWA GoogleButton: white pill with dark text (components/ui/GoogleButton)
   return (
     <TouchableOpacity
       onPress={handleGoogleSignIn}
       style={{
-        backgroundColor: Colors.night2,
-        borderWidth: 1,
-        borderColor: Colors.border,
+        backgroundColor: '#FFFFFF',
         borderRadius: 12,
-        padding: 14,
+        paddingVertical: 14,
+        minHeight: 48,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 10,
       }}
     >
-      <Text style={{ fontSize: 18, color: Colors.textPrimary }}>G</Text>
+      <Text style={{ fontSize: 18, color: '#1F1F1F', fontFamily: 'DMSans_600SemiBold' }}>G</Text>
       <Text
         style={{
-          color: Colors.textPrimary,
+          color: '#1F1F1F',
           fontFamily: 'DMSans_600SemiBold',
-          fontSize: 15,
+          fontSize: 14,
         }}
       >
         {t.continueWithGoogle}

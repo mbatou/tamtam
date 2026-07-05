@@ -10,15 +10,24 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        // Mirrors the PWA .echo-bottom-nav: near-black teal-tinted bar with a
+        // teal pill behind the active item (bg-[#1D9E75]/10, rounded-xl).
         tabBarStyle: {
-          backgroundColor: Colors.night2,
-          borderTopColor: Colors.border,
+          backgroundColor: Colors.navBg,
+          borderTopColor: Colors.navBorder,
           borderTopWidth: 1,
-          height: 60,
+          height: 64,
           paddingBottom: 8,
+          paddingTop: 4,
         },
         tabBarActiveTintColor: Colors.teal,
         tabBarInactiveTintColor: Colors.textMuted,
+        tabBarActiveBackgroundColor: Colors.tealMuted,
+        tabBarItemStyle: {
+          borderRadius: 12,
+          marginHorizontal: 8,
+          marginVertical: 4,
+        },
         tabBarLabelStyle: {
           fontFamily: 'DMSans_600SemiBold',
           fontSize: 10,

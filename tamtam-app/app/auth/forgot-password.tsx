@@ -78,6 +78,8 @@ export default function ForgotPasswordScreen() {
           <View
             style={{
               backgroundColor: Colors.tealMuted,
+              borderWidth: 1,
+              borderColor: Colors.heroTealBorder,
               borderRadius: 12,
               padding: 16,
               marginBottom: 24,
@@ -96,38 +98,58 @@ export default function ForgotPasswordScreen() {
           </View>
         ) : (
           <>
+            <Text
+              style={{
+                fontFamily: 'DMSans_600SemiBold',
+                fontSize: 12,
+                color: 'rgba(255,255,255,0.5)',
+                marginBottom: 8,
+              }}
+            >
+              {t.email}
+            </Text>
             <TextInput
               value={email}
               onChangeText={setEmail}
-              placeholder={t.email}
-              placeholderTextColor={Colors.textMuted}
+              placeholder={t.emailPlaceholder}
+              placeholderTextColor={Colors.textGhost}
               keyboardType="email-address"
               autoCapitalize="none"
               style={{
-                backgroundColor: Colors.night2,
+                backgroundColor: Colors.night3,
                 borderWidth: 1,
-                borderColor: Colors.border,
+                borderColor: Colors.inputBorder,
                 borderRadius: 12,
-                padding: 14,
+                paddingHorizontal: 16,
+                paddingVertical: 12,
                 color: Colors.textPrimary,
                 fontFamily: 'DMSans_400Regular',
-                fontSize: 15,
+                fontSize: 14,
                 marginBottom: 16,
               }}
             />
 
             {error ? (
-              <Text
+              <View
                 style={{
-                  color: Colors.error,
-                  fontSize: 13,
-                  fontFamily: 'DMSans_400Regular',
-                  marginBottom: 12,
-                  textAlign: 'center',
+                  backgroundColor: Colors.errorBg,
+                  borderWidth: 1,
+                  borderColor: 'rgba(239,68,68,0.2)',
+                  borderRadius: 12,
+                  padding: 12,
+                  marginBottom: 16,
                 }}
               >
-                {error}
-              </Text>
+                <Text
+                  style={{
+                    color: Colors.error,
+                    fontSize: 13,
+                    fontFamily: 'DMSans_400Regular',
+                  }}
+                >
+                  {error}
+                </Text>
+              </View>
             ) : null}
 
             <TouchableOpacity
@@ -136,8 +158,10 @@ export default function ForgotPasswordScreen() {
               style={{
                 backgroundColor: Colors.orange,
                 borderRadius: 12,
-                padding: 16,
+                paddingVertical: 14,
+                minHeight: 48,
                 alignItems: 'center',
+                justifyContent: 'center',
                 opacity: loading ? 0.6 : 1,
                 marginBottom: 16,
               }}
@@ -157,7 +181,7 @@ export default function ForgotPasswordScreen() {
 
         <TouchableOpacity
           onPress={() => router.back()}
-          style={{ alignItems: 'center' }}
+          style={{ alignItems: 'center', minHeight: 44, justifyContent: 'center' }}
         >
           <Text
             style={{

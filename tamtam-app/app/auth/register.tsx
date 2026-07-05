@@ -14,6 +14,27 @@ import { Colors } from '@/constants/colors'
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
 import { useLanguage } from '@/hooks/useLanguage'
 
+// PWA auth field look: label above a #141420 input with a white/[0.07]
+// border, rounded-xl, placeholder at white/20 (components/auth/FormField).
+const labelStyle = {
+  fontFamily: 'DMSans_600SemiBold',
+  fontSize: 12,
+  color: 'rgba(255,255,255,0.5)',
+  marginBottom: 8,
+} as const
+
+const inputStyle = {
+  backgroundColor: Colors.night3,
+  borderWidth: 1,
+  borderColor: Colors.inputBorder,
+  borderRadius: 12,
+  paddingHorizontal: 16,
+  paddingVertical: 12,
+  color: Colors.textPrimary,
+  fontFamily: 'DMSans_400Regular',
+  fontSize: 14,
+} as const
+
 export default function RegisterScreen() {
   const { t } = useLanguage()
   const [name, setName] = useState('')
@@ -107,76 +128,58 @@ export default function RegisterScreen() {
           />
         </View>
 
+        <Text style={labelStyle}>{t.name}</Text>
         <TextInput
           value={name}
           onChangeText={setName}
-          placeholder={t.name}
-          placeholderTextColor={Colors.textMuted}
+          placeholder={t.namePlaceholder}
+          placeholderTextColor={Colors.textGhost}
           autoCapitalize="words"
-          style={{
-            backgroundColor: Colors.night2,
-            borderWidth: 1,
-            borderColor: Colors.border,
-            borderRadius: 12,
-            padding: 14,
-            color: Colors.textPrimary,
-            fontFamily: 'DMSans_400Regular',
-            fontSize: 15,
-            marginBottom: 12,
-          }}
+          style={{ ...inputStyle, marginBottom: 16 }}
         />
 
+        <Text style={labelStyle}>{t.email}</Text>
         <TextInput
           value={email}
           onChangeText={setEmail}
-          placeholder={t.email}
-          placeholderTextColor={Colors.textMuted}
+          placeholder={t.emailPlaceholder}
+          placeholderTextColor={Colors.textGhost}
           keyboardType="email-address"
           autoCapitalize="none"
-          style={{
-            backgroundColor: Colors.night2,
-            borderWidth: 1,
-            borderColor: Colors.border,
-            borderRadius: 12,
-            padding: 14,
-            color: Colors.textPrimary,
-            fontFamily: 'DMSans_400Regular',
-            fontSize: 15,
-            marginBottom: 12,
-          }}
+          style={{ ...inputStyle, marginBottom: 16 }}
         />
 
+        <Text style={labelStyle}>{t.password}</Text>
         <TextInput
           value={password}
           onChangeText={setPassword}
-          placeholder={t.password}
-          placeholderTextColor={Colors.textMuted}
+          placeholder={t.passwordPlaceholder}
+          placeholderTextColor={Colors.textGhost}
           secureTextEntry
-          style={{
-            backgroundColor: Colors.night2,
-            borderWidth: 1,
-            borderColor: Colors.border,
-            borderRadius: 12,
-            padding: 14,
-            color: Colors.textPrimary,
-            fontFamily: 'DMSans_400Regular',
-            fontSize: 15,
-            marginBottom: 20,
-          }}
+          style={{ ...inputStyle, marginBottom: 20 }}
         />
 
         {error ? (
-          <Text
+          <View
             style={{
-              color: Colors.error,
-              fontSize: 13,
-              fontFamily: 'DMSans_400Regular',
-              marginBottom: 12,
-              textAlign: 'center',
+              backgroundColor: Colors.errorBg,
+              borderWidth: 1,
+              borderColor: 'rgba(239,68,68,0.2)',
+              borderRadius: 12,
+              padding: 12,
+              marginBottom: 16,
             }}
           >
-            {error}
-          </Text>
+            <Text
+              style={{
+                color: Colors.error,
+                fontSize: 13,
+                fontFamily: 'DMSans_400Regular',
+              }}
+            >
+              {error}
+            </Text>
+          </View>
         ) : null}
 
         <TouchableOpacity
@@ -185,8 +188,10 @@ export default function RegisterScreen() {
           style={{
             backgroundColor: Colors.orange,
             borderRadius: 12,
-            padding: 16,
+            paddingVertical: 14,
+            minHeight: 48,
             alignItems: 'center',
+            justifyContent: 'center',
             opacity: loading ? 0.6 : 1,
           }}
         >
@@ -194,7 +199,7 @@ export default function RegisterScreen() {
             style={{
               color: '#fff',
               fontFamily: 'DMSans_600SemiBold',
-              fontSize: 15,
+              fontSize: 14,
             }}
           >
             {loading ? '...' : t.register}
@@ -203,17 +208,17 @@ export default function RegisterScreen() {
 
         <TouchableOpacity
           onPress={() => router.back()}
-          style={{ alignItems: 'center', marginTop: 24 }}
+          style={{ alignItems: 'center', marginTop: 24, minHeight: 44, justifyContent: 'center' }}
         >
           <Text
             style={{
-              color: Colors.textMuted,
+              color: Colors.textFaint,
               fontSize: 14,
               fontFamily: 'DMSans_400Regular',
             }}
           >
             {t.alreadyAccount}{' '}
-            <Text style={{ color: Colors.orange }}>{t.login}</Text>
+            <Text style={{ color: Colors.teal, fontFamily: 'DMSans_600SemiBold' }}>{t.login}</Text>
           </Text>
         </TouchableOpacity>
       </ScrollView>
