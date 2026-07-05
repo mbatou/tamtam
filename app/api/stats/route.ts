@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 
+// Intentionally public: aggregate social-proof counters for the landing page
+// (see useLandingStats). Must only ever return platform-wide aggregates.
+
 // Cache for 5 minutes
 export const revalidate = 300;
 

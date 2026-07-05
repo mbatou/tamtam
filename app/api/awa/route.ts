@@ -14,11 +14,11 @@ export async function POST(req: Request) {
 
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
-  if (!session) return new Response("Unauthorized", { status: 401 });
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
+  if (!authUser) return new Response("Unauthorized", { status: 401 });
 
-  const { allowed } = rateLimit(`awa:${session.user.id}`, 20, 3600000);
+  const { allowed } = rateLimit(`awa:${authUser.id}`, 20, 3600000);
   if (!allowed) {
     return new Response("Rate limit exceeded", { status: 429 });
   }
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   }
 
   const supabase = createServiceClient();
-  const brandId = await getEffectiveBrandId(supabase, session.user.id);
+  const brandId = await getEffectiveBrandId(supabase, authUser.id);
   const { data: brand } = await supabase
     .from("users")
     .select("name")

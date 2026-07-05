@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { formatFCFA, timeAgo } from "@/lib/utils";
 import { getBrandDisplayName, getBrandSubtitle } from "@/lib/display-utils";
@@ -189,9 +189,14 @@ function UsersPageContent() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  useEffect(() => { loadData(); }, [page, filter, roleFilter, debouncedSearch]);
+  // Refs so loadData can read the latest values without re-running the fetch
+  // effect when they change.
+  const showToastRef = useRef(showToast);
+  showToastRef.current = showToast;
+  const highlightIdRef = useRef(highlightId);
+  highlightIdRef.current = highlightId;
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       params.set("page", page.toString());
@@ -205,12 +210,14 @@ function UsersPageContent() {
       setStats(data.stats || { totalEchos: 0, totalBrands: 0, flagged: 0, totalPaid: 0 });
       setTabs(data.tabs || { all: 0, verified: 0, flagged: 0, suspended: 0 });
       setTotalFiltered(data.total || 0);
-      if (highlightId) openUserById(data.users || [], highlightId);
+      if (highlightIdRef.current) openUserById(data.users || [], highlightIdRef.current);
     } catch {
-      showToast("Erreur de chargement", "error");
+      showToastRef.current("Erreur de chargement", "error");
     }
     setLoading(false);
-  }
+  }, [page, filter, roleFilter, debouncedSearch, openUserById]);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   async function performAction(userId: string, action: string) {
     try {

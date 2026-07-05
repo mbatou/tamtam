@@ -91,7 +91,7 @@ const sections: NavSection[] = [
       { label: "Brands", href: "/superadmin/crm", icon: Building2, badgeKey: "leads", permKey: "leads" },
       { label: "Pixels", href: "/superadmin/pixels", icon: Zap, permKey: "leads" },
       { label: "Support", href: "/superadmin/support", icon: MessageCircle, permKey: "support" },
-      { label: "CRM & Leads", href: "/superadmin/leads", icon: Target, permKey: "leads" },
+      { label: "CRM & Leads", href: "/superadmin/crm", icon: Target, permKey: "leads" },
     ],
   },
   {

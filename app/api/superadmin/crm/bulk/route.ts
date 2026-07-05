@@ -1,18 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
 import crypto from "crypto";
+import { requireAuth } from "@/lib/api/auth";
 
 export const dynamic = "force-dynamic";
 
 async function requireSuperadmin() {
-  const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return null;
-  const supabase = createServiceClient();
-  const { data: user } = await supabase.from("users").select("role").eq("id", session.user.id).single();
-  if (!user || user.role !== "superadmin") return null;
-  return { session, supabase };
+  try {
+    return await requireAuth(["superadmin"]);
+  } catch {
+    return null;
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -62,7 +60,7 @@ export async function POST(request: NextRequest) {
       // Log activity
       try {
         await supabase.from("admin_activity_log").insert({
-          admin_id: auth.session.user.id,
+          admin_id: auth.authUser.id,
           action: "crm_bulk_email",
           target_type: "user",
           target_id: userIds[0],
@@ -107,7 +105,7 @@ export async function POST(request: NextRequest) {
       // Log activity
       try {
         await supabase.from("admin_activity_log").insert({
-          admin_id: auth.session.user.id,
+          admin_id: auth.authUser.id,
           action: "crm_bulk_delete",
           target_type: "user",
           target_id: userIds[0],

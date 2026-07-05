@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { verifySharedWebhookSecret } from "@/lib/api/webhooks";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,10 @@ const STATUS_MAP: Record<string, string> = {
 };
 
 export async function POST(request: NextRequest) {
+  if (!verifySharedWebhookSecret(request, "SMS_WEBHOOK_SECRET")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   let ticket: string | null = null;
   let dlrStatus: string | null = null;
 

@@ -4,15 +4,15 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 export async function GET() {
   // Auth check
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) {
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   const supabase = createServiceClient();
 
   // Verify admin or superadmin role
-  const { data: user } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  const { data: user } = await supabase.from("users").select("role").eq("id", authUser.id).single();
   if (!user || !["batteur", "admin", "superadmin"].includes(user.role)) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
@@ -22,7 +22,7 @@ export async function GET() {
     const { data: campaigns } = await supabase
       .from("campaigns")
       .select("id")
-      .eq("batteur_id", session.user.id);
+      .eq("batteur_id", authUser.id);
     const campaignIds = (campaigns || []).map((c) => c.id);
     if (campaignIds.length === 0) {
       return NextResponse.json([]);

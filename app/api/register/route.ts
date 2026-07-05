@@ -16,8 +16,8 @@ export async function POST(req: NextRequest) {
 
   // Verify the authenticated user matches the userId being registered
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) {
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   const { userId, name, phone, mobile_money_provider, referral_code, tm_ref } = body;
   const city = normalizeCity(body.city);
 
-  if (userId !== session.user.id) {
+  if (userId !== authUser.id) {
     return NextResponse.json({ error: "Non autorisé — userId ne correspond pas" }, { status: 403 });
   }
 

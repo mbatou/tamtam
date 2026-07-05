@@ -9,17 +9,17 @@ import { logWalletTransaction } from "@/lib/wallet-transactions";
 export async function GET() {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   const supabase = createServiceClient();
 
   // Verify superadmin role — this endpoint returns ALL payouts
-  const { data: currentUser } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  const { data: currentUser } = await supabase.from("users").select("role").eq("id", authUser.id).single();
   if (!currentUser || currentUser.role !== "superadmin") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
@@ -39,14 +39,14 @@ export async function GET() {
 export async function POST() {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
-  const { allowed } = rateLimit(`payout:${session.user.id}`, 3, 86400000);
+  const { allowed } = rateLimit(`payout:${authUser.id}`, 3, 86400000);
   if (!allowed) {
     return NextResponse.json({ error: "Trop de demandes de retrait. Réessaie demain." }, { status: 429 });
   }
@@ -57,7 +57,7 @@ export async function POST() {
   const { data: user } = await supabase
     .from("users")
     .select("balance, mobile_money_provider")
-    .eq("id", session.user.id)
+    .eq("id", authUser.id)
     .single();
 
   if (!user || user.balance < MIN_PAYOUT_AMOUNT) {
@@ -71,7 +71,7 @@ export async function POST() {
   const { data: pendingPayout } = await supabase
     .from("payouts")
     .select("id")
-    .eq("echo_id", session.user.id)
+    .eq("echo_id", authUser.id)
     .eq("status", "pending")
     .single();
 
@@ -88,7 +88,7 @@ export async function POST() {
   const { error: balanceError } = await supabase
     .from("users")
     .update({ balance: 0 })
-    .eq("id", session.user.id);
+    .eq("id", authUser.id);
 
   if (balanceError) {
     return NextResponse.json({ error: balanceError.message }, { status: 500 });
@@ -96,7 +96,7 @@ export async function POST() {
 
   await logWalletTransaction({
     supabase,
-    userId: session.user.id,
+    userId: authUser.id,
     amount: -withdrawAmount,
     type: "withdrawal",
     description: `Retrait total du solde — ${user.mobile_money_provider || "mobile money"}`,
@@ -106,7 +106,7 @@ export async function POST() {
   const { data, error } = await supabase
     .from("payouts")
     .insert({
-      echo_id: session.user.id,
+      echo_id: authUser.id,
       amount: withdrawAmount,
       provider: user.mobile_money_provider,
     })
@@ -118,7 +118,7 @@ export async function POST() {
     await supabase
       .from("users")
       .update({ balance: withdrawAmount })
-      .eq("id", session.user.id);
+      .eq("id", authUser.id);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
@@ -126,7 +126,7 @@ export async function POST() {
   const { data: echoUser } = await supabase
     .from("users")
     .select("name, phone")
-    .eq("id", session.user.id)
+    .eq("id", authUser.id)
     .single();
 
   sendPayoutRequestNotification({

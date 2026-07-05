@@ -3,8 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Bell, Send, Ban, Clock, RefreshCw, TrendingUp, Users, ArrowRight, Smartphone } from "lucide-react";
-import SmsTestPanel from "@/components/admin/SmsTestPanel";
+import { Send, Ban, Clock, RefreshCw, TrendingUp, Users, ArrowRight, Smartphone, Bell } from "lucide-react";
 import SmsDashboard from "@/components/admin/SmsDashboard";
 
 interface Stats {
@@ -196,10 +195,6 @@ export default function NotificationsOverview() {
       {activeTab === "sms" ? (
         <div className="flex flex-col gap-6">
           <SmsDashboard />
-          <div className="border-t border-white/[0.06] pt-4">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-white/25 mb-3">Zone de test (Georges)</p>
-            <SmsTestPanel />
-          </div>
         </div>
       ) : (
       <>
@@ -321,8 +316,6 @@ export default function NotificationsOverview() {
             {[
               { href: "/superadmin/notifications/send", label: "Composer", icon: Send },
               { href: "/superadmin/notifications/history", label: "Historique", icon: Clock },
-              { href: "/superadmin/notifications/sequences", label: "Séquences", icon: ArrowRight },
-              { href: "/superadmin/notifications/settings", label: "Paramètres", icon: Bell },
             ].map((item) => (
               <Link
                 key={item.href}

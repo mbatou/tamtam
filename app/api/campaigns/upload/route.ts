@@ -4,10 +4,10 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 export async function POST(request: NextRequest) {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServiceClient();
   const ext = file.name.split(".").pop() || "jpg";
-  const fileName = `${session.user.id}/${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
+  const fileName = `${authUser.id}/${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const { error: uploadError } = await supabase.storage

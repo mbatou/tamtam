@@ -7,14 +7,14 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) {
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   const supabase = createServiceClient();
 
-  const { data: currentUser } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  const { data: currentUser } = await supabase.from("users").select("role").eq("id", authUser.id).single();
   if (!currentUser || !["batteur", "admin", "superadmin"].includes(currentUser.role)) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Verify ownership
-  const brandId = await getEffectiveBrandId(supabase, session.user.id);
+  const brandId = await getEffectiveBrandId(supabase, authUser.id);
   const { data: campaign } = await supabase
     .from("campaigns")
     .select("id, created_at, cpc, budget, spent, batteur_id")

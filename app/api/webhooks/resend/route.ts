@@ -7,6 +7,12 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
 
+  // Fail-closed: never accept unsigned webhooks in production.
+  if (!webhookSecret && process.env.NODE_ENV === "production") {
+    console.error("[Resend] RESEND_WEBHOOK_SECRET not configured — rejecting webhook");
+    return NextResponse.json({ error: "Webhook secret not configured" }, { status: 503 });
+  }
+
   const body = await request.text();
 
   if (webhookSecret) {

@@ -170,6 +170,17 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Protect brand-admin API routes (defense in depth — routes also self-check)
+  if (pathname.startsWith("/api/admin/")) {
+    if (!user) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+    const role = await getUserRole(user.id);
+    if (!role || !["batteur", "admin", "superadmin"].includes(role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
+
   // Protect superadmin API routes
   if (pathname.startsWith("/api/superadmin/")) {
     if (!user) {
@@ -219,6 +230,7 @@ export const config = {
     "/onboarding/:path*",
     "/admin/:path*",
     "/superadmin/:path*",
+    "/api/admin/:path*",
     "/api/superadmin/:path*",
     "/brand-picker",
   ],

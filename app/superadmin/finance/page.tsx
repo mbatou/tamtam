@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { formatFCFA, formatNumber } from "@/lib/utils";
@@ -127,9 +127,14 @@ function FinancePageContent() {
     }
   }, []);
 
-  useEffect(() => { loadData(); }, [dateRange]);
+  // Refs so loadData can read the latest values without re-running the fetch
+  // effect when they change.
+  const showToastRef = useRef(showToast);
+  showToastRef.current = showToast;
+  const highlightIdRef = useRef(highlightId);
+  highlightIdRef.current = highlightId;
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       if (dateRange.from) params.set("from", dateRange.from);
@@ -141,16 +146,18 @@ function FinancePageContent() {
       ]);
       const json = await res.json();
       setData(json);
-      if (highlightId) openPayoutById(json, highlightId);
+      if (highlightIdRef.current) openPayoutById(json, highlightIdRef.current);
       if (stuckRes.ok) {
         const stuckJson = await stuckRes.json();
         setStuckData(stuckJson);
       }
     } catch {
-      showToast("Erreur de chargement", "error");
+      showToastRef.current("Erreur de chargement", "error");
     }
     setLoading(false);
-  }
+  }, [dateRange, openPayoutById]);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   async function executeFixStuckEarnings() {
     setFixingEarnings(true);

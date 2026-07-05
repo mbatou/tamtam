@@ -17,7 +17,6 @@ const NOTIFICATION_TYPES = [
   { id: "new_campaign", label: "Nouvelle campagne", icon: "🥁", desc: "Alerter les Échos qu'une nouvelle campagne est disponible", channels: ["push", "email"] },
   { id: "share_reminder", label: "Rappel de partage", icon: "📲", desc: "Rappeler aux Échos de partager les campagnes actives", channels: ["push"] },
   { id: "reengagement", label: "Réengagement", icon: "🔄", desc: "Relancer les Échos inactifs", channels: ["push", "email"] },
-  { id: "streak_danger", label: "Streak en danger", icon: "🔥", desc: "Avertir les Échos dont le streak est en danger", channels: ["push"] },
   { id: "custom", label: "Message personnalisé", icon: "✏️", desc: "Écrire votre propre message", channels: ["push", "email"] },
 ];
 
@@ -27,7 +26,6 @@ const SEGMENTS = [
   { id: "no_clicks", label: "Joiné mais 0 clics" },
   { id: "dormant", label: "Dormants (>30j sans clics)" },
   { id: "ghosts", label: "Jamais engagés (>14j)" },
-  { id: "streak_active", label: "Streak actif" },
   { id: "city", label: "Par ville" },
 ];
 
@@ -35,7 +33,6 @@ const DEFAULT_MESSAGES: Record<string, { title: string; body: string; url: strin
   new_campaign: { title: "Nouvelle campagne disponible !", body: "Une campagne est disponible. Ouvre l'app pour participer.", url: "/rythmes" },
   share_reminder: { title: "Partagez et gagnez", body: "Ton lien attend d'être partagé — FCFA par clic vérifié", url: "/rythmes" },
   reengagement: { title: "Tu nous manques", body: "Des Échos à Dakar gagnent 15 000 FCFA/mois. Rejoins une campagne.", url: "/rythmes" },
-  streak_danger: { title: "Ton streak est en danger", body: "Partage aujourd'hui pour ne pas perdre ta série !", url: "/dashboard" },
   custom: { title: "", body: "", url: "/rythmes" },
 };
 

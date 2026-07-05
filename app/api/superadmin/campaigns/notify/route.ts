@@ -23,11 +23,11 @@ function buildWhatsAppLink(phone: string, campaignTitle: string, cpc: number, bu
 
 export async function POST(request: NextRequest) {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
-  const { data: admin } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  const { data: admin } = await supabase.from("users").select("role").eq("id", authUser.id).single();
   if (!admin || admin.role !== "superadmin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
   // Log admin action
   try {
     await supabase.from("admin_activity_log").insert({
-      admin_id: session.user.id,
+      admin_id: authUser.id,
       action: "campaign_notify_echos",
       target_type: "campaign",
       target_id: campaign_id,

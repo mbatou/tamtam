@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/api/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -17,13 +17,11 @@ const POSITION_DEFAULTS: Record<string, string[]> = {
 };
 
 async function requireSuperadmin() {
-  const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return null;
-  const supabase = createServiceClient();
-  const { data: user } = await supabase.from("users").select("role").eq("id", session.user.id).single();
-  if (!user || user.role !== "superadmin") return null;
-  return { session, supabase };
+  try {
+    return await requireAuth(["superadmin"]);
+  } catch {
+    return null;
+  }
 }
 
 export async function GET() {
@@ -50,7 +48,7 @@ export async function POST(request: NextRequest) {
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = auth.supabase;
-  const session = auth.session;
+  const authUser = auth.authUser;
   const body = await request.json();
   const { action } = body;
 
@@ -64,7 +62,7 @@ export async function POST(request: NextRequest) {
     const permissions = team_permissions || POSITION_DEFAULTS[team_position] || [];
 
     // Create auth user
-    const { data: authUser, error: authErr } = await supabase.auth.admin.createUser({
+    const { data: createdUser, error: authErr } = await supabase.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
@@ -73,7 +71,7 @@ export async function POST(request: NextRequest) {
 
     // Create profile
     const { error: profileErr } = await supabase.from("users").insert({
-      id: authUser.user.id,
+      id: createdUser.user.id,
       name,
       phone: phone || null,
       role: "admin",
@@ -87,15 +85,15 @@ export async function POST(request: NextRequest) {
 
     try {
       await supabase.from("admin_activity_log").insert({
-        admin_id: session.user.id,
+        admin_id: authUser.id,
         action: "team_create",
         target_type: "user",
-        target_id: authUser.user.id,
+        target_id: createdUser.user.id,
         details: { name, email, team_position },
       });
     } catch { /* log may not exist */ }
 
-    return NextResponse.json({ success: true, user_id: authUser.user.id });
+    return NextResponse.json({ success: true, user_id: createdUser.user.id });
   }
 
   // --- Update a team member's position/permissions ---
@@ -112,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     try {
       await supabase.from("admin_activity_log").insert({
-        admin_id: session.user.id,
+        admin_id: authUser.id,
         action: "team_update",
         target_type: "user",
         target_id: user_id,
@@ -129,7 +127,7 @@ export async function POST(request: NextRequest) {
     if (!user_id) return NextResponse.json({ error: "user_id required" }, { status: 400 });
 
     // Don't allow removing yourself
-    if (user_id === session.user.id) {
+    if (user_id === authUser.id) {
       return NextResponse.json({ error: "Cannot remove yourself" }, { status: 400 });
     }
 
@@ -141,7 +139,7 @@ export async function POST(request: NextRequest) {
 
     try {
       await supabase.from("admin_activity_log").insert({
-        admin_id: session.user.id,
+        admin_id: authUser.id,
         action: "team_remove",
         target_type: "user",
         target_id: user_id,

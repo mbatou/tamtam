@@ -5,13 +5,13 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
 
   const { data: currentUser } = await supabase
-    .from("users").select("role").eq("id", session.user.id).single();
+    .from("users").select("role").eq("id", authUser.id).single();
   if (!currentUser || currentUser.role !== "superadmin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }

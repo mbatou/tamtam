@@ -10,11 +10,11 @@ export async function GET(request: NextRequest) {
 
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (session) {
-    userId = session.user.id;
+  if (authUser) {
+    userId = authUser.id;
   } else {
     // Fall back to Bearer token (used during login before cookies sync)
     const authHeader = request.headers.get("authorization");
@@ -47,10 +47,10 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -74,7 +74,7 @@ export async function PUT(request: NextRequest) {
   const { data, error } = await supabase
     .from("users")
     .update(updates)
-    .eq("id", session.user.id)
+    .eq("id", authUser.id)
     .select("*")
     .single();
 

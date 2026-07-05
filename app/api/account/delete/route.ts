@@ -5,8 +5,8 @@ import crypto from "crypto";
 
 export async function POST(req: Request) {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   const { confirmation } = await req.json();
 
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Tapez SUPPRIMER pour confirmer" }, { status: 400 });
   }
 
-  const userId = session.user.id;
+  const userId = authUser.id;
   const supabase = createServiceClient();
 
   // Get user data
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
   }
 
   // Anonymize the user record
-  const userEmail = user.email || session.user.email || "";
+  const userEmail = user.email || authUser.email || "";
   const hashedEmail = crypto.createHash("sha256").update(userEmail).digest("hex").substring(0, 16);
 
   await supabase

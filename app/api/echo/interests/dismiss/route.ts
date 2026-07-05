@@ -5,8 +5,8 @@ export const dynamic = "force-dynamic";
 
 export async function POST() {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) {
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -15,7 +15,7 @@ export async function POST() {
   const { error } = await supabase
     .from("users")
     .update({ interests_prompt_dismissed_at: new Date().toISOString() })
-    .eq("id", session.user.id);
+    .eq("id", authUser.id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

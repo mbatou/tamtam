@@ -7,12 +7,12 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   // Auth check: superadmin only
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabaseAdmin = createServiceClient();
   const { data: currentUser } = await supabaseAdmin
-    .from("users").select("role").eq("id", session.user.id).single();
+    .from("users").select("role").eq("id", authUser.id).single();
   if (!currentUser || currentUser.role !== "superadmin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }

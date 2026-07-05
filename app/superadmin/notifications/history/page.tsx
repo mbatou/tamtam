@@ -46,7 +46,7 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 const FILTER_STATUSES = ["", "sent", "pending", "suppressed", "failed"];
-const FILTER_TYPES = ["", "new_campaign", "share_reminder", "inactivity", "campaign_ending", "streak_danger", "manual", "reengagement"];
+const FILTER_TYPES = ["", "new_campaign", "share_reminder", "inactivity", "campaign_ending", "manual", "reengagement"];
 
 export default function HistoryPage() {
   const router = useRouter();

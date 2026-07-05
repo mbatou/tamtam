@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import * as Sentry from "@sentry/nextjs";
-import crypto from "crypto";
+import { verifyCronSecret } from "@/lib/api/cron";
 
 export const dynamic = "force-dynamic";
 
@@ -13,17 +13,6 @@ export const dynamic = "force-dynamic";
 
 const MIN_CLICKS_THRESHOLD = 50;
 const LOW_CONVERSION_RATE = 0.02; // 2%
-
-function verifyCronSecret(request: NextRequest): boolean {
-  const authHeader = request.headers.get("authorization");
-  if (!authHeader || !process.env.CRON_SECRET) return false;
-  const expected = `Bearer ${process.env.CRON_SECRET}`;
-  if (authHeader.length !== expected.length) return false;
-  return crypto.timingSafeEqual(
-    Buffer.from(authHeader),
-    Buffer.from(expected)
-  );
-}
 
 export async function GET(request: NextRequest) {
   if (!verifyCronSecret(request)) {

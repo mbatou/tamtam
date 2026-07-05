@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
+import { requireAuth } from "@/lib/api/auth";
 
 export const dynamic = "force-dynamic";
 
 async function requireSuperadmin() {
-  const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return null;
-  const supabase = createServiceClient();
-  const { data: user } = await supabase.from("users").select("role").eq("id", session.user.id).single();
-  if (!user || user.role !== "superadmin") return null;
-  return { session, supabase };
+  try {
+    return await requireAuth(["superadmin"]);
+  } catch {
+    return null;
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -112,7 +110,7 @@ export async function POST(request: NextRequest) {
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = auth.supabase;
-  const session = auth.session;
+  const authUser = auth.authUser;
   const body = await request.json();
 
   // ===== RECHARGE VALIDATION (Wave payments) =====
@@ -162,12 +160,12 @@ export async function POST(request: NextRequest) {
         description: `Top-up validated by admin`,
         sourceId: payment_id,
         sourceType: "payment",
-        createdBy: session.user.id,
+        createdBy: authUser.id,
       });
 
       try {
         await supabase.from("admin_activity_log").insert({
-          admin_id: session.user.id,
+          admin_id: authUser.id,
           action: "recharge_validated",
           target_type: "payment",
           target_id: payment_id,
@@ -188,7 +186,7 @@ export async function POST(request: NextRequest) {
 
       try {
         await supabase.from("admin_activity_log").insert({
-          admin_id: session.user.id,
+          admin_id: authUser.id,
           action: "recharge_rejected",
           target_type: "payment",
           target_id: payment_id,
@@ -246,7 +244,7 @@ export async function POST(request: NextRequest) {
       description: `Refund — withdrawal rejected by admin`,
       sourceId: payout_id,
       sourceType: "payout",
-      createdBy: session.user.id,
+      createdBy: authUser.id,
     });
   } else {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
@@ -254,7 +252,7 @@ export async function POST(request: NextRequest) {
 
   try {
     await supabase.from("admin_activity_log").insert({
-      admin_id: session.user.id,
+      admin_id: authUser.id,
       action: `payout_${action}`,
       target_type: "payout",
       target_id: payout_id,

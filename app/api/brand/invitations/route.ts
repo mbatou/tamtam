@@ -6,10 +6,10 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     .from("brand_team_members")
     .select("id, email, brand_owner_id")
     .eq("id", invitationId)
-    .eq("email", session.user.email?.toLowerCase().trim())
+    .eq("email", authUser.email?.toLowerCase().trim())
     .in("status", ["invited", "pending"])
     .is("removed_at", null)
     .single();
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       .update({
         status: "active",
         accepted_at: new Date().toISOString(),
-        member_user_id: session.user.id,
+        member_user_id: authUser.id,
       })
       .eq("id", invitationId);
 

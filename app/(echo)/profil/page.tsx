@@ -45,7 +45,6 @@ export default function ProfilPage() {
     share_reminder: true,
     inactivity: true,
     campaign_ending: true,
-    streak_danger: true,
   });
 
   const supabase = createClient();
@@ -305,7 +304,7 @@ export default function ProfilPage() {
               <div className="flex items-center gap-1.5">
                 <h2 className="text-lg font-bold truncate">{user?.name}</h2>
                 {user?.is_founding_echo && (
-                  <span className="text-sm" title="Écho Fondateur">&#129351;</span>
+                  <span className="text-sm" title={t("echo.profile.foundingEchoTitle")}>&#129351;</span>
                 )}
               </div>
               <p className="text-xs text-white/40">{user?.phone}</p>
@@ -685,7 +684,7 @@ export default function ProfilPage() {
           {pushEnabled && (
             <div className="mt-3 pt-3 border-t border-white/[0.06] space-y-2">
               <p className="text-[10px] text-white/30 mb-2">{t("echo.push.prefsTitle")}</p>
-              {(["new_campaign", "share_reminder", "inactivity", "campaign_ending", "streak_danger"] as const).map((key) => (
+              {(["new_campaign", "share_reminder", "inactivity", "campaign_ending"] as const).map((key) => (
                 <div key={key} className="flex items-center justify-between py-1">
                   <span className="text-xs text-white/60">{t(`echo.push.pref_${key}`)}</span>
                   <button

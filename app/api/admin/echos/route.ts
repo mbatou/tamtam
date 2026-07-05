@@ -9,22 +9,22 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   const supabase = createServiceClient();
 
   // Verify the user is a brand (batteur)
-  const { data: currentUser } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  const { data: currentUser } = await supabase.from("users").select("role").eq("id", authUser.id).single();
   if (!currentUser || !["batteur", "admin", "superadmin"].includes(currentUser.role)) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 
-  const batteurId = await getEffectiveBrandId(supabase, session.user.id);
+  const batteurId = await getEffectiveBrandId(supabase, authUser.id);
 
   // Get brand's campaigns
   const { data: campaigns } = await supabase

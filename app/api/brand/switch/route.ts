@@ -7,10 +7,10 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
   const hasAccess = await validateBrandAccess(
     supabase,
-    session.user.id,
+    authUser.id,
     brandId
   );
 
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
   await supabase
     .from("users")
     .update({ last_used_brand_id: brandId })
-    .eq("id", session.user.id);
+    .eq("id", authUser.id);
 
   return NextResponse.json({ success: true });
 }

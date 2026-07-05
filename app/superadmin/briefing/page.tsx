@@ -153,7 +153,7 @@ export default function MorningBriefPage() {
   if (data.actionRequired.newLeads > 0) {
     actionItems.push({
       text: `${data.actionRequired.newLeads} nouveau(x) lead(s) en attente (plus ancien : ${data.actionRequired.oldestLeadAge}h)`,
-      href: "/superadmin/leads",
+      href: "/superadmin/crm",
       severity: data.actionRequired.oldestLeadAge > 24 ? "red" : "orange",
       icon: <Target size={14} />,
     });

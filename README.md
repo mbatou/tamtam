@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Tamtam
 
-## Getting Started
+Tamtam is a word-of-mouth marketing platform for Senegal: brands ("batteurs") fund campaigns, everyday creators ("échos") share tracked links with their audience and earn FCFA per verified click, lead, or conversion. Payouts run on Wave.
 
-First, run the development server:
+## Stack
+
+- **Web app** — Next.js 14 (App Router) + TypeScript (strict) + Tailwind, deployed on Vercel
+- **Database/Auth** — Supabase (Postgres, RLS, service-role API routes)
+- **Payments** — Wave (checkout for wallet top-ups, B2B payouts, signed webhooks)
+- **Email** — Resend (svix-signed webhooks) · **SMS** — MTarget · **Push** — web-push (VAPID)
+- **Monitoring** — Sentry
+
+## Repository layout
+
+| Path | What it is |
+|---|---|
+| `app/` | Next.js routes — `(landing)`, `(auth)`, `(echo)` creator app, `admin/` brand console, `superadmin/` ops console, `api/` (~140 routes) |
+| `components/`, `lib/`, `types/` | Shared UI, server libraries (`lib/api` auth/cron kernel, wallet, notifications, sms, reconciliation), domain types |
+| `supabase/migrations/` | SQL migrations (partial — core schema is managed in Supabase; see audit) |
+| `__tests__/` | Vitest suites |
+| `tamtam-app/` | Expo React Native mobile app (own package.json) |
+| `tamtam-pixel-extension/` | Chrome MV3 helper extension for installing the conversion pixel |
+| `docs/` | Setup guides + audit reports |
+
+## Development
 
 ```bash
+npm install
+cp .env.example .env.local   # fill in Supabase, Wave, Resend, VAPID, etc.
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Checks (run by CI on every PR):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run typecheck
+npm run lint
+npm test
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Conventions
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- API routes authenticate through `lib/api/auth.ts` (`requireAuth`, role allowlists — uses `auth.getUser()`), cron routes through `lib/api/cron.ts` (`verifyCronSecret`), provider webhooks fail closed in production.
+- Data access in API routes uses `createServiceClient()` from `lib/supabase/server.ts`; browser code uses `lib/supabase/client.ts`.
+- Cron schedules live in `vercel.json` and must match `app/api/cron/*`.
+- i18n: keys in `messages/{fr,en}.json` via `useTranslation()` from `lib/i18n`.

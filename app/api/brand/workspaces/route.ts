@@ -7,18 +7,18 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   const supabase = createServiceClient();
 
   const [brands, pending] = await Promise.all([
-    getAccessibleBrands(supabase, session.user.id),
-    getPendingInvitations(supabase, session.user.email || ""),
+    getAccessibleBrands(supabase, authUser.id),
+    getPendingInvitations(supabase, authUser.email || ""),
   ]);
 
   return NextResponse.json({ brands, pending });

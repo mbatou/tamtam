@@ -10,7 +10,7 @@ import {
   Wallet, Zap,
   Settings, MessageCircle, LogOut,
 } from "lucide-react";
-import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import BrandSwitcher from "@/components/dashboard/BrandSwitcher";
 
 const NAV_GROUPS = [
@@ -113,7 +113,7 @@ export default function AdminSidebar() {
         </nav>
 
         <div className="px-5 py-4 space-y-3" style={{ borderTop: "0.5px solid rgba(255,255,255,0.07)" }}>
-          <LanguageSwitcher />
+          <LanguageSwitcher variant="compact" />
           <button
             onClick={handleLogout}
             className="flex items-center gap-2.5 text-[12px] font-medium text-red-400/60 hover:text-red-400 transition-colors"
@@ -129,7 +129,7 @@ export default function AdminSidebar() {
         <div className="flex items-center justify-between mb-2">
           <Image src="/brand/tamtam-horizontal-orange.png" alt="Tamtam" width={100} height={26} priority className="h-6 w-auto" />
           <div className="flex items-center gap-3">
-            <LanguageSwitcher />
+            <LanguageSwitcher variant="compact" />
             <button onClick={handleLogout} className="text-red-400/60 hover:text-red-400 transition">
               <LogOut size={16} />
             </button>

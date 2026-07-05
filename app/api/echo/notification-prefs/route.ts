@@ -13,8 +13,8 @@ const ALLOWED_KEYS = [
 
 export async function GET() {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) {
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -22,7 +22,7 @@ export async function GET() {
   const { data } = await supabase
     .from("users")
     .select("notification_prefs")
-    .eq("id", session.user.id)
+    .eq("id", authUser.id)
     .single();
 
   const prefs: Record<string, boolean> = {};
@@ -35,8 +35,8 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) {
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -64,7 +64,7 @@ export async function PUT(request: NextRequest) {
     await supabase
       .from("users")
       .update(smsUpdate)
-      .eq("id", session.user.id);
+      .eq("id", authUser.id);
   }
 
   // Merge with existing prefs (brand prefs may also be on this field)
@@ -72,7 +72,7 @@ export async function PUT(request: NextRequest) {
     const { data: existing } = await supabase
       .from("users")
       .select("notification_prefs")
-      .eq("id", session.user.id)
+      .eq("id", authUser.id)
       .single();
 
     const merged = { ...(existing?.notification_prefs as Record<string, boolean> || {}), ...prefs };
@@ -80,7 +80,7 @@ export async function PUT(request: NextRequest) {
     await supabase
       .from("users")
       .update({ notification_prefs: merged })
-      .eq("id", session.user.id);
+      .eq("id", authUser.id);
 
     return NextResponse.json({ success: true, prefs: merged });
   }

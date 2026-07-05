@@ -1,19 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { updateLeadSchema } from "@/lib/validations";
 import { sendBatteurWelcomeEmail, sendRoleUpgradeEmail } from "@/lib/email";
 import crypto from "crypto";
+import { requireAuth } from "@/lib/api/auth";
 
 export const dynamic = "force-dynamic";
 
 async function requireSuperadmin() {
-  const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return null;
-  const supabase = createServiceClient();
-  const { data: user } = await supabase.from("users").select("role").eq("id", session.user.id).single();
-  if (!user || user.role !== "superadmin") return null;
-  return { session, supabase };
+  try {
+    return await requireAuth(["superadmin"]);
+  } catch {
+    return null;
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -204,7 +202,7 @@ export async function POST(request: NextRequest) {
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = auth.supabase;
-  const session = auth.session;
+  const authUser = auth.authUser;
   const body = await request.json();
   const { action } = body;
 
@@ -218,7 +216,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase.from("crm_notes").insert({
       contact_id,
       contact_type,
-      author_id: session.user.id,
+      author_id: authUser.id,
       content,
       note_type: note_type || "note",
       followup_date: followup_date || null,
@@ -337,7 +335,7 @@ export async function POST(request: NextRequest) {
 
           try {
             await supabase.from("admin_activity_log").insert({
-              admin_id: session.user.id,
+              admin_id: authUser.id,
               action: "promote_echo_to_batteur",
               target_type: "user",
               target_id: existingProfile.id,
@@ -374,13 +372,13 @@ export async function POST(request: NextRequest) {
     // Generate temporary password
     const tempPassword = crypto.randomBytes(8).toString("hex") + "A1!";
 
-    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+    const { data: createdUser, error: authError } = await supabase.auth.admin.createUser({
       email: accountEmail,
       password: tempPassword,
       email_confirm: true,
     });
 
-    if (authError || !authUser.user) {
+    if (authError || !createdUser.user) {
       if (authError?.message?.includes("already been registered") || authError?.message?.includes("already exists")) {
         return NextResponse.json({
           error: "This email is already registered. Please use a different email.",
@@ -391,7 +389,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { error: profileError } = await supabase.from("users").insert({
-      id: authUser.user.id,
+      id: createdUser.user.id,
       name: lead.business_name || lead.contact_name,
       phone: lead.whatsapp || null,
       role: "batteur",
@@ -399,7 +397,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (profileError) {
-      await supabase.auth.admin.deleteUser(authUser.user.id);
+      await supabase.auth.admin.deleteUser(createdUser.user.id);
       return NextResponse.json({ error: profileError.message }, { status: 500 });
     }
 
@@ -413,10 +411,10 @@ export async function POST(request: NextRequest) {
 
     try {
       await supabase.from("admin_activity_log").insert({
-        admin_id: session.user.id,
+        admin_id: authUser.id,
         action: "convert_lead",
         target_type: "user",
-        target_id: authUser.user.id,
+        target_id: createdUser.user.id,
         details: { lead_id, business_name: lead.business_name, email: accountEmail },
       });
     } catch {}
@@ -433,7 +431,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      user_id: authUser.user.id,
+      user_id: createdUser.user.id,
       email_sent: true,
       email_used: accountEmail,
     });

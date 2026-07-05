@@ -29,13 +29,13 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) {
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   const supabase = createServiceClient();
-  const brandId = await getEffectiveBrandId(supabase, session.user.id);
+  const brandId = await getEffectiveBrandId(supabase, authUser.id);
 
   const { data: transaction, error } = await supabase
     .from("wallet_transactions")
@@ -57,7 +57,7 @@ export async function GET(
 
   // Fetch brand email from auth
   const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1 });
-  let brandEmail = session.user.email || "";
+  let brandEmail = authUser.email || "";
   if (!brandEmail && authUsers?.[0]) brandEmail = authUsers[0].email || "";
 
   // If campaign-related, fetch campaign details

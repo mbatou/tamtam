@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { sendNewCampaignNotification, sendCampaignLiveToBrand } from "@/lib/email";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { unlockCampaignEarnings } from "@/lib/unlock-earnings";
 import { triggerNewCampaign } from "@/lib/notifications/engine";
 import { processNotificationQueue } from "@/lib/notifications/sender";
 import { sendSmsBatch } from "@/lib/sms/sms-service";
+import { requireAuth } from "@/lib/api/auth";
+import { awardAmbassadorCommission } from "@/lib/ambassador-commission";
 
 export const dynamic = "force-dynamic";
 
@@ -48,13 +50,11 @@ async function notifyEchosNewCampaign(supabase: ReturnType<typeof createServiceC
 }
 
 async function requireSuperadmin() {
-  const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return null;
-  const supabase = createServiceClient();
-  const { data: user } = await supabase.from("users").select("role").eq("id", session.user.id).single();
-  if (!user || user.role !== "superadmin") return null;
-  return { session, supabase };
+  try {
+    return await requireAuth(["superadmin"]);
+  } catch {
+    return null;
+  }
 }
 
 export async function GET() {
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = auth.supabase;
-  const session = auth.session;
+  const authUser = auth.authUser;
   const body = await request.json();
   const { action } = body;
 
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
       type: "campaign_budget_debit",
       description: `Campaign created by admin: ${title}`,
       sourceType: "campaign",
-      createdBy: session.user.id,
+      createdBy: authUser.id,
     });
 
     // Create campaign pre-approved
@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
         spent: 0,
         status: "active",
         moderation_status: "approved",
-        moderated_by: session.user.id,
+        moderated_by: authUser.id,
         moderated_at: new Date().toISOString(),
         objective: objective || "traffic",
       })
@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
 
     try {
       await supabase.from("admin_activity_log").insert({
-        admin_id: session.user.id,
+        admin_id: authUser.id,
         action: "campaign_create",
         target_type: "campaign",
         target_id: campaign.id,
@@ -209,60 +209,11 @@ export async function POST(request: NextRequest) {
     notifyEchosNewCampaign(supabase, title, parseInt(cpc));
 
     // Ambassador commission for superadmin-created campaigns (LUP-80)
-    try {
-      const { data: brand } = await supabase
-        .from("users")
-        .select("referred_by_ambassador")
-        .eq("id", batteur_id)
-        .single();
-
-      if (brand?.referred_by_ambassador) {
-        const { data: ambassador } = await supabase
-          .from("ambassadors")
-          .select("id, commission_rate")
-          .eq("id", brand.referred_by_ambassador)
-          .eq("status", "active")
-          .single();
-
-        if (ambassador) {
-          const commissionAmount = Math.round(parseInt(budget) * (ambassador.commission_rate / 100));
-          const { data: referral } = await supabase
-            .from("ambassador_referrals")
-            .select("id, first_campaign_at, total_campaigns, total_commission_earned")
-            .eq("ambassador_id", ambassador.id)
-            .eq("brand_user_id", batteur_id)
-            .single();
-
-          if (referral) {
-            const refUpdates: Record<string, unknown> = {
-              total_campaigns: (referral.total_campaigns || 0) + 1,
-              status: "active",
-              total_commission_earned: (referral.total_commission_earned || 0) + commissionAmount,
-            };
-            if (!referral.first_campaign_at) refUpdates.first_campaign_at = new Date().toISOString();
-            await supabase.from("ambassador_referrals").update(refUpdates).eq("id", referral.id);
-
-            await supabase.from("ambassador_commissions").insert({
-              ambassador_id: ambassador.id,
-              referral_id: referral.id,
-              campaign_id: campaign.id,
-              campaign_budget: parseInt(budget),
-              commission_rate: ambassador.commission_rate,
-              commission_amount: commissionAmount,
-              status: "earned",
-            });
-
-            const { data: amb } = await supabase.from("ambassadors").select("total_earned").eq("id", ambassador.id).single();
-            if (amb) {
-              await supabase.from("ambassadors").update({
-                total_earned: (amb.total_earned || 0) + commissionAmount,
-                updated_at: new Date().toISOString(),
-              }).eq("id", ambassador.id);
-            }
-          }
-        }
-      }
-    } catch { /* Non-blocking */ }
+    await awardAmbassadorCommission(supabase, {
+      brandUserId: batteur_id,
+      campaignId: campaign.id,
+      campaignBudget: parseInt(budget),
+    });
 
     return NextResponse.json({ success: true, campaign });
   }
@@ -286,7 +237,7 @@ export async function POST(request: NextRequest) {
   }
 
   const updates: Record<string, unknown> = {
-    moderated_by: session.user.id,
+    moderated_by: authUser.id,
     moderated_at: new Date().toISOString(),
   };
 
@@ -329,7 +280,7 @@ export async function POST(request: NextRequest) {
           description: `Approbation campagne par admin`,
           sourceId: campaign_id,
           sourceType: "campaign",
-          createdBy: session.user.id,
+          createdBy: authUser.id,
         });
       }
 
@@ -387,7 +338,7 @@ export async function POST(request: NextRequest) {
               description: `Refund for rejected campaign by admin`,
               sourceId: campaign_id,
               sourceType: "campaign",
-              createdBy: session.user.id,
+              createdBy: authUser.id,
             });
           }
         }
@@ -419,7 +370,7 @@ export async function POST(request: NextRequest) {
             description: `Remboursement frais landing page (campagne rejetee)`,
             sourceId: campaign_id,
             sourceType: "campaign_setup_fee",
-            createdBy: session.user.id,
+            createdBy: authUser.id,
           });
         }
       }
@@ -480,7 +431,7 @@ export async function POST(request: NextRequest) {
             description: `Refund for stopped campaign: ${campaign.title || campaign.id} (${stopRemaining} FCFA remaining)`,
             sourceId: campaign_id,
             sourceType: "campaign",
-            createdBy: session.user.id,
+            createdBy: authUser.id,
           });
         }
       }
@@ -502,7 +453,7 @@ export async function POST(request: NextRequest) {
   // Log action
   try {
     await supabase.from("admin_activity_log").insert({
-      admin_id: session.user.id,
+      admin_id: authUser.id,
       action: `campaign_${action}`,
       target_type: "campaign",
       target_id: campaign_id,
@@ -512,72 +463,11 @@ export async function POST(request: NextRequest) {
 
   // --- Ambassador commission (LUP-80) ---
   if (action === "approve") {
-    try {
-      const brandId = campaign.batteur_id;
-      const { data: brand } = await supabase
-        .from("users")
-        .select("referred_by_ambassador")
-        .eq("id", brandId)
-        .single();
-
-      if (brand?.referred_by_ambassador) {
-        const { data: ambassador } = await supabase
-          .from("ambassadors")
-          .select("id, commission_rate")
-          .eq("id", brand.referred_by_ambassador)
-          .eq("status", "active")
-          .single();
-
-        if (ambassador) {
-          const commissionAmount = Math.round(campaign.budget * (ambassador.commission_rate / 100));
-
-          const { data: referral } = await supabase
-            .from("ambassador_referrals")
-            .select("id, first_campaign_at, total_campaigns, total_commission_earned")
-            .eq("ambassador_id", ambassador.id)
-            .eq("brand_user_id", brandId)
-            .single();
-
-          if (referral) {
-            // Update referral record
-            const refUpdates: Record<string, unknown> = {
-              total_campaigns: (referral.total_campaigns || 0) + 1,
-              status: "active",
-              total_commission_earned: (referral.total_commission_earned || 0) + commissionAmount,
-            };
-            if (!referral.first_campaign_at) {
-              refUpdates.first_campaign_at = new Date().toISOString();
-            }
-            await supabase.from("ambassador_referrals").update(refUpdates).eq("id", referral.id);
-
-            // Log commission
-            await supabase.from("ambassador_commissions").insert({
-              ambassador_id: ambassador.id,
-              referral_id: referral.id,
-              campaign_id: campaign.id,
-              campaign_budget: campaign.budget,
-              commission_rate: ambassador.commission_rate,
-              commission_amount: commissionAmount,
-              status: "earned",
-            });
-
-            // Update ambassador totals
-            const { data: amb } = await supabase
-              .from("ambassadors")
-              .select("total_earned")
-              .eq("id", ambassador.id)
-              .single();
-
-            if (amb) {
-              await supabase.from("ambassadors").update({
-                total_earned: (amb.total_earned || 0) + commissionAmount,
-                updated_at: new Date().toISOString(),
-              }).eq("id", ambassador.id);
-            }
-          }
-        }
-      }
-    } catch { /* Non-blocking: ambassador commission failure should not block approval */ }
+    await awardAmbassadorCommission(supabase, {
+      brandUserId: campaign.batteur_id,
+      campaignId: campaign.id,
+      campaignBudget: campaign.budget,
+    });
   }
 
   // Send engagement emails based on action

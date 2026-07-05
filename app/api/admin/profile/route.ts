@@ -5,11 +5,11 @@ import { getEffectiveBrandId } from "@/lib/brand-utils";
 
 export async function GET() {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   const supabase = createServiceClient();
-  const brandId = await getEffectiveBrandId(supabase, session.user.id);
+  const brandId = await getEffectiveBrandId(supabase, authUser.id);
   const { data, error } = await supabase
     .from("users")
     .select("id, name, phone, city, mobile_money_provider, logo_url, industry, notification_prefs, created_at")
@@ -19,11 +19,11 @@ export async function GET() {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Get the owner's email for the profile display
-  let ownerEmail = session.user.email;
-  if (brandId !== session.user.id) {
+  let ownerEmail = authUser.email;
+  if (brandId !== authUser.id) {
     try {
       const { data: authData } = await supabase.auth.admin.getUserById(brandId);
-      ownerEmail = authData?.user?.email || session.user.email;
+      ownerEmail = authData?.user?.email || authUser.email;
     } catch { /* fallback to current user email */ }
   }
 
@@ -32,8 +32,8 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   const body = await request.json();
   const { name, phone, city, mobile_money_provider, industry, notification_prefs } = body;
@@ -51,7 +51,7 @@ export async function PUT(request: NextRequest) {
   }
 
   const supabase = createServiceClient();
-  const brandId = await getEffectiveBrandId(supabase, session.user.id);
+  const brandId = await getEffectiveBrandId(supabase, authUser.id);
   const { data, error } = await supabase
     .from("users")
     .update(updates)
@@ -61,5 +61,5 @@ export async function PUT(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ ...data, email: session.user.email });
+  return NextResponse.json({ ...data, email: authUser.email });
 }

@@ -5,13 +5,13 @@ import crypto from "crypto";
 
 export async function POST(req: Request) {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
 
   // Verify superadmin role
-  const { data: adminCheck } = await supabase.from("users").select("role").eq("id", session.user.id).single();
+  const { data: adminCheck } = await supabase.from("users").select("role").eq("id", authUser.id).single();
   if (!adminCheck || adminCheck.role !== "superadmin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
       company_name: user.company_name ? "Deleted company" : null,
       balance: 0,
       deleted_at: new Date().toISOString(),
-      deleted_by: session.user.id,
+      deleted_by: authUser.id,
       deletion_reason: reason,
     })
     .eq("id", userId);
@@ -82,13 +82,13 @@ export async function POST(req: Request) {
     type: "account_deletion",
     description: `Account deleted by admin: ${reason}`,
     sourceType: "system",
-    createdBy: session.user.id,
+    createdBy: authUser.id,
   });
 
   // Log to admin activity
   try {
     await supabase.from("admin_activity_log").insert({
-      admin_id: session.user.id,
+      admin_id: authUser.id,
       action: "user_delete_account",
       target_type: "user",
       target_id: userId,

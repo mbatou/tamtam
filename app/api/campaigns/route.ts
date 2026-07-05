@@ -80,10 +80,10 @@ async function notifyCampaignCompleted(campaignId: string) {
 export async function GET(request: NextRequest) {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -114,10 +114,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
   const effectiveCpaEvent = pricingModel === "cpa" && cpa_event ? cpa_event : null;
 
   const supabase = createServiceClient();
-  const brandId = await getEffectiveBrandId(supabase, session.user.id);
+  const brandId = await getEffectiveBrandId(supabase, authUser.id);
 
   // Draft: save without balance check or deduction
   if (save_as_draft) {
@@ -283,10 +283,10 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -302,7 +302,7 @@ export async function PUT(request: NextRequest) {
   const { id, title, description, destination_url, cpc, budget, starts_at, ends_at, creative_urls, target_cities, status, moderation_status, objective, pixel_id, pricing_model, cpa_amount, cpa_event } = parsed.data;
 
   const supabase = createServiceClient();
-  const brandId = await getEffectiveBrandId(supabase, session.user.id);
+  const brandId = await getEffectiveBrandId(supabase, authUser.id);
 
   // Verify ownership and get current campaign data
   const { data: existing } = await supabase.from("campaigns").select("batteur_id, budget, spent, status, moderation_status, title").eq("id", id).single();
@@ -525,10 +525,10 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const authClient = createClient();
   const {
-    data: { session },
-  } = await authClient.auth.getSession();
+    data: { user: authUser },
+  } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -544,7 +544,7 @@ export async function DELETE(request: NextRequest) {
   const { id } = parsed.data;
 
   const supabase = createServiceClient();
-  const brandId = await getEffectiveBrandId(supabase, session.user.id);
+  const brandId = await getEffectiveBrandId(supabase, authUser.id);
 
   // Verify ownership and get campaign data for refund
   const { data: existing } = await supabase.from("campaigns").select("batteur_id, budget, spent, status, moderation_status, objective, setup_fee_paid, setup_fee_amount_fcfa, title").eq("id", id).single();

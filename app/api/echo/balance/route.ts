@@ -5,9 +5,9 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
+  const { data: { user: authUser } } = await authClient.auth.getUser();
 
-  if (!session) {
+  if (!authUser) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
@@ -16,7 +16,7 @@ export async function GET() {
   const { data: user } = await supabase
     .from("users")
     .select("available_balance, pending_balance, balance")
-    .eq("id", session.user.id)
+    .eq("id", authUser.id)
     .single();
 
   const available = user?.available_balance ?? user?.balance ?? 0;
@@ -25,7 +25,7 @@ export async function GET() {
   const { data: pendingList } = await supabase
     .from("pending_earnings")
     .select("campaign_name, amount_fcfa, click_count, unlock_date")
-    .eq("echo_id", session.user.id)
+    .eq("echo_id", authUser.id)
     .eq("status", "pending")
     .gt("amount_fcfa", 0)
     .order("unlock_date", { ascending: true });

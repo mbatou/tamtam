@@ -9,8 +9,8 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   const authClient = createClient();
-  const { data: { session } } = await authClient.auth.getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { data: { user: authUser } } = await authClient.auth.getUser();
+  if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServiceClient();
 
@@ -18,7 +18,7 @@ export async function GET(
   const { data: user } = await supabase
     .from("users")
     .select("role")
-    .eq("id", session.user.id)
+    .eq("id", authUser.id)
     .single();
   if (!user || user.role !== "superadmin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -1221,8 +1221,8 @@ function Footer() {
             </p>
             <ul className="space-y-2">
               {[
-                { label: t("landing.footer.terms"), href: "/cgu" },
-                { label: t("landing.footer.privacy"), href: "/confidentialite" },
+                { label: t("landing.footer.terms"), href: "/terms" },
+                { label: t("landing.footer.privacy"), href: "/privacy" },
                 { label: t("landing.footer.about"), href: "/a-propos" },
               ].map((link, i) => (
                 <li key={i}>

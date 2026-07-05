@@ -14,6 +14,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { Colors } from '@/constants/colors'
 import { useLanguage } from '@/hooks/useLanguage'
+import { SHARE_BASE_URL } from '@/constants/config'
 
 export default function CampaignDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -49,7 +50,7 @@ export default function CampaignDetailScreen() {
   }, [id, profile?.id])
 
   const shareUrl = trackedLink
-    ? `https://tamma.me/r/${trackedLink.short_code || trackedLink.id}`
+    ? `${SHARE_BASE_URL}/r/${trackedLink.short_code || trackedLink.id}`
     : null
 
   async function handleCopy() {

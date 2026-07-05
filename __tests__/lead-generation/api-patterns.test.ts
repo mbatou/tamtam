@@ -36,7 +36,7 @@ describe("POST /api/landing-pages — Pattern Audit", () => {
   });
 
   it("checks session auth before processing", () => {
-    expect(src).toContain("auth.getSession");
+    expect(src).toContain("auth.getUser");
     expect(src).toContain("status: 401");
   });
 
@@ -182,7 +182,7 @@ describe("GET/PUT /api/admin/campaigns/leads — Pattern Audit", () => {
   });
 
   it("requires auth", () => {
-    expect(src).toContain("auth.getSession");
+    expect(src).toContain("auth.getUser");
     expect(src).toContain("status: 401");
   });
 

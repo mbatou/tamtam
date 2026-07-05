@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
@@ -30,11 +30,19 @@ export default function BrandPickerPage() {
   const [loading, setLoading] = useState(true);
   const [processingInvite, setProcessingInvite] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchWorkspaces();
-  }, []);
+  const handleSelect = useCallback(async (brandId: string) => {
+    document.cookie = `${ACTIVE_BRAND_COOKIE}=${brandId}; max-age=${7 * 24 * 60 * 60}; path=/`;
 
-  async function fetchWorkspaces() {
+    fetch("/api/brand/switch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ brandId }),
+    }).catch(() => {});
+
+    router.push("/admin/dashboard");
+  }, [router]);
+
+  const fetchWorkspaces = useCallback(async () => {
     const res = await fetch("/api/brand/workspaces");
     if (!res.ok) {
       router.push("/login");
@@ -48,19 +56,11 @@ export default function BrandPickerPage() {
     if (data.brands.length === 1 && (!data.pending || data.pending.length === 0)) {
       handleSelect(data.brands[0].id);
     }
-  }
+  }, [router, handleSelect]);
 
-  async function handleSelect(brandId: string) {
-    document.cookie = `${ACTIVE_BRAND_COOKIE}=${brandId}; max-age=${7 * 24 * 60 * 60}; path=/`;
-
-    fetch("/api/brand/switch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ brandId }),
-    }).catch(() => {});
-
-    router.push("/admin/dashboard");
-  }
+  useEffect(() => {
+    fetchWorkspaces();
+  }, [fetchWorkspaces]);
 
   async function handleAccept(invitationId: string) {
     setProcessingInvite(invitationId);
