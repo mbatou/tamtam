@@ -15,6 +15,11 @@ export const t = {
     resetPasswordSubtitle: 'Entre ton email pour recevoir un lien de réinitialisation.',
     resetEmailSent: 'Email envoyé ! Vérifie ta boîte de réception.',
     back: 'Retour',
+    orSeparator: 'ou',
+    emailPlaceholder: 'ton@email.com',
+    passwordPlaceholder: 'Minimum 6 caractères',
+    namePlaceholder: 'Prénom et nom',
+    tagline: 'Gagne en partageant',
 
     // Navigation (matches PWA EchoBottomNav)
     navPulse: 'Pulse',
@@ -34,6 +39,7 @@ export const t = {
     rythmesJoined: 'Rythmes rejoints',
     myRythmes: 'Mes Rythmes',
     seeAll: 'Tout voir',
+    moreAvailable: 'de plus',
     discover: 'Découvrir',
     acceptRythme: 'Accepter le Rythme',
     accepting: 'Acceptation...',
@@ -50,20 +56,33 @@ export const t = {
     tabMine: 'Mes Rythmes',
     tabDone: 'Terminés',
     noAvailableRythmes: 'Aucun rythme disponible',
+    noActiveRythmes: 'Aucun rythme actif',
     clicks: 'clics',
     available: 'disponible',
     perConversion: '/ conversion',
     perClick: '/ clic',
+    perAction: 'par action',
     remaining: 'restant',
     noFinished: 'Aucun rythme terminé',
     finishedHint: 'Les rythmes terminés apparaîtront ici.',
+    newBadge: 'Nouveau',
+    statusActive: 'Actif',
+    acceptError: "Impossible d'accepter le rythme. Réessaie.",
+    cpaHint: 'Campagne CPA — Tu gagnes à chaque conversion',
+    awarenessHint: 'Campagne Notoriété — Partage le visuel + lien ensemble',
 
     // Earnings (matches PWA echo/earnings)
     earningsTitle: 'Mes Gains',
     totalEarned: 'Total gagné',
     pendingEarnings: 'Gains en cours',
+    totalAll: 'Gains totaux',
+    processing: 'Retrait en cours de traitement...',
     history: 'Historique des retraits',
     noWithdraw: 'Aucun retrait effectué.',
+    withdrawOnWeb: "Le retrait s'effectue sur le site",
+
+    // Campaign detail
+    budget: 'Budget',
 
     // Share
     shareTitle: 'Partage ce lien sur tes réseaux',
@@ -79,6 +98,7 @@ export const t = {
     days: 'jours',
     paymentMethod: 'Moyen de paiement',
     balance: 'Solde',
+    city: 'Ville',
     inviteFriends: 'Inviter des amis',
     shareWhatsApp: 'Partager sur WhatsApp',
 
@@ -93,6 +113,8 @@ export const t = {
     failed: 'Échoué',
     error: 'Erreur',
     preparing: 'Préparation...',
+    loadError: 'Une erreur est survenue',
+    retry: 'Réessayer',
 
     // Settings
     settings: 'Paramètres',
@@ -100,6 +122,7 @@ export const t = {
     notifications: 'Notifications',
     smsNotifications: 'Notifications SMS',
     pushNotifications: 'Notifications Push',
+    pushComingSoon: 'Notifications push — bientôt disponible',
     signOut: 'Se déconnecter',
     version: 'Version',
     french: 'Français',
@@ -126,6 +149,11 @@ export const t = {
     resetPasswordSubtitle: 'Enter your email to receive a reset link.',
     resetEmailSent: 'Email sent! Check your inbox.',
     back: 'Back',
+    orSeparator: 'or',
+    emailPlaceholder: 'your@email.com',
+    passwordPlaceholder: 'Minimum 6 characters',
+    namePlaceholder: 'First and last name',
+    tagline: 'Earn by sharing',
 
     // Navigation
     navPulse: 'Pulse',
@@ -145,6 +173,7 @@ export const t = {
     rythmesJoined: 'Rythmes joined',
     myRythmes: 'My Rythmes',
     seeAll: 'See all',
+    moreAvailable: 'more',
     discover: 'Discover',
     acceptRythme: 'Accept Rythme',
     accepting: 'Accepting...',
@@ -161,20 +190,33 @@ export const t = {
     tabMine: 'My Rythmes',
     tabDone: 'Done',
     noAvailableRythmes: 'No rythmes available',
+    noActiveRythmes: 'No active rythmes',
     clicks: 'clicks',
     available: 'available',
     perConversion: '/ conversion',
     perClick: '/ click',
+    perAction: 'per action',
     remaining: 'remaining',
     noFinished: 'No finished rythmes',
     finishedHint: 'Finished rythmes will appear here.',
+    newBadge: 'New',
+    statusActive: 'Active',
+    acceptError: 'Could not accept the rythme. Please try again.',
+    cpaHint: 'CPA Campaign — You earn on each conversion',
+    awarenessHint: 'Awareness Campaign — Share the visual + link together',
 
     // Earnings
     earningsTitle: 'My Earnings',
     totalEarned: 'Total earned',
     pendingEarnings: 'Pending earnings',
+    totalAll: 'Total earnings',
+    processing: 'Withdrawal being processed...',
     history: 'Withdrawal history',
     noWithdraw: 'No withdrawals yet.',
+    withdrawOnWeb: 'Withdrawals are made on the website',
+
+    // Campaign detail
+    budget: 'Budget',
 
     // Share
     shareTitle: 'Share this link on your networks',
@@ -190,6 +232,7 @@ export const t = {
     days: 'days',
     paymentMethod: 'Payment method',
     balance: 'Balance',
+    city: 'City',
     inviteFriends: 'Invite friends',
     shareWhatsApp: 'Share on WhatsApp',
 
@@ -204,6 +247,8 @@ export const t = {
     failed: 'Failed',
     error: 'Error',
     preparing: 'Preparing...',
+    loadError: 'Something went wrong',
+    retry: 'Retry',
 
     // Settings
     settings: 'Settings',
@@ -211,6 +256,7 @@ export const t = {
     notifications: 'Notifications',
     smsNotifications: 'SMS Notifications',
     pushNotifications: 'Push Notifications',
+    pushComingSoon: 'Push notifications — coming soon',
     signOut: 'Sign out',
     version: 'Version',
     french: 'Français',

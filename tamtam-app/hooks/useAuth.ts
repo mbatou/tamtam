@@ -1,39 +1,37 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { api } from '@/lib/api'
 import { Session } from '@supabase/supabase-js'
+import type { Database } from '@/lib/database.types'
 
-interface Profile {
-  id: string
-  name: string
-  role: string
-  balance: number
-  available_balance: number
-  pending_balance: number
-  total_valid_clicks: number
-  total_earned: number
-  city: string | null
-  phone: string | null
-}
+type Profile = Pick<
+  Database['public']['Tables']['users']['Row'],
+  | 'id'
+  | 'name'
+  | 'role'
+  | 'balance'
+  | 'available_balance'
+  | 'pending_balance'
+  | 'total_valid_clicks'
+  | 'total_earned'
+  | 'city'
+  | 'phone'
+>
 
 export function useAuth() {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const fetchProfile = useCallback(async (userId: string) => {
+  const fetchProfile = useCallback(async (_userId: string) => {
     try {
-      const { data } = await supabase
-        .from('users')
-        .select(`
-          id, name, role, balance, available_balance,
-          pending_balance, total_valid_clicks, total_earned,
-          city, phone
-        `)
-        .eq('id', userId)
-        .single()
-
+      // GET /api/echo/user returns the full users row for the bearer token's
+      // user; keep only the Profile fields the app relies on.
+      const data = await api<Profile>('/api/echo/user')
       setProfile(data)
-    } catch {}
+    } catch (err) {
+      console.error('[useAuth] fetchProfile failed:', err)
+    }
     setLoading(false)
   }, [])
 

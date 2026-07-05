@@ -1,37 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { requireAuthResponse } from "@/lib/api/auth";
 import { normalizeCity } from "@/lib/cities";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  // Try cookie-based session first, then fall back to Authorization header
-  let userId: string | null = null;
+  // Cookie-based session, with Bearer token fallback (mobile app / login
+  // before cookies sync) — both handled by the auth kernel.
+  const auth = await requireAuthResponse(undefined, request);
+  if (auth instanceof NextResponse) return auth;
+  const { supabase } = auth;
+  const userId = auth.authUser.id;
 
-  const authClient = createClient();
-  const {
-    data: { user: authUser },
-  } = await authClient.auth.getUser();
-
-  if (authUser) {
-    userId = authUser.id;
-  } else {
-    // Fall back to Bearer token (used during login before cookies sync)
-    const authHeader = request.headers.get("authorization");
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.slice(7);
-      const { data: { user } } = await authClient.auth.getUser(token);
-      if (user) {
-        userId = user.id;
-      }
-    }
-  }
-
-  if (!userId) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-  }
-
-  const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("users")
     .select("*")
@@ -45,14 +25,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  const authClient = createClient();
-  const {
-    data: { user: authUser },
-  } = await authClient.auth.getUser();
-
-  if (!authUser) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-  }
+  const auth = await requireAuthResponse(undefined, request);
+  if (auth instanceof NextResponse) return auth;
+  const { authUser, supabase } = auth;
 
   const body = await request.json();
   const { name, phone, city, mobile_money_provider, platforms, primary_platform, audience_size_range } = body;
@@ -70,7 +45,6 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Aucune modification" }, { status: 400 });
   }
 
-  const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("users")
     .update(updates)

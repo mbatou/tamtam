@@ -14,8 +14,29 @@ import { Colors } from '@/constants/colors'
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
 import { useLanguage } from '@/hooks/useLanguage'
 
+// PWA auth field look: label above a #141420 input with a white/[0.07]
+// border, rounded-xl, placeholder at white/20 (components/auth/FormField).
+const labelStyle = {
+  fontFamily: 'DMSans_600SemiBold',
+  fontSize: 12,
+  color: 'rgba(255,255,255,0.5)',
+  marginBottom: 8,
+} as const
+
+const inputStyle = {
+  backgroundColor: Colors.night3,
+  borderWidth: 1,
+  borderColor: Colors.inputBorder,
+  borderRadius: 12,
+  paddingHorizontal: 16,
+  paddingVertical: 12,
+  color: Colors.textPrimary,
+  fontFamily: 'DMSans_400Regular',
+  fontSize: 14,
+} as const
+
 export default function LoginScreen() {
-  const { t, lang } = useLanguage()
+  const { t } = useLanguage()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -72,7 +93,7 @@ export default function LoginScreen() {
               marginTop: 4,
             }}
           >
-            {lang === 'fr' ? 'Gagne en partageant' : 'Earn by sharing'}
+            {t.tagline}
           </Text>
         </View>
 
@@ -96,79 +117,75 @@ export default function LoginScreen() {
               fontFamily: 'DMSans_400Regular',
             }}
           >
-            ou
+            {t.orSeparator}
           </Text>
           <View
             style={{ flex: 1, height: 1, backgroundColor: Colors.border }}
           />
         </View>
 
+        <Text style={labelStyle}>{t.email}</Text>
         <TextInput
           value={email}
           onChangeText={setEmail}
-          placeholder={t.email}
-          placeholderTextColor={Colors.textMuted}
+          placeholder={t.emailPlaceholder}
+          placeholderTextColor={Colors.textGhost}
           keyboardType="email-address"
           autoCapitalize="none"
-          style={{
-            backgroundColor: Colors.night2,
-            borderWidth: 1,
-            borderColor: Colors.border,
-            borderRadius: 12,
-            padding: 14,
-            color: Colors.textPrimary,
-            fontFamily: 'DMSans_400Regular',
-            fontSize: 15,
-            marginBottom: 12,
-          }}
+          style={{ ...inputStyle, marginBottom: 16 }}
         />
 
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 8,
+          }}
+        >
+          <Text style={{ ...labelStyle, marginBottom: 0 }}>{t.password}</Text>
+          <TouchableOpacity onPress={() => router.push('/auth/forgot-password')}>
+            <Text
+              style={{
+                color: 'rgba(255,255,255,0.35)',
+                fontSize: 12,
+                fontFamily: 'DMSans_400Regular',
+              }}
+            >
+              {t.forgotPassword}
+            </Text>
+          </TouchableOpacity>
+        </View>
         <TextInput
           value={password}
           onChangeText={setPassword}
-          placeholder={t.password}
-          placeholderTextColor={Colors.textMuted}
+          placeholder={t.passwordPlaceholder}
+          placeholderTextColor={Colors.textGhost}
           secureTextEntry
-          style={{
-            backgroundColor: Colors.night2,
-            borderWidth: 1,
-            borderColor: Colors.border,
-            borderRadius: 12,
-            padding: 14,
-            color: Colors.textPrimary,
-            fontFamily: 'DMSans_400Regular',
-            fontSize: 15,
-            marginBottom: 8,
-          }}
+          style={{ ...inputStyle, marginBottom: 20 }}
         />
 
-        <TouchableOpacity
-          onPress={() => router.push('/auth/forgot-password')}
-          style={{ alignSelf: 'flex-end', marginBottom: 20 }}
-        >
-          <Text
-            style={{
-              color: Colors.textMuted,
-              fontSize: 13,
-              fontFamily: 'DMSans_400Regular',
-            }}
-          >
-            {t.forgotPassword}
-          </Text>
-        </TouchableOpacity>
-
         {error ? (
-          <Text
+          <View
             style={{
-              color: Colors.error,
-              fontSize: 13,
-              fontFamily: 'DMSans_400Regular',
-              marginBottom: 12,
-              textAlign: 'center',
+              backgroundColor: Colors.errorBg,
+              borderWidth: 1,
+              borderColor: 'rgba(239,68,68,0.2)',
+              borderRadius: 12,
+              padding: 12,
+              marginBottom: 16,
             }}
           >
-            {error}
-          </Text>
+            <Text
+              style={{
+                color: Colors.error,
+                fontSize: 13,
+                fontFamily: 'DMSans_400Regular',
+              }}
+            >
+              {error}
+            </Text>
+          </View>
         ) : null}
 
         <TouchableOpacity
@@ -177,8 +194,10 @@ export default function LoginScreen() {
           style={{
             backgroundColor: Colors.orange,
             borderRadius: 12,
-            padding: 16,
+            paddingVertical: 14,
+            minHeight: 48,
             alignItems: 'center',
+            justifyContent: 'center',
             opacity: loading ? 0.6 : 1,
           }}
         >
@@ -186,7 +205,7 @@ export default function LoginScreen() {
             style={{
               color: '#fff',
               fontFamily: 'DMSans_600SemiBold',
-              fontSize: 15,
+              fontSize: 14,
             }}
           >
             {loading ? '...' : t.login}
@@ -195,17 +214,17 @@ export default function LoginScreen() {
 
         <TouchableOpacity
           onPress={() => router.push('/auth/register')}
-          style={{ alignItems: 'center', marginTop: 24 }}
+          style={{ alignItems: 'center', marginTop: 24, minHeight: 44, justifyContent: 'center' }}
         >
           <Text
             style={{
-              color: Colors.textMuted,
+              color: Colors.textFaint,
               fontSize: 14,
               fontFamily: 'DMSans_400Regular',
             }}
           >
             {t.noAccount}{' '}
-            <Text style={{ color: Colors.orange }}>{t.register}</Text>
+            <Text style={{ color: Colors.teal, fontFamily: 'DMSans_600SemiBold' }}>{t.register}</Text>
           </Text>
         </TouchableOpacity>
       </ScrollView>

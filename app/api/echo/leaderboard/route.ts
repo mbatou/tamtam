@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { requireAuthResponse } from "@/lib/api/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -21,14 +21,9 @@ function getStartOfMonth(): string {
 }
 
 export async function GET(request: NextRequest) {
-  const authClient = createClient();
-  const {
-    data: { user: authUser },
-  } = await authClient.auth.getUser();
-
-  if (!authUser) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-  }
+  const auth = await requireAuthResponse(undefined, request);
+  if (auth instanceof NextResponse) return auth;
+  const { authUser, supabase } = auth;
 
   const period = request.nextUrl.searchParams.get("period") || "weekly";
   const sinceDate =
@@ -37,8 +32,6 @@ export async function GET(request: NextRequest) {
       : period === "monthly"
         ? getStartOfMonth()
         : getStartOfWeek();
-
-  const supabase = createServiceClient();
 
   // Get ALL results (no limit) to compute user rank
   const { data: allResults, error } = await supabase.rpc("get_leaderboard", {

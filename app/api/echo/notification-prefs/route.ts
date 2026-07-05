@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { requireAuthResponse } from "@/lib/api/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -11,14 +11,11 @@ const ALLOWED_KEYS = [
   "streak_danger",
 ];
 
-export async function GET() {
-  const authClient = createClient();
-  const { data: { user: authUser } } = await authClient.auth.getUser();
-  if (!authUser) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-  }
+export async function GET(request: NextRequest) {
+  const auth = await requireAuthResponse(undefined, request);
+  if (auth instanceof NextResponse) return auth;
+  const { authUser, supabase } = auth;
 
-  const supabase = createServiceClient();
   const { data } = await supabase
     .from("users")
     .select("notification_prefs")
@@ -34,11 +31,9 @@ export async function GET() {
 }
 
 export async function PUT(request: NextRequest) {
-  const authClient = createClient();
-  const { data: { user: authUser } } = await authClient.auth.getUser();
-  if (!authUser) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-  }
+  const auth = await requireAuthResponse(undefined, request);
+  if (auth instanceof NextResponse) return auth;
+  const { authUser, supabase } = auth;
 
   const body = await request.json();
   const prefs: Record<string, boolean> = {};
@@ -48,8 +43,6 @@ export async function PUT(request: NextRequest) {
       prefs[key] = Boolean(body[key]);
     }
   }
-
-  const supabase = createServiceClient();
 
   // Handle SMS opt-out separately (direct column, not JSONB)
   if ("sms_optout" in body) {

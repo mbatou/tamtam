@@ -1,21 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { requireAuthResponse } from "@/lib/api/auth";
 import { acceptCampaignSchema } from "@/lib/validations";
 import { trackConversion } from "@/lib/tracking/track-conversion";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const authClient = createClient();
-  const {
-    data: { user: authUser },
-  } = await authClient.auth.getUser();
-
-  if (!authUser) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-  }
-
-  const supabase = createServiceClient();
+export async function GET(request: NextRequest) {
+  const auth = await requireAuthResponse(undefined, request);
+  if (auth instanceof NextResponse) return auth;
+  const { authUser, supabase } = auth;
   const { data, error } = await supabase
     .from("tracked_links")
     .select("*, campaigns(*)")
@@ -30,14 +23,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const authClient = createClient();
-  const {
-    data: { user: authUser },
-  } = await authClient.auth.getUser();
-
-  if (!authUser) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-  }
+  const auth = await requireAuthResponse(undefined, request);
+  if (auth instanceof NextResponse) return auth;
+  const { authUser, supabase } = auth;
 
   const body = await request.json();
   const parsed = acceptCampaignSchema.safeParse(body);
@@ -47,8 +35,6 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
-
-  const supabase = createServiceClient();
 
   // Verify campaign is active before accepting
   const { data: campaign } = await supabase

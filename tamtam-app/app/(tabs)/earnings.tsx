@@ -1,27 +1,32 @@
-import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity } from 'react-native'
+import { View, Text, SafeAreaView, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator, Linking } from 'react-native'
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { api } from '@/lib/api'
 import { Colors } from '@/constants/colors'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
+import { formatFCFA } from '@/constants/config'
 
 export default function EarningsScreen() {
   const { profile, refetchProfile } = useAuth()
   const { t } = useLanguage()
   const [payouts, setPayouts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
 
   const loadPayouts = useCallback(async () => {
     if (!profile?.id) return
-    const { data } = await supabase
-      .from('wave_payouts')
-      .select('id, amount, status, provider, created_at')
-      .eq('echo_id', profile.id)
-      .order('created_at', { ascending: false })
-      .limit(20)
-
-    setPayouts(data || [])
+    try {
+      // GET /api/echo/payouts → full payout rows, newest first.
+      // Balance figures (available/pending/total_earned) stay on the profile
+      // from useAuth (/api/echo/user) — /api/echo/balance lacks total_earned.
+      const data = await api<any[]>('/api/echo/payouts')
+      setLoadError(false)
+      setPayouts((data || []).slice(0, 20))
+    } catch (err) {
+      console.error('[Earnings] loadPayouts failed:', err)
+      setLoadError(true)
+    }
     setLoading(false)
   }, [profile?.id])
 
@@ -35,16 +40,48 @@ export default function EarningsScreen() {
     setRefreshing(false)
   }
 
-  const formatFCFA = (n: number) => n.toLocaleString('fr-FR') + ' F'
   const balance = profile?.available_balance || 0
   const pendingBalance = profile?.pending_balance || 0
   const totalEarned = profile?.total_earned || 0
   const hasPendingPayout = payouts.some((p: any) => p.status === 'pending' || p.status === 'processing')
 
+  // Mirrors the PWA payout pill palette (teal/orange/red at 15% bg, 20% border)
   function getStatusStyle(status: string) {
-    if (status === 'sent') return { bg: Colors.successBg, text: Colors.teal, border: Colors.teal + '33', label: t.sent }
-    if (status === 'pending' || status === 'processing') return { bg: Colors.orangeMuted, text: Colors.orange, border: Colors.orange + '33', label: t.pending }
+    if (status === 'sent') return { bg: Colors.badgeTealBg, text: Colors.teal, border: Colors.heroTealBorder, label: t.sent }
+    if (status === 'pending' || status === 'processing') return { bg: Colors.badgeOrangeBg, text: Colors.orange, border: Colors.badgeOrangeBorder, label: t.pending }
     return { bg: Colors.errorBg, text: Colors.error, border: 'rgba(239,68,68,0.2)', label: t.failed }
+  }
+
+  if (loadError) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.textPrimary, marginBottom: 12, textAlign: 'center' }}>
+            {t.loadError}
+          </Text>
+          <TouchableOpacity
+            onPress={loadPayouts}
+            style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10 }}
+          >
+            <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 13, color: '#fff' }}>{t.retry}</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    )
+  }
+
+  if (loading) {
+    // Skeleton blocks mirroring the PWA earnings loading state
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
+        <View style={{ padding: 16, paddingTop: 20, gap: 12 }}>
+          <View style={{ height: 24, width: 112, borderRadius: 12, backgroundColor: Colors.card }} />
+          <View style={{ height: 144, borderRadius: 16, backgroundColor: Colors.card }} />
+          <View style={{ height: 24, width: 160, borderRadius: 12, backgroundColor: Colors.card }} />
+          <View style={{ height: 64, borderRadius: 12, backgroundColor: Colors.card }} />
+        </View>
+      </SafeAreaView>
+    )
   }
 
   return (
@@ -57,17 +94,17 @@ export default function EarningsScreen() {
           {t.earningsTitle}
         </Text>
 
-        {/* Balance card */}
+        {/* Balance card (PWA .echo-earnings-bg hero) */}
         <View style={{
-          backgroundColor: Colors.tealMuted, borderRadius: 16, padding: 20, marginBottom: 20,
-          borderWidth: 1, borderColor: Colors.teal + '33',
+          backgroundColor: Colors.heroTealBg, borderRadius: 16, padding: 20, marginBottom: 20,
+          borderWidth: 1, borderColor: Colors.heroTealBorder,
         }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <View>
               <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 10, color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 }}>
                 {t.availableBalance}
               </Text>
-              <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 28, color: Colors.orange }}>
+              <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 30, color: Colors.orange, letterSpacing: -0.75 }}>
                 {formatFCFA(balance)}
               </Text>
             </View>
@@ -84,31 +121,41 @@ export default function EarningsScreen() {
           {hasPendingPayout ? (
             <View style={{
               marginTop: 12, padding: 12, borderRadius: 12,
-              backgroundColor: Colors.tealMuted, borderWidth: 1, borderColor: Colors.teal + '33',
+              backgroundColor: Colors.tealMuted, borderWidth: 1, borderColor: Colors.heroTealBorder,
               flexDirection: 'row', alignItems: 'center', gap: 8,
             }}>
-              <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.teal }}>
-                ⏳ {t.pending}...
+              <ActivityIndicator size="small" color={Colors.teal} />
+              <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 13, color: Colors.teal, flex: 1 }}>
+                {t.processing}
               </Text>
             </View>
           ) : (
-            <TouchableOpacity
-              disabled={balance < 500}
-              style={{
-                marginTop: 12, paddingVertical: 12, borderRadius: 12, alignItems: 'center',
-                backgroundColor: balance >= 500 ? Colors.teal : 'rgba(255,255,255,0.05)',
-                borderWidth: balance >= 500 ? 0 : 1,
-                borderColor: Colors.borderActive,
-                opacity: balance >= 500 ? 1 : 0.5,
-              }}
-            >
+            <>
+              <TouchableOpacity
+                disabled={balance < 500}
+                onPress={() => Linking.openURL('https://tamma.me/earnings')}
+                style={{
+                  marginTop: 12, paddingVertical: 12, minHeight: 44, borderRadius: 12,
+                  alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: balance >= 500 ? Colors.teal : Colors.btnGhostBg,
+                  borderWidth: balance >= 500 ? 0 : 1,
+                  borderColor: Colors.btnGhostBorder,
+                }}
+              >
+                <Text style={{
+                  fontFamily: 'DMSans_600SemiBold', fontSize: 14,
+                  color: balance >= 500 ? '#fff' : Colors.textGhost,
+                }}>
+                  {t.withdraw}
+                </Text>
+              </TouchableOpacity>
               <Text style={{
-                fontFamily: 'DMSans_600SemiBold', fontSize: 14,
-                color: balance >= 500 ? '#fff' : Colors.textGhost,
+                fontFamily: 'DMSans_400Regular', fontSize: 10, color: Colors.textFaint,
+                textAlign: 'center', marginTop: 8,
               }}>
-                {t.withdraw}
+                {t.withdrawOnWeb}
               </Text>
-            </TouchableOpacity>
+            </>
           )}
         </View>
 
@@ -116,14 +163,26 @@ export default function EarningsScreen() {
         {pendingBalance > 0 && (
           <View style={{
             borderRadius: 16, padding: 20, marginBottom: 20,
-            backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.orange + '33',
+            backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.badgeOrangeBorder,
           }}>
-            <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 10, color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 }}>
-              {t.pendingEarnings}
-            </Text>
-            <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 24, color: Colors.orange }}>
-              {formatFCFA(pendingBalance)}
-            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <View>
+                <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 10, color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 }}>
+                  {t.pendingEarnings}
+                </Text>
+                <Text style={{ fontFamily: 'Syne_800ExtraBold', fontSize: 24, color: Colors.orange }}>
+                  {formatFCFA(pendingBalance)}
+                </Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={{ fontFamily: 'DMSans_400Regular', fontSize: 10, color: Colors.textFaint }}>
+                  {t.totalAll}
+                </Text>
+                <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 14, color: Colors.textSecondary }}>
+                  {formatFCFA(balance + pendingBalance)}
+                </Text>
+              </View>
+            </View>
           </View>
         )}
 
@@ -158,7 +217,7 @@ export default function EarningsScreen() {
                     width: 32, height: 32, borderRadius: 16,
                     backgroundColor: style.bg, alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <Text style={{ fontSize: 12 }}>
+                    <Text style={{ fontSize: 12, color: style.text }}>
                       {payout.status === 'sent' ? '✓' : payout.status === 'pending' || payout.status === 'processing' ? '⏳' : '✕'}
                     </Text>
                   </View>
@@ -172,7 +231,7 @@ export default function EarningsScreen() {
                   </View>
                 </View>
                 <View style={{
-                  backgroundColor: style.bg, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2,
+                  backgroundColor: style.bg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2,
                   borderWidth: 1, borderColor: style.border,
                 }}>
                   <Text style={{ fontFamily: 'DMSans_600SemiBold', fontSize: 10, color: style.text }}>

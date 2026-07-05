@@ -1,17 +1,13 @@
 import { NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { requireAuthResponse } from "@/lib/api/auth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const authClient = createClient();
-  const { data: { user: authUser } } = await authClient.auth.getUser();
-  if (!authUser) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-  }
-
-  const supabase = createServiceClient();
-  const userId = authUser.id;
+export async function GET(request: Request) {
+  const auth = await requireAuthResponse(undefined, request);
+  if (auth instanceof NextResponse) return auth;
+  const { supabase } = auth;
+  const userId = auth.authUser.id;
 
   const { data: links } = await supabase
     .from("tracked_links")
