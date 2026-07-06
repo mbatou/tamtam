@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { api } from '@/lib/api'
+import { unregisterPush } from '@/lib/push'
 import { Session } from '@supabase/supabase-js'
 import type { Database } from '@/lib/database.types'
 
@@ -17,6 +18,10 @@ type Profile = Pick<
   | 'city'
   | 'phone'
   | 'created_at'
+  | 'referral_code'
+  | 'is_founding_echo'
+  | 'sms_optout'
+  | 'mobile_money_provider'
 >
 
 export function useAuth() {
@@ -63,6 +68,9 @@ export function useAuth() {
   }, [fetchProfile])
 
   async function signOut() {
+    // Best-effort: stop this device from receiving pushes for the account
+    // BEFORE the session (and its Bearer token) goes away.
+    await unregisterPush()
     await supabase.auth.signOut()
   }
 

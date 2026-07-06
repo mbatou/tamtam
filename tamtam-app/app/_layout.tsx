@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Stack } from 'expo-router'
+import { Stack, router, type Href } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
+import * as Notifications from 'expo-notifications'
 import {
   useFonts,
   DMSans_400Regular,
@@ -14,6 +15,29 @@ import { supabase } from '@/lib/supabase'
 import { Colors } from '@/constants/colors'
 import { View, ActivityIndicator } from 'react-native'
 import type { Session } from '@supabase/supabase-js'
+
+// Foreground behavior: still show the banner + play the sound while the app
+// is open (default would silently swallow the notification).
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+})
+
+// Server pushes carry PWA-style paths in data.url — map them onto the
+// mobile tab routes. Anything unknown lands on the dashboard tab.
+const PUSH_URL_TO_ROUTE: Record<string, Href> = {
+  '/rythmes': '/(tabs)/rythmes',
+  '/earnings': '/(tabs)/earnings',
+  '/dashboard': '/(tabs)',
+}
+
+function routeForPushUrl(url: unknown): Href {
+  return (typeof url === 'string' && PUSH_URL_TO_ROUTE[url]) || '/(tabs)'
+}
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false)
@@ -37,7 +61,20 @@ export default function RootLayout() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(() => {})
 
-    return () => subscription.unsubscribe()
+    // Notification tap → navigate to the tab the push points at.
+    const responseSub = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const data = response.notification.request.content.data as
+          | Record<string, unknown>
+          | undefined
+        router.replace(routeForPushUrl(data?.url))
+      }
+    )
+
+    return () => {
+      subscription.unsubscribe()
+      responseSub.remove()
+    }
   }, [])
 
   if (!loaded || !ready) {

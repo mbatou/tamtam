@@ -114,6 +114,39 @@ export const t = {
     inviteFriends: 'Inviter des amis',
     shareWhatsApp: 'Partager sur WhatsApp',
 
+    // Profile — edit form (matches PWA ProfileEditForm)
+    editProfile: 'Modifier le profil',
+    nameRequired: 'Nom *',
+    nameRequiredError: 'Le nom est requis.',
+    phone: 'Téléphone',
+    save: 'Enregistrer',
+    saving: 'Enregistrement...',
+    profileUpdated: 'Profil mis à jour avec succès !',
+
+    // Profile — referral (matches PWA ReferralCard)
+    inviteDesc: 'Invite tes amis sur Tamtam et gagne 150 FCFA pour chaque ami qui rejoint !',
+    inviteMessage: "Rejoins-moi sur Tamtam et gagne de l'argent en partageant des liens sur WhatsApp ! 👉 https://tamma.me/register?ref={code}",
+    inviteCta: 'Inviter',
+    referralCodeLabel: 'Ton code de parrainage',
+    referralCopied: 'Lien de parrainage copié !',
+
+    // Profile — founding echo (matches PWA FoundingEchoBadge)
+    foundingEchoTitle: 'Écho Fondateur',
+    foundingEchoDesc: 'Fait partie des premiers 1 152 Échos de Tamtam. Ce badge est exclusif et ne sera jamais redistribué.',
+
+    // Profile — password (matches PWA PasswordSection)
+    changePassword: 'Changer le mot de passe',
+    newPassword: 'Nouveau mot de passe',
+    confirmPassword: 'Confirmer le mot de passe',
+    minChars: 'Min. 6 caractères',
+    repeatPassword: 'Répétez le mot de passe',
+    passwordMin: 'Le mot de passe doit contenir au moins 6 caractères.',
+    passwordMismatch: 'Les mots de passe ne correspondent pas.',
+    passwordUpdated: 'Mot de passe mis à jour !',
+    passwordStrong: "Utilisez un mot de passe fort d'au moins 6 caractères.",
+    updating: 'Mise à jour...',
+    update: 'Mettre à jour',
+
     // Common
     earned: 'gagné',
     wave: 'Wave',
@@ -127,14 +160,27 @@ export const t = {
     preparing: 'Préparation...',
     loadError: 'Une erreur est survenue',
     retry: 'Réessayer',
+    networkRetry: 'Erreur réseau. Veuillez réessayer.',
 
     // Settings
     settings: 'Paramètres',
     language: 'Langue',
     notifications: 'Notifications',
     smsNotifications: 'Notifications SMS',
-    pushNotifications: 'Notifications Push',
-    pushComingSoon: 'Notifications push — bientôt disponible',
+    pushNotifications: 'Notifications push',
+    statusEnabled: 'Activées',
+    statusDisabled: 'Désactivées',
+    pushEnabledMsg: 'Notifications activées',
+    pushDisabledMsg: 'Notifications désactivées',
+    pushPrefsTitle: 'Types de notifications',
+    prefNewCampaign: 'Nouvelles campagnes',
+    prefShareReminder: 'Rappels de partage',
+    prefInactivity: 'Réactivation',
+    prefCampaignEnding: 'Campagnes qui expirent',
+    pushDenied: 'Notifications bloquées. Autorise-les dans les réglages de ton téléphone.',
+    openSettings: 'Ouvrir les réglages',
+    pushUnavailable: "Notifications push indisponibles sur cette version de l'app.",
+    smsDesc: 'Recevoir les SMS de TamTam (campagnes, paiements)',
     signOut: 'Se déconnecter',
     version: 'Version',
     french: 'Français',
@@ -260,6 +306,39 @@ export const t = {
     inviteFriends: 'Invite friends',
     shareWhatsApp: 'Share on WhatsApp',
 
+    // Profile — edit form (matches PWA ProfileEditForm)
+    editProfile: 'Edit profile',
+    nameRequired: 'Name *',
+    nameRequiredError: 'Name is required.',
+    phone: 'Phone',
+    save: 'Save',
+    saving: 'Saving...',
+    profileUpdated: 'Profile updated successfully!',
+
+    // Profile — referral (matches PWA ReferralCard)
+    inviteDesc: 'Invite your friends to Tamtam and earn 150 FCFA for each friend who joins!',
+    inviteMessage: 'Join me on Tamtam and earn money by sharing links on WhatsApp! 👉 https://tamma.me/register?ref={code}',
+    inviteCta: 'Invite',
+    referralCodeLabel: 'Your referral code',
+    referralCopied: 'Referral link copied!',
+
+    // Profile — founding echo (matches PWA FoundingEchoBadge)
+    foundingEchoTitle: 'Founding Echo',
+    foundingEchoDesc: 'Part of the first 1,152 Tamtam Echos. This badge is exclusive and will never be redistributed.',
+
+    // Profile — password (matches PWA PasswordSection)
+    changePassword: 'Change password',
+    newPassword: 'New password',
+    confirmPassword: 'Confirm password',
+    minChars: 'Min. 6 characters',
+    repeatPassword: 'Repeat password',
+    passwordMin: 'Password must be at least 6 characters.',
+    passwordMismatch: 'Passwords do not match.',
+    passwordUpdated: 'Password updated!',
+    passwordStrong: 'Use a strong password of at least 6 characters.',
+    updating: 'Updating...',
+    update: 'Update',
+
     // Common
     earned: 'earned',
     wave: 'Wave',
@@ -273,14 +352,27 @@ export const t = {
     preparing: 'Preparing...',
     loadError: 'Something went wrong',
     retry: 'Retry',
+    networkRetry: 'Network error. Please try again.',
 
     // Settings
     settings: 'Settings',
     language: 'Language',
     notifications: 'Notifications',
-    smsNotifications: 'SMS Notifications',
-    pushNotifications: 'Push Notifications',
-    pushComingSoon: 'Push notifications — coming soon',
+    smsNotifications: 'SMS notifications',
+    pushNotifications: 'Push notifications',
+    statusEnabled: 'Enabled',
+    statusDisabled: 'Disabled',
+    pushEnabledMsg: 'Notifications enabled',
+    pushDisabledMsg: 'Notifications disabled',
+    pushPrefsTitle: 'Notification types',
+    prefNewCampaign: 'New campaigns',
+    prefShareReminder: 'Share reminders',
+    prefInactivity: 'Re-engagement',
+    prefCampaignEnding: 'Campaigns ending soon',
+    pushDenied: 'Notifications are blocked. Allow them in your phone settings.',
+    openSettings: 'Open settings',
+    pushUnavailable: 'Push notifications are unavailable on this version of the app.',
+    smsDesc: 'Receive TamTam SMS (campaigns, payments)',
     signOut: 'Sign out',
     version: 'Version',
     french: 'Français',
