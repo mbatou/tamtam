@@ -1,5 +1,6 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import webpush from "web-push";
+import { sendExpoPushToUser, hasExpoTokens } from "./expo-push";
 import { getEchoStrings, type EchoLang } from "@/lib/echo-i18n";
 
 export const MAX_DAILY_PUSHES = 2;
@@ -172,16 +173,7 @@ export async function sendSinglePush(
     payload: Record<string, unknown>;
   },
 ): Promise<"sent" | "failed" | "suppressed"> {
-  if (!initVapid()) {
-    await supabase.from("notification_queue").insert({
-      ...entry,
-      campaign_id: entry.campaign_id || null,
-      scheduled_for: new Date().toISOString(),
-      status: "failed",
-      suppression_reason: "vapid_not_configured",
-    });
-    return "failed";
-  }
+  const vapidOk = initVapid();
 
   const canSend = await checkDailyCap(supabase, entry.echo_id);
   if (!canSend) {
@@ -200,7 +192,9 @@ export async function sendSinglePush(
     .select("id, subscription")
     .eq("user_id", entry.echo_id);
 
-  if (!subs || subs.length === 0) {
+  const hasNative = await hasExpoTokens(supabase, entry.echo_id);
+
+  if ((!subs || subs.length === 0) && !hasNative) {
     await supabase.from("notification_queue").insert({
       ...entry,
       campaign_id: entry.campaign_id || null,
@@ -215,19 +209,27 @@ export async function sendSinglePush(
   let anySent = false;
   const expiredSubIds: string[] = [];
 
-  for (const sub of subs) {
-    try {
-      await webpush.sendNotification(
-        sub.subscription as webpush.PushSubscription,
-        JSON.stringify(pushPayload),
-      );
-      anySent = true;
-    } catch (err: unknown) {
-      const pushError = err as { statusCode?: number };
-      if (pushError.statusCode === 410 || pushError.statusCode === 404) {
-        expiredSubIds.push(sub.id);
+  if (vapidOk && subs) {
+    for (const sub of subs) {
+      try {
+        await webpush.sendNotification(
+          sub.subscription as webpush.PushSubscription,
+          JSON.stringify(pushPayload),
+        );
+        anySent = true;
+      } catch (err: unknown) {
+        const pushError = err as { statusCode?: number };
+        if (pushError.statusCode === 410 || pushError.statusCode === 404) {
+          expiredSubIds.push(sub.id);
+        }
       }
     }
+  }
+
+  // Native devices (mobile app) via Expo push
+  if (hasNative) {
+    const expoSent = await sendExpoPushToUser(supabase, entry.echo_id, pushPayload);
+    anySent = anySent || expoSent;
   }
 
   if (expiredSubIds.length > 0) {
@@ -259,24 +261,9 @@ export async function sendSinglePush(
 export async function processNotificationQueue(
   supabase: SupabaseClient,
 ): Promise<{ sent: number; failed: number; suppressed: number }> {
-  if (!initVapid()) {
-    const now = new Date().toISOString();
-    const { data: pending } = await supabase
-      .from("notification_queue")
-      .select("id")
-      .eq("status", "pending")
-      .lte("scheduled_for", now)
-      .limit(200);
-
-    if (pending && pending.length > 0) {
-      await supabase
-        .from("notification_queue")
-        .update({ status: "failed", suppression_reason: "vapid_not_configured" })
-        .in("id", pending.map((n) => n.id));
-    }
-
-    return { sent: 0, failed: pending?.length || 0, suppressed: 0 };
-  }
+  // Web push needs VAPID; native (Expo) delivery works without it, so a
+  // missing VAPID config no longer bulk-fails the queue.
+  const vapidOk = initVapid();
 
   const now = new Date().toISOString();
 
@@ -310,13 +297,15 @@ export async function processNotificationQueue(
       continue;
     }
 
-    // Get push subscriptions for this echo
+    // Get push subscriptions (web) + native tokens for this echo
     const { data: subs } = await supabase
       .from("push_subscriptions")
       .select("id, subscription")
       .eq("user_id", notification.echo_id);
 
-    if (!subs || subs.length === 0) {
+    const hasNative = await hasExpoTokens(supabase, notification.echo_id);
+
+    if ((!subs || subs.length === 0) && !hasNative) {
       await supabase
         .from("notification_queue")
         .update({ status: "suppressed", suppression_reason: "no_push_subscription" })
@@ -328,19 +317,26 @@ export async function processNotificationQueue(
     const pushPayload = buildPayload(notification.type, notification.payload);
     let anySent = false;
 
-    for (const sub of subs) {
-      try {
-        await webpush.sendNotification(
-          sub.subscription as webpush.PushSubscription,
-          JSON.stringify(pushPayload),
-        );
-        anySent = true;
-      } catch (err: unknown) {
-        const pushError = err as { statusCode?: number };
-        if (pushError.statusCode === 410 || pushError.statusCode === 404) {
-          expiredSubIds.push(sub.id);
+    if (vapidOk && subs) {
+      for (const sub of subs) {
+        try {
+          await webpush.sendNotification(
+            sub.subscription as webpush.PushSubscription,
+            JSON.stringify(pushPayload),
+          );
+          anySent = true;
+        } catch (err: unknown) {
+          const pushError = err as { statusCode?: number };
+          if (pushError.statusCode === 410 || pushError.statusCode === 404) {
+            expiredSubIds.push(sub.id);
+          }
         }
       }
+    }
+
+    if (hasNative) {
+      const expoSent = await sendExpoPushToUser(supabase, notification.echo_id, pushPayload);
+      anySent = anySent || expoSent;
     }
 
     if (anySent) {
