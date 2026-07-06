@@ -90,9 +90,9 @@ export default function PulseScreen() {
           </Text>
           <TouchableOpacity
             onPress={loadData}
-            style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10 }}
+            style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10, minHeight: 44, justifyContent: 'center' }}
           >
-            <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 13, color: '#fff' }}>{t.retry}</Text>
+            <Text style={{ ...Typography.button, fontSize: 13 }}>{t.retry}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -129,8 +129,9 @@ export default function PulseScreen() {
         {/* Top bar: greeting + avatar */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <View>
+            {/* PWA echo.dashboard.greeting: "Salut {name} 👋" / "Hey {name} 👋" */}
             <Text style={{ ...Typography.heading }}>
-              {t.greeting} {profile?.name?.split(' ')[0] || ''}
+              {t.greeting} {profile?.name?.split(' ')[0] || ''} 👋
             </Text>
             <Text style={{ ...Typography.bodySmall, color: Colors.textFaint, marginTop: 2 }}>
               {t.yourPulse}
@@ -141,7 +142,7 @@ export default function PulseScreen() {
             backgroundColor: Colors.tealSoft, borderWidth: 1, borderColor: Colors.tealBorder30,
             alignItems: 'center', justifyContent: 'center',
           }}>
-            <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 14, color: Colors.teal }}>
+            <Text style={{ fontFamily: Fonts.bodyBold, fontSize: 14, color: Colors.teal }}>
               {profile?.name?.trim() ? profile.name.trim().charAt(0).toUpperCase() : '?'}
             </Text>
           </View>
@@ -214,10 +215,11 @@ export default function PulseScreen() {
               {stat.liveDot && (
                 <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.teal, marginBottom: 3 }} />
               )}
-              <Text style={{ fontFamily: Fonts.heading, fontSize: 18, color: stat.color }}>
+              {/* PWA `text-lg font-black` (DM Sans) */}
+              <Text style={{ ...Typography.stat, color: stat.color }}>
                 {stat.value}
               </Text>
-              <Text style={{ ...Typography.captionBold, fontSize: 9, marginTop: 2 }}>
+              <Text style={{ ...Typography.captionSemiBold, fontSize: 9, marginTop: 2 }}>
                 {stat.label}
               </Text>
             </View>
@@ -231,7 +233,10 @@ export default function PulseScreen() {
               <Text style={{ ...Typography.headingSmall }}>
                 {t.myRythmes}
               </Text>
-              <TouchableOpacity onPress={() => router.push('/(tabs)/rythmes' as any)}>
+              <TouchableOpacity
+                onPress={() => router.push('/(tabs)/rythmes' as any)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
                 <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 11, color: Colors.teal }}>
                   {t.seeAll} →
                 </Text>
@@ -265,14 +270,15 @@ export default function PulseScreen() {
                       </View>
                     )}
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 12, color: Colors.textPrimary }} numberOfLines={1}>
+                      {/* PWA CampaignMiniCard: title `text-xs font-bold`, earned `text-[10px] font-bold` */}
+                      <Text style={{ fontFamily: Fonts.bodyBold, fontSize: 12, color: Colors.textPrimary }} numberOfLines={1}>
                         {campaign.title}
                       </Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
                         <Text style={{ fontFamily: Fonts.body, fontSize: 10, color: Colors.textMuted }}>
                           {link.click_count} {t.clicks}
                         </Text>
-                        <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 10, color: Colors.orange }}>
+                        <Text style={{ fontFamily: Fonts.bodyBold, fontSize: 10, color: Colors.orange }}>
                           {formatFCFA(earned)}
                         </Text>
                       </View>
@@ -323,7 +329,8 @@ export default function PulseScreen() {
                       {campaign.description}
                     </Text>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 14, color: Colors.orange }}>
+                      {/* PWA `text-sm font-bold text-[#D35400]` */}
+                      <Text style={{ fontFamily: Fonts.bodyBold, fontSize: 14, color: Colors.orange }}>
                         {isCpa
                           ? `${formatFCFA(Math.floor((campaign.cpa_amount || 0) * ECHO_SHARE_PERCENT / 100))} ${t.perConversion}`
                           : `${campaign.cpc} FCFA ${t.perClick}`
@@ -380,7 +387,8 @@ export default function PulseScreen() {
             backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder,
           }}>
             <Text style={{ fontSize: 32, marginBottom: 8 }}>🔔</Text>
-            <Text style={{ ...Typography.bodyBold, marginBottom: 4 }}>
+            {/* PWA empty state title is `text-sm font-semibold` */}
+            <Text style={{ ...Typography.bodySemiBold, marginBottom: 4 }}>
               {t.noAvailable}
             </Text>
             <Text style={{ ...Typography.bodySmall, color: Colors.textFaint, textAlign: 'center', marginBottom: 16 }}>

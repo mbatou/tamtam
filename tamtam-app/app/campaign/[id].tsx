@@ -106,9 +106,9 @@ export default function CampaignDetailScreen() {
           </Text>
           <TouchableOpacity
             onPress={load}
-            style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10 }}
+            style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10, minHeight: 44, justifyContent: 'center' }}
           >
-            <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 13, color: '#fff' }}>{t.retry}</Text>
+            <Text style={{ ...Typography.button, fontSize: 13 }}>{t.retry}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -237,7 +237,7 @@ export default function CampaignDetailScreen() {
               <Text style={{ ...Typography.stat }}>
                 {trackedLink.click_count || 0}
               </Text>
-              <Text style={{ ...Typography.captionBold, fontSize: 9 }}>{t.clicks}</Text>
+              <Text style={{ ...Typography.captionSemiBold, fontSize: 9 }}>{t.clicks}</Text>
             </View>
             <View style={{ width: 1, height: 32, backgroundColor: Colors.btnGhostBorder }} />
             <View style={{ flex: 1, alignItems: 'center' }}>
@@ -246,14 +246,14 @@ export default function CampaignDetailScreen() {
                   <Text style={{ ...Typography.stat, color: Colors.teal }}>
                     {formatFCFA(Math.floor((campaign.cpa_amount || 0) * ECHO_SHARE_PERCENT / 100))}
                   </Text>
-                  <Text style={{ ...Typography.captionBold, fontSize: 9 }}>{t.perConversion}</Text>
+                  <Text style={{ ...Typography.captionSemiBold, fontSize: 9 }}>{t.perConversion}</Text>
                 </>
               ) : (
                 <>
                   <Text style={{ ...Typography.stat, color: Colors.orange }}>
                     {formatFCFA(earned)}
                   </Text>
-                  <Text style={{ ...Typography.captionBold, fontSize: 9 }}>{t.earned}</Text>
+                  <Text style={{ ...Typography.captionSemiBold, fontSize: 9 }}>{t.earned}</Text>
                 </>
               )}
             </View>
@@ -341,10 +341,11 @@ export default function CampaignDetailScreen() {
           }}
         >
           <Ionicons name="share-social-outline" size={18} color="#fff" />
+          {/* PWA share CTA: `text-sm font-bold` */}
           <Text
             style={{
-              fontFamily: Fonts.bodySemiBold,
-              fontSize: 15,
+              fontFamily: Fonts.bodyBold,
+              fontSize: 14,
               color: '#fff',
             }}
           >

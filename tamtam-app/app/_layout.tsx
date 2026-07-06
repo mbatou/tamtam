@@ -4,9 +4,11 @@ import { StatusBar } from 'expo-status-bar'
 import {
   useFonts,
   DMSans_400Regular,
+  DMSans_500Medium,
   DMSans_600SemiBold,
+  DMSans_700Bold,
 } from '@expo-google-fonts/dm-sans'
-import { Syne_800ExtraBold } from '@expo-google-fonts/syne'
+import { Syne_700Bold, Syne_800ExtraBold } from '@expo-google-fonts/syne'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
 import { Colors } from '@/constants/colors'
@@ -15,9 +17,13 @@ import type { Session } from '@supabase/supabase-js'
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false)
+  // Full PWA font stack (globals.css): Syne 700/800 + DM Sans 400/500/600/700.
   const [loaded] = useFonts({
     DMSans_400Regular,
+    DMSans_500Medium,
     DMSans_600SemiBold,
+    DMSans_700Bold,
+    Syne_700Bold,
     Syne_800ExtraBold,
   })
 

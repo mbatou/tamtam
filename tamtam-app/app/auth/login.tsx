@@ -81,9 +81,10 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={{ alignItems: 'center', marginBottom: 48 }}>
+            {/* Brand wordmark — PWA brand moments are `font-syne font-black` (Syne 800) */}
             <Text
               style={{
-                fontFamily: Fonts.heading,
+                fontFamily: Fonts.hero,
                 fontSize: 40,
                 color: Colors.orange,
                 letterSpacing: -1,
@@ -150,7 +151,10 @@ export default function LoginScreen() {
             }}
           >
             <Text style={{ ...labelStyle, marginBottom: 0 }}>{t.password}</Text>
-            <TouchableOpacity onPress={() => router.push('/auth/forgot-password')}>
+            <TouchableOpacity
+              onPress={() => router.push('/auth/forgot-password')}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
               <Text
                 style={{
                   color: 'rgba(255,255,255,0.35)',
@@ -207,10 +211,11 @@ export default function LoginScreen() {
               opacity: loading ? 0.6 : 1,
             }}
           >
+            {/* PWA auth submit CTA: `font-bold` */}
             <Text
               style={{
                 color: '#fff',
-                fontFamily: Fonts.bodySemiBold,
+                fontFamily: Fonts.bodyBold,
                 fontSize: 14,
               }}
             >

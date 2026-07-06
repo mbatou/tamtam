@@ -172,10 +172,11 @@ export default function ForgotPasswordScreen() {
                   marginBottom: 16,
                 }}
               >
+                {/* PWA auth submit CTA: `font-bold` */}
                 <Text
                   style={{
                     color: '#fff',
-                    fontFamily: Fonts.bodySemiBold,
+                    fontFamily: Fonts.bodyBold,
                     fontSize: 15,
                   }}
                 >
