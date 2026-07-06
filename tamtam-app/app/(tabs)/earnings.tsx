@@ -63,9 +63,9 @@ export default function EarningsScreen() {
           </Text>
           <TouchableOpacity
             onPress={loadPayouts}
-            style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10 }}
+            style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10, minHeight: 44, justifyContent: 'center' }}
           >
-            <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 13, color: '#fff' }}>{t.retry}</Text>
+            <Text style={{ ...Typography.button, fontSize: 13 }}>{t.retry}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -96,9 +96,9 @@ export default function EarningsScreen() {
           {t.earningsTitle}
         </Text>
 
-        {/* Balance card (PWA .echo-earnings-bg hero) */}
+        {/* Balance card (PWA .echo-earnings-bg hero: rounded-2xl p-4) */}
         <View style={{
-          backgroundColor: Colors.heroTealBg, borderRadius: 16, padding: 20, marginBottom: 20,
+          backgroundColor: Colors.heroTealBg, borderRadius: 16, padding: 16, marginBottom: 20,
           borderWidth: 1, borderColor: Colors.heroTealBorder,
         }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -114,7 +114,8 @@ export default function EarningsScreen() {
               <Text style={{ ...Typography.caption }}>
                 {t.totalEarned}
               </Text>
-              <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 14, color: Colors.orange }}>
+              {/* PWA `text-sm font-bold text-[#D35400]` */}
+              <Text style={{ fontFamily: Fonts.bodyBold, fontSize: 14, color: Colors.orange }}>
                 {formatFCFA(totalEarned)}
               </Text>
             </View>
@@ -127,7 +128,8 @@ export default function EarningsScreen() {
               flexDirection: 'row', alignItems: 'center', gap: 8,
             }}>
               <ActivityIndicator size="small" color={Colors.teal} />
-              <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 13, color: Colors.teal, flex: 1 }}>
+              {/* PWA processing note is regular-weight `text-sm` */}
+              <Text style={{ fontFamily: Fonts.body, fontSize: 14, color: Colors.teal, flex: 1 }}>
                 {t.processing}
               </Text>
             </View>
@@ -144,8 +146,9 @@ export default function EarningsScreen() {
                   borderColor: Colors.btnGhostBorder,
                 }}
               >
+                {/* PWA withdraw CTA: `text-sm font-bold` */}
                 <Text style={{
-                  fontFamily: Fonts.bodySemiBold, fontSize: 14,
+                  fontFamily: Fonts.bodyBold, fontSize: 14,
                   color: balance >= 500 ? '#fff' : Colors.textGhost,
                 }}>
                   {t.withdraw}
@@ -172,7 +175,8 @@ export default function EarningsScreen() {
                 <Text style={{ ...Typography.label, marginBottom: 2 }}>
                   {t.pendingEarnings}
                 </Text>
-                <Text style={{ fontFamily: Fonts.heading, fontSize: 24, color: Colors.orange }}>
+                {/* PWA `text-2xl font-black` (DM Sans, clamps to 700) */}
+                <Text style={{ fontFamily: Fonts.bodyBold, fontSize: 24, color: Colors.orange }}>
                   {formatFCFA(pendingBalance)}
                 </Text>
               </View>
@@ -180,7 +184,8 @@ export default function EarningsScreen() {
                 <Text style={{ ...Typography.caption }}>
                   {t.totalAll}
                 </Text>
-                <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 14, color: Colors.textSecondary }}>
+                {/* PWA `text-sm font-bold text-white/60` */}
+                <Text style={{ fontFamily: Fonts.bodyBold, fontSize: 14, color: Colors.textSecondary }}>
                   {formatFCFA(balance + pendingBalance)}
                 </Text>
               </View>
@@ -188,9 +193,9 @@ export default function EarningsScreen() {
           </View>
         )}
 
-        {/* Payout history */}
+        {/* Payout history (PWA h2 `text-sm font-bold text-white/60 uppercase tracking-wider`) */}
         <Text style={{
-          fontFamily: Fonts.bodySemiBold, fontSize: 12, color: Colors.textSecondary,
+          fontFamily: Fonts.bodyBold, fontSize: 14, color: Colors.textSecondary,
           textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12,
         }}>
           {t.history}
@@ -219,7 +224,7 @@ export default function EarningsScreen() {
                     width: 32, height: 32, borderRadius: 16,
                     backgroundColor: style.bg, alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 12, color: style.text }}>
+                    <Text style={{ fontFamily: Fonts.body, fontSize: 12, color: style.text }}>
                       {payout.status === 'sent' ? '✓' : payout.status === 'pending' || payout.status === 'processing' ? '⏳' : '✕'}
                     </Text>
                   </View>
@@ -236,7 +241,8 @@ export default function EarningsScreen() {
                   backgroundColor: style.bg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2,
                   borderWidth: 1, borderColor: style.border,
                 }}>
-                  <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 10, color: style.text }}>
+                  {/* PWA status pill: `text-[10px] font-bold` */}
+                  <Text style={{ fontFamily: Fonts.bodyBold, fontSize: 10, color: style.text }}>
                     {style.label}
                   </Text>
                 </View>

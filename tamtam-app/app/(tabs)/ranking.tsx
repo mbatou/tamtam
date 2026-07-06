@@ -87,7 +87,7 @@ export default function RankingScreen() {
           </Text>
           <TouchableOpacity
             onPress={loadData}
-            style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10 }}
+            style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10, minHeight: 44, justifyContent: 'center' }}
           >
             <Text style={{ ...Typography.button, fontSize: 13 }}>{t.retry}</Text>
           </TouchableOpacity>
@@ -118,11 +118,12 @@ export default function RankingScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.teal} />
         }
       >
-        {/* Header (PWA eyebrow + hero title) */}
-        <Text style={{ ...Typography.label, color: Colors.teal, fontSize: 11, marginBottom: 4 }}>
+        {/* Header (PWA eyebrow `text-[11px] font-medium uppercase tracking-[0.12em]`
+            + hero title `text-[26px] font-black font-syne tracking-[-0.5px]`) */}
+        <Text style={{ ...Typography.label, fontFamily: Fonts.bodyMedium, color: Colors.teal, fontSize: 11, letterSpacing: 1.3, marginBottom: 4 }}>
           {t.rankingEyebrow}
         </Text>
-        <Text style={{ ...Typography.heading, fontSize: 26, letterSpacing: -0.5 }}>
+        <Text style={{ ...Typography.hero, letterSpacing: -0.5 }}>
           {t.rankingTitle}
         </Text>
         {entries.length > 0 && (
@@ -138,7 +139,8 @@ export default function RankingScreen() {
             backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder,
           }}>
             <Text style={{ fontSize: 40, marginBottom: 8 }}>🏆</Text>
-            <Text style={{ ...Typography.bodyBold, marginBottom: 4 }}>
+            {/* PWA empty title: `text-[15px] font-black` (DM Sans) */}
+            <Text style={{ ...Typography.bodyBold, fontSize: 15, marginBottom: 4 }}>
               {t.rankingEmptyTitle}
             </Text>
             <Text style={{ ...Typography.bodySmall, color: Colors.textFaint, textAlign: 'center', marginBottom: 16 }}>
@@ -172,7 +174,8 @@ export default function RankingScreen() {
                     backgroundColor: p.bg, borderWidth: first ? 3 : 2, borderColor: p.color,
                     alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <Text style={{ fontFamily: Fonts.heading, fontSize: first ? 24 : 20, color: p.color }}>
+                    {/* PWA podium initials/figures: `font-black` (DM Sans, no font-syne) */}
+                    <Text style={{ fontFamily: Fonts.bodyBold, fontSize: first ? 24 : 20, color: p.color }}>
                       {entry.name?.trim().charAt(0).toUpperCase()}
                     </Text>
                   </View>
@@ -190,7 +193,7 @@ export default function RankingScreen() {
                       {entry.city}
                     </Text>
                   )}
-                  <Text style={{ fontFamily: Fonts.heading, fontSize: first ? 14 : 12, color: first ? p.color : Colors.textSecondary }}>
+                  <Text style={{ fontFamily: Fonts.bodyBold, fontSize: first ? 14 : 12, color: first ? p.color : Colors.textSecondary }}>
                     {entry.total_clicks.toLocaleString(locale)}
                   </Text>
                   <Text style={{ ...Typography.caption, fontSize: 9, color: Colors.textGhost, marginTop: -4 }}>
@@ -202,7 +205,7 @@ export default function RankingScreen() {
                     backgroundColor: p.bg, borderTopWidth: 2, borderTopColor: p.color,
                     alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <Text style={{ fontFamily: Fonts.heading, fontSize: first ? 20 : place === 2 ? 16 : 14, color: p.color }}>
+                    <Text style={{ fontFamily: Fonts.bodyBold, fontSize: first ? 20 : place === 2 ? 16 : 14, color: p.color }}>
                       {place}
                     </Text>
                   </View>
@@ -236,7 +239,8 @@ export default function RankingScreen() {
                 backgroundColor: Colors.tealSoft, borderWidth: 2, borderColor: Colors.tealBorder30,
                 alignItems: 'center', justifyContent: 'center',
               }}>
-                <Text style={{ fontFamily: Fonts.heading, fontSize: 18, color: Colors.tealMid }}>
+                {/* PWA `text-[18px] font-black` (DM Sans) */}
+                <Text style={{ fontFamily: Fonts.bodyBold, fontSize: 18, color: Colors.tealMid }}>
                   {userEntry.name?.trim().charAt(0).toUpperCase()}
                 </Text>
               </View>
@@ -246,7 +250,8 @@ export default function RankingScreen() {
                 </Text>
                 <Text style={{ ...Typography.caption, fontSize: 11 }}>
                   {t.yourRank}:{' '}
-                  <Text style={{ fontFamily: Fonts.bodySemiBold, color: Colors.tealMid }}>#{userEntry.rank}</Text>
+                  {/* PWA `font-bold` rank number */}
+                  <Text style={{ fontFamily: Fonts.bodyBold, color: Colors.tealMid }}>#{userEntry.rank}</Text>
                 </Text>
               </View>
             </View>
@@ -303,7 +308,8 @@ function RankRow({
       backgroundColor: isMe ? 'rgba(29,158,117,0.05)' : 'transparent',
     }}>
       <View style={{ width: 32, alignItems: 'center' }}>
-        <Text style={{ fontFamily: Fonts.heading, fontSize: 13, color: isMe ? Colors.tealMid : Colors.textFaint }}>
+        {/* PWA RankRow figures: `font-black` (DM Sans, no font-syne) */}
+        <Text style={{ fontFamily: Fonts.bodyBold, fontSize: 13, color: isMe ? Colors.tealMid : Colors.textFaint }}>
           #{entry.rank}
         </Text>
       </View>
@@ -312,7 +318,7 @@ function RankRow({
         backgroundColor: isMe ? Colors.tealSoft : Colors.btnGhostBg,
         borderWidth: isMe ? 1 : 0, borderColor: Colors.tealBorder30,
       }}>
-        <Text style={{ fontFamily: Fonts.heading, fontSize: 13, color: isMe ? Colors.tealMid : Colors.textSecondary }}>
+        <Text style={{ fontFamily: Fonts.bodyBold, fontSize: 13, color: isMe ? Colors.tealMid : Colors.textSecondary }}>
           {entry.name?.trim().charAt(0).toUpperCase()}
         </Text>
       </View>
@@ -321,9 +327,10 @@ function RankRow({
           <Text numberOfLines={1} style={{ ...Typography.bodySmallBold, fontSize: 13, color: isMe ? Colors.textPrimary : Colors.textSecondary, flexShrink: 1 }}>
             {entry.name}
           </Text>
+          {/* PWA founding pill is regular-weight `text-[9px]` */}
           {entry.is_founding_echo && (
             <View style={{ backgroundColor: Colors.badgeOrangeBg, borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1 }}>
-              <Text style={{ ...Typography.captionBold, fontSize: 9, color: Colors.orangeMid }}>
+              <Text style={{ ...Typography.caption, fontSize: 9, color: Colors.orangeMid }}>
                 {t.founding}
               </Text>
             </View>
@@ -336,7 +343,7 @@ function RankRow({
         )}
       </View>
       <View style={{ alignItems: 'flex-end' }}>
-        <Text style={{ fontFamily: Fonts.heading, fontSize: 14, color: isMe ? Colors.tealMid : Colors.textSecondary }}>
+        <Text style={{ fontFamily: Fonts.bodyBold, fontSize: 14, color: isMe ? Colors.tealMid : Colors.textSecondary }}>
           {entry.total_clicks.toLocaleString(locale)}
         </Text>
         <Text style={{ ...Typography.caption, color: Colors.textGhost }}>{t.clicks}</Text>

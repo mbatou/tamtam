@@ -103,9 +103,9 @@ export default function RythmesScreen() {
           </Text>
           <TouchableOpacity
             onPress={loadData}
-            style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10 }}
+            style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 10, minHeight: 44, justifyContent: 'center' }}
           >
-            <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 13, color: '#fff' }}>{t.retry}</Text>
+            <Text style={{ ...Typography.button, fontSize: 13 }}>{t.retry}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -146,13 +146,14 @@ export default function RythmesScreen() {
               key={tab.key}
               onPress={() => setActiveTab(tab.key)}
               style={{
-                flex: 1, paddingVertical: 10, minHeight: 40, borderRadius: 8,
+                flex: 1, paddingVertical: 10, minHeight: 44, borderRadius: 8,
                 alignItems: 'center', justifyContent: 'center',
                 backgroundColor: activeTab === tab.key ? Colors.teal : 'transparent',
               }}
             >
+              {/* PWA tab bar: `text-xs font-bold` */}
               <Text style={{
-                fontFamily: Fonts.bodySemiBold, fontSize: 12,
+                fontFamily: Fonts.bodyBold, fontSize: 12,
                 color: activeTab === tab.key ? '#fff' : Colors.textMuted,
               }}>
                 {tab.label} {tab.count > 0 ? `(${tab.count})` : ''}
@@ -166,7 +167,8 @@ export default function RythmesScreen() {
           availableCampaigns.length === 0 ? (
             <View style={{ borderRadius: 12, padding: 24, alignItems: 'center', backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder }}>
               <Text style={{ fontSize: 32, marginBottom: 8 }}>🔔</Text>
-              <Text style={{ ...Typography.bodyBold, marginBottom: 4 }}>
+              {/* PWA empty state title: `text-sm font-semibold` */}
+              <Text style={{ ...Typography.bodySemiBold, marginBottom: 4 }}>
                 {t.noAvailableRythmes}
               </Text>
               <Text style={{ ...Typography.bodySmall, color: Colors.textFaint, textAlign: 'center' }}>
@@ -190,8 +192,9 @@ export default function RythmesScreen() {
                       <Text style={{ ...Typography.bodyBold, flex: 1, marginRight: 8 }}>
                         {campaign.title}
                       </Text>
+                      {/* PWA StatusBadge: `text-[10px] font-bold` */}
                       <View style={{ backgroundColor: Colors.badgeOrangeBg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1, borderColor: Colors.badgeOrangeBorder }}>
-                        <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 10, color: Colors.orange }}>{t.newBadge}</Text>
+                        <Text style={{ fontFamily: Fonts.bodyBold, fontSize: 10, color: Colors.orange }}>{t.newBadge}</Text>
                       </View>
                     </View>
                     <Text style={{ ...Typography.bodySmall, color: Colors.textFaint, marginBottom: 8 }} numberOfLines={2}>
@@ -212,7 +215,8 @@ export default function RythmesScreen() {
                       </View>
                     )}
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 14, color: Colors.orange }}>
+                      {/* PWA `text-sm font-bold text-[#D35400]` */}
+                      <Text style={{ fontFamily: Fonts.bodyBold, fontSize: 14, color: Colors.orange }}>
                         {isCpa ? `${formatFCFA(Math.floor((campaign.cpa_amount || 0) * ECHO_SHARE_PERCENT / 100))} ${t.perConversion}` : `${campaign.cpc} FCFA ${t.perClick}`}
                       </Text>
                       <Text style={{ ...Typography.bodySmall }}>
@@ -243,10 +247,14 @@ export default function RythmesScreen() {
           myActiveLinks.length === 0 ? (
             <View style={{ borderRadius: 12, padding: 32, alignItems: 'center', backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder }}>
               <Text style={{ fontSize: 32, marginBottom: 8 }}>🔍</Text>
-              <Text style={{ ...Typography.bodyBold, marginBottom: 4 }}>
+              {/* PWA empty state title: `text-sm font-semibold` */}
+              <Text style={{ ...Typography.bodySemiBold, marginBottom: 4 }}>
                 {t.noActiveRythmes}
               </Text>
-              <TouchableOpacity onPress={() => setActiveTab('available')} style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 8, marginTop: 12 }}>
+              <TouchableOpacity
+                onPress={() => setActiveTab('available')}
+                style={{ backgroundColor: Colors.teal, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 8, marginTop: 12, minHeight: 44, justifyContent: 'center' }}
+              >
                 <Text style={{ ...Typography.button, fontSize: 12 }}>{t.discover}</Text>
               </TouchableOpacity>
             </View>
@@ -270,8 +278,9 @@ export default function RythmesScreen() {
                       <Text style={{ ...Typography.bodyBold, flex: 1, marginRight: 8 }} numberOfLines={1}>
                         {campaign.title}
                       </Text>
+                      {/* PWA StatusBadge: `text-[10px] font-bold` */}
                       <View style={{ backgroundColor: Colors.badgeTealBg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1, borderColor: Colors.heroTealBorder }}>
-                        <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 10, color: Colors.teal }}>{t.statusActive}</Text>
+                        <Text style={{ fontFamily: Fonts.bodyBold, fontSize: 10, color: Colors.teal }}>{t.statusActive}</Text>
                       </View>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
@@ -281,7 +290,8 @@ export default function RythmesScreen() {
                           {link.click_count}
                         </Text>
                       </View>
-                      <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 12, color: isCpa ? Colors.teal : Colors.orange }}>
+                      {/* PWA `font-bold` earned/conversion amount */}
+                      <Text style={{ fontFamily: Fonts.bodyBold, fontSize: 12, color: isCpa ? Colors.teal : Colors.orange }}>
                         {isCpa ? `${formatFCFA(Math.floor((campaign.cpa_amount || 0) * ECHO_SHARE_PERCENT / 100))} ${t.perConversion}` : `${formatFCFA(earned)} ${t.earned}`}
                       </Text>
                     </View>
@@ -328,7 +338,8 @@ export default function RythmesScreen() {
           finishedLinks.length === 0 ? (
             <View style={{ borderRadius: 12, padding: 24, alignItems: 'center', backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder }}>
               <Text style={{ fontSize: 24, marginBottom: 8 }}>📊</Text>
-              <Text style={{ ...Typography.bodyBold, marginBottom: 4 }}>
+              {/* PWA empty state title: `text-sm font-semibold` */}
+              <Text style={{ ...Typography.bodySemiBold, marginBottom: 4 }}>
                 {t.noFinished}
               </Text>
               <Text style={{ ...Typography.bodySmall, color: Colors.textFaint, textAlign: 'center' }}>
@@ -352,9 +363,9 @@ export default function RythmesScreen() {
                       {link.click_count} {t.clicks}
                     </Text>
                     {finishedCpa ? (
-                      <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 12, color: Colors.teal }}>CPA</Text>
+                      <Text style={{ fontFamily: Fonts.bodyBold, fontSize: 12, color: Colors.teal }}>CPA</Text>
                     ) : (
-                      <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 12, color: Colors.orange }}>
+                      <Text style={{ fontFamily: Fonts.bodyBold, fontSize: 12, color: Colors.orange }}>
                         {formatFCFA(earned)}
                       </Text>
                     )}

@@ -54,12 +54,14 @@ export default function ProfileScreen() {
               backgroundColor: Colors.tealSoft, borderWidth: 1, borderColor: Colors.tealBorder30,
               alignItems: 'center', justifyContent: 'center',
             }}>
-              <Text style={{ fontFamily: Fonts.heading, fontSize: 20, color: Colors.teal }}>
+              {/* PWA avatar initial: `text-xl font-black` (DM Sans) */}
+              <Text style={{ fontFamily: Fonts.bodyBold, fontSize: 20, color: Colors.teal }}>
                 {initial}
               </Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 18, color: Colors.textPrimary }} numberOfLines={1}>
+              {/* PWA h2 `text-lg font-bold` */}
+              <Text style={{ fontFamily: Fonts.bodyBold, fontSize: 18, color: Colors.textPrimary }} numberOfLines={1}>
                 {profile?.name}
               </Text>
               {profile?.phone && (
@@ -82,19 +84,19 @@ export default function ProfileScreen() {
             <Text style={{ ...Typography.stat }}>
               {(profile?.total_valid_clicks || 0).toLocaleString('fr-FR')}
             </Text>
-            <Text style={{ ...Typography.captionBold, fontSize: 9 }}>{t.validClicks}</Text>
+            <Text style={{ ...Typography.captionSemiBold, fontSize: 9 }}>{t.validClicks}</Text>
           </View>
           <View style={{ flex: 1, borderRadius: 12, padding: 12, alignItems: 'center', backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder }}>
             <Text style={{ ...Typography.stat, color: Colors.orange }}>
               {formatFCFA(profile?.total_earned || 0)}
             </Text>
-            <Text style={{ ...Typography.captionBold, fontSize: 9 }}>{t.earned}</Text>
+            <Text style={{ ...Typography.captionSemiBold, fontSize: 9 }}>{t.earned}</Text>
           </View>
           <View style={{ flex: 1, borderRadius: 12, padding: 12, alignItems: 'center', backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder }}>
             <Text style={{ ...Typography.stat }}>
               {formatFCFA(profile?.available_balance || 0)}
             </Text>
-            <Text style={{ ...Typography.captionBold, fontSize: 9 }}>{t.balance}</Text>
+            <Text style={{ ...Typography.captionSemiBold, fontSize: 9 }}>{t.balance}</Text>
           </View>
         </View>
 
@@ -103,28 +105,26 @@ export default function ProfileScreen() {
           borderRadius: 12, overflow: 'hidden', marginBottom: 20,
           backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder,
         }}>
+          {/* PWA AccountDetailsCard: money rows `text-xs font-bold`, others `text-xs font-semibold` */}
           {[
-            { label: t.balance, value: formatFCFA(profile?.available_balance || 0), color: Colors.orange },
-            { label: t.totalEarned, value: formatFCFA(profile?.total_earned || 0), color: Colors.orange },
-            { label: t.paymentMethod, value: profile?.phone ? t.wave : '—', color: Colors.textPrimary },
-            { label: t.city, value: profile?.city || '—', color: Colors.textPrimary },
-            { label: t.memberSince, value: formatMonthYear(profile?.created_at, lang), color: Colors.textPrimary },
+            { label: t.balance, value: formatFCFA(profile?.available_balance || 0), color: Colors.orange, bold: true },
+            { label: t.totalEarned, value: formatFCFA(profile?.total_earned || 0), color: Colors.orange, bold: true },
+            { label: t.paymentMethod, value: profile?.phone ? t.wave : '—', color: Colors.textPrimary, bold: false },
+            { label: t.city, value: profile?.city || '—', color: Colors.textPrimary, bold: false },
+            { label: t.memberSince, value: formatMonthYear(profile?.created_at, lang), color: Colors.textPrimary, bold: false },
           ].map((row, i, rows) => (
             <View key={i} style={{
               flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12,
               borderBottomWidth: i < rows.length - 1 ? 1 : 0, borderBottomColor: Colors.divider,
             }}>
               <Text style={{ ...Typography.bodySmall }}>{row.label}</Text>
-              <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 12, color: row.color }}>{row.value}</Text>
+              <Text style={{ fontFamily: row.bold ? Fonts.bodyBold : Fonts.bodySemiBold, fontSize: 12, color: row.color }}>{row.value}</Text>
             </View>
           ))}
         </View>
 
         {/* Language selector */}
-        <Text style={{
-          ...Typography.captionBold,
-          textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8,
-        }}>
+        <Text style={{ ...Typography.label, marginBottom: 8 }}>
           {t.language}
         </Text>
         <View style={{
@@ -159,10 +159,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* Notifications */}
-        <Text style={{
-          ...Typography.captionBold,
-          textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8,
-        }}>
+        <Text style={{ ...Typography.label, marginBottom: 8 }}>
           {t.notifications}
         </Text>
         <View style={{
@@ -187,7 +184,7 @@ export default function ProfileScreen() {
           onPress={handleSignOut}
           style={{
             borderWidth: 1, borderColor: 'rgba(239,68,68,0.20)',
-            borderRadius: 12, paddingVertical: 14, alignItems: 'center',
+            borderRadius: 12, paddingVertical: 14, minHeight: 44, alignItems: 'center', justifyContent: 'center',
           }}
         >
           <Text style={{ fontFamily: Fonts.bodySemiBold, fontSize: 14, color: Colors.error }}>
