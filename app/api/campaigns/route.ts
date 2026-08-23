@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { createCampaignSchema, updateCampaignSchema, deleteCampaignSchema } from "@/lib/validations";
-import { sendCampaignCompletedToEcho, sendEmail, sendCampaignPendingApprovalAlert } from "@/lib/email";
+import { sendCampaignCompletedToEcho, sendCampaignPendingApprovalAlert } from "@/lib/email";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { debitBrandBudget, debitBrandBudgetLogged, creditBrandWallet } from "@/lib/wallet";
