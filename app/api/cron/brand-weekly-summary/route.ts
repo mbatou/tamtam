@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { sendEmail } from "@/lib/email";
+import { sendRoutedEmailBatch } from "@/lib/notifications/email-router";
 import { verifyCronSecret } from "@/lib/api/cron";
 
 export const dynamic = "force-dynamic";
@@ -53,15 +53,10 @@ export async function GET(request: NextRequest) {
 
   const recentSet = new Set(recentSent?.map((s) => s.user_id) || []);
 
-  // Get auth emails
-  const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-  const emailMap = new Map(authUsers?.map((u) => [u.id, u.email]) || []);
+  const payloads = [];
 
-  let sent = 0;
   for (const brand of brands) {
     if (recentSet.has(brand.id)) continue;
-    const email = emailMap.get(brand.id);
-    if (!email) continue;
 
     const myCampaigns = brandCampaigns.get(brand.id) || [];
     const totalSpent = myCampaigns.reduce((sum, c) => sum + c.spent, 0);
@@ -81,11 +76,10 @@ export async function GET(request: NextRequest) {
       })
       .join("");
 
-    try {
-      await sendEmail({
-        to: email,
-        subject: `📊 Résumé hebdo — ${activeCampaigns} campagne(s) active(s)`,
-        html: `
+    payloads.push({
+      userId: brand.id,
+      subject: `📊 Résumé hebdo — ${activeCampaigns} campagne(s) active(s)`,
+      html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px;">
             <h2 style="color: #D35400;">Bonjour ${brand.name} !</h2>
             <p>Voici le résumé de vos campagnes cette semaine :</p>
@@ -119,20 +113,22 @@ export async function GET(request: NextRequest) {
             <p style="margin-top: 20px;">
               <a href="https://www.tamma.me/admin/analytics" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Voir mes analytics →</a>
             </p>
-            <p style="margin-top: 20px; color: #888; font-size: 13px;">
-              Vous recevez cet email car vous avez des campagnes actives sur Tamtam.
-            </p>
           </div>
         `,
-      });
-
-      await supabase.from("sent_emails").insert({
-        user_id: brand.id,
-        email_type: "brand_weekly_summary",
-      });
-      sent++;
-    } catch { /* non-blocking */ }
+    });
   }
 
-  return NextResponse.json({ sent });
+  // Reporting cadence for brands — the audience that actually lives in email.
+  // The router resolves addresses (paginated, unlike the old
+  // `listUsers({ perPage: 1000 })`), honours the digest opt-out, appends the
+  // unsubscribe footer and records every send.
+  const totals = await sendRoutedEmailBatch(supabase, "brand_weekly_summary", payloads, {
+    dedupeWithinHours: 6 * 24,
+  });
+
+  return NextResponse.json({
+    sent: totals.sent,
+    suppressed: totals.suppressed,
+    failed: totals.failed,
+  });
 }

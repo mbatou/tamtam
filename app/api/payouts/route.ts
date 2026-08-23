@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { MIN_PAYOUT_AMOUNT } from "@/lib/constants";
 import { rateLimit } from "@/lib/rate-limit";
-import { sendPayoutRequestNotification } from "@/lib/email";
+import { alertPayoutRequest } from "@/lib/notifications/ops-alerts";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 
 export async function GET() {
@@ -129,7 +129,7 @@ export async function POST() {
     .eq("id", authUser.id)
     .single();
 
-  sendPayoutRequestNotification({
+  alertPayoutRequest({
     echoName: echoUser?.name || "Inconnu",
     echoPhone: echoUser?.phone || "",
     amount: withdrawAmount,

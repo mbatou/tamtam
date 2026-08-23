@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { sendEmail } from "@/lib/email";
+import { sendRoutedEmailBatch } from "@/lib/notifications/email-router";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { verifyCronSecret } from "@/lib/api/cron";
 
@@ -60,25 +60,23 @@ export async function GET(request: NextRequest) {
     .select("id, name")
     .in("id", echoIds);
 
-  const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-  const emailMap = new Map(authUsers?.map((u) => [u.id, u.email]) || []);
-
-  // Build send list then process in parallel batches to avoid timeout
+  // Address resolution, opt-out checks, the ledger write and the unsubscribe
+  // footer all live in the router now. It also paginates properly — the old
+  // `listUsers({ perPage: 1000 })` here silently dropped every Écho past #1000,
+  // and the platform is at 1 505.
   const toSend = (echos || [])
-    .filter((echo) => !recentSet.has(echo.id) && emailMap.get(echo.id) && echoStats.get(echo.id)?.validClicks)
-    .map((echo) => ({ echo, email: emailMap.get(echo.id)!, stats: echoStats.get(echo.id)! }));
+    .filter((echo) => !recentSet.has(echo.id) && echoStats.get(echo.id)?.validClicks)
+    .map((echo) => ({ echo, stats: echoStats.get(echo.id)! }));
 
-  let sent = 0;
-  const BATCH_SIZE = 10;
-  for (let i = 0; i < toSend.length; i += BATCH_SIZE) {
-    const batch = toSend.slice(i, i + BATCH_SIZE);
-    const results = await Promise.allSettled(
-      batch.map(async ({ echo, email, stats }) => {
-        const campaignList = Array.from(stats.campaigns).slice(0, 5).join(", ");
-        await sendEmail({
-          to: email,
-          subject: `💰 Ton résumé hebdo — ${stats.earnings.toLocaleString()} FCFA gagnés`,
-          html: `
+  const totals = await sendRoutedEmailBatch(
+    supabase,
+    "echo_weekly_summary",
+    toSend.map(({ echo, stats }) => {
+      const campaignList = Array.from(stats.campaigns).slice(0, 5).join(", ");
+      return {
+        userId: echo.id,
+        subject: `💰 Ton résumé hebdo — ${stats.earnings.toLocaleString()} FCFA gagnés`,
+        html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px;">
               <h2 style="color: #D35400;">Bravo ${echo.name} !</h2>
               <p>Voici ton résumé de la semaine sur Tamtam :</p>
@@ -102,56 +100,22 @@ export async function GET(request: NextRequest) {
               <p style="margin-top: 20px;">
                 <a href="https://www.tamma.me/dashboard" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Voir mon tableau de bord →</a>
               </p>
-              <p style="margin-top: 20px; color: #888; font-size: 13px;">
-                Tu reçois cet email car tu es Écho sur Tamtam.
-              </p>
             </div>
           `,
-        });
-        await supabase.from("sent_emails").insert({
-          user_id: echo.id,
-          email_type: "echo_weekly_summary",
-        });
-        return echo.id;
-      })
-    );
-    sent += results.filter((r) => r.status === "fulfilled").length;
-  }
+      };
+    }),
+    { dedupeWithinHours: 6 * 24 },
+  );
 
-  // Also send push notifications to echos with push subscriptions
-  const { data: subscriptions } = await supabase
-    .from("push_subscriptions")
-    .select("user_id, subscription")
-    .in("user_id", echoIds);
+  // The duplicate push blast that used to live here is gone. A weekly recap is
+  // a record, not a nudge — push added nothing the email did not say, and this
+  // one initialised web-push by hand, so it bypassed notification_prefs, the
+  // daily cap and the queue entirely. Engagement lives on push through the
+  // notification engine (inactivity, share reminders); recaps live on email.
 
-  if (subscriptions?.length && process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const webpush = require("web-push");
-      const toB64Url = (k: string) => k.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "").trim();
-      webpush.setVapidDetails(
-        "mailto:support@tamma.me",
-        toB64Url(process.env.VAPID_PUBLIC_KEY),
-        toB64Url(process.env.VAPID_PRIVATE_KEY)
-      );
-
-      for (const sub of subscriptions) {
-        const stats = echoStats.get(sub.user_id);
-        if (!stats || stats.validClicks === 0) continue;
-
-        try {
-          await webpush.sendNotification(
-            sub.subscription,
-            JSON.stringify({
-              title: `${stats.earnings.toLocaleString()} FCFA gagnés cette semaine`,
-              body: `${stats.validClicks} clics valides. Continue à partager !`,
-              url: "/dashboard",
-            })
-          );
-        } catch { /* subscription may be expired */ }
-      }
-    } catch { /* web-push not available */ }
-  }
-
-  return NextResponse.json({ sent });
+  return NextResponse.json({
+    sent: totals.sent,
+    suppressed: totals.suppressed,
+    failed: totals.failed,
+  });
 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuthResponse } from "@/lib/api/auth";
 import { payoutRequestSchema } from "@/lib/validations";
 import { rateLimit } from "@/lib/rate-limit";
-import { sendPayoutRequestNotification } from "@/lib/email";
+import { alertPayoutRequest } from "@/lib/notifications/ops-alerts";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { createPayout, calculatePayoutFee } from "@/lib/wave";
 import { randomUUID } from "crypto";
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Notify admin
-      sendPayoutRequestNotification({
+      alertPayoutRequest({
         echoName: user.name || "Inconnu",
         echoPhone: user.phone || "",
         amount: parsed.data.amount,
@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
         .eq("idempotency_key", idempotencyKey);
 
       // Still notify admin of the situation
-      sendPayoutRequestNotification({
+      alertPayoutRequest({
         echoName: user.name || "Inconnu",
         echoPhone: user.phone || "",
         amount: parsed.data.amount,
@@ -261,7 +261,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Notify admin by email
-  sendPayoutRequestNotification({
+  alertPayoutRequest({
     echoName: user.name || "Inconnu",
     echoPhone: user.phone || "",
     amount: parsed.data.amount,

@@ -171,6 +171,13 @@ export async function sendSinglePush(
     campaign_id?: string | null;
     payload: Record<string, unknown>;
   },
+  /**
+   * Money events (earnings unlocked, payout sent/failed) set bypassDailyCap.
+   * The cap exists to stop engagement spam; suppressing "your money is ready"
+   * because two share reminders got there first would be a bug, not restraint.
+   * Mirrors the bypass `sendSmsToEcho` already has.
+   */
+  options: { bypassDailyCap?: boolean } = {},
 ): Promise<"sent" | "failed" | "suppressed"> {
   if (!initVapid()) {
     await supabase.from("notification_queue").insert({
@@ -183,7 +190,7 @@ export async function sendSinglePush(
     return "failed";
   }
 
-  const canSend = await checkDailyCap(supabase, entry.echo_id);
+  const canSend = options.bypassDailyCap || (await checkDailyCap(supabase, entry.echo_id));
   if (!canSend) {
     await supabase.from("notification_queue").insert({
       ...entry,

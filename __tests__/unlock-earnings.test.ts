@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createMockSupabase, type MockSupabase } from "./helpers/mock-supabase";
 
-// unlockCampaignEarnings uses the supabaseAdmin singleton + sendEmail directly
+// unlockCampaignEarnings uses the supabaseAdmin singleton, and notifies via the
+// channel router (email) + the push sender. Both are stubbed: this file is
+// about the atomic claim, not about delivery.
 let mock: MockSupabase;
 vi.mock("@/lib/supabase/admin", () => ({
   get supabaseAdmin() {
@@ -10,6 +12,13 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 vi.mock("@/lib/email", () => ({
   sendEmail: vi.fn(async () => ({ ok: true })),
+  sendEmailSafe: vi.fn(async () => ({ success: true, id: "re_test" })),
+}));
+vi.mock("@/lib/notifications/email-router", () => ({
+  sendRoutedEmail: vi.fn(async () => ({ status: "sent", resendId: "re_test" })),
+}));
+vi.mock("@/lib/notifications/sender", () => ({
+  sendSinglePush: vi.fn(async () => "sent"),
 }));
 
 import { unlockCampaignEarnings } from "@/lib/unlock-earnings";

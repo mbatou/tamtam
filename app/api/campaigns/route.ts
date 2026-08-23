@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { createCampaignSchema, updateCampaignSchema, deleteCampaignSchema } from "@/lib/validations";
-import { sendCampaignCompletedToEcho, sendCampaignPendingApprovalAlert } from "@/lib/email";
+import { buildCampaignCompletedToEcho } from "@/lib/email";
+import { alertCampaignPendingApproval } from "@/lib/notifications/ops-alerts";
+import { sendRoutedEmailBatch } from "@/lib/notifications/email-router";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { debitBrandBudget, debitBrandBudgetLogged, creditBrandWallet } from "@/lib/wallet";
@@ -36,9 +38,6 @@ async function notifyCampaignCompleted(campaignId: string) {
       .is("deleted_at", null);
     if (!echos) return;
 
-    const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-    const emailMap = new Map(authUsers?.map((u) => [u.id, u.email]) || []);
-
     const clickMap = new Map(links.map((l) => [l.echo_id, l.click_count]));
 
     // For CPA campaigns, get actual earnings from paid conversions
@@ -59,22 +58,29 @@ async function notifyCampaignCompleted(campaignId: string) {
       }
     }
 
-    for (const echo of echos) {
-      const email = emailMap.get(echo.id);
-      const clicks = clickMap.get(echo.id) || 0;
-      const earnings = cpaEarningsMap
-        ? (cpaEarningsMap.get(echo.id) || 0)
-        : Math.floor(clicks * campaign.cpc * ECHO_SHARE_PERCENT / 100);
-      if (email) {
-        sendCampaignCompletedToEcho({
-          to: email,
-          echoName: echo.name,
-          campaignTitle: campaign.title,
-          clickCount: clicks,
-          earnings,
-        }).catch(() => {});
-      }
-    }
+    // `campaign_completed_echo` — a closing statement, so email only. The
+    // router resolves addresses with proper pagination (this used to be
+    // `listUsers({ perPage: 1000 })`, which dropped every Écho past #1000).
+    await sendRoutedEmailBatch(
+      supabase,
+      "campaign_completed_echo",
+      echos.map((echo) => {
+        const clicks = clickMap.get(echo.id) || 0;
+        const earnings = cpaEarningsMap
+          ? (cpaEarningsMap.get(echo.id) || 0)
+          : Math.floor((clicks * campaign.cpc * ECHO_SHARE_PERCENT) / 100);
+        return {
+          userId: echo.id,
+          campaignId,
+          ...buildCampaignCompletedToEcho({
+            echoName: echo.name,
+            campaignTitle: campaign.title,
+            clickCount: clicks,
+            earnings,
+          }),
+        };
+      }),
+    );
   } catch { /* non-blocking */ }
 }
 
@@ -253,7 +259,7 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (requireApproval) {
-    await sendCampaignPendingApprovalAlert({
+    await alertCampaignPendingApproval({
       campaignTitle: title,
       brandName: brand?.name || null,
       budget,
@@ -481,7 +487,7 @@ export async function PUT(request: NextRequest) {
       .eq("id", brandId)
       .single();
 
-    await sendCampaignPendingApprovalAlert({
+    await alertCampaignPendingApproval({
       campaignTitle: data.title || existing.title || id,
       brandName: submittingBrand?.name || null,
       budget: data.budget ?? existing.budget ?? 0,

@@ -1,8 +1,9 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
-import { sendEmail } from "@/lib/email";
 import { getUserEmail } from "@/lib/user-emails";
+import { sendRoutedEmail } from "@/lib/notifications/email-router";
+import { sendSinglePush } from "@/lib/notifications/sender";
 
 export async function unlockCampaignEarnings(campaignId: string, campaignName: string) {
   const { data: pendingList } = await supabaseAdmin
@@ -89,9 +90,15 @@ export async function notifyEchoUnlock(
   const formattedAmount = new Intl.NumberFormat("fr-FR").format(amount);
   const formattedBalance = new Intl.NumberFormat("fr-FR").format(newAvailableBalance);
 
-  if (user.email) {
-    await sendEmail({
-      to: user.email,
+  // `earnings_unlocked` routes to push + email (channel policy): push to act
+  // now, email as the durable record of what was unlocked and from where.
+  // No SMS — the money is not going anywhere, so it does not warrant the spend.
+  {
+    await sendRoutedEmail(supabaseAdmin, {
+      event: "earnings_unlocked",
+      userId: echoId,
+      campaignId: campaignId ?? null,
+      email: user.email ?? undefined,
       subject: `${formattedAmount} FCFA débloqués !`,
       html: `
         <div style="background:#0A0A1A;color:white;padding:32px;font-family:Arial,sans-serif;max-width:500px;">
@@ -112,29 +119,19 @@ export async function notifyEchoUnlock(
     }).catch(console.error);
   }
 
-  if (user.phone && campaignId) {
-    const message = encodeURIComponent(
-      `${formattedAmount} FCFA débloqués !\n\n` +
-      `La campagne "${campaignName}" est terminée.\n\n` +
-      `Solde disponible : ${formattedBalance} FCFA\n\n` +
-      `Retirer → tamma.me/earnings`
-    );
-    const waLink = `https://wa.me/${user.phone}?text=${message}`;
-
-    try {
-      // notification_logs requires campaign_id (NOT NULL) and has no
-      // metadata column — the previous insert violated both.
-      await supabaseAdmin
-        .from("notification_logs")
-        .insert({
-          campaign_id: campaignId,
-          echo_id: echoId,
-          channel: "whatsapp",
-          status: "manual",
-        });
-    } catch (err) {
-      console.error("[unlock] notification_logs insert failed:", err);
-    }
-    void waLink;
-  }
+  // The push half. This used to build a wa.me deep link, throw it away, and
+  // log a "manual" WhatsApp row nobody ever acted on — so in practice an Écho
+  // learned their money was withdrawable by opening the app and noticing.
+  // Money events bypass the engagement daily cap: being second in the queue
+  // behind a share reminder is not a reason to withhold "your money is ready".
+  await sendSinglePush(
+    supabaseAdmin,
+    {
+      echo_id: echoId,
+      type: "payout_ready",
+      campaign_id: campaignId ?? null,
+      payload: { amount, campaignTitle: campaignName },
+    },
+    { bypassDailyCap: true },
+  ).catch(console.error);
 }

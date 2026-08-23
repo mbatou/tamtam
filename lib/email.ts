@@ -7,7 +7,6 @@ function getResend() {
 }
 
 const FROM_EMAIL = "Tamtam <noreply@tamma.me>";
-const SUPPORT_EMAIL = "support@tamma.me";
 
 export async function sendEmail({
   to,
@@ -57,64 +56,6 @@ export async function sendEmailSafe(options: {
   } catch (error) {
     return { success: false, error: String(error) };
   }
-}
-
-export async function sendLeadNotification({
-  business_name,
-  contact_name,
-  email,
-  whatsapp,
-  message,
-}: {
-  business_name: string;
-  contact_name: string;
-  email: string;
-  whatsapp?: string | null;
-  message?: string | null;
-}) {
-  const whatsappLink = whatsapp
-    ? `<a href="https://wa.me/221${whatsapp.replace(/\s/g, '')}">${whatsapp}</a>`
-    : "Non fourni";
-
-  return sendEmail({
-    to: SUPPORT_EMAIL,
-    subject: `🥁 Nouveau Batteur intéressé: ${business_name}`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px;">
-        <h2 style="color: #D35400;">Nouveau lead Batteur!</h2>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td style="padding: 8px; font-weight: bold; color: #666;">Entreprise</td>
-            <td style="padding: 8px;">${business_name}</td>
-          </tr>
-          <tr style="background: #f9f9f9;">
-            <td style="padding: 8px; font-weight: bold; color: #666;">Contact</td>
-            <td style="padding: 8px;">${contact_name}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; font-weight: bold; color: #666;">Email</td>
-            <td style="padding: 8px;"><a href="mailto:${email}">${email}</a></td>
-          </tr>
-          <tr style="background: #f9f9f9;">
-            <td style="padding: 8px; font-weight: bold; color: #666;">WhatsApp</td>
-            <td style="padding: 8px;">${whatsappLink}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; font-weight: bold; color: #666;">Message</td>
-            <td style="padding: 8px;">${message || "Aucun message"}</td>
-          </tr>
-          <tr style="background: #f9f9f9;">
-            <td style="padding: 8px; font-weight: bold; color: #666;">Date</td>
-            <td style="padding: 8px;">${new Date().toLocaleString("fr-SN")}</td>
-          </tr>
-        </table>
-        <p style="margin-top: 20px; color: #888; font-size: 13px;">
-          Réponds dans les 24h. Accède au lead dans le
-          <a href="https://www.tamma.me/superadmin">dashboard superadmin</a>.
-        </p>
-      </div>
-    `,
-  });
 }
 
 export async function sendRoleUpgradeEmail({
@@ -189,155 +130,20 @@ export async function sendBatteurWelcomeEmail({
 
 // --- Admin notification emails ---
 
-export async function sendRechargeRequestNotification({
-  brandName,
-  amount,
-  paymentMethod,
-  refCommand,
-}: {
-  brandName: string;
-  amount: number;
-  paymentMethod: string;
-  refCommand: string;
-}) {
-  return sendEmail({
-    to: SUPPORT_EMAIL,
-    subject: `💰 Demande de recharge : ${amount} FCFA — ${brandName}`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px;">
-        <h2 style="color: #D35400;">Nouvelle demande de recharge</h2>
-        <p>Un batteur vient de soumettre une demande de recharge Wave.</p>
-        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-          <tr>
-            <td style="padding: 8px; font-weight: bold; color: #666;">Batteur</td>
-            <td style="padding: 8px;">${brandName}</td>
-          </tr>
-          <tr style="background: #f9f9f9;">
-            <td style="padding: 8px; font-weight: bold; color: #666;">Montant</td>
-            <td style="padding: 8px; font-weight: bold; font-size: 18px; color: #D35400;">${amount} FCFA</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; font-weight: bold; color: #666;">Methode</td>
-            <td style="padding: 8px;">${paymentMethod}</td>
-          </tr>
-          <tr style="background: #f9f9f9;">
-            <td style="padding: 8px; font-weight: bold; color: #666;">Reference</td>
-            <td style="padding: 8px; font-family: monospace; font-size: 12px;">${refCommand}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; font-weight: bold; color: #666;">Date</td>
-            <td style="padding: 8px;">${new Date().toLocaleString("fr-SN")}</td>
-          </tr>
-        </table>
-        <p>Verifie le paiement sur le dashboard Wave puis valide dans le backoffice :</p>
-        <p style="margin-top: 20px;">
-          <a href="https://www.tamma.me/superadmin/finance" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Voir les recharges</a>
-        </p>
-      </div>
-    `,
-  });
-}
-
-export async function sendPayoutRequestNotification({
-  echoName,
-  echoPhone,
-  amount,
-  provider,
-}: {
-  echoName: string;
-  echoPhone: string;
-  amount: number;
-  provider: string;
-}) {
-  return sendEmail({
-    to: SUPPORT_EMAIL,
-    subject: `🏧 Demande de retrait : ${amount} FCFA — ${echoName}`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px;">
-        <h2 style="color: #D35400;">Nouvelle demande de retrait</h2>
-        <p>Un echo vient de demander un retrait de ses gains.</p>
-        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-          <tr>
-            <td style="padding: 8px; font-weight: bold; color: #666;">Echo</td>
-            <td style="padding: 8px;">${echoName}</td>
-          </tr>
-          <tr style="background: #f9f9f9;">
-            <td style="padding: 8px; font-weight: bold; color: #666;">Telephone</td>
-            <td style="padding: 8px;">${echoPhone}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; font-weight: bold; color: #666;">Montant</td>
-            <td style="padding: 8px; font-weight: bold; font-size: 18px; color: #D35400;">${amount} FCFA</td>
-          </tr>
-          <tr style="background: #f9f9f9;">
-            <td style="padding: 8px; font-weight: bold; color: #666;">Fournisseur</td>
-            <td style="padding: 8px;">${provider === "wave" ? "Wave" : "Orange Money"}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; font-weight: bold; color: #666;">Date</td>
-            <td style="padding: 8px;">${new Date().toLocaleString("fr-SN")}</td>
-          </tr>
-        </table>
-        <p>Traite cette demande dans le backoffice :</p>
-        <p style="margin-top: 20px;">
-          <a href="https://www.tamma.me/superadmin/finance" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Voir les demandes</a>
-        </p>
-      </div>
-    `,
-  });
-}
-
 // --- Engagement emails ---
 
-export async function sendNewCampaignNotification({
-  to,
-  echoName,
-  campaignTitle,
-  cpc,
-}: {
-  to: string;
-  echoName: string;
-  campaignTitle: string;
-  cpc: number;
-}) {
-  return sendEmail({
-    to,
-    subject: `🎵 Nouveau Rythme disponible : ${campaignTitle}`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px;">
-        <h2 style="color: #D35400;">Salut ${echoName} !</h2>
-        <p>Un nouveau Rythme vient d'être lancé sur Tamtam et attend tes partages.</p>
-        <div style="background: #fef3e2; border-left: 4px solid #D35400; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0;">
-          <p style="margin: 0; font-weight: bold; font-size: 16px;">${campaignTitle}</p>
-          <p style="margin: 8px 0 0; color: #666;">Gagne <strong style="color: #D35400;">${cpc} FCFA</strong> par clic valide</p>
-        </div>
-        <p>Connecte-toi pour générer ton lien de partage et commencer à gagner :</p>
-        <p style="margin-top: 20px;">
-          <a href="https://www.tamma.me/rythmes" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Voir les Rythmes</a>
-        </p>
-        <p style="margin-top: 20px; color: #888; font-size: 13px;">
-          Tu reçois cet email car tu es Echo sur Tamtam. Besoin d'aide ? <a href="mailto:support@tamma.me" style="color:#888888;text-decoration:none;">support@tamma.me</a> · <a href="https://wa.me/221762799393" style="color:#25D366;text-decoration:none;">WhatsApp</a>
-        </p>
-      </div>
-    `,
-  });
-}
-
-export async function sendCampaignCompletedToEcho({
-  to,
+export function buildCampaignCompletedToEcho({
   echoName,
   campaignTitle,
   clickCount,
   earnings,
 }: {
-  to: string;
   echoName: string;
   campaignTitle: string;
   clickCount: number;
   earnings: number;
-}) {
-  return sendEmail({
-    to,
+}): { subject: string; html: string } {
+  return {
     subject: `🏁 Rythme terminé : ${campaignTitle}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px;">
@@ -361,28 +167,23 @@ export async function sendCampaignCompletedToEcho({
           <a href="https://www.tamma.me/rythmes" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Voir les Rythmes</a>
         </p>
         <p style="margin-top: 20px; color: #888; font-size: 13px;">
-          Tu reçois cet email car tu as participé à ce Rythme sur Tamtam. <a href="mailto:support@tamma.me" style="color:#888888;text-decoration:none;">support@tamma.me</a> · <a href="https://wa.me/221762799393" style="color:#25D366;text-decoration:none;">WhatsApp</a>
-        </p>
       </div>
     `,
-  });
+  };
 }
 
-export async function sendCampaignLiveToBrand({
-  to,
+export function buildCampaignLiveEmail({
   brandName,
   campaignTitle,
   budget,
   cpc,
 }: {
-  to: string;
   brandName: string;
   campaignTitle: string;
   budget: number;
   cpc: number;
-}) {
-  return sendEmail({
-    to,
+}): { subject: string; html: string } {
+  return {
     subject: `✅ Votre campagne est en ligne : ${campaignTitle}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px;">
@@ -410,7 +211,54 @@ export async function sendCampaignLiveToBrand({
         </p>
       </div>
     `,
-  });
+  };
+}
+
+/**
+ * Campaign rejected — the brand-facing half of moderation.
+ *
+ * Before the channel policy this event was sent on NO channel at all: a brand
+ * whose campaign was refused found out by refreshing the dashboard and seeing
+ * a status chip, with the reason nowhere. Email is the only channel that can
+ * carry a paragraph of explanation, which is exactly why it belongs here.
+ */
+export function buildCampaignRejectedEmail({
+  brandName,
+  campaignTitle,
+  reason,
+  refunded,
+}: {
+  brandName: string;
+  campaignTitle: string;
+  reason: string | null;
+  refunded: number;
+}): { subject: string; html: string } {
+  return {
+    subject: `Campagne non validée : ${campaignTitle}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px;">
+        <h2 style="color: #D35400;">Bonjour ${brandName},</h2>
+        <p>Votre campagne <strong>${campaignTitle}</strong> n'a pas été validée par notre équipe.</p>
+        ${
+          reason
+            ? `<div style="background:#fff5f5;border-left:4px solid #e74c3c;padding:16px;margin:20px 0;border-radius:0 8px 8px 0;">
+                 <p style="margin:0;font-weight:bold;color:#c0392b;">Motif</p>
+                 <p style="margin:8px 0 0;color:#333;line-height:1.6;">${reason}</p>
+               </div>`
+            : `<p style="color:#666;">Aucun motif détaillé n'a été renseigné. Contactez-nous et nous vous expliquons.</p>`
+        }
+        ${
+          refunded > 0
+            ? `<p>Votre budget de <strong>${refunded.toLocaleString("fr-FR")} FCFA</strong> a été recrédité sur votre portefeuille. Rien n'a été dépensé.</p>`
+            : `<p>Aucun budget n'a été débité.</p>`
+        }
+        <p>Corrigez les points ci-dessus et soumettez à nouveau — la plupart des campagnes repassent du premier coup.</p>
+        <p style="margin-top: 20px;">
+          <a href="https://www.tamma.me/admin/campaigns" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Modifier ma campagne</a>
+        </p>
+      </div>
+    `,
+  };
 }
 
 /**
@@ -424,45 +272,3 @@ export async function sendCampaignLiveToBrand({
  * Failures are logged, never thrown: a missed alert must not fail the
  * brand's submission.
  */
-export async function sendCampaignPendingApprovalAlert(opts: {
-  campaignTitle: string;
-  brandName: string | null;
-  budget: number;
-  pricingLabel: string;
-  pricingAmount: number | null;
-  source: "creation" | "submission" | "lead_gen";
-}): Promise<void> {
-  const to = process.env.ADMIN_ALERT_EMAIL || SUPPORT_EMAIL;
-  const sourceLabel =
-    opts.source === "submission"
-      ? "Soumise depuis un brouillon"
-      : opts.source === "lead_gen"
-        ? "Campagne lead generation"
-        : "Nouvelle création";
-
-  const result = await sendEmailSafe({
-    to,
-    subject: `Nouvelle campagne à valider: ${opts.campaignTitle}`,
-    html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px;">
-          <h2 style="color: #D35400;">Nouvelle campagne à valider</h2>
-          <p style="color:#666;font-size:13px;">${sourceLabel}</p>
-          <p><strong>Marque:</strong> ${opts.brandName || "—"}</p>
-          <p><strong>Campagne:</strong> ${opts.campaignTitle}</p>
-          <p><strong>Budget:</strong> ${opts.budget.toLocaleString("fr-FR")} FCFA</p>
-          ${opts.pricingAmount !== null ? `<p><strong>${opts.pricingLabel}:</strong> ${opts.pricingAmount} FCFA</p>` : ""}
-          <p style="margin-top: 20px;">
-            <a href="https://www.tamma.me/superadmin/campaigns" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Valider maintenant →</a>
-          </p>
-        </div>
-      `,
-    tags: [{ name: "type", value: "campaign_pending_approval" }],
-  });
-
-  if (!result.success) {
-    // Loud: a swallowed failure here is exactly why approvals were missed.
-    console.error(
-      `[campaign-approval-alert] FAILED to notify ${to} about "${opts.campaignTitle}": ${result.error}`
-    );
-  }
-}
