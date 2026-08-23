@@ -10,6 +10,7 @@ import { sendSmsBatch } from "@/lib/sms/sms-service";
 import { requireAuth } from "@/lib/api/auth";
 import { awardAmbassadorCommission } from "@/lib/ambassador-commission";
 import { debitBrandBudgetLogged, creditBrandWallet } from "@/lib/wallet";
+import { refundCampaignRemaining } from "@/lib/campaign-refund";
 
 export const dynamic = "force-dynamic";
 
@@ -407,29 +408,13 @@ export async function POST(request: NextRequest) {
       updates.status = "completed";
       unlockCampaignEarnings(campaign_id, campaign.title || campaign_id).catch(console.error);
 
-      const stopRemaining = campaign.budget - (campaign.spent || 0);
-
-      // After updating the campaign, refund remaining budget to brand
-      if (stopRemaining > 0 && campaign.batteur_id) {
-        // Idempotency: check if a stop refund already exists
-        const { data: existingRefund } = await supabase
-          .from("wallet_transactions")
-          .select("id")
-          .eq("source_id", campaign_id)
-          .eq("type", "campaign_budget_refund")
-          .ilike("description", "%arrêtée%")
-          .limit(1);
-
-        if (!existingRefund || existingRefund.length === 0) {
-          await creditBrandWallet(supabase, {
-            brandId: campaign.batteur_id,
-            amount: stopRemaining,
-            description: `Refund for stopped campaign: ${campaign.title || campaign.id} (${stopRemaining} FCFA remaining)`,
-            sourceId: campaign_id,
-            createdBy: authUser.id,
-          });
-        }
-      }
+      // Refund remaining budget to the brand — atomic + exactly-once (F7).
+      // Shares one guard with the click route and the expiry cron, so a
+      // stopped-then-expired campaign can no longer be refunded twice.
+      await refundCampaignRemaining(supabase, campaign_id, {
+        reason: "campagne arrêtée",
+        createdBy: authUser.id,
+      });
       break;
     }
     default:
