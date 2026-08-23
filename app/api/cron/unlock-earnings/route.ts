@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { notifyEchoUnlock, unlockCampaignEarnings } from "@/lib/unlock-earnings";
 import { verifyCronSecret } from "@/lib/api/cron";
+import { refundCampaignRemaining } from "@/lib/campaign-refund";
 
 export const dynamic = "force-dynamic";
 
@@ -33,23 +34,11 @@ export async function GET(request: NextRequest) {
     // (un-awaited, both paths could process the same row — F5 double-credit)
     await unlockCampaignEarnings(campaign.id, campaign.title || campaign.id).catch(console.error);
 
-    // Refund remaining budget to brand
-    const remaining = campaign.budget - (campaign.spent || 0);
-    if (remaining > 0 && campaign.batteur_id) {
-      await supabaseAdmin.rpc("increment_balance", {
-        p_user_id: campaign.batteur_id,
-        p_amount: remaining,
-      });
-      await logWalletTransaction({
-        supabase: supabaseAdmin,
-        userId: campaign.batteur_id,
-        amount: remaining,
-        type: "campaign_budget_refund",
-        description: `Remboursement fin de campagne: ${campaign.title || campaign.id}`,
-        sourceId: campaign.id,
-        sourceType: "campaign",
-      });
-    }
+    // Refund remaining budget to the brand — atomic + exactly-once (F7).
+    // Previously this path had NO idempotency guard at all.
+    await refundCampaignRemaining(supabaseAdmin, campaign.id, {
+      reason: "fin de campagne",
+    });
     expiredCount++;
   }
 

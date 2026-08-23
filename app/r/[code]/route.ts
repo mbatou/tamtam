@@ -7,6 +7,7 @@ import * as Sentry from "@sentry/nextjs";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { unlockCampaignEarnings } from "@/lib/unlock-earnings";
 import { generateShortCode } from "@/lib/utils";
+import { refundCampaignRemaining } from "@/lib/campaign-refund";
 
 function appendTmRef(url: string, tmRef: string): string {
   try {
@@ -167,33 +168,10 @@ export async function GET(
 
       unlockCampaignEarnings(campaign.id, campaign.title || campaign.id).catch(console.error);
 
-      // Refund remaining balance to brand (if any)
-      if (preRemaining > 0 && campaign.batteur_id) {
-        const { data: existingRefund } = await supabase
-          .from("wallet_transactions")
-          .select("id")
-          .eq("source_id", campaign.id)
-          .eq("type", "campaign_budget_refund")
-          .ilike("description", "%fin de campagne%")
-          .limit(1);
-
-        if (!existingRefund || existingRefund.length === 0) {
-          await supabase.rpc("increment_balance", {
-            p_user_id: campaign.batteur_id,
-            p_amount: preRemaining,
-          });
-
-          await logWalletTransaction({
-            supabase,
-            userId: campaign.batteur_id,
-            amount: preRemaining,
-            type: "campaign_budget_refund",
-            description: `Remboursement fin de campagne: ${campaign.title || campaign.id} (${preRemaining} FCFA restants < CPC ${campaign.cpc} FCFA)`,
-            sourceId: campaign.id,
-            sourceType: "campaign",
-          });
-        }
-      }
+      // Refund remaining budget to the brand — atomic + exactly-once (F7)
+      await refundCampaignRemaining(supabase, campaign.id, {
+        reason: "fin de campagne (budget insuffisant)",
+      });
 
       return NextResponse.redirect(destinationUrl);
     }
@@ -261,30 +239,10 @@ export async function GET(
 
             unlockCampaignEarnings(campaign.id, campaign.title || campaign.id).catch(console.error);
 
-            // Refund the small remaining balance (idempotent)
-            const { data: existingRefund } = await supabase
-              .from("wallet_transactions")
-              .select("id")
-              .eq("source_id", campaign.id)
-              .eq("type", "campaign_budget_refund")
-              .ilike("description", "%fin de campagne%")
-              .limit(1);
-
-            if (!existingRefund || existingRefund.length === 0) {
-              await supabase.rpc("increment_balance", {
-                p_user_id: campaign.batteur_id,
-                p_amount: postRemaining,
-              });
-              await logWalletTransaction({
-                supabase,
-                userId: campaign.batteur_id,
-                amount: postRemaining,
-                type: "campaign_budget_refund",
-                description: `Remboursement fin de campagne: ${campaign.title || campaign.id} (${postRemaining} FCFA restants < CPC ${campaign.cpc} FCFA)`,
-                sourceId: campaign.id,
-                sourceType: "campaign",
-              });
-            }
+            // Refund the small remaining balance — atomic + exactly-once (F7)
+            await refundCampaignRemaining(supabase, campaign.id, {
+              reason: "fin de campagne (budget insuffisant)",
+            });
           } catch (err) {
             console.error("Auto-complete refund error:", err);
           }
