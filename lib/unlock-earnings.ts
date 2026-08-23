@@ -17,14 +17,22 @@ export async function unlockCampaignEarnings(campaignId: string, campaignName: s
   for (const pending of pendingList) {
     if (pending.amount_fcfa <= 0) continue;
 
-    await supabaseAdmin
+    // Atomic claim: only the caller that flips status pending→unlocked may
+    // transfer. Concurrent unlockers (completion sites, the daily cron's
+    // due-list loop) lose the claim and skip — prevents double-crediting
+    // available_balance for the same earnings row (F5).
+    const { data: claimed } = await supabaseAdmin
       .from("pending_earnings")
       .update({
         status: "unlocked",
         unlocked_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
-      .eq("id", pending.id);
+      .eq("id", pending.id)
+      .eq("status", "pending")
+      .select("id");
+
+    if (!claimed || claimed.length === 0) continue;
 
     await supabaseAdmin.rpc("transfer_pending_to_available", {
       p_user_id: pending.echo_id,
