@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import PendingDriftCard from "@/components/superadmin/PendingDriftCard";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>;
@@ -222,6 +223,11 @@ export default function WaveReconciliationPage() {
             Refresh
           </button>
         </div>
+      </div>
+
+      {/* Stuck pending-earnings drift (one-click backfill) */}
+      <div className="mb-4">
+        <PendingDriftCard />
       </div>
 
       {/* Action feedback */}
