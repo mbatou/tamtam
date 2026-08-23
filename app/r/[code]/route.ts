@@ -227,47 +227,11 @@ export async function GET(
         .order("created_at", { ascending: false })
         .limit(1);
     } else {
-      // Upsert pending_earnings record for this echo+campaign
-      const campaignEnd = campaign.ends_at ? new Date(campaign.ends_at) : null;
-      const thirtyDaysFromNow = new Date();
-      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-      const unlockDate = (campaignEnd && campaignEnd <= thirtyDaysFromNow)
-        ? campaignEnd.toISOString().split("T")[0]
-        : thirtyDaysFromNow.toISOString().split("T")[0];
-
-      (async () => {
-        try {
-          const { data: existing } = await supabase
-            .from("pending_earnings")
-            .select("id, amount_fcfa, click_count")
-            .eq("echo_id", link.echo_id)
-            .eq("campaign_id", campaign.id)
-            .eq("status", "pending")
-            .maybeSingle();
-
-          if (existing) {
-            await supabase
-              .from("pending_earnings")
-              .update({
-                amount_fcfa: existing.amount_fcfa + echoEarnings,
-                click_count: existing.click_count + 1,
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", existing.id);
-          } else {
-            await supabase
-              .from("pending_earnings")
-              .insert({
-                echo_id: link.echo_id,
-                campaign_id: campaign.id,
-                campaign_name: campaign.title,
-                amount_fcfa: echoEarnings,
-                click_count: 1,
-                unlock_date: unlockDate,
-              });
-          }
-        } catch (e) { console.error(e); }
-      })();
+      // pending_earnings is written ATOMICALLY inside the increment_click RPC
+      // (migration 20260823_echo_payout_drift_fix.sql), in the same transaction
+      // as the pending_balance credit — so the row can never drift or be dropped
+      // by a serverless freeze after the response. Do NOT upsert it here too, or
+      // earnings would be double-counted.
 
       // Log click earning transaction + update click counter (async, don't block redirect)
       Promise.all([

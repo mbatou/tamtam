@@ -362,6 +362,42 @@ export async function checkCampaignIntegrity(): Promise<Issue[]> {
   return issues;
 }
 
+/** CHECK 7: Echo pending earnings that can never unlock (stuck-earnings drift).
+ *  pending_balance not backed by a pending_earnings row — the unlock cron
+ *  settles only from pending_earnings, so this money never reaches
+ *  available_balance and can never be withdrawn. Remediate with
+ *  POST /api/superadmin/reconcile-pending-drift { dry_run: false }. */
+export async function checkEchoPendingDrift(): Promise<Issue[]> {
+  const issues: Issue[] = [];
+
+  const { data: rows } = await supabaseAdmin.rpc("echo_pending_drift");
+  const drifted = ((rows as { echo_id: string; echo_name: string | null; drift: number }[]) || [])
+    .filter((r) => r.drift > 0);
+
+  if (drifted.length === 0) return issues;
+
+  const totalStuck = drifted.reduce((s, r) => s + r.drift, 0);
+
+  issues.push({
+    severity: totalStuck > 5000 ? "critical" : totalStuck > 500 ? "warning" : "info",
+    category: "balance_mismatch",
+    subjectType: "echo_pending",
+    subjectId: "global",
+    description: `${drifted.length} Échos ont ${totalStuck} F de gains bloqués (pending_balance sans pending_earnings — ne se débloqueront jamais). Régulariser via /api/superadmin/reconcile-pending-drift`,
+    expectedValue: 0,
+    actualValue: totalStuck,
+    discrepancy: totalStuck,
+    suggestedAction: "manual_credit",
+    autoHealable: false,
+    metadata: {
+      echos: drifted.length,
+      top: drifted.slice(0, 20).map((r) => ({ echo_id: r.echo_id, name: r.echo_name, stuck_fcfa: r.drift })),
+    },
+  });
+
+  return issues;
+}
+
 // ---------------------------------------------------------------------------
 // ORCHESTRATORS
 // ---------------------------------------------------------------------------
@@ -373,6 +409,7 @@ export async function runLiveReconciliation(): Promise<Issue[]> {
     checkCheckoutFlowIntegrity(),
     checkPayoutFlowIntegrity(),
     checkWebhookBacklog(),
+    checkEchoPendingDrift(),
   ]);
   return results.flat();
 }
@@ -388,6 +425,7 @@ export async function runFullReconciliation(): Promise<ReconciliationSnapshot> {
     checkPayoutFlowIntegrity(),
     checkCampaignIntegrity(),
     checkWebhookBacklog(),
+    checkEchoPendingDrift(),
   ]);
 
   const allIssues = results.flat();
