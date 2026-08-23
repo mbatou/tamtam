@@ -4,6 +4,7 @@ import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { notifyEchoUnlock, unlockCampaignEarnings } from "@/lib/unlock-earnings";
 import { verifyCronSecret } from "@/lib/api/cron";
 import { refundCampaignRemaining } from "@/lib/campaign-refund";
+import { getUserEmail } from "@/lib/user-emails";
 
 export const dynamic = "force-dynamic";
 
@@ -103,19 +104,22 @@ export async function GET(request: NextRequest) {
         sourceType: "campaign_unlock",
       });
 
+      // public.users has no email column (it lives in auth.users)
       const { data: user } = await supabaseAdmin
         .from("users")
-        .select("name, phone, email, available_balance")
+        .select("name, phone, available_balance")
         .eq("id", pending.echo_id)
         .single();
+      const echoEmail = user ? await getUserEmail(supabaseAdmin, pending.echo_id) : null;
 
       if (user && pending.amount_fcfa > 0) {
         await notifyEchoUnlock(
           pending.echo_id,
-          user,
+          { ...user, email: echoEmail },
           pending.amount_fcfa,
           (campaign?.title || pending.campaign_name) + " (paiement intermédiaire)",
           user.available_balance || 0,
+          pending.campaign_id,
         ).catch(console.error);
       }
     } else {
@@ -149,19 +153,22 @@ export async function GET(request: NextRequest) {
         sourceType: "campaign_unlock",
       });
 
+      // public.users has no email column (it lives in auth.users)
       const { data: user } = await supabaseAdmin
         .from("users")
-        .select("name, phone, email, available_balance")
+        .select("name, phone, available_balance")
         .eq("id", pending.echo_id)
         .single();
+      const echoEmail = user ? await getUserEmail(supabaseAdmin, pending.echo_id) : null;
 
       if (user) {
         await notifyEchoUnlock(
           pending.echo_id,
-          user,
+          { ...user, email: echoEmail },
           pending.amount_fcfa,
           campaign?.title || pending.campaign_name || "Campagne",
           user.available_balance || 0,
+          pending.campaign_id,
         ).catch(console.error);
       }
     }

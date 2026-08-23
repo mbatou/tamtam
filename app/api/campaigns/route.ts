@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { createCampaignSchema, updateCampaignSchema, deleteCampaignSchema } from "@/lib/validations";
-import { sendCampaignCompletedToEcho, sendEmail } from "@/lib/email";
+import { sendCampaignCompletedToEcho, sendEmail, sendCampaignPendingApprovalAlert } from "@/lib/email";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { debitBrandBudget, debitBrandBudgetLogged, creditBrandWallet } from "@/lib/wallet";
@@ -253,23 +253,14 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (requireApproval) {
-    // Notify superadmin about new campaign pending review
-    sendEmail({
-      to: "support@tamma.me",
-      subject: `Nouvelle campagne soumise: ${title}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px;">
-          <h2 style="color: #D35400;">Nouvelle campagne à valider</h2>
-          <p><strong>Marque:</strong> ${brand?.name || "—"}</p>
-          <p><strong>Campagne:</strong> ${title}</p>
-          <p><strong>Budget:</strong> ${budget.toLocaleString()} FCFA</p>
-          <p><strong>${pricingModel === "cpa" ? "CPA" : "CPC"}:</strong> ${pricingModel === "cpa" ? cpa_amount : effectiveCpc} FCFA</p>
-          <p style="margin-top: 20px;">
-            <a href="https://www.tamma.me/superadmin/campaigns" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Valider maintenant →</a>
-          </p>
-        </div>
-      `,
-    }).catch(() => {});
+    await sendCampaignPendingApprovalAlert({
+      campaignTitle: title,
+      brandName: brand?.name || null,
+      budget,
+      pricingLabel: pricingModel === "cpa" ? "CPA" : "CPC",
+      pricingAmount: pricingModel === "cpa" ? (effectiveCpaAmount ?? null) : effectiveCpc,
+      source: "creation",
+    });
   }
 
   return NextResponse.json(data, { status: 201 });
@@ -479,6 +470,25 @@ export async function PUT(request: NextRequest) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // A draft submitted for review used to land silently — no alert was sent
+  // from this path at all, so campaigns sat unapproved with nobody notified.
+  if (isNewSubmission && data?.moderation_status === "pending") {
+    const { data: submittingBrand } = await supabase
+      .from("users")
+      .select("name")
+      .eq("id", brandId)
+      .single();
+
+    await sendCampaignPendingApprovalAlert({
+      campaignTitle: data.title || existing.title || id,
+      brandName: submittingBrand?.name || null,
+      budget: data.budget ?? existing.budget ?? 0,
+      pricingLabel: data.pricing_model === "cpa" ? "CPA" : "CPC",
+      pricingAmount: data.pricing_model === "cpa" ? data.cpa_amount ?? null : data.cpc ?? null,
+      source: "submission",
+    });
   }
 
   // Unlock echo earnings and notify when campaign is completed

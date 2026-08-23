@@ -2,6 +2,7 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { sendEmail } from "@/lib/email";
+import { getUserEmail } from "@/lib/user-emails";
 
 export async function unlockCampaignEarnings(campaignId: string, campaignName: string) {
   const { data: pendingList } = await supabaseAdmin
@@ -49,19 +50,24 @@ export async function unlockCampaignEarnings(campaignId: string, campaignName: s
       sourceType: "campaign_unlock",
     });
 
+    // NB: public.users has no email column — it lives in auth.users.
+    // Selecting it here silently returned null, which is why this
+    // notification never fired in production.
     const { data: user } = await supabaseAdmin
       .from("users")
-      .select("name, phone, email, available_balance")
+      .select("name, phone, available_balance")
       .eq("id", pending.echo_id)
       .single();
 
     if (user) {
+      const email = await getUserEmail(supabaseAdmin, pending.echo_id);
       notifyEchoUnlock(
         pending.echo_id,
-        user,
+        { ...user, email },
         pending.amount_fcfa,
         campaignName,
         user.available_balance || 0,
+        campaignId,
       ).catch(console.error);
     }
 
@@ -78,6 +84,7 @@ export async function notifyEchoUnlock(
   amount: number,
   campaignName: string,
   newAvailableBalance: number,
+  campaignId?: string,
 ) {
   const formattedAmount = new Intl.NumberFormat("fr-FR").format(amount);
   const formattedBalance = new Intl.NumberFormat("fr-FR").format(newAvailableBalance);
@@ -105,7 +112,7 @@ export async function notifyEchoUnlock(
     }).catch(console.error);
   }
 
-  if (user.phone) {
+  if (user.phone && campaignId) {
     const message = encodeURIComponent(
       `${formattedAmount} FCFA débloqués !\n\n` +
       `La campagne "${campaignName}" est terminée.\n\n` +
@@ -115,14 +122,19 @@ export async function notifyEchoUnlock(
     const waLink = `https://wa.me/${user.phone}?text=${message}`;
 
     try {
+      // notification_logs requires campaign_id (NOT NULL) and has no
+      // metadata column — the previous insert violated both.
       await supabaseAdmin
         .from("notification_logs")
         .insert({
+          campaign_id: campaignId,
           echo_id: echoId,
           channel: "whatsapp",
           status: "manual",
-          metadata: { wa_link: waLink, type: "unlock" },
         });
-    } catch { /* non-blocking */ }
+    } catch (err) {
+      console.error("[unlock] notification_logs insert failed:", err);
+    }
+    void waLink;
   }
 }

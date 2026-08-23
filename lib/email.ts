@@ -412,3 +412,57 @@ export async function sendCampaignLiveToBrand({
     `,
   });
 }
+
+/**
+ * Alert the platform team that a campaign is waiting for approval.
+ *
+ * Called from EVERY path that leaves a campaign in moderation_status
+ * "pending" — direct creation, draft submission, and lead-gen launch.
+ * (Draft submissions used to land silently, so campaigns sat unapproved
+ * with nobody notified.)
+ *
+ * Failures are logged, never thrown: a missed alert must not fail the
+ * brand's submission.
+ */
+export async function sendCampaignPendingApprovalAlert(opts: {
+  campaignTitle: string;
+  brandName: string | null;
+  budget: number;
+  pricingLabel: string;
+  pricingAmount: number | null;
+  source: "creation" | "submission" | "lead_gen";
+}): Promise<void> {
+  const to = process.env.ADMIN_ALERT_EMAIL || SUPPORT_EMAIL;
+  const sourceLabel =
+    opts.source === "submission"
+      ? "Soumise depuis un brouillon"
+      : opts.source === "lead_gen"
+        ? "Campagne lead generation"
+        : "Nouvelle création";
+
+  const result = await sendEmailSafe({
+    to,
+    subject: `Nouvelle campagne à valider: ${opts.campaignTitle}`,
+    html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px;">
+          <h2 style="color: #D35400;">Nouvelle campagne à valider</h2>
+          <p style="color:#666;font-size:13px;">${sourceLabel}</p>
+          <p><strong>Marque:</strong> ${opts.brandName || "—"}</p>
+          <p><strong>Campagne:</strong> ${opts.campaignTitle}</p>
+          <p><strong>Budget:</strong> ${opts.budget.toLocaleString("fr-FR")} FCFA</p>
+          ${opts.pricingAmount !== null ? `<p><strong>${opts.pricingLabel}:</strong> ${opts.pricingAmount} FCFA</p>` : ""}
+          <p style="margin-top: 20px;">
+            <a href="https://www.tamma.me/superadmin/campaigns" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Valider maintenant →</a>
+          </p>
+        </div>
+      `,
+    tags: [{ name: "type", value: "campaign_pending_approval" }],
+  });
+
+  if (!result.success) {
+    // Loud: a swallowed failure here is exactly why approvals were missed.
+    console.error(
+      `[campaign-approval-alert] FAILED to notify ${to} about "${opts.campaignTitle}": ${result.error}`
+    );
+  }
+}
