@@ -29,7 +29,9 @@ export async function GET(request: NextRequest) {
       .eq("id", campaign.id)
       .eq("status", "active");
 
-    unlockCampaignEarnings(campaign.id, campaign.title || campaign.id).catch(console.error);
+    // Awaited so the due-list query below sees these rows already claimed
+    // (un-awaited, both paths could process the same row — F5 double-credit)
+    await unlockCampaignEarnings(campaign.id, campaign.title || campaign.id).catch(console.error);
 
     // Refund remaining budget to brand
     const remaining = campaign.budget - (campaign.spent || 0);
@@ -74,7 +76,29 @@ export async function GET(request: NextRequest) {
     const isStillActive = campaign?.status === "active";
 
     if (isStillActive) {
-      // Campaign still running — 30-day rolling unlock
+      // Campaign still running — 30-day rolling unlock.
+      // Atomic claim FIRST (zero the row before transferring): the guard on
+      // status AND the exact amount we read means a concurrent unlocker or a
+      // click landing between read and claim makes us skip — never transfer
+      // an amount that no longer matches the row (F5).
+      const nextUnlock = new Date();
+      nextUnlock.setDate(nextUnlock.getDate() + 30);
+
+      const { data: claimed } = await supabaseAdmin
+        .from("pending_earnings")
+        .update({
+          amount_fcfa: 0,
+          click_count: 0,
+          unlock_date: nextUnlock.toISOString().split("T")[0],
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", pending.id)
+        .eq("status", "pending")
+        .eq("amount_fcfa", pending.amount_fcfa)
+        .select("id");
+
+      if (!claimed || claimed.length === 0) continue;
+
       await supabaseAdmin.rpc("transfer_pending_to_available", {
         p_user_id: pending.echo_id,
         p_amount: pending.amount_fcfa,
@@ -89,20 +113,6 @@ export async function GET(request: NextRequest) {
         sourceId: pending.campaign_id,
         sourceType: "campaign_unlock",
       });
-
-      // Reset for next 30-day cycle
-      const nextUnlock = new Date();
-      nextUnlock.setDate(nextUnlock.getDate() + 30);
-
-      await supabaseAdmin
-        .from("pending_earnings")
-        .update({
-          amount_fcfa: 0,
-          click_count: 0,
-          unlock_date: nextUnlock.toISOString().split("T")[0],
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", pending.id);
 
       const { data: user } = await supabaseAdmin
         .from("users")
@@ -120,15 +130,20 @@ export async function GET(request: NextRequest) {
         ).catch(console.error);
       }
     } else {
-      // Campaign completed/paused/cancelled — final unlock
-      await supabaseAdmin
+      // Campaign completed/paused/cancelled — final unlock.
+      // Atomic claim: transfer only if we flipped status pending→unlocked (F5).
+      const { data: claimed } = await supabaseAdmin
         .from("pending_earnings")
         .update({
           status: "unlocked",
           unlocked_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
-        .eq("id", pending.id);
+        .eq("id", pending.id)
+        .eq("status", "pending")
+        .select("id");
+
+      if (!claimed || claimed.length === 0) continue;
 
       await supabaseAdmin.rpc("transfer_pending_to_available", {
         p_user_id: pending.echo_id,
