@@ -46,7 +46,6 @@ const PAGE_TITLES: Record<string, string> = {
   "/superadmin/settings": "Settings",
   "/superadmin/ambassadors": "Ambassadors",
   "/superadmin/analytics": "Analytics",
-  "/superadmin/reconciliation": "Reconciliation",
   "/superadmin/email-campaigns": "Email Campaigns",
   "/superadmin/roadmap": "Roadmap",
   "/superadmin/notifications": "Notifications",

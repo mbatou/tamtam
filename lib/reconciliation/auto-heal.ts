@@ -5,8 +5,17 @@ import { logWalletTransaction } from "@/lib/wallet-transactions";
 import type { Issue } from "./engine";
 
 // ---------------------------------------------------------------------------
-// Auto-heal worker — READ-only sync operations (never moves money)
-// Logs all actions to reconciliation_auto_heals for audit trail
+// Auto-heal worker — refetches a checkout or payout from the Wave API and
+// writes back the status Wave reports.
+//
+// WARNING: this is NOT purely read-only. healCheckoutSync calls
+// credit_wallet_from_checkout, which credits the user's wallet, when Wave
+// reports a checkout we still hold as "open" has in fact completed. Treat any
+// caller of it as a money-moving action and confirm with the operator first.
+// healPayoutSync only syncs status — a refund after a failed payout stays a
+// deliberate human action.
+//
+// Logs all actions to reconciliation_auto_heals for audit trail.
 // ---------------------------------------------------------------------------
 
 interface HealResult {

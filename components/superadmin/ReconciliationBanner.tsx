@@ -2,44 +2,40 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { formatFCFA } from "@/lib/utils";
 
-interface BannerStatus {
-  hasCritical: boolean;
-  unresolvedCount: number;
-  snapshot: {
-    total_discrepancy: number;
-    computed_at: string;
-    critical_issues_count: number;
-  } | null;
+interface Verdict {
+  status: "ok" | "warning" | "critical";
+  moneyOwedFcfa: number;
+  actionableCount: number;
 }
 
+/**
+ * Platform-wide alert for money owed to users.
+ *
+ * Reads the same /api/superadmin/reconciliation/verdict endpoint as the
+ * reconciliation page's hero, so the banner and the page can never show
+ * different numbers — and it never shows the old total_discrepancy, which was a
+ * sum of absolute values of unrelated things and not money.
+ */
 export default function ReconciliationBanner() {
-  const [status, setStatus] = useState<BannerStatus | null>(null);
+  const [verdict, setVerdict] = useState<Verdict | null>(null);
 
   useEffect(() => {
-    fetch("/api/superadmin/reconciliation/status")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (d) setStatus(d);
-      })
-      .catch((err) => console.error("[reconciliation-banner]", err));
-
-    const interval = setInterval(() => {
-      fetch("/api/superadmin/reconciliation/status")
+    const load = () =>
+      fetch("/api/superadmin/reconciliation/verdict")
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
-          if (d) setStatus(d);
+          if (d) setVerdict(d);
         })
         .catch((err) => console.error("[reconciliation-banner]", err));
-    }, 5 * 60 * 1000); // Refresh every 5 min
 
+    load();
+    const interval = setInterval(load, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
-  if (!status?.hasCritical) return null;
-
-  const discrepancy = status.snapshot?.total_discrepancy || 0;
-  const criticalCount = status.snapshot?.critical_issues_count || 0;
+  if (verdict?.status !== "critical") return null;
 
   return (
     <div className="bg-red-500/10 border-b border-red-500/20 px-4 py-2">
@@ -47,11 +43,12 @@ export default function ReconciliationBanner() {
         <div className="flex items-center gap-2 text-sm">
           <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
           <span className="text-red-400 font-semibold">
-            {criticalCount} critical reconciliation issue{criticalCount > 1 ? "s" : ""}
+            {verdict.actionableCount} problème{verdict.actionableCount > 1 ? "s" : ""} critique
+            {verdict.actionableCount > 1 ? "s" : ""} de réconciliation
           </span>
-          {discrepancy > 0 && (
+          {verdict.moneyOwedFcfa > 0 && (
             <span className="text-red-300/70 text-xs">
-              ({discrepancy.toLocaleString()} F discrepancy)
+              (dû aux utilisateurs : {formatFCFA(verdict.moneyOwedFcfa)})
             </span>
           )}
         </div>
@@ -59,7 +56,7 @@ export default function ReconciliationBanner() {
           href="/superadmin/wave-reconciliation"
           className="text-xs font-bold text-red-400 hover:text-red-300 transition shrink-0"
         >
-          View &rarr;
+          Voir &rarr;
         </Link>
       </div>
     </div>
