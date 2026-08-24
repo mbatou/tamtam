@@ -73,6 +73,15 @@ export default function EarningsPage() {
     setLoading(false);
   }
 
+  // Derived above validateAmount on purpose: this is the ONE number the whole
+  // withdrawal flow must agree on. `users.balance` is a stale legacy column for
+  // Échos — earnings reach them through pending_balance → available_balance, and
+  // nothing writes them back to `balance`. Validating against it while
+  // displaying `available_balance` meant the sheet offered a maximum it then
+  // refused ("Le montant dépasse ton solde" on an amount the UI suggested).
+  const availableBalance = balanceData?.available ?? user?.available_balance ?? user?.balance ?? 0;
+  const pendingBalance = balanceData?.pending ?? user?.pending_balance ?? 0;
+
   function roundToFive(n: number) {
     return Math.floor(n / 5) * 5;
   }
@@ -82,7 +91,7 @@ export default function EarningsPage() {
     if (!num || num <= 0) return t("echo.earnings.enterAmount");
     if (num < minPayout) return t("echo.earnings.minWithdraw") + " " + formatFCFA(minPayout);
     if (num % 5 !== 0) return t("echo.earnings.multipleOfFive");
-    if (num > (user?.balance || 0)) return t("echo.earnings.insufficientBalance");
+    if (num > availableBalance) return t("echo.earnings.insufficientBalance");
     return "";
   }
 
@@ -144,8 +153,6 @@ export default function EarningsPage() {
     );
   }
 
-  const availableBalance = balanceData?.available ?? user?.available_balance ?? user?.balance ?? 0;
-  const pendingBalance = balanceData?.pending ?? user?.pending_balance ?? 0;
   const canWithdraw = availableBalance >= minPayout;
   const hasPendingPayout = payouts.some((p) => p.status === "pending" || p.status === "processing");
   const totalEarned = user?.total_earned || 0;
