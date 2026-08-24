@@ -9,6 +9,11 @@ vi.mock("@/lib/notifications/email-router", () => ({
 import { sendCampaignReport } from "@/lib/notifications/campaign-report";
 import { sendRechargeReceipt } from "@/lib/notifications/recharge-receipt";
 import { buildBudgetAlertEmail, buildCampaignReportEmail, buildRechargeReceiptEmail } from "@/lib/email";
+import {
+  BUDGET_ALERT_THRESHOLD,
+  crossesBudgetThreshold,
+  isAtRisk,
+} from "@/lib/notifications/budget-alert";
 
 // fr-FR groups with U+202F (narrow no-break space), not a plain space — assert
 // against the same formatter rather than hand-typing the separator.
@@ -249,5 +254,53 @@ describe("brand email templates", () => {
     });
     expect(html).not.toContain("NaN");
     expect(html).not.toContain("Infinity");
+  });
+});
+
+describe("budget alert threshold", () => {
+  // The primary alert fires from the click route, so the crossing test has to
+  // be pure arithmetic on numbers already in hand — no query on the hot path.
+  it("is true for exactly one click per campaign", () => {
+    const budget = 1000;
+    const cpc = 100;
+    let crossings = 0;
+    for (let spent = 0; spent < budget; spent += cpc) {
+      if (crossesBudgetThreshold(budget, spent, spent + cpc)) crossings++;
+    }
+    expect(crossings).toBe(1);
+  });
+
+  it("fires on the click that takes spend to the threshold", () => {
+    // 700 → 800 of 1000 is the crossing at 80%.
+    expect(crossesBudgetThreshold(1000, 700, 800)).toBe(true);
+    expect(crossesBudgetThreshold(1000, 600, 700)).toBe(false);
+    expect(crossesBudgetThreshold(1000, 800, 900)).toBe(false);
+  });
+
+  it("fires when a single large click jumps clean over the threshold", () => {
+    expect(crossesBudgetThreshold(1000, 100, 950)).toBe(true);
+  });
+
+  it("never divides by zero on a budget-less campaign", () => {
+    expect(crossesBudgetThreshold(0, 0, 100)).toBe(false);
+  });
+
+  it("agrees with the cron's sweep predicate at the boundary", () => {
+    const budget = 1000;
+    const spent = Math.ceil(budget * BUDGET_ALERT_THRESHOLD);
+    expect(isAtRisk({ budget, spent, cpc: 100, pricing_model: "cpc" })).toBe(true);
+    expect(isAtRisk({ budget, spent: spent - 200, cpc: 100, pricing_model: "cpc" })).toBe(false);
+  });
+
+  it("does not warn about a campaign that can no longer afford one unit", () => {
+    // That campaign is finished, not nearly finished — the click route
+    // completes and refunds it, and it gets the report instead.
+    expect(isAtRisk({ budget: 1000, spent: 950, cpc: 100, pricing_model: "cpc" })).toBe(false);
+    expect(isAtRisk({ budget: 1000, spent: 900, cpc: 100, pricing_model: "cpc" })).toBe(true);
+  });
+
+  it("uses the CPA amount as the unit for CPA campaigns", () => {
+    expect(isAtRisk({ budget: 10000, spent: 9000, cpc: 0, cpa_amount: 500, pricing_model: "cpa" })).toBe(true);
+    expect(isAtRisk({ budget: 10000, spent: 9800, cpc: 0, cpa_amount: 500, pricing_model: "cpa" })).toBe(false);
   });
 });

@@ -9,6 +9,7 @@ import { unlockCampaignEarnings } from "@/lib/unlock-earnings";
 import { generateShortCode } from "@/lib/utils";
 import { refundCampaignRemaining } from "@/lib/campaign-refund";
 import { sendCampaignReport } from "@/lib/notifications/campaign-report";
+import { crossesBudgetThreshold, sendBudgetAlert } from "@/lib/notifications/budget-alert";
 
 function appendTmRef(url: string, tmRef: string): string {
   try {
@@ -231,30 +232,44 @@ export async function GET(
         supabase.rpc("increment_echo_clicks", { p_echo_id: link.echo_id }),
       ]).catch(console.error);
 
+      const spentBefore = campaign.spent || 0;
+      const spentAfter = spentBefore + campaign.cpc;
+
       // Post-click check: if remaining budget < CPC after this click, auto-complete + refund
-      const postRemaining = campaign.budget - ((campaign.spent || 0) + campaign.cpc);
+      const postRemaining = campaign.budget - spentAfter;
       if (postRemaining < campaign.cpc && postRemaining > 0 && campaign.batteur_id) {
-        (async () => {
-          try {
-            // Auto-complete the campaign (only if still active to prevent race condition)
-            await supabase
-              .from("campaigns")
-              .update({ status: "completed" })
-              .eq("id", campaign.id)
-              .eq("status", "active");
+        // Awaited. This branch moves money (the refund) and closes the
+        // campaign; work started and left running past the response is dropped
+        // when the serverless function freezes, which is how the
+        // pending_earnings drift happened. It costs latency on exactly one
+        // click per campaign — the one that ends it.
+        try {
+          // Auto-complete the campaign (only if still active to prevent race condition)
+          await supabase
+            .from("campaigns")
+            .update({ status: "completed" })
+            .eq("id", campaign.id)
+            .eq("status", "active");
 
-            unlockCampaignEarnings(campaign.id, campaign.title || campaign.id).catch(console.error);
+          unlockCampaignEarnings(campaign.id, campaign.title || campaign.id).catch(console.error);
 
-            // Refund the small remaining balance — atomic + exactly-once (F7)
-            await refundCampaignRemaining(supabase, campaign.id, {
-              reason: "fin de campagne (budget insuffisant)",
-            });
+          // Refund the small remaining balance — atomic + exactly-once (F7)
+          await refundCampaignRemaining(supabase, campaign.id, {
+            reason: "fin de campagne (budget insuffisant)",
+          });
 
-            await sendCampaignReport(supabase, campaign.id);
-          } catch (err) {
-            console.error("Auto-complete refund error:", err);
-          }
-        })();
+          await sendCampaignReport(supabase, campaign.id);
+        } catch (err) {
+          console.error("Auto-complete refund error:", err);
+        }
+      } else if (campaign.batteur_id && crossesBudgetThreshold(campaign.budget, spentBefore, spentAfter)) {
+        // The primary budget alert. `crossesBudgetThreshold` is pure
+        // arithmetic on numbers already in hand — no query on the hot path —
+        // and it is true for exactly one click per campaign, so this awaits on
+        // that click and nowhere else. The daily cron is only the safety net
+        // (Vercel Hobby caps crons at one run a day, which is far too slow to
+        // be the thing a brand relies on).
+        await sendBudgetAlert(supabase, campaign.id);
       }
     }
   }

@@ -104,14 +104,35 @@ guard rather than a flag on the row:
 - **Recharge receipt** — both Wave webhook handlers can credit one checkout.
   Keyed on the payment reference, with a partial-unique index behind it so the
   guard is the database's, not a race-prone read.
-- **Budget alert** — the cron runs hourly but a campaign crosses 80% once.
-  Same `oncePerCampaign` guard, and the SMS only fires alongside a first-time
-  email, so we never pay for a text about a campaign already warned about.
+- **Budget alert** — fires from two places (see below). Same `oncePerCampaign`
+  guard, and the SMS only fires alongside a first-time email, so we never pay
+  for a text about a campaign already warned about.
 
-The budget alert runs on a cron rather than in the click route deliberately:
-the click route ends in a redirect, and work started after a redirect is
-dropped when the serverless function freezes. That is exactly how the
-`pending_earnings` drift happened.
+## Where the budget alert fires
+
+Vercel Hobby caps cron jobs at one run per day, which is far too slow to be
+what a brand relies on — a campaign can go from 80% to stopped in an afternoon.
+So the primary trigger is not the cron:
+
+1. **The click route, on the exact click that crosses 80%.** The brand hears
+   within seconds and can top up before delivery stops. `crossesBudgetThreshold`
+   is pure arithmetic on numbers the request already has — no query on the hot
+   path — and it is true for exactly one click per campaign, so the alert is
+   awaited on that click and nowhere else.
+2. **A daily cron, as the safety net.** It catches campaigns that crossed via
+   CPA conversions rather than clicks, and any crossing whose request died
+   first. Most runs should report `sent: 0`.
+
+To run the sweep more often, point an external scheduler at
+`/api/cron/budget-alerts` with the `CRON_SECRET` header — no plan upgrade
+needed. `sendBudgetAlert` is idempotent per campaign, so overlapping triggers
+cannot double-send.
+
+**On awaiting in the click route:** the auto-complete branch there used to be a
+fire-and-forget IIFE even though it moves money (the refund). Work left running
+past the response is dropped when the serverless function freezes — that is
+exactly how the `pending_earnings` drift happened — so it is awaited now. Both
+awaits cost latency on exactly one click per campaign.
 
 ## Ops alerts that were bypassing everything
 
