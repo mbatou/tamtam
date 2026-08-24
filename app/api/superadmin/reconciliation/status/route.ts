@@ -30,20 +30,11 @@ export async function GET() {
     .select("*", { count: "exact", head: true })
     .eq("resolved", false);
 
-  // Get critical unresolved issues
-  const { data: criticalIssues } = await supabase
-    .from("reconciliation_issues")
-    .select("*")
-    .eq("severity", "critical")
-    .eq("resolved", false)
-    .order("created_at", { ascending: false })
-    .limit(10);
-
+  // The "is the money OK?" verdict lives at /api/superadmin/reconciliation/verdict.
+  // This endpoint only serves the cached snapshot numbers behind the technical
+  // details panel — never a health signal.
   return NextResponse.json({
     snapshot: latestSnapshot,
     unresolvedCount: unresolvedCount || 0,
-    criticalIssues: criticalIssues || [],
-    hasIssues: (unresolvedCount || 0) > 0,
-    hasCritical: (criticalIssues || []).length > 0,
   });
 }

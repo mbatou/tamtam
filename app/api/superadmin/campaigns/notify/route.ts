@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { sendNewCampaignNotification } from "@/lib/email";
+import { triggerNewCampaign } from "@/lib/notifications/engine";
+import { processNotificationQueue } from "@/lib/notifications/sender";
+import { sendSmsBatch } from "@/lib/sms/sms-service";
 
 export const dynamic = "force-dynamic";
 
@@ -58,48 +60,38 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No echos found" }, { status: 404 });
   }
 
-  // Paginate auth users to build email map
-  const emailMap = new Map<string, string>();
-  let page = 1;
-  while (true) {
-    const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ page, perPage: 500 });
-    if (!authUsers || authUsers.length === 0) break;
-    for (const u of authUsers) {
-      if (u.email) emailMap.set(u.id, u.email);
-    }
-    if (authUsers.length < 500) break;
-    page++;
-  }
+  // `new_campaign` routes to push + SMS — this tool used to email every Écho
+  // instead, which was a fourth copy of a message push, SMS and the in-app
+  // feed already carry. The WhatsApp links below stay: they are a manual
+  // outreach aid for a human, not an automated channel.
+  const pushResult = await triggerNewCampaign(supabase, campaign_id)
+    .then(async (queued) => {
+      await processNotificationQueue(supabase);
+      return queued;
+    })
+    .catch((err) => {
+      console.error("[notify] push blast failed:", err);
+      return { queued: 0, skipped: 0 };
+    });
 
-  let emailSent = 0;
-  let emailFailed = 0;
+  const smsResult = await sendSmsBatch({
+    type: "new_campaign",
+    campaignId: campaign_id,
+    segment: "all",
+    vars: { cpc: campaign.cpc || 50 },
+  }).catch((err) => {
+    console.error("[notify] SMS blast failed:", err);
+    return { sent: 0, failed: 0, skipped: 0, total: 0, details: [] };
+  });
+
   let whatsappReady = 0;
   let unreachable = 0;
   const whatsappLinks: { name: string; phone: string; link: string }[] = [];
   const logs: { echo_id: string; channel: string; status: string; error_message?: string }[] = [];
 
   for (const echo of echos) {
-    const email = emailMap.get(echo.id);
     const phone = echo.phone;
 
-    // Try email first
-    if (email && process.env.RESEND_API_KEY) {
-      try {
-        await sendNewCampaignNotification({
-          to: email,
-          echoName: echo.name,
-          campaignTitle: campaign.title,
-          cpc: campaign.cpc,
-        });
-        emailSent++;
-        logs.push({ echo_id: echo.id, channel: "email", status: "sent" });
-      } catch (err) {
-        emailFailed++;
-        logs.push({ echo_id: echo.id, channel: "email", status: "failed", error_message: err instanceof Error ? err.message : "unknown" });
-      }
-    }
-
-    // Generate WhatsApp link for echos with phone (regardless of email status)
     if (phone) {
       const link = buildWhatsAppLink(phone, campaign.title, campaign.cpc, campaign.budget);
       if (link) {
@@ -107,12 +99,9 @@ export async function POST(request: NextRequest) {
         whatsappLinks.push({ name: echo.name, phone, link });
         logs.push({ echo_id: echo.id, channel: "whatsapp", status: "manual" });
       }
-    }
-
-    // Track unreachable (no email AND no phone)
-    if (!email && !phone) {
+    } else {
       unreachable++;
-      logs.push({ echo_id: echo.id, channel: "none", status: "failed", error_message: "no_contact_info" });
+      logs.push({ echo_id: echo.id, channel: "none", status: "failed", error_message: "no_phone" });
     }
   }
 
@@ -143,15 +132,24 @@ export async function POST(request: NextRequest) {
       action: "campaign_notify_echos",
       target_type: "campaign",
       target_id: campaign_id,
-      details: { emailSent, emailFailed, whatsappReady, unreachable, total: echos.length },
+      details: {
+        pushQueued: pushResult.queued,
+        smsSent: smsResult.sent,
+        whatsappReady,
+        unreachable,
+        total: echos.length,
+      },
     });
   } catch { /* non-blocking */ }
 
   return NextResponse.json({
     success: true,
     total: echos.length,
-    emailSent,
-    emailFailed,
+    pushQueued: pushResult.queued,
+    pushSkipped: pushResult.skipped,
+    smsSent: smsResult.sent,
+    smsFailed: smsResult.failed,
+    smsSkipped: smsResult.skipped,
     whatsappReady,
     unreachable,
     whatsappLinks,

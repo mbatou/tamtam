@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/server";
 import { apiError, validationError } from "@/lib/api/errors";
-import { sendNewCampaignNotification, sendCampaignLiveToBrand } from "@/lib/email";
+import { buildCampaignLiveEmail, buildCampaignRejectedEmail, buildNewCampaignEmail } from "@/lib/email";
+import { sendRoutedEmail, sendRoutedEmailBatch } from "@/lib/notifications/email-router";
 import { unlockCampaignEarnings } from "@/lib/unlock-earnings";
 import { triggerNewCampaign } from "@/lib/notifications/engine";
 import { processNotificationQueue } from "@/lib/notifications/sender";
@@ -11,6 +12,7 @@ import { requireAuth } from "@/lib/api/auth";
 import { awardAmbassadorCommission } from "@/lib/ambassador-commission";
 import { debitBrandBudgetLogged, creditBrandWallet } from "@/lib/wallet";
 import { refundCampaignRemaining } from "@/lib/campaign-refund";
+import { sendCampaignReport } from "@/lib/notifications/campaign-report";
 
 export const dynamic = "force-dynamic";
 
@@ -38,42 +40,79 @@ const moderateCampaignBodySchema = z.object({
   reason: z.string().max(500).optional().nullable(),
 });
 
-async function notifyEchosNewCampaign(supabase: ReturnType<typeof createServiceClient>, campaignTitle: string, cpc: number) {
-  try {
-    const { data: echos } = await supabase
-      .from("users")
-      .select("id, name, phone")
-      .eq("role", "echo")
-      .is("deleted_at", null);
-    if (!echos?.length) return;
+/**
+ * Announce a newly live campaign to Échos — push, SMS and email.
+ *
+ * `new_campaign` is the one Écho event on all three channels: it is the
+ * reason an Écho is on the platform, and push only reaches PWA installs. It
+ * is also by far the highest-volume email we send, so it goes through the
+ * router — suppressible, unsubscribable, and counted in email_event_stats.
+ */
+function notifyEchosNewCampaign(
+  supabase: ReturnType<typeof createServiceClient>,
+  campaignId: string,
+  campaignTitle: string,
+  cpc: number,
+  targetCities: string[] | null,
+) {
+  triggerNewCampaign(supabase, campaignId)
+    .then(() => processNotificationQueue(supabase))
+    .catch((err) => console.error("[push] new-campaign blast failed:", err));
 
-    // Paginate through all auth users to build email map
-    const emailMap = new Map<string, string>();
-    let page = 1;
-    while (true) {
-      const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ page, perPage: 500 });
-      if (!authUsers || authUsers.length === 0) break;
-      for (const u of authUsers) {
-        if (u.email) emailMap.set(u.id, u.email);
-      }
-      if (authUsers.length < 500) break;
-      page++;
-    }
+  sendSmsBatch({
+    type: "new_campaign",
+    campaignId,
+    segment: "all",
+    cityFilter: targetCities?.length ? targetCities : undefined,
+    vars: { cpc: cpc || 50 },
+  }).catch((err) => console.error("[SMS] Campaign blast failed:", err));
 
-    // Send emails in batches of 10 to avoid EMFILE
-    const toSend = echos
-      .map((echo) => ({ echo, email: emailMap.get(echo.id) }))
-      .filter((e): e is { echo: typeof echos[number]; email: string } => !!e.email);
+  emailEchosNewCampaign(supabase, campaignId, campaignTitle, cpc, targetCities).catch((err) =>
+    console.error("[email] new-campaign blast failed:", err),
+  );
+}
 
-    for (let i = 0; i < toSend.length; i += 10) {
-      const batch = toSend.slice(i, i + 10);
-      await Promise.allSettled(
-        batch.map(({ echo, email }) =>
-          sendNewCampaignNotification({ to: email, echoName: echo.name, campaignTitle, cpc })
-        )
-      );
-    }
-  } catch { /* non-blocking */ }
+/**
+ * The email half of the new-campaign announcement.
+ *
+ * Geo-targeted the same way push is: an Écho outside the campaign's target
+ * cities cannot usefully act on it, so emailing them would be the kind of
+ * irrelevance that trains people to ignore the sender.
+ */
+async function emailEchosNewCampaign(
+  supabase: ReturnType<typeof createServiceClient>,
+  campaignId: string,
+  campaignTitle: string,
+  cpc: number,
+  targetCities: string[] | null,
+) {
+  let query = supabase
+    .from("users")
+    .select("id, name, city")
+    .eq("role", "echo")
+    .is("deleted_at", null)
+    .neq("status", "suspended");
+
+  if (targetCities?.length) query = query.in("city", targetCities);
+
+  const { data: echos } = await query;
+  if (!echos?.length) return;
+
+  const totals = await sendRoutedEmailBatch(
+    supabase,
+    "new_campaign",
+    echos.map((echo) => ({
+      userId: echo.id,
+      campaignId,
+      ...buildNewCampaignEmail({ echoName: echo.name, campaignTitle, cpc }),
+    })),
+    // One announcement per campaign per Écho, whichever path triggers it.
+    { dedupeWithinHours: 24 },
+  );
+
+  console.warn(
+    `[email] new_campaign "${campaignTitle}": sent ${totals.sent}, suppressed ${totals.suppressed}, failed ${totals.failed}`,
+  );
 }
 
 async function requireSuperadmin() {
@@ -222,20 +261,27 @@ export async function POST(request: NextRequest) {
     // Notify brand that campaign is live
     try {
       const { data: brandUser } = await supabase.from("users").select("name").eq("id", batteur_id).single();
-      const { data: { user: authUser } } = await supabase.auth.admin.getUserById(batteur_id);
-      if (authUser?.email && brandUser) {
-        sendCampaignLiveToBrand({
-          to: authUser.email,
+      if (brandUser) {
+        const { subject, html } = buildCampaignLiveEmail({
           brandName: brandUser.name,
           campaignTitle: title,
           budget: parseInt(budget),
           cpc: parseInt(cpc),
-        }).catch(() => {});
+        });
+        await sendRoutedEmail(supabase, {
+          event: "campaign_live",
+          userId: batteur_id,
+          campaignId: campaign.id,
+          subject,
+          html,
+        });
       }
     } catch { /* non-blocking */ }
 
-    // Notify echos about new campaign
-    notifyEchosNewCampaign(supabase, title, parseInt(cpc));
+    // Notify echos — push + SMS per the channel policy (`new_campaign`).
+    // This path used to email every Écho and fire nothing else; the approval
+    // path did all three. Same event, so: same channels, and no email.
+    notifyEchosNewCampaign(supabase, campaign.id, title, parseInt(cpc), null);
 
     // Ambassador commission for superadmin-created campaigns (LUP-80)
     await awardAmbassadorCommission(supabase, {
@@ -415,6 +461,8 @@ export async function POST(request: NextRequest) {
         reason: "campagne arrêtée",
         createdBy: authUser.id,
       });
+
+      await sendCampaignReport(supabase, campaign_id);
       break;
     }
     default:
@@ -462,32 +510,55 @@ export async function POST(request: NextRequest) {
         .single();
       if (campaignFull) {
         const { data: brandUser } = await supabase.from("users").select("name").eq("id", campaignFull.batteur_id).single();
-        const { data: { user: authUser } } = await supabase.auth.admin.getUserById(campaignFull.batteur_id);
-        if (authUser?.email && brandUser) {
-          sendCampaignLiveToBrand({
-            to: authUser.email,
+        if (brandUser) {
+          const { subject, html } = buildCampaignLiveEmail({
             brandName: brandUser.name,
             campaignTitle: campaignFull.title,
             budget: campaignFull.budget,
             cpc: campaignFull.cpc,
-          }).catch(() => {});
+          });
+          await sendRoutedEmail(supabase, {
+            event: "campaign_live",
+            userId: campaignFull.batteur_id,
+            campaignId: campaign_id,
+            subject,
+            html,
+          });
         }
-        // Notify echos about new campaign
-        notifyEchosNewCampaign(supabase, campaignFull.title, campaignFull.cpc);
-        // Smart push notifications — enqueue + send
-        triggerNewCampaign(supabase, campaign_id)
-          .then(() => processNotificationQueue(supabase))
-          .catch(() => {});
-        // SMS blast to eligible echos
-        sendSmsBatch({
-          type: "new_campaign",
-          campaignId: campaign_id,
-          segment: "all",
-          cityFilter: campaign.target_cities?.length ? campaign.target_cities : undefined,
-          vars: { cpc: campaignFull.cpc || 50 },
-        }).catch((err) => console.error("[SMS] Campaign blast failed:", err));
+        // Notify echos — push + SMS, no email (see notifyEchosNewCampaign)
+        notifyEchosNewCampaign(supabase, campaign_id, campaignFull.title, campaignFull.cpc, campaign.target_cities);
       }
     } catch { /* non-blocking */ }
+  }
+
+  // Rejection used to be silent on every channel — the brand had to notice the
+  // status chip change, and the reason was never conveyed at all.
+  if (action === "reject") {
+    try {
+      const { data: brandUser } = await supabase
+        .from("users")
+        .select("name")
+        .eq("id", campaign.batteur_id)
+        .single();
+
+      if (brandUser) {
+        const { subject, html } = buildCampaignRejectedEmail({
+          brandName: brandUser.name,
+          campaignTitle: campaign.title,
+          reason: reason || null,
+          refunded: campaign.budget || 0,
+        });
+        await sendRoutedEmail(supabase, {
+          event: "campaign_rejected",
+          userId: campaign.batteur_id,
+          campaignId: campaign_id,
+          subject,
+          html,
+        });
+      }
+    } catch (err) {
+      console.error("[superadmin/campaigns] rejection email failed:", err);
+    }
   }
 
   const refunded = action === "stop" ? campaign.budget - (campaign.spent || 0) : 0;

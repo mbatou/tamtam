@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { paymentRequestSchema } from "@/lib/validations";
 import { rateLimit } from "@/lib/rate-limit";
-import { sendRechargeRequestNotification } from "@/lib/email";
+import { alertRechargeRequest } from "@/lib/notifications/ops-alerts";
 import { createCheckoutSession } from "@/lib/wave";
 
 // Fallback: legacy Wave payment link (used when WAVE_API_KEY is not set)
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       .eq("id", authUser.id)
       .single();
 
-    sendRechargeRequestNotification({
+    alertRechargeRequest({
       brandName: profile?.name || "Inconnu",
       amount,
       paymentMethod: payment_method || "Wave",

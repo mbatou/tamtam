@@ -335,14 +335,15 @@ export default function RythmesPage() {
                           <><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> {(campaign.objective || "traffic") === "awareness" ? t("echo.rythmes.shareVisualLink") : t("common.shareOnWhatsApp")}</>
                         )}
                       </button>
-                      {(campaign.objective || "traffic") !== "awareness" && (
-                        <button
-                          onClick={() => isShareable ? copyLink(link.short_code) : openDetail(campaign)}
-                          className={`w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold transition flex items-center justify-center gap-1.5 ${isShareable ? "active:bg-white/10 text-white/60" : "opacity-30 cursor-not-allowed"}`}
-                        >
-                          🔗 {t("common.copyLink")}
-                        </button>
-                      )}
+                      {/* Available for every objective — awareness échos share
+                          the visual on Status/Stories and still need the raw
+                          tracked link to paste in a bio, DM or caption. */}
+                      <button
+                        onClick={() => isShareable ? copyLink(link.short_code) : openDetail(campaign)}
+                        className={`w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold transition flex items-center justify-center gap-1.5 ${isShareable ? "active:bg-white/10 text-white/60" : "opacity-30 cursor-not-allowed"}`}
+                      >
+                        🔗 {t("common.copyLink")}
+                      </button>
                     </div>
                     {isShareable && (
                       <p className="text-white/30 text-[10px] text-center mt-2">

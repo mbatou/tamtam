@@ -9,6 +9,10 @@
       "schedule": "0 1 * * *"
     },
     {
+      "path": "/api/cron/budget-alerts",
+      "schedule": "0 6 * * *"
+    },
+    {
       "path": "/api/cron/reconciliation",
       "schedule": "0 2 * * *"
     },
@@ -27,10 +31,6 @@
     {
       "path": "/api/cron/brand-nudge",
       "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/cron/notify-new-campaign",
-      "schedule": "0 10 * * *"
     },
     {
       "path": "/api/cron/echo-weekly-summary",

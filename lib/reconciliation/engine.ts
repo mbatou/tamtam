@@ -56,7 +56,40 @@ export interface ReconciliationSnapshot {
 // LIVE CHECKS — fast, run on page load
 // ---------------------------------------------------------------------------
 
-/** CHECK 1: Platform balance totals vs Wave math */
+/** Minimum absolute gap (F) below which the platform identity is considered noise. */
+const PLATFORM_BALANCE_TOLERANCE_FCFA = 1000;
+
+/** CHECK 1: Platform balance totals vs Wave math.
+ *
+ *  INDICATEUR NON FIABLE — informational only, never critical.
+ *
+ *  The identity `brand balances + echo balances == money in − money out` does
+ *  not hold on this data model, for reasons that are modelling gaps and not
+ *  missing money:
+ *
+ *  1. The platform margin. A click debits `campaigns.spent` by the full `cpc`
+ *     but credits the echo only `cpc * ECHO_SHARE_PERCENT/100`. The remaining
+ *     share is platform revenue: it leaves the brand's balance (as the campaign
+ *     budget debit) and never lands in any user balance, so the two sides drift
+ *     apart monotonically with GMV.
+ *  2. In-flight campaign budgets. A brand is debited the whole budget at
+ *     campaign creation; the unspent remainder only returns on completion. Until
+ *     then it is held by the platform and is invisible to both sides.
+ *  3. `sum_brand_balances()` still sums the legacy `users.balance` column while
+ *     `sum_echo_balances()` sums `available_balance + pending_balance`, so the
+ *     two halves of "platform liabilities" are different quantities and
+ *     historical snapshots are not comparable with each other.
+ *  4. `wallet_transactions` cannot close the gap either: echo earnings are
+ *     written twice (once at click time, once again when the earning unlocks)
+ *     from four different code paths, and `logWalletTransaction` is explicitly
+ *     non-blocking — it swallows its own failures. The ledger is an audit trail,
+ *     not a double-entry book.
+ *
+ *  `platformHeldEstimate` below is a best-effort derivation of (1) + (2) from
+ *  the ledger, reported so the residual is smaller and the model gap is
+ *  visible — it is NOT accurate enough to raise an alert on. Fixing this check
+ *  properly means making the ledger authoritative first.
+ */
 export async function checkPlatformVsWaveBalance(): Promise<Issue[]> {
   const issues: Issue[] = [];
 
@@ -130,29 +163,60 @@ export async function checkPlatformVsWaveBalance(): Promise<Issue[]> {
     0
   );
 
+  // Money the platform holds that sits in no user balance: the margin taken on
+  // every click, plus campaign budgets debited but not yet spent or refunded.
+  const { data: campaignTxns } = await supabaseAdmin
+    .from("wallet_transactions")
+    .select("amount, type")
+    .in("type", ["campaign_budget_debit", "campaign_budget_refund"]);
+
+  const campaignsFunded = (campaignTxns || [])
+    .filter((r: { type: string }) => r.type === "campaign_budget_debit")
+    .reduce((s: number, r: { amount: number }) => s + Math.abs(r.amount), 0);
+  const campaignsRefunded = (campaignTxns || [])
+    .filter((r: { type: string }) => r.type === "campaign_budget_refund")
+    .reduce((s: number, r: { amount: number }) => s + r.amount, 0);
+
+  // Earnings actually credited to an echo balance. The second row written when
+  // an earning unlocks (source_type "campaign_unlock") only moves money from
+  // pending_balance to available_balance — counting it would double it.
+  const { data: earningTxns } = await supabaseAdmin
+    .from("wallet_transactions")
+    .select("amount, source_type")
+    .in("type", ["click_earning", "cpa_earning", "lead_earning"]);
+
+  const echoEarningsCredited = (earningTxns || [])
+    .filter((r: { source_type: string | null }) => r.source_type !== "campaign_unlock")
+    .reduce((s: number, r: { amount: number }) => s + r.amount, 0);
+
+  const platformHeldEstimate = campaignsFunded - campaignsRefunded - echoEarningsCredited;
+
   const totalMoneyIn = checkoutsTotal + legacyIn + bonusCredits;
   const totalMoneyOut = payoutsTotal + feesTotal + legacyOut;
-  const expectedPlatformBalance = totalMoneyIn - totalMoneyOut;
+  const expectedPlatformBalance = totalMoneyIn - totalMoneyOut - platformHeldEstimate;
   const discrepancy = platformLiabilities - expectedPlatformBalance;
 
-  if (Math.abs(discrepancy) > 0) {
-    let severity: IssueSeverity;
-    if (Math.abs(discrepancy) > 5000) severity = "critical";
-    else if (Math.abs(discrepancy) > 500) severity = "warning";
-    else severity = "info";
-
+  if (Math.abs(discrepancy) >= PLATFORM_BALANCE_TOLERANCE_FCFA) {
     issues.push({
-      severity,
+      // Never critical, never a warning: the model is incomplete (see the
+      // function doc), so this number cannot mean "money is missing".
+      severity: "info",
       category: "balance_mismatch",
       subjectType: "platform",
       subjectId: "global",
-      description: `Platform liabilities (${platformLiabilities} F) ≠ expected (${expectedPlatformBalance} F). Discrepancy: ${discrepancy > 0 ? "+" : ""}${discrepancy} F`,
+      description:
+        `Indicateur non fiable — modèle comptable incomplet. Soldes plateforme ` +
+        `(${platformLiabilities} F) ≠ attendu (${expectedPlatformBalance} F), écart ` +
+        `${discrepancy > 0 ? "+" : ""}${discrepancy} F. La marge plateforme et les budgets ` +
+        `de campagne en cours ne sont estimés qu'approximativement, et sum_brand_balances() ` +
+        `lit encore la colonne héritée users.balance. Ne pas traiter comme de l'argent manquant.`,
       expectedValue: expectedPlatformBalance,
       actualValue: platformLiabilities,
       discrepancy,
       suggestedAction: "investigate",
       autoHealable: false,
       metadata: {
+        unreliable: true,
         brandBalance,
         echoBalance,
         checkoutsTotal,
@@ -161,6 +225,10 @@ export async function checkPlatformVsWaveBalance(): Promise<Issue[]> {
         legacyIn,
         legacyOut,
         bonusCredits,
+        campaignsFunded,
+        campaignsRefunded,
+        echoEarningsCredited,
+        platformHeldEstimate,
       },
     });
   }
@@ -288,30 +356,57 @@ export async function checkWebhookBacklog(): Promise<Issue[]> {
 }
 
 // ---------------------------------------------------------------------------
-// CACHED CHECKS — run by cron every 5 min
+// CACHED CHECKS — run by the daily reconciliation cron (02:00 UTC, vercel.json)
 // ---------------------------------------------------------------------------
 
-/** CHECK 5: User balance integrity */
+/** CHECK 5: Legacy-column balance integrity.
+ *
+ *  INDICATEUR NON FIABLE — informational only.
+ *
+ *  `find_user_balance_mismatches()` compares `users.balance` against the sum of
+ *  that user's `wallet_transactions`. Two limits:
+ *
+ *  - For échos the comparison is meaningless: their money moved to
+ *    `available_balance` / `pending_balance` and `users.balance` is dead, so
+ *    every écho with any history mismatches. Those rows are dropped here — the
+ *    real écho check is checkEchoPendingDrift (CHECK 7).
+ *  - For brands `users.balance` is still the live column, so the comparison is
+ *    meaningful, but `logWalletTransaction` is non-blocking and swallows its own
+ *    failures, so a gap can be a missing ledger row rather than missing money.
+ *    That is worth reading, not worth paging anyone: severity stays "info".
+ */
 export async function checkUserBalanceIntegrity(): Promise<Issue[]> {
   const issues: Issue[] = [];
 
   const { data: mismatches } = await supabaseAdmin.rpc("find_user_balance_mismatches");
   for (const row of mismatches || []) {
+    if (row.role !== "batteur") continue;
+
     const diff = row.actual_balance - row.expected_balance;
     if (diff === 0) continue;
 
     issues.push({
-      severity: Math.abs(diff) > 1000 ? "critical" : "warning",
+      severity: "info",
       category: "balance_mismatch",
       subjectType: "user",
       subjectId: row.user_id,
-      description: `${row.role} ${row.user_name || row.user_id.slice(0, 8)}: balance ${row.actual_balance}F ≠ expected ${row.expected_balance}F (${diff > 0 ? "+" : ""}${diff}F)`,
+      description:
+        `Indicateur non fiable (colonne héritée users.balance) — marque ` +
+        `${row.user_name || row.user_id.slice(0, 8)} : solde ${row.actual_balance} F ≠ ` +
+        `somme du journal ${row.expected_balance} F (${diff > 0 ? "+" : ""}${diff} F). ` +
+        `Peut venir d'une écriture de journal manquante, pas forcément d'argent manquant.`,
       expectedValue: row.expected_balance,
       actualValue: row.actual_balance,
       discrepancy: diff,
       suggestedAction: "investigate",
       autoHealable: false,
-      metadata: { role: row.role, user_id: row.user_id, txn_count: row.transaction_count },
+      metadata: {
+        unreliable: true,
+        legacyColumn: "users.balance",
+        role: row.role,
+        user_id: row.user_id,
+        txn_count: row.transaction_count,
+      },
     });
   }
 
@@ -448,10 +543,14 @@ export async function runFullReconciliation(): Promise<ReconciliationSnapshot> {
   const payoutsTotal = (payouts || []).reduce((s: number, r: { net_amount: number }) => s + r.net_amount, 0);
   const feesTotal = (payouts || []).reduce((s: number, r: { fee: number }) => s + (r.fee || 0), 0);
 
-  const totalDiscrepancy = allIssues.reduce(
-    (sum, i) => sum + Math.abs(i.discrepancy || 0),
-    0
-  );
+  // Issues flagged `unreliable` are model gaps, not money (see CHECK 1 / CHECK
+  // 5) and their "discrepancy" runs into the millions — including them would
+  // make this column meaningless. It stays a sum of absolute values of
+  // different things, so it is history, never a health signal: the verdict
+  // endpoint is what answers "is the money OK?".
+  const totalDiscrepancy = allIssues
+    .filter((i) => i.metadata?.unreliable !== true)
+    .reduce((sum, i) => sum + Math.abs(i.discrepancy || 0), 0);
 
   const snapshot: ReconciliationSnapshot = {
     brandBalanceTotal: brandTotal || 0,

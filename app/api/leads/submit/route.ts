@@ -202,24 +202,19 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Notify brand (non-blocking, only for verified leads)
+  // Deliver the lead to the brand that paid for it (non-blocking, verified only)
   if (status === "verified") {
-    // Get brand name
-    const { data: brand } = await supabaseAdmin
-      .from("users")
-      .select("name")
-      .eq("id", campaign.batteur_id)
-      .single();
-
-    notifyNewLead({
+    await notifyNewLead({
+      supabase: supabaseAdmin,
+      brandId: campaign.batteur_id,
+      leadId: lead.id,
       leadName: name,
       leadPhone: phone,
       leadEmail: email,
+      campaignId: campaign.id,
       campaignTitle: campaign.title,
-      brandName: brand?.name || "Marque",
       notificationEmail: landingPage.notification_email,
-      notificationPhone: landingPage.notification_phone,
-    }).catch(() => {});
+    });
   }
 
   // Always return success (don't leak status to potential spammers)

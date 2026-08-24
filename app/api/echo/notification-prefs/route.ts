@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthResponse } from "@/lib/api/auth";
+import {
+  SUPPRESSIBLE_CATEGORIES,
+  type EmailCategory,
+  type EmailPrefs,
+} from "@/lib/notifications/channel-policy";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +23,7 @@ export async function GET(request: NextRequest) {
 
   const { data } = await supabase
     .from("users")
-    .select("notification_prefs")
+    .select("notification_prefs, sms_optout, email_optout, email_prefs")
     .eq("id", authUser.id)
     .single();
 
@@ -27,7 +32,22 @@ export async function GET(request: NextRequest) {
     prefs[key] = (data?.notification_prefs as Record<string, boolean>)?.[key] !== false;
   }
 
-  return NextResponse.json(prefs);
+  // Email preferences live alongside push and SMS so all three channels are
+  // manageable from one screen. Only suppressible categories are exposed —
+  // account and payment email cannot be turned off, so offering a toggle that
+  // does nothing would be a lie.
+  const emailPrefs = (data?.email_prefs as EmailPrefs | null) || {};
+  const email: Record<string, boolean> = {};
+  for (const category of SUPPRESSIBLE_CATEGORIES) {
+    email[category] = emailPrefs[category] !== false;
+  }
+
+  return NextResponse.json({
+    ...prefs,
+    sms_optout: Boolean(data?.sms_optout),
+    email_optout: Boolean(data?.email_optout),
+    email,
+  });
 }
 
 export async function PUT(request: NextRequest) {
@@ -58,6 +78,42 @@ export async function PUT(request: NextRequest) {
       .from("users")
       .update(smsUpdate)
       .eq("id", authUser.id);
+  }
+
+  // Email opt-out — same shape as the SMS pair above.
+  if ("email_optout" in body) {
+    await supabase
+      .from("users")
+      .update({
+        email_optout: Boolean(body.email_optout),
+        email_optout_at: body.email_optout ? new Date().toISOString() : null,
+      })
+      .eq("id", authUser.id);
+  }
+
+  // Per-category email preferences. Only suppressible categories are writable:
+  // a request to disable "money" or "account" email is silently ignored rather
+  // than stored, so no future reader can mistake it for an honoured preference.
+  if (body.email && typeof body.email === "object") {
+    const incoming: EmailPrefs = {};
+    for (const category of SUPPRESSIBLE_CATEGORIES) {
+      if (category in body.email) {
+        incoming[category as EmailCategory] = Boolean(body.email[category]);
+      }
+    }
+
+    if (Object.keys(incoming).length > 0) {
+      const { data: existing } = await supabase
+        .from("users")
+        .select("email_prefs")
+        .eq("id", authUser.id)
+        .single();
+
+      await supabase
+        .from("users")
+        .update({ email_prefs: { ...((existing?.email_prefs as EmailPrefs | null) || {}), ...incoming } })
+        .eq("id", authUser.id);
+    }
   }
 
   // Merge with existing prefs (brand prefs may also be on this field)

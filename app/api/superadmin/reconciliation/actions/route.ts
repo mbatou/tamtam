@@ -139,7 +139,13 @@ export async function POST(request: NextRequest) {
       }
 
       case "manual_credit": {
-        // Credit a user manually (for orphan checkout scenarios)
+        // Credit a user manually (for orphan checkout scenarios).
+        //
+        // The column to credit depends on the role: a brand's spendable money
+        // is users.balance (what credit_wallet_from_checkout and
+        // debit_brand_budget both operate on), while an écho's spendable money
+        // moved to users.available_balance — for échos users.balance is dead,
+        // and crediting it would look like it worked while giving them nothing.
         const userId = body.userId;
         const amount = body.amount;
 
@@ -147,10 +153,9 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: "Missing userId or invalid amount" }, { status: 400 });
         }
 
-        // Update balance
         const { data: user } = await supabase
           .from("users")
-          .select("balance")
+          .select("role, balance, available_balance")
           .eq("id", userId)
           .single();
 
@@ -158,10 +163,19 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: "User not found" }, { status: 404 });
         }
 
-        await supabase
+        const isEcho = user.role === "echo";
+        const { error: creditError } = await supabase
           .from("users")
-          .update({ balance: (user.balance || 0) + amount })
+          .update(
+            isEcho
+              ? { available_balance: (user.available_balance || 0) + amount }
+              : { balance: (user.balance || 0) + amount }
+          )
           .eq("id", userId);
+
+        if (creditError) {
+          return NextResponse.json({ error: creditError.message }, { status: 500 });
+        }
 
         await logWalletTransaction({
           supabase,
@@ -186,7 +200,12 @@ export async function POST(request: NextRequest) {
             .eq("id", issueId);
         }
 
-        return NextResponse.json({ ok: true, action: "credited", amount });
+        return NextResponse.json({
+          ok: true,
+          action: "credited",
+          amount,
+          column: isEcho ? "available_balance" : "balance",
+        });
       }
 
       default:

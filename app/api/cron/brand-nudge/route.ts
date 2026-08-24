@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { sendEmail } from "@/lib/email";
+import { sendRoutedEmailBatch } from "@/lib/notifications/email-router";
 import { verifyCronSecret } from "@/lib/api/cron";
 
 export const dynamic = "force-dynamic";
@@ -48,20 +48,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ sent: 0 });
   }
 
-  // Get emails from auth
-  const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-  const emailMap = new Map(authUsers?.map((u) => [u.id, u.email]) || []);
-
-  let sent = 0;
-  for (const brand of toNudge) {
-    const email = emailMap.get(brand.id);
-    if (!email) continue;
-
-    try {
-      await sendEmail({
-        to: email,
-        subject: `${brand.name}, votre première campagne vous attend !`,
-        html: `
+  // `brand_nudge` is the one genuinely marketing email on the platform, so it
+  // is the most suppressible category — the router honours that, and the
+  // unsubscribe footer it appends is what makes sending this legitimate at all.
+  const totals = await sendRoutedEmailBatch(
+    supabase,
+    "brand_nudge",
+    toNudge.map((brand) => ({
+      userId: brand.id,
+      subject: `${brand.name}, votre première campagne vous attend !`,
+      html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px;">
             <h2 style="color: #D35400;">Bonjour ${brand.name} !</h2>
             <p>Vous avez créé votre compte Tamtam mais n'avez pas encore lancé de campagne.</p>
@@ -74,15 +70,8 @@ export async function GET(request: NextRequest) {
             </p>
           </div>
         `,
-      });
+    })),
+  );
 
-      await supabase.from("sent_emails").insert({
-        user_id: brand.id,
-        email_type: "brand_nudge",
-      });
-      sent++;
-    } catch { /* non-blocking */ }
-  }
-
-  return NextResponse.json({ sent });
+  return NextResponse.json({ sent: totals.sent, suppressed: totals.suppressed, failed: totals.failed });
 }

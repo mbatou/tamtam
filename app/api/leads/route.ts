@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { leadSchema } from "@/lib/validations";
 import { rateLimit } from "@/lib/rate-limit";
-import { sendLeadNotification } from "@/lib/email";
+import { alertBatteurLeadReceived } from "@/lib/notifications/ops-alerts";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
 
   // Send notification email (non-blocking)
   try {
-    await sendLeadNotification({ business_name, contact_name, email, whatsapp, message });
+    await alertBatteurLeadReceived({ business_name, contact_name, email, whatsapp, message });
   } catch (e) {
     console.error("Lead notification email failed:", e);
   }

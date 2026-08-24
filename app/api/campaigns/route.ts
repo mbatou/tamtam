@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { createCampaignSchema, updateCampaignSchema, deleteCampaignSchema } from "@/lib/validations";
-import { sendCampaignCompletedToEcho, sendEmail } from "@/lib/email";
+import { buildCampaignCompletedToEcho } from "@/lib/email";
+import { alertCampaignPendingApproval } from "@/lib/notifications/ops-alerts";
+import { sendRoutedEmailBatch } from "@/lib/notifications/email-router";
+import { sendCampaignReport } from "@/lib/notifications/campaign-report";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { debitBrandBudget, debitBrandBudgetLogged, creditBrandWallet } from "@/lib/wallet";
@@ -36,9 +39,6 @@ async function notifyCampaignCompleted(campaignId: string) {
       .is("deleted_at", null);
     if (!echos) return;
 
-    const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-    const emailMap = new Map(authUsers?.map((u) => [u.id, u.email]) || []);
-
     const clickMap = new Map(links.map((l) => [l.echo_id, l.click_count]));
 
     // For CPA campaigns, get actual earnings from paid conversions
@@ -59,22 +59,29 @@ async function notifyCampaignCompleted(campaignId: string) {
       }
     }
 
-    for (const echo of echos) {
-      const email = emailMap.get(echo.id);
-      const clicks = clickMap.get(echo.id) || 0;
-      const earnings = cpaEarningsMap
-        ? (cpaEarningsMap.get(echo.id) || 0)
-        : Math.floor(clicks * campaign.cpc * ECHO_SHARE_PERCENT / 100);
-      if (email) {
-        sendCampaignCompletedToEcho({
-          to: email,
-          echoName: echo.name,
-          campaignTitle: campaign.title,
-          clickCount: clicks,
-          earnings,
-        }).catch(() => {});
-      }
-    }
+    // `campaign_completed_echo` — a closing statement, so email only. The
+    // router resolves addresses with proper pagination (this used to be
+    // `listUsers({ perPage: 1000 })`, which dropped every Écho past #1000).
+    await sendRoutedEmailBatch(
+      supabase,
+      "campaign_completed_echo",
+      echos.map((echo) => {
+        const clicks = clickMap.get(echo.id) || 0;
+        const earnings = cpaEarningsMap
+          ? (cpaEarningsMap.get(echo.id) || 0)
+          : Math.floor((clicks * campaign.cpc * ECHO_SHARE_PERCENT) / 100);
+        return {
+          userId: echo.id,
+          campaignId,
+          ...buildCampaignCompletedToEcho({
+            echoName: echo.name,
+            campaignTitle: campaign.title,
+            clickCount: clicks,
+            earnings,
+          }),
+        };
+      }),
+    );
   } catch { /* non-blocking */ }
 }
 
@@ -253,23 +260,14 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (requireApproval) {
-    // Notify superadmin about new campaign pending review
-    sendEmail({
-      to: "support@tamma.me",
-      subject: `Nouvelle campagne soumise: ${title}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px;">
-          <h2 style="color: #D35400;">Nouvelle campagne à valider</h2>
-          <p><strong>Marque:</strong> ${brand?.name || "—"}</p>
-          <p><strong>Campagne:</strong> ${title}</p>
-          <p><strong>Budget:</strong> ${budget.toLocaleString()} FCFA</p>
-          <p><strong>${pricingModel === "cpa" ? "CPA" : "CPC"}:</strong> ${pricingModel === "cpa" ? cpa_amount : effectiveCpc} FCFA</p>
-          <p style="margin-top: 20px;">
-            <a href="https://www.tamma.me/superadmin/campaigns" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Valider maintenant →</a>
-          </p>
-        </div>
-      `,
-    }).catch(() => {});
+    await alertCampaignPendingApproval({
+      campaignTitle: title,
+      brandName: brand?.name || null,
+      budget,
+      pricingLabel: pricingModel === "cpa" ? "CPA" : "CPC",
+      pricingAmount: pricingModel === "cpa" ? (effectiveCpaAmount ?? null) : effectiveCpc,
+      source: "creation",
+    });
   }
 
   return NextResponse.json(data, { status: 201 });
@@ -481,10 +479,31 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // A draft submitted for review used to land silently — no alert was sent
+  // from this path at all, so campaigns sat unapproved with nobody notified.
+  if (isNewSubmission && data?.moderation_status === "pending") {
+    const { data: submittingBrand } = await supabase
+      .from("users")
+      .select("name")
+      .eq("id", brandId)
+      .single();
+
+    await alertCampaignPendingApproval({
+      campaignTitle: data.title || existing.title || id,
+      brandName: submittingBrand?.name || null,
+      budget: data.budget ?? existing.budget ?? 0,
+      pricingLabel: data.pricing_model === "cpa" ? "CPA" : "CPC",
+      pricingAmount: data.pricing_model === "cpa" ? data.cpa_amount ?? null : data.cpc ?? null,
+      source: "submission",
+    });
+  }
+
   // Unlock echo earnings and notify when campaign is completed
   if (status === "completed" && existing.status === "active") {
     unlockCampaignEarnings(id, existing.title || id).catch(console.error);
     notifyCampaignCompleted(id);
+    // Performance report to the brand — the deliverable of the campaign.
+    await sendCampaignReport(supabase, id);
   }
 
   // Also unlock when pausing (echos shouldn't wait for a paused campaign)

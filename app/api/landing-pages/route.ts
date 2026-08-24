@@ -4,7 +4,7 @@ import { createLeadCampaignSchema, createLeadCampaignDraftSchema } from "@/lib/v
 import { generateLandingPageContent } from "@/lib/ai/landing-page-generator";
 import { getEffectiveBrandId } from "@/lib/brand-utils";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
-import { sendEmail } from "@/lib/email";
+import { alertLeadGenPendingApproval } from "@/lib/notifications/ops-alerts";
 import { LEAD_GEN_SETUP_FEE_FCFA } from "@/lib/constants";
 import * as Sentry from "@sentry/nextjs";
 import crypto from "crypto";
@@ -275,24 +275,16 @@ export async function POST(request: NextRequest) {
       sourceType: "campaign_setup_fee",
     });
 
-    sendEmail({
-      to: "support@tamma.me",
-      subject: `Nouvelle campagne Lead Gen: ${data.title}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px;">
-          <h2 style="color: #D35400;">Nouvelle campagne Lead Generation</h2>
-          <p><strong>Marque:</strong> ${batteur.name || data.brand_name}</p>
-          <p><strong>Campagne:</strong> ${data.title}</p>
-          <p><strong>Budget:</strong> ${data.budget.toLocaleString()} FCFA</p>
-          <p><strong>CPL:</strong> ${data.cost_per_lead_fcfa} FCFA</p>
-          <p><strong>CPC:</strong> ${data.cpc} FCFA</p>
-          <p><strong>Landing page:</strong> /l/${landingPage.slug}</p>
-          <p style="margin-top: 20px;">
-            <a href="https://www.tamma.me/superadmin/campaigns" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Valider maintenant</a>
-          </p>
-        </div>
-      `,
-    }).catch(() => {});
+    // Shared with every other pending-approval path. This used to be a bespoke
+    // template hardcoded to support@tamma.me — so setting ADMIN_ALERT_EMAIL
+    // silently stopped delivering the lead-gen half of the approval alerts.
+    await alertLeadGenPendingApproval({
+      campaignTitle: data.title,
+      brandName: batteur.name || data.brand_name,
+      budget: data.budget,
+      costPerLead: data.cost_per_lead_fcfa ?? null,
+      campaignId: campaign.id,
+    });
   }
 
   return NextResponse.json({ campaign, landing_page: landingPage }, { status: 201 });

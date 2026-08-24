@@ -1,7 +1,7 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { sendEmailSafe } from "@/lib/email";
-import type { Issue, ReconciliationSnapshot } from "./engine";
+import { sendOpsEmail } from "@/lib/notifications/email-router";
+import type { ReconciliationSnapshot } from "./engine";
 
 // ---------------------------------------------------------------------------
 // Reconciliation email alerts with deduplication
@@ -44,7 +44,7 @@ export async function sendReconciliationAlerts(
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto;">
       <h2 style="color: #e74c3c;">Reconciliation Alert: ${criticalIssues.length} Critical Issue${criticalIssues.length > 1 ? "s" : ""}</h2>
-      <p style="color: #666;">Snapshot computed at ${new Date().toLocaleString("fr-SN")} in ${snapshot.computeDurationMs}ms</p>
+      <p style="color: #666;">Snapshot computed at ${new Date().toLocaleString("fr-SN")}</p>
 
       <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
         <tr style="background: #1a1a2e; color: #fff;">
@@ -62,10 +62,6 @@ export async function sendReconciliationAlerts(
           <td style="padding: 6px 10px;">${snapshot.platformLiabilitiesTotal.toLocaleString()} F</td>
         </tr>
         <tr>
-          <td style="padding: 6px 10px; font-weight: bold;">Total Discrepancy</td>
-          <td style="padding: 6px 10px; color: ${snapshot.totalDiscrepancy > 0 ? "#e74c3c" : "#27ae60"};">${snapshot.totalDiscrepancy.toLocaleString()} F</td>
-        </tr>
-        <tr>
           <td style="padding: 6px 10px; font-weight: bold;">Wave Checkouts</td>
           <td style="padding: 6px 10px;">${snapshot.waveCheckoutsCount} (${snapshot.waveCheckoutsTotal.toLocaleString()} F)</td>
         </tr>
@@ -81,62 +77,25 @@ export async function sendReconciliationAlerts(
     </div>
   `;
 
-  const result = await sendEmailSafe({
+  const result = await sendOpsEmail(supabaseAdmin, {
+    event: "reconciliation_critical",
     to: ADMIN_EMAIL,
     subject: `[TAMTAM] ${criticalIssues.length} Critical Reconciliation Issue${criticalIssues.length > 1 ? "s" : ""}`,
     html,
-    tags: [{ name: "category", value: "reconciliation-alert" }],
   });
 
-  // Record that we sent this alert
+  if (result.status !== "sent") {
+    // Do NOT record the dedup key on failure. This used to insert first and
+    // check success after, so one bounced send suppressed the alert for the
+    // rest of the hour — on the single most critical alert the platform has.
+    console.error("[reconciliation] critical alert NOT delivered:", result);
+    return;
+  }
+
   await supabaseAdmin.from("reconciliation_alerts_sent").insert({
     alert_key: alertKey,
     severity: "critical",
     subject: `${criticalIssues.length} critical issues`,
-  });
-
-  if (!result.success) {
-    console.error("Failed to send reconciliation alert:", result.error);
-  }
-}
-
-/** Send a specific issue alert (for manual trigger) */
-export async function sendIssueAlert(issue: Issue): Promise<void> {
-  const alertKey = `issue_${issue.category}_${issue.subjectId}_${new Date().toISOString().slice(0, 13)}`;
-
-  const { data: existing } = await supabaseAdmin
-    .from("reconciliation_alerts_sent")
-    .select("id")
-    .eq("alert_key", alertKey)
-    .single();
-
-  if (existing) return;
-
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px;">
-      <h2 style="color: ${issue.severity === "critical" ? "#e74c3c" : "#f39c12"};">
-        Reconciliation ${issue.severity.toUpperCase()}: ${issue.category}
-      </h2>
-      <p>${escapeHtml(issue.description)}</p>
-      ${issue.discrepancy ? `<p><strong>Discrepancy:</strong> ${issue.discrepancy} F</p>` : ""}
-      ${issue.suggestedAction ? `<p><strong>Suggested action:</strong> ${issue.suggestedAction}</p>` : ""}
-      <p style="color: #999; font-size: 12px;">
-        <a href="https://www.tamma.me/superadmin/wave-reconciliation" style="color: #D35400;">View Dashboard</a>
-      </p>
-    </div>
-  `;
-
-  await sendEmailSafe({
-    to: ADMIN_EMAIL,
-    subject: `[TAMTAM] ${issue.severity.toUpperCase()}: ${issue.category} — ${issue.subjectType}/${issue.subjectId.slice(0, 8)}`,
-    html,
-    tags: [{ name: "category", value: "reconciliation-alert" }],
-  });
-
-  await supabaseAdmin.from("reconciliation_alerts_sent").insert({
-    alert_key: alertKey,
-    severity: issue.severity,
-    subject: issue.description.slice(0, 200),
   });
 }
 
