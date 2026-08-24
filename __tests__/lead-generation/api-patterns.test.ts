@@ -79,9 +79,12 @@ describe("POST /api/landing-pages — Pattern Audit", () => {
     expect(src).toContain("batteur.balance");
   });
 
-  it("notifies superadmin about new lead gen campaign", () => {
-    expect(src).toContain("support@tamma.me");
-    expect(src).toContain("sendEmail");
+  it("notifies superadmin about a new lead gen campaign via the shared alert", () => {
+    // It used to hardcode support@tamma.me on a bespoke template, so setting
+    // ADMIN_ALERT_EMAIL silently stopped delivering the lead-gen half of the
+    // approval alerts. One alert, one recipient rule, for every path.
+    expect(src).toContain("alertLeadGenPendingApproval");
+    expect(src).not.toContain('to: "support@tamma.me"');
   });
 });
 
@@ -342,30 +345,43 @@ describe("lib/ai/landing-page-generator.ts — Pattern Audit", () => {
 
 describe("lib/notifications/lead-notification.ts — Pattern Audit", () => {
   const src = readFile("lib/notifications/lead-notification.ts");
+  const template = readFile("lib/email.ts");
 
   it("file exists and is non-empty", () => {
     expect(src.length).toBeGreaterThan(0);
   });
 
-  it("uses sendEmailSafe (non-throwing)", () => {
-    expect(src).toContain("sendEmailSafe");
+  it("delivers through the channel router, not sendEmail directly", () => {
+    expect(src).toContain("sendRoutedEmail");
+    expect(src).toContain('event: "lead_received"');
   });
 
-  it("includes wa.me deep link", () => {
-    expect(src).toContain("wa.me");
+  it("falls back to the brand's account email instead of skipping", () => {
+    // The old code did `if (!notificationEmail) return`, so a brand that never
+    // filled in the optional landing-page field silently received none of the
+    // leads it was paying for. The router resolves the account email now.
+    expect(src).not.toContain("if (!notificationEmail) return");
+    expect(src).toContain("input.notificationEmail || undefined");
   });
 
-  it("skips when no notification email", () => {
-    expect(src).toContain("if (!notificationEmail) return");
+  it("keys the ledger on the lead id so a retried POST sends one email", () => {
+    expect(src).toContain("reference: input.leadId");
   });
 
-  it("strips + from phone for wa.me link", () => {
-    expect(src).toContain('replace(/^\\+/, "")');
+  it("never propagates a failure — the lead is already saved and billed", () => {
+    expect(src).toContain("catch");
+    expect(src).toContain("console.error");
+  });
+
+  it("builds a wa.me deep link with the + stripped", () => {
+    expect(template).toContain("buildLeadReceivedEmail");
+    expect(template).toContain("wa.me");
+    expect(template).toContain('replace(/^\\+/, "")');
   });
 
   it("includes campaign title in email subject", () => {
     expect(src).toContain("campaignTitle");
-    expect(src).toContain("subject:");
+    expect(template).toContain("subject: `Nouveau lead : ${leadName} — ${campaignTitle}`");
   });
 });
 

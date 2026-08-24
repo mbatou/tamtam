@@ -83,7 +83,7 @@ export async function alertPayoutRequest(opts: {
   });
 }
 
-export async function alertLeadReceived(opts: {
+export async function alertBatteurLeadReceived(opts: {
   business_name: string;
   contact_name: string;
   email: string;
@@ -95,7 +95,7 @@ export async function alertLeadReceived(opts: {
     : "Non fourni";
 
   await sendOpsEmail(createServiceClient(), {
-    event: "lead_received",
+    event: "batteur_lead_received",
     to: SUPPORT_EMAIL,
     subject: `🥁 Nouveau Batteur intéressé: ${opts.business_name}`,
     html: shell(
@@ -152,5 +152,64 @@ export async function alertCampaignPendingApproval(opts: {
           : ""),
       { href: "https://www.tamma.me/superadmin/campaigns", label: "Valider maintenant →" },
     ),
+  });
+}
+
+/**
+ * An Écho's withdrawal bounced.
+ *
+ * Wave returned the payout, the funds went back on their balance, and until
+ * now nobody was told — not the Écho, not ops. A failed payout was
+ * indistinguishable from a slow one, so the only way to find them was the
+ * reconciliation dashboard.
+ */
+export async function alertPayoutFailed(opts: {
+  echoName: string;
+  echoPhone: string | null;
+  amount: number;
+  reason: string | null;
+  payoutId: string;
+}): Promise<void> {
+  await sendOpsEmail(createServiceClient(), {
+    event: "payout_failed_admin",
+    to: opsRecipient(),
+    subject: `⚠️ Retrait échoué : ${opts.amount.toLocaleString("fr-FR")} FCFA — ${opts.echoName}`,
+    html: shell(
+      "Un retrait a échoué",
+      "Wave a rejeté ce paiement. Le montant a été recrédité sur le solde de l'Écho — vérifiez le numéro puis relancez.",
+      row("Écho", opts.echoName) +
+        row("Téléphone", opts.echoPhone || "—", true) +
+        row("Montant", `<strong style="font-size:18px;color:#e74c3c;">${opts.amount.toLocaleString("fr-FR")} FCFA</strong>`) +
+        row("Motif Wave", opts.reason || "Non précisé", true) +
+        row("Référence", `<code style="font-size:12px;">${opts.payoutId}</code>`),
+      { href: "https://www.tamma.me/superadmin/wave-reconciliation", label: "Voir les retraits" },
+    ),
+  });
+}
+
+/**
+ * A lead-generation campaign is waiting for approval.
+ *
+ * Delegates to the shared pending-approval alert so lead-gen campaigns cannot
+ * drift onto a different template with a different recipient — which is
+ * exactly what had happened: the two landing-page paths hardcoded
+ * support@tamma.me and ignored ADMIN_ALERT_EMAIL entirely, so setting that
+ * variable silently stopped delivering half the approval alerts.
+ */
+export async function alertLeadGenPendingApproval(opts: {
+  campaignTitle: string;
+  brandName: string | null;
+  budget: number;
+  costPerLead: number | null;
+  campaignId?: string | null;
+}): Promise<void> {
+  await alertCampaignPendingApproval({
+    campaignTitle: opts.campaignTitle,
+    brandName: opts.brandName,
+    budget: opts.budget,
+    pricingLabel: "Coût par lead",
+    pricingAmount: opts.costPerLead,
+    source: "lead_gen",
+    campaignId: opts.campaignId,
   });
 }

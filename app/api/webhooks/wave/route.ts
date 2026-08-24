@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { verifyWebhookSignature } from "@/lib/wave";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { sendRechargeReceipt } from "@/lib/notifications/recharge-receipt";
+import { notifyPayoutFailed } from "@/lib/notifications/payout-failed";
 import { sendSmsToEcho } from "@/lib/sms/sms-service";
 
 export const dynamic = "force-dynamic";
@@ -291,6 +292,15 @@ async function handlePayoutFailed(
       .update({ status: "failed" })
       .eq("id", wavePayout.payout_id);
   }
+
+  // Nobody was told before this — not the Écho whose money bounced, not ops.
+  // A failed payout was indistinguishable from a slow one.
+  await notifyPayoutFailed(supabase, {
+    echoId: wavePayout.user_id,
+    amount: wavePayout.amount,
+    reason: data.error_message || data.failure_reason || null,
+    payoutId: wavePayout.payout_id || wavePayout.id,
+  });
 }
 
 // ---------------------------------------------------------------------------

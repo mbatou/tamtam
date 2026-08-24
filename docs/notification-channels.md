@@ -41,7 +41,25 @@ drift back out to call sites.
 | Campaign completed | **email** | Full performance report. |
 | Recharge confirmed | **email** | Receipt, keyed by payment reference. |
 | Budget nearly exhausted | **email + SMS** | The one urgent Brand event. |
-| Lead received | **email** (to ops) | |
+| Lead received | **email** | A lead-gen capture, delivered to the brand that paid per lead. |
+
+Échos also get **payout sent** and **payout failed** on SMS + email — the two
+moments where their money actually moves.
+
+**Ops (`ADMIN_ALERT_EMAIL`, falling back to `support@tamma.me`) gets:**
+
+| Alert | Why it matters when missing |
+|---|---|
+| Campaign pending approval | Campaigns sit unapproved |
+| Recharge request | A brand's money is held |
+| Payout request | An Écho is not paid |
+| Payout failed | A withdrawal bounced and nobody knows |
+| Batteur lead received | A prospect goes uncalled |
+| Reconciliation critical | The money-integrity alarm |
+
+Every one is on the `account` category, so none of them can be unsubscribed
+from, and every send lands in the ledger — *"I stopped getting the approval
+emails"* is now a query rather than a guess.
 
 Everything else on the Écho side — share reminders, inactivity, streaks,
 campaign-ending — is push only. A nudge that is stale by the time an inbox is
@@ -68,6 +86,7 @@ queue — it initialised `web-push` by hand.
 | `recharge_received` | **nothing** | receipt with reference and new balance |
 | `budget_exhausted` | **nothing** | email + SMS before the campaign stops |
 | `earnings_unlocked` (push half) | a `wa.me` link built and thrown away | real push, cap-bypassed |
+| `payout_failed` | **nothing** — a bounced payout looked like a slow one | SMS + email to the Écho, alert to ops |
 
 A brand whose campaign was refused used to find out by refreshing the dashboard
 and noticing a status chip. The reason text existed only in the database. A
@@ -93,6 +112,29 @@ The budget alert runs on a cron rather than in the click route deliberately:
 the click route ends in a redirect, and work started after a redirect is
 dropped when the serverless function freezes. That is exactly how the
 `pending_earnings` drift happened.
+
+## Ops alerts that were bypassing everything
+
+Four admin paths predated the router and each had a way of going quiet:
+
+- **Two lead-gen approval alerts** (`landing-pages` create and launch)
+  hardcoded `support@tamma.me` on a bespoke template. Setting
+  `ADMIN_ALERT_EMAIL` therefore *silently stopped delivering half the approval
+  alerts* — the same class of failure as the original missing-approval report.
+  Both now delegate to the one shared alert.
+- **The reconciliation critical alarm** wrote its hourly dedup key *before*
+  checking whether the send succeeded, so one bounce silenced the alarm for the
+  rest of the hour. The key is now written only after a confirmed send.
+- **Payout failed** notified nobody at all. Wave rejected the transfer, the
+  funds returned to the Écho's balance, and the only way to find out was the
+  reconciliation dashboard. Now: SMS + email to the Écho (bypassing quiet
+  hours — someone who thinks the platform ate their money should not wait until
+  07:00) and an alert to ops with the Wave error.
+- **Lead delivery to brands** returned early when the landing page had no
+  optional `notification_email`, so a brand that never filled that field
+  received **none of the leads it was paying per-lead for**. It now falls back
+  to the account email, and is keyed on the lead id so a retried form POST
+  sends one email.
 
 ## Money and account email is never suppressed
 

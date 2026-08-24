@@ -484,3 +484,88 @@ export function buildBudgetAlertEmail({
     `,
   };
 }
+
+/**
+ * Payout failed — the Écho's money bounced back.
+ *
+ * Wave rejected the transfer and the funds returned to their available
+ * balance. Before this, nothing was sent on any channel: a failed withdrawal
+ * looked exactly like a slow one, so Échos assumed the platform had eaten it.
+ */
+export function buildPayoutFailedEmail({
+  echoName,
+  amount,
+  reason,
+  newBalance,
+}: {
+  echoName: string;
+  amount: number;
+  reason: string | null;
+  newBalance: number | null;
+}): { subject: string; html: string } {
+  return {
+    subject: `Votre retrait de ${fmt(amount)} FCFA n'a pas abouti`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px;">
+        <h2 style="color: #D35400;">${echoName}, votre retrait n'est pas passé</h2>
+        <p>Wave a rejeté le transfert de <strong>${fmt(amount)} FCFA</strong>.</p>
+
+        <div style="background:#f0fdf4;border-left:4px solid #22c55e;border-radius:0 8px 8px 0;padding:16px;margin:20px 0;">
+          <p style="margin:0;color:#166534;"><strong>Votre argent n'est pas perdu.</strong>
+          Le montant a été remis sur votre solde disponible${newBalance !== null ? ` — vous avez ${fmt(newBalance)} FCFA` : ""}.</p>
+        </div>
+
+        ${reason ? `<p><strong>Motif :</strong> ${reason}</p>` : ""}
+
+        <p>La cause la plus fréquente est un numéro Wave incorrect ou un compte non actif.
+        Vérifiez votre numéro dans votre profil, puis relancez le retrait.</p>
+
+        <p style="margin-top: 24px;">
+          <a href="https://www.tamma.me/earnings" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Relancer mon retrait →</a>
+        </p>
+      </div>
+    `,
+  };
+}
+
+/**
+ * A lead-generation form capture, delivered to the brand that paid for it.
+ *
+ * Distinct from the ops "someone wants to become a Batteur" alert — the two
+ * shared the name `lead_received` and that is how they got conflated.
+ */
+export function buildLeadReceivedEmail({
+  leadName,
+  leadPhone,
+  leadEmail,
+  campaignTitle,
+}: {
+  leadName: string;
+  leadPhone: string;
+  leadEmail?: string | null;
+  campaignTitle: string;
+}): { subject: string; html: string } {
+  const waPhone = leadPhone.replace(/^\+/, "").replace(/\s/g, "");
+  return {
+    subject: `Nouveau lead : ${leadName} — ${campaignTitle}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px;">
+        <h2 style="color: #D35400;">Nouveau lead capturé</h2>
+        <p>Un prospect a rempli votre formulaire pour la campagne <strong>${campaignTitle}</strong>.</p>
+        <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+          ${statRow("Nom", leadName)}
+          ${statRow("Téléphone", `<a href="tel:${leadPhone}">${leadPhone}</a>`)}
+          ${leadEmail ? statRow("Email", `<a href="mailto:${leadEmail}">${leadEmail}</a>`) : ""}
+          ${statRow("Date", new Date().toLocaleString("fr-SN"))}
+        </table>
+        <p style="color:#666;">Les leads se refroidissent vite — rappelez dans l'heure si vous le pouvez.</p>
+        <p style="margin-top: 24px;">
+          <a href="https://wa.me/${waPhone}" style="display: inline-block; padding: 12px 24px; background: #25D366; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Contacter sur WhatsApp</a>
+        </p>
+        <p style="margin-top: 12px;">
+          <a href="https://www.tamma.me/admin/campaigns" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Voir tous mes leads</a>
+        </p>
+      </div>
+    `,
+  };
+}

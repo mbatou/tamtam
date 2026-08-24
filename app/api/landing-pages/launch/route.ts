@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getEffectiveBrandId } from "@/lib/brand-utils";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
-import { sendEmail } from "@/lib/email";
+import { alertLeadGenPendingApproval } from "@/lib/notifications/ops-alerts";
 import { LEAD_GEN_SETUP_FEE_FCFA } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
   const { data: campaign } = await supabase
     .from("campaigns")
-    .select("id, batteur_id, budget, status, moderation_status, objective, landing_page_id, setup_fee_paid, title")
+    .select("id, batteur_id, budget, status, moderation_status, objective, landing_page_id, setup_fee_paid, title, cost_per_lead_fcfa")
     .eq("id", campaign_id)
     .eq("batteur_id", brandId)
     .single();
@@ -112,21 +112,13 @@ export async function POST(request: NextRequest) {
   }
 
   if (requireApproval) {
-    sendEmail({
-      to: "support@tamma.me",
-      subject: `Nouvelle campagne Lead Gen: ${campaign.title}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px;">
-          <h2 style="color: #D35400;">Nouvelle campagne Lead Generation</h2>
-          <p><strong>Marque:</strong> ${batteur.name || "—"}</p>
-          <p><strong>Campagne:</strong> ${campaign.title}</p>
-          <p><strong>Budget:</strong> ${campaign.budget.toLocaleString()} FCFA</p>
-          <p style="margin-top: 20px;">
-            <a href="https://www.tamma.me/superadmin/campaigns" style="display: inline-block; padding: 12px 24px; background: #D35400; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Valider maintenant</a>
-          </p>
-        </div>
-      `,
-    }).catch(() => {});
+    await alertLeadGenPendingApproval({
+      campaignTitle: campaign.title,
+      brandName: batteur.name || null,
+      budget: campaign.budget,
+      costPerLead: campaign.cost_per_lead_fcfa ?? null,
+      campaignId: campaign_id,
+    });
   }
 
   return NextResponse.json({

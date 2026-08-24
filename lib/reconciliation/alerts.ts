@@ -1,6 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { sendEmailSafe } from "@/lib/email";
+import { sendOpsEmail } from "@/lib/notifications/email-router";
 import type { ReconciliationSnapshot } from "./engine";
 
 // ---------------------------------------------------------------------------
@@ -77,23 +77,26 @@ export async function sendReconciliationAlerts(
     </div>
   `;
 
-  const result = await sendEmailSafe({
+  const result = await sendOpsEmail(supabaseAdmin, {
+    event: "reconciliation_critical",
     to: ADMIN_EMAIL,
     subject: `[TAMTAM] ${criticalIssues.length} Critical Reconciliation Issue${criticalIssues.length > 1 ? "s" : ""}`,
     html,
-    tags: [{ name: "category", value: "reconciliation-alert" }],
   });
 
-  // Record that we sent this alert
+  if (result.status !== "sent") {
+    // Do NOT record the dedup key on failure. This used to insert first and
+    // check success after, so one bounced send suppressed the alert for the
+    // rest of the hour — on the single most critical alert the platform has.
+    console.error("[reconciliation] critical alert NOT delivered:", result);
+    return;
+  }
+
   await supabaseAdmin.from("reconciliation_alerts_sent").insert({
     alert_key: alertKey,
     severity: "critical",
     subject: `${criticalIssues.length} critical issues`,
   });
-
-  if (!result.success) {
-    console.error("Failed to send reconciliation alert:", result.error);
-  }
 }
 
 function escapeHtml(str: string): string {

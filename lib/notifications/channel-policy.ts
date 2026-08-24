@@ -61,6 +61,7 @@ export type NotificationEvent =
   | "brand_weekly_summary"
   | "brand_nudge"
   | "brand_welcome"
+  | "lead_received"
   // ── Account (email is the credential channel — always email) ──────────────
   | "otp"
   | "role_upgrade"
@@ -69,7 +70,9 @@ export type NotificationEvent =
   | "campaign_pending_approval"
   | "recharge_request"
   | "payout_request"
-  | "lead_received";
+  | "payout_failed_admin"
+  | "batteur_lead_received"
+  | "reconciliation_critical";
 
 export interface ChannelRoute {
   audience: Audience;
@@ -230,6 +233,15 @@ export const CHANNEL_ROUTES: Record<NotificationEvent, ChannelRoute> = {
     emailCategory: "account",
     why: "Carries the temporary password. Email is the only channel that can.",
   },
+  lead_received: {
+    audience: "brand",
+    channels: ["email"],
+    emailCategory: "campaign",
+    why:
+      "A prospect filled in the brand's lead-gen form. The brand paid per " +
+      "lead, so this is the delivery of a purchased good — it carries the " +
+      "name, phone and a WhatsApp deep link to call them back.",
+  },
 
   // ── Account ──────────────────────────────────────────────────────────────
   otp: {
@@ -270,11 +282,32 @@ export const CHANNEL_ROUTES: Record<NotificationEvent, ChannelRoute> = {
     emailCategory: "account",
     why: "Requires a human to release an Écho's money.",
   },
-  lead_received: {
+  payout_failed_admin: {
     audience: "admin",
     channels: ["email"],
     emailCategory: "account",
-    why: "Sales lead with a 24h response expectation.",
+    why:
+      "An Écho's withdrawal bounced and the funds were returned to their " +
+      "balance. Nobody was told before this — not the Écho, not ops — so a " +
+      "failed payout looked identical to a slow one.",
+  },
+  reconciliation_critical: {
+    audience: "admin",
+    channels: ["email"],
+    emailCategory: "account",
+    why:
+      "The money-integrity alarm. Deduped to once an hour, and the dedup key " +
+      "is now written only after a successful send — it used to be written " +
+      "first, so a single bounce silenced the alarm for the rest of the hour.",
+  },
+  batteur_lead_received: {
+    audience: "admin",
+    channels: ["email"],
+    emailCategory: "account",
+    why:
+      "A prospect wants to become a Batteur. Distinct from `lead_received`, " +
+      "which is a lead-gen capture delivered TO a brand — the two used to " +
+      "share a name and that is how they got conflated.",
   },
 };
 
