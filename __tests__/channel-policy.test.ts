@@ -62,12 +62,20 @@ describe("channel policy — the relevance doctrine", () => {
     }
   });
 
-  it("keeps email off the high-volume Écho engagement events", () => {
-    // The regression this whole exercise exists to prevent: approving one
-    // campaign emailed 1 500+ Échos something push and SMS had already said.
-    for (const event of ["new_campaign", "share_reminder", "campaign_ending", "inactivity"] as const) {
+  it("keeps email off the short-shelf-life Écho nudges", () => {
+    // A nudge that is stale by the time an inbox is checked has no business
+    // being an email. `new_campaign` is the deliberate exception — it is why
+    // an Écho is on the platform, so it goes on all three.
+    for (const event of ["share_reminder", "campaign_ending", "inactivity", "streak_danger"] as const) {
       expect(usesChannel(event, "email"), `${event} must not email Échos`).toBe(false);
     }
+  });
+
+  it("makes the highest-volume email suppressible and unsubscribable", () => {
+    // new_campaign is ~1 500 emails per approval. It is allowed, but it must
+    // never be the kind of mail someone cannot turn off.
+    expect(usesChannel("new_campaign", "email")).toBe(true);
+    expect(isSuppressible("new_campaign")).toBe(true);
   });
 
   it("routes every Brand-facing event to email", () => {
@@ -143,7 +151,7 @@ describe("evaluateEmailSuppression", () => {
   });
 
   it("refuses events that do not route to email at all", () => {
-    expect(evaluateEmailSuppression("new_campaign", {})).toEqual({
+    expect(evaluateEmailSuppression("share_reminder", {})).toEqual({
       optedOut: true,
       reason: "not_an_email_event",
     });

@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/server";
 import { apiError, validationError } from "@/lib/api/errors";
-import { buildCampaignLiveEmail, buildCampaignRejectedEmail } from "@/lib/email";
-import { sendRoutedEmail } from "@/lib/notifications/email-router";
+import { buildCampaignLiveEmail, buildCampaignRejectedEmail, buildNewCampaignEmail } from "@/lib/email";
+import { sendRoutedEmail, sendRoutedEmailBatch } from "@/lib/notifications/email-router";
 import { unlockCampaignEarnings } from "@/lib/unlock-earnings";
 import { triggerNewCampaign } from "@/lib/notifications/engine";
 import { processNotificationQueue } from "@/lib/notifications/sender";
@@ -12,6 +12,7 @@ import { requireAuth } from "@/lib/api/auth";
 import { awardAmbassadorCommission } from "@/lib/ambassador-commission";
 import { debitBrandBudgetLogged, creditBrandWallet } from "@/lib/wallet";
 import { refundCampaignRemaining } from "@/lib/campaign-refund";
+import { sendCampaignReport } from "@/lib/notifications/campaign-report";
 
 export const dynamic = "force-dynamic";
 
@@ -40,16 +41,17 @@ const moderateCampaignBodySchema = z.object({
 });
 
 /**
- * Announce a newly live campaign to Échos.
+ * Announce a newly live campaign to Échos — push, SMS and email.
  *
- * Channels come from the policy (`new_campaign` → push + SMS). Email is
- * deliberately absent: this fires for 1 500+ Échos on every approval, and an
- * email repeating what push and SMS already said was the single largest source
- * of irrelevant mail on the platform.
+ * `new_campaign` is the one Écho event on all three channels: it is the
+ * reason an Écho is on the platform, and push only reaches PWA installs. It
+ * is also by far the highest-volume email we send, so it goes through the
+ * router — suppressible, unsubscribable, and counted in email_event_stats.
  */
 function notifyEchosNewCampaign(
   supabase: ReturnType<typeof createServiceClient>,
   campaignId: string,
+  campaignTitle: string,
   cpc: number,
   targetCities: string[] | null,
 ) {
@@ -64,6 +66,53 @@ function notifyEchosNewCampaign(
     cityFilter: targetCities?.length ? targetCities : undefined,
     vars: { cpc: cpc || 50 },
   }).catch((err) => console.error("[SMS] Campaign blast failed:", err));
+
+  emailEchosNewCampaign(supabase, campaignId, campaignTitle, cpc, targetCities).catch((err) =>
+    console.error("[email] new-campaign blast failed:", err),
+  );
+}
+
+/**
+ * The email half of the new-campaign announcement.
+ *
+ * Geo-targeted the same way push is: an Écho outside the campaign's target
+ * cities cannot usefully act on it, so emailing them would be the kind of
+ * irrelevance that trains people to ignore the sender.
+ */
+async function emailEchosNewCampaign(
+  supabase: ReturnType<typeof createServiceClient>,
+  campaignId: string,
+  campaignTitle: string,
+  cpc: number,
+  targetCities: string[] | null,
+) {
+  let query = supabase
+    .from("users")
+    .select("id, name, city")
+    .eq("role", "echo")
+    .is("deleted_at", null)
+    .neq("status", "suspended");
+
+  if (targetCities?.length) query = query.in("city", targetCities);
+
+  const { data: echos } = await query;
+  if (!echos?.length) return;
+
+  const totals = await sendRoutedEmailBatch(
+    supabase,
+    "new_campaign",
+    echos.map((echo) => ({
+      userId: echo.id,
+      campaignId,
+      ...buildNewCampaignEmail({ echoName: echo.name, campaignTitle, cpc }),
+    })),
+    // One announcement per campaign per Écho, whichever path triggers it.
+    { dedupeWithinHours: 24 },
+  );
+
+  console.warn(
+    `[email] new_campaign "${campaignTitle}": sent ${totals.sent}, suppressed ${totals.suppressed}, failed ${totals.failed}`,
+  );
 }
 
 async function requireSuperadmin() {
@@ -232,7 +281,7 @@ export async function POST(request: NextRequest) {
     // Notify echos — push + SMS per the channel policy (`new_campaign`).
     // This path used to email every Écho and fire nothing else; the approval
     // path did all three. Same event, so: same channels, and no email.
-    notifyEchosNewCampaign(supabase, campaign.id, parseInt(cpc), null);
+    notifyEchosNewCampaign(supabase, campaign.id, title, parseInt(cpc), null);
 
     // Ambassador commission for superadmin-created campaigns (LUP-80)
     await awardAmbassadorCommission(supabase, {
@@ -412,6 +461,8 @@ export async function POST(request: NextRequest) {
         reason: "campagne arrêtée",
         createdBy: authUser.id,
       });
+
+      await sendCampaignReport(supabase, campaign_id);
       break;
     }
     default:
@@ -475,7 +526,7 @@ export async function POST(request: NextRequest) {
           });
         }
         // Notify echos — push + SMS, no email (see notifyEchosNewCampaign)
-        notifyEchosNewCampaign(supabase, campaign_id, campaignFull.cpc, campaign.target_cities);
+        notifyEchosNewCampaign(supabase, campaign_id, campaignFull.title, campaignFull.cpc, campaign.target_cities);
       }
     } catch { /* non-blocking */ }
   }

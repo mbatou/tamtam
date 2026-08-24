@@ -4,6 +4,7 @@ import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { notifyEchoUnlock, unlockCampaignEarnings } from "@/lib/unlock-earnings";
 import { verifyCronSecret } from "@/lib/api/cron";
 import { refundCampaignRemaining } from "@/lib/campaign-refund";
+import { sendCampaignReport } from "@/lib/notifications/campaign-report";
 import { getUserEmail } from "@/lib/user-emails";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +41,10 @@ export async function GET(request: NextRequest) {
     await refundCampaignRemaining(supabaseAdmin, campaign.id, {
       reason: "fin de campagne",
     });
+
+    // Performance report to the brand — exactly once per campaign, whichever
+    // of the six completion paths gets there first.
+    await sendCampaignReport(supabaseAdmin, campaign.id);
     expiredCount++;
   }
 

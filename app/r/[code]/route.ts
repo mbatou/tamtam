@@ -8,6 +8,7 @@ import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { unlockCampaignEarnings } from "@/lib/unlock-earnings";
 import { generateShortCode } from "@/lib/utils";
 import { refundCampaignRemaining } from "@/lib/campaign-refund";
+import { sendCampaignReport } from "@/lib/notifications/campaign-report";
 
 function appendTmRef(url: string, tmRef: string): string {
   try {
@@ -173,6 +174,11 @@ export async function GET(
         reason: "fin de campagne (budget insuffisant)",
       });
 
+      // Awaited, not fire-and-forget: work started after the redirect is
+      // dropped when the serverless function freezes (that is exactly how the
+      // pending_earnings drift happened).
+      await sendCampaignReport(supabase, campaign.id);
+
       return NextResponse.redirect(destinationUrl);
     }
 
@@ -243,6 +249,8 @@ export async function GET(
             await refundCampaignRemaining(supabase, campaign.id, {
               reason: "fin de campagne (budget insuffisant)",
             });
+
+            await sendCampaignReport(supabase, campaign.id);
           } catch (err) {
             console.error("Auto-complete refund error:", err);
           }

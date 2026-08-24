@@ -37,6 +37,19 @@ interface RoutedEmail {
   campaignId?: string | null;
   /** Skip if the same event was already emailed to this user within N hours. */
   dedupeWithinHours?: number;
+  /**
+   * Send at most once for this (user, event, campaign) ever. For closing
+   * statements — a completion report or a budget alert — where campaign
+   * completion is reachable from six different code paths and a brand must
+   * not get six copies.
+   */
+  oncePerCampaign?: boolean;
+  /**
+   * External idempotency key (a payment reference, an invoice number). Stored
+   * on the ledger row and guarded by a partial-unique index, so the same
+   * receipt cannot go out twice even if two handlers race.
+   */
+  reference?: string;
   /** Pre-resolved address, to avoid a per-recipient auth lookup in fan-outs. */
   email?: string;
   /** Pre-fetched preferences, same reason. */
@@ -84,6 +97,7 @@ async function recordSend(
     email_type: string;
     campaign_id?: string | null;
     recipient?: string | null;
+    reference?: string | null;
     category?: string | null;
     status: string;
     resend_id?: string | null;
@@ -112,6 +126,22 @@ async function alreadySent(
     .eq("email_type", event)
     .eq("status", "sent")
     .gte("created_at", cutoff);
+  return (count ?? 0) > 0;
+}
+
+async function alreadySentForCampaign(
+  supabase: SupabaseClient,
+  userId: string,
+  event: string,
+  campaignId: string,
+): Promise<boolean> {
+  const { count } = await supabase
+    .from("sent_emails")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("email_type", event)
+    .eq("campaign_id", campaignId)
+    .eq("status", "sent");
   return (count ?? 0) > 0;
 }
 
@@ -150,6 +180,16 @@ export async function sendRoutedEmail(
     return { status: "suppressed", reason: "already_sent" };
   }
 
+  if (opts.oncePerCampaign) {
+    if (!opts.campaignId) {
+      console.error(`[email-router] oncePerCampaign requested for ${opts.event} with no campaignId`);
+      return { status: "suppressed", reason: "missing_campaign_id" };
+    }
+    if (await alreadySentForCampaign(supabase, opts.userId, opts.event, opts.campaignId)) {
+      return { status: "suppressed", reason: "already_sent_for_campaign" };
+    }
+  }
+
   const to = opts.email ?? (await getUserEmails(supabase, [opts.userId])).get(opts.userId);
   if (!to) {
     await recordSend(supabase, {
@@ -179,6 +219,7 @@ export async function sendRoutedEmail(
     email_type: opts.event,
     campaign_id: opts.campaignId ?? null,
     recipient: to,
+    reference: opts.reference ?? null,
     category: route.emailCategory,
     status: result.success ? "sent" : "failed",
     resend_id: result.success ? result.id ?? null : null,

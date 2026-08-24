@@ -9,6 +9,10 @@
       "schedule": "0 1 * * *"
     },
     {
+      "path": "/api/cron/budget-alerts",
+      "schedule": "0 * * * *"
+    },
+    {
       "path": "/api/cron/reconciliation",
       "schedule": "0 2 * * *"
     },

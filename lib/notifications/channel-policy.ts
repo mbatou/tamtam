@@ -91,13 +91,15 @@ export const CHANNEL_ROUTES: Record<NotificationEvent, ChannelRoute> = {
   // ── Écho · engagement — free channels only ───────────────────────────────
   new_campaign: {
     audience: "echo",
-    channels: ["push", "sms"],
-    emailCategory: null,
+    channels: ["push", "sms", "email"],
+    emailCategory: "campaign",
     why:
-      "Highest-volume event on the platform (1 500+ Échos per approval). Push " +
-      "reaches subscribers instantly and SMS reaches the rest. An email saying " +
-      "the same thing was the third copy — pure noise, and the reason Écho " +
-      "email open rates cannot support anything that actually matters.",
+      "The one Écho event on all three channels, by product decision: a new " +
+      "campaign is the whole reason an Écho is on the platform, and push only " +
+      "reaches PWA installs. It is also the highest-volume email we send " +
+      "(1 500+ per approval), so it is suppressible, carries an unsubscribe " +
+      "link, and is the first thing to check in email_event_stats — if Échos " +
+      "turn it off in numbers, that is the answer.",
   },
   share_reminder: {
     audience: "echo",

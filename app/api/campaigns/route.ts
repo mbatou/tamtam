@@ -4,6 +4,7 @@ import { createCampaignSchema, updateCampaignSchema, deleteCampaignSchema } from
 import { buildCampaignCompletedToEcho } from "@/lib/email";
 import { alertCampaignPendingApproval } from "@/lib/notifications/ops-alerts";
 import { sendRoutedEmailBatch } from "@/lib/notifications/email-router";
+import { sendCampaignReport } from "@/lib/notifications/campaign-report";
 import { ECHO_SHARE_PERCENT } from "@/lib/constants";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
 import { debitBrandBudget, debitBrandBudgetLogged, creditBrandWallet } from "@/lib/wallet";
@@ -501,6 +502,8 @@ export async function PUT(request: NextRequest) {
   if (status === "completed" && existing.status === "active") {
     unlockCampaignEarnings(id, existing.title || id).catch(console.error);
     notifyCampaignCompleted(id);
+    // Performance report to the brand — the deliverable of the campaign.
+    await sendCampaignReport(supabase, id);
   }
 
   // Also unlock when pausing (echos shouldn't wait for a paused campaign)

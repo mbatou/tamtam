@@ -32,6 +32,7 @@ COMMENT ON COLUMN public.users.email_prefs IS
 
 ALTER TABLE public.sent_emails
   ADD COLUMN IF NOT EXISTS recipient text,
+  ADD COLUMN IF NOT EXISTS reference text,
   ADD COLUMN IF NOT EXISTS category text,
   ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'sent',
   ADD COLUMN IF NOT EXISTS resend_id text,
@@ -56,6 +57,13 @@ CREATE INDEX IF NOT EXISTS idx_sent_emails_type_created
 CREATE INDEX IF NOT EXISTS idx_sent_emails_status
   ON public.sent_emails (status)
   WHERE status <> 'sent';
+
+-- Receipts are keyed by the payment reference: both Wave webhook handlers can
+-- credit the same checkout, and a brand must not get two receipts for one
+-- charge. Partial-unique so the guard is the database's, not a race-prone read.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sent_emails_reference_once
+  ON public.sent_emails (email_type, reference)
+  WHERE reference IS NOT NULL AND status = 'sent';
 
 CREATE INDEX IF NOT EXISTS idx_sent_emails_resend_id
   ON public.sent_emails (resend_id)

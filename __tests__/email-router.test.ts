@@ -38,10 +38,10 @@ describe("sendRoutedEmail — the policy is enforced here, not at call sites", (
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const mock = createMockSupabase();
 
-    // `new_campaign` is push + SMS. A call site asking to email it is a bug in
+    // `share_reminder` is push-only. A call site asking to email it is a bug in
     // the call site — the router must not quietly widen the matrix back out.
     const result = await sendRoutedEmail(mock.client, {
-      event: "new_campaign",
+      event: "share_reminder",
       userId: ECHO,
       subject: "x",
       html: "<p>x</p>",

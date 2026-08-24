@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { logWalletTransaction } from "@/lib/wallet-transactions";
+import { sendRechargeReceipt } from "@/lib/notifications/recharge-receipt";
 import { requireAuth } from "@/lib/api/auth";
 import { apiError, validationError } from "@/lib/api/errors";
 
@@ -185,6 +186,13 @@ export async function POST(request: NextRequest) {
         sourceId: payment_id,
         sourceType: "payment",
         createdBy: authUser.id,
+      });
+
+      await sendRechargeReceipt(supabase, {
+        brandId: payment.user_id,
+        amount: payment.amount,
+        method: payment.payment_method || "Wave",
+        reference: payment.ref_command || payment_id,
       });
 
       try {
