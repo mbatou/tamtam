@@ -15,6 +15,11 @@ export default function EarningsScreen() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  // The withdrawal floor is a platform setting, not a constant. This screen
+  // used to hardcode 500 while the real minimum is 1 000, so it enabled
+  // "Retirer" for balances the web page then refused — the same
+  // offer-then-refuse mismatch that blocked withdrawals outright.
+  const [minPayout, setMinPayout] = useState(1000)
 
   const loadPayouts = useCallback(async () => {
     if (!profile?.id) return
@@ -22,9 +27,13 @@ export default function EarningsScreen() {
       // GET /api/echo/payouts → full payout rows, newest first.
       // Balance figures (available/pending/total_earned) stay on the profile
       // from useAuth (/api/echo/user) — /api/echo/balance lacks total_earned.
-      const data = await api<any[]>('/api/echo/payouts')
+      const [data, balanceData] = await Promise.all([
+        api<any[]>('/api/echo/payouts'),
+        api<{ min_withdrawal?: number }>('/api/echo/balance').catch(() => null),
+      ])
       setLoadError(false)
       setPayouts((data || []).slice(0, 20))
+      if (balanceData?.min_withdrawal) setMinPayout(balanceData.min_withdrawal)
     } catch (err) {
       console.error('[Earnings] loadPayouts failed:', err)
       setLoadError(true)
@@ -136,20 +145,20 @@ export default function EarningsScreen() {
           ) : (
             <>
               <TouchableOpacity
-                disabled={balance < 500}
+                disabled={balance < minPayout}
                 onPress={() => Linking.openURL('https://tamma.me/earnings')}
                 style={{
                   marginTop: 12, paddingVertical: 12, minHeight: 44, borderRadius: 12,
                   alignItems: 'center', justifyContent: 'center',
-                  backgroundColor: balance >= 500 ? Colors.teal : Colors.btnGhostBg,
-                  borderWidth: balance >= 500 ? 0 : 1,
+                  backgroundColor: balance >= minPayout ? Colors.teal : Colors.btnGhostBg,
+                  borderWidth: balance >= minPayout ? 0 : 1,
                   borderColor: Colors.btnGhostBorder,
                 }}
               >
                 {/* PWA withdraw CTA: `text-sm font-bold` */}
                 <Text style={{
                   fontFamily: Fonts.bodyBold, fontSize: 14,
-                  color: balance >= 500 ? '#fff' : Colors.textGhost,
+                  color: balance >= minPayout ? '#fff' : Colors.textGhost,
                 }}>
                   {t.withdraw}
                 </Text>
